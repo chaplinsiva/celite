@@ -2,11 +2,11 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [returnUrl, setReturnUrl] = useState<string | null>(null);
@@ -34,6 +34,20 @@ export default function AuthCallbackPage() {
         <p className="mt-2 text-sm text-zinc-400">Please wait while we finish authentication.</p>
       </div>
     </main>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className="text-center">
+          <h1 className="text-xl font-semibold">Loading…</h1>
+        </div>
+      </main>
+    }>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
 

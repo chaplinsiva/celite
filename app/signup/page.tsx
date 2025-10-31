@@ -1,12 +1,14 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, type FormEvent } from 'react';
+import { Suspense, useState, useEffect, type FormEvent } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 
-export default function SignupPage() {
+function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signUp, user } = useAppContext();
@@ -136,5 +138,19 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex flex-col justify-center items-center bg-black">
+        <div className="w-full max-w-md bg-zinc-900/90 p-10 rounded-2xl shadow-2xl mt-24">
+          <h2 className="text-2xl font-bold mb-8 text-center text-white">Loading...</h2>
+        </div>
+      </div>
+    }>
+      <SignupContent />
+    </Suspense>
   );
 }
