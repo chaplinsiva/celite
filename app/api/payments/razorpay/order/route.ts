@@ -67,13 +67,8 @@ export async function POST(req: Request) {
       },
     };
 
-    // Add customer details if available
-    if (userEmail || userName) {
-      payload.customer = {};
-      if (userEmail) payload.customer.email = userEmail;
-      if (userName) payload.customer.name = userName;
-      if (userId) payload.customer.notes = { user_id: userId };
-    }
+    // Note: Razorpay orders don't support a 'customer' field
+    // Customer information is stored in notes instead
     const order = await razorpayRequest('/orders', { method: 'POST', body: payload });
     return NextResponse.json({ ok: true, key: key_id, order });
   } catch (e: any) {
