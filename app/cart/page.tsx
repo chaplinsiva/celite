@@ -1,12 +1,31 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { formatPriceWithDecimal } from "../../lib/currency";
 
 export default function CartPage() {
+  const [mounted, setMounted] = useState(false);
   const { user, cartItems, cartCount, removeFromCart, resetCart } = useAppContext();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
+        <div className="max-w-3xl mx-auto text-center rounded-3xl border border-white/10 bg-white/5 p-12">
+          <h1 className="text-3xl font-semibold">Loading...</h1>
+        </div>
+      </main>
+    );
+  }
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 

@@ -7,6 +7,11 @@ let browserClient: SupabaseClient | null = null;
 export function getSupabaseBrowserClient(): SupabaseClient {
   if (browserClient) return browserClient;
 
+  // Only create client in browser environment
+  if (typeof window === 'undefined') {
+    throw new Error('Supabase client can only be created in browser environment');
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
