@@ -2,11 +2,9 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
 import path from 'path';
 
-export async function GET(req: Request, context: { params?: { slug?: string } }) {
+export async function GET(req: Request, { params }: { params: { slug: string } }) {
   try {
-    const url = new URL(req.url);
-    const slugFromPath = url.pathname.split('/').pop() || '';
-    const slug = context?.params?.slug || slugFromPath;
+    const slug = params.slug;
     if (!slug) return NextResponse.json({ ok: false, error: 'Missing slug' }, { status: 400 });
 
     const admin = getSupabaseAdminClient();
