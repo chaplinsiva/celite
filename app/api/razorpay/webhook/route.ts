@@ -65,6 +65,7 @@ export async function POST(req: Request) {
 
         // Also update subscriptions table for compatibility with existing code
         const subscriptionEntity = payload.subscription?.entity || payload.invoice?.entity;
+        const razorpaySubscriptionId = subscriptionEntity?.id || null;
         const plan = subscriptionEntity?.plan_id
           ? subscriptionEntity.plan_id.includes('yearly')
             ? 'yearly'
@@ -81,7 +82,7 @@ export async function POST(req: Request) {
             validUntil.setMonth(validUntil.getMonth() + 1);
           }
 
-          // Upsert subscription
+          // Upsert subscription with Razorpay subscription ID
           await admin
             .from('subscriptions')
             .upsert(
@@ -90,6 +91,7 @@ export async function POST(req: Request) {
                 is_active: true,
                 plan,
                 valid_until: validUntil.toISOString(),
+                razorpay_subscription_id: razorpaySubscriptionId,
               },
               { onConflict: 'user_id' }
             );

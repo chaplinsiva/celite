@@ -215,14 +215,20 @@ function CheckoutContent() {
           },
           handler: async (resp: any) => {
             try {
-              // Activate subscription in our DB
+              // Get Razorpay subscription ID from response or sub object
+              const razorpaySubscriptionId = resp.razorpay_subscription_id || sub?.id || null;
+              
+              // Activate subscription in our DB with Razorpay subscription ID
               const activateRes = await fetch('/api/subscription/activate', {
                 method: 'POST',
                 headers: { 
                   Authorization: `Bearer ${session.access_token}`, 
                   'Content-Type': 'application/json' 
                 },
-                body: JSON.stringify({ plan: subscriptionPlan }),
+                body: JSON.stringify({ 
+                  plan: subscriptionPlan,
+                  razorpay_subscription_id: razorpaySubscriptionId 
+                }),
               });
               
               if (activateRes.ok) {
