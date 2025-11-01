@@ -6,6 +6,7 @@ import type { Template } from '../data/templateData';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { useLoginModal } from '../context/LoginModalContext';
+import { getYouTubeEmbedUrl } from '../lib/utils';
 
 type FeaturedTemplate = Template & {
   is_limited_offer?: boolean;
@@ -24,9 +25,6 @@ export default function TemplateCarousel() {
   const featuredListRef = useRef<HTMLDivElement>(null);
   const [featured, setFeatured] = useState<FeaturedTemplate[]>([]);
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
-  const [hovered, setHovered] = useState<string | null>(null);
-  const [mutedMap, setMutedMap] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const load = async () => {
@@ -122,34 +120,6 @@ export default function TemplateCarousel() {
     }
   };
 
-  const handleMouseEnter = (slug: string) => {
-    setHovered(slug);
-    const vid = videoRefs.current[slug];
-    if (vid) {
-      vid.currentTime = 0;
-      const isMuted = mutedMap[slug] ?? true;
-      vid.muted = isMuted;
-      const p = vid.play();
-      if (p && typeof p.catch === 'function') p.catch(() => {});
-    }
-  };
-
-  const handleMouseLeave = (slug: string) => {
-    const vid = videoRefs.current[slug];
-    if (vid) {
-      vid.pause();
-      vid.currentTime = 0;
-    }
-    setHovered((h) => (h === slug ? null : h));
-  };
-
-  const toggleMute = (slug: string) => {
-    const nextMuted = !(mutedMap[slug] ?? true);
-    setMutedMap((m) => ({ ...m, [slug]: nextMuted }));
-    const vid = videoRefs.current[slug];
-    if (vid) vid.muted = nextMuted;
-  };
-
   const handleDownload = async (slug: string) => {
     try {
       const supabase = getSupabaseBrowserClient();
@@ -197,8 +167,6 @@ export default function TemplateCarousel() {
     return (
     <div
       className="group min-w-[85vw] sm:min-w-[350px] md:min-w-0 bg-gradient-to-br from-zinc-950/95 via-zinc-900/95 to-zinc-950/95 rounded-2xl shadow-xl border border-white/10 hover:border-white/30 p-4 sm:p-5 flex flex-col items-center snap-center transition-all duration-300 relative overflow-hidden hover:scale-[1.02] hover:shadow-2xl backdrop-blur-sm"
-      onMouseEnter={() => handleMouseEnter(tpl.slug)}
-      onMouseLeave={() => handleMouseLeave(tpl.slug)}
     >
       {/* Decorative Gradient Corner */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -209,51 +177,20 @@ export default function TemplateCarousel() {
       )}
       {/* 16:9 Aspect Ratio Container */}
       <div className="relative w-full aspect-video rounded-xl mb-4 sm:mb-5 overflow-hidden bg-zinc-950 border border-white/5 group-hover:border-white/20 transition-colors">
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-10"></div>
-        <img
-          src={tpl.img}
-          alt={tpl.name}
-          className="absolute inset-0 w-full h-full object-cover rounded-xl transition-transform duration-500 ease-out scale-110 group-hover:scale-100"
-          style={{ 
-            opacity: hovered === tpl.slug && tpl.video ? 0 : 1
-          }}
-        />
-        {tpl.video && (
-          <video
-            ref={(el) => { videoRefs.current[tpl.slug] = el; }}
-            src={tpl.video}
-            poster={tpl.img}
-            playsInline
-            muted={(mutedMap[tpl.slug] ?? true)}
-            preload="metadata"
-            className={`absolute inset-0 w-full h-full object-cover rounded-xl transition-all duration-500 ease-out scale-110 group-hover:scale-100 ${hovered === tpl.slug ? 'opacity-100' : 'opacity-0'}`}
-          >
-            Sorry, your browser does not support embedded videos.
-          </video>
-        )}
-        {hovered === tpl.slug && tpl.video && (
-          <button
-            aria-label={(mutedMap[tpl.slug] ?? true) ? 'Unmute audio' : 'Mute audio'}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleMute(tpl.slug); }}
-            className="absolute bottom-3 right-3 z-20 bg-black/80 backdrop-blur-sm text-white rounded-full w-10 h-10 flex items-center justify-center border border-white/20 hover:bg-black/90 hover:scale-110 transition-all duration-200 shadow-lg"
-            title={(mutedMap[tpl.slug] ?? true) ? 'Unmute' : 'Mute'}
-          >
-            {(mutedMap[tpl.slug] ?? true) ? (
-              // muted -> show speaker with X
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                <path d="M3 9v6h4l5 5V4L7 9H3z"></path>
-                <path d="M16 9l5 5m0-5l-5 5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-              </svg>
-            ) : (
-              // unmuted -> show speaker with waves
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                <path d="M3 9v6h4l5 5V4L7 9H3z"></path>
-                <path d="M16 8a5 5 0 010 8" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-                <path d="M18 6a8 8 0 010 12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-              </svg>
-            )}
-          </button>
-        )}
+        {tpl.video ? (() => {
+          const embedUrl = getYouTubeEmbedUrl(tpl.video);
+          return embedUrl ? (
+            <div className="w-full h-full rounded-xl overflow-hidden">
+              <iframe
+                src={embedUrl}
+                title={tpl.name}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full"
+              />
+            </div>
+          ) : null;
+        })() : null}
       </div>
       <h3 className="text-lg sm:text-xl font-bold text-white mb-2 text-center group-hover:text-blue-400 transition-colors">{tpl.name}</h3>
       {(tpl.category || tpl.subcategory) && (

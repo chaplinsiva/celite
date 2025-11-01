@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext, TemplateCartItem } from '../../../context/AppContext';
@@ -8,6 +8,7 @@ import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { formatPrice } from '../../../lib/currency';
 import { useLoginModal } from '../../../context/LoginModalContext';
 import { trackViewItem, trackAddToCart } from '../../../lib/gtag';
+import { getYouTubeEmbedUrl } from '../../../lib/utils';
 import type { Template } from '../../../data/templateData';
 interface Review {
   name: string;
@@ -27,9 +28,6 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   const { openLoginModal } = useLoginModal();
   const router = useRouter();
   const [feedback, setFeedback] = useState<string | null>(null);
-  const relatedVideoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
-  const [hoveredRelated, setHoveredRelated] = useState<string | null>(null);
-  const [relatedMuted, setRelatedMuted] = useState<Record<string, boolean>>({});
   const [isSubActive, setIsSubActive] = useState<boolean>(false);
   const [downloading, setDownloading] = useState<boolean>(false);
   const [purchased, setPurchased] = useState<boolean>(false);
@@ -292,34 +290,6 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
     setTimeout(() => setFeedback(null), 2500);
   };
 
-  const onRelatedEnter = (slug: string, hasVideo?: boolean) => {
-    if (!hasVideo) return;
-    setHoveredRelated(slug);
-    const vid = relatedVideoRefs.current[slug];
-    if (vid) {
-      vid.currentTime = 0;
-      const isMuted = relatedMuted[slug] ?? true;
-      vid.muted = isMuted;
-      const p = vid.play();
-      if (p && typeof p.catch === 'function') p.catch(() => {});
-    }
-  };
-
-  const onRelatedLeave = (slug: string) => {
-    const vid = relatedVideoRefs.current[slug];
-    if (vid) {
-      vid.pause();
-      vid.currentTime = 0;
-    }
-    setHoveredRelated((h) => (h === slug ? null : h));
-  };
-
-  const toggleRelatedMute = (slug: string) => {
-    const nextMuted = !(relatedMuted[slug] ?? true);
-    setRelatedMuted((m) => ({ ...m, [slug]: nextMuted }));
-    const vid = relatedVideoRefs.current[slug];
-    if (vid) vid.muted = nextMuted;
-  };
 
   const retryPayment = () => {
     // Navigate to checkout or retry payment
@@ -342,15 +312,20 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
       <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-10 mb-14 mt-10 py-8 sm:py-12 px-3 sm:px-8 bg-zinc-900/80 rounded-3xl shadow-lg">
         {/* Product Gallery */}
         <div className="flex-1 flex flex-col items-center md:items-start w-full">
-          {product.video ? (
-            <video width="480" height="270" src={product.video} controls preload="metadata" poster={product.img}
-              className="w-full max-w-xs sm:max-w-sm md:max-w-sm lg:max-w-xs rounded-2xl shadow-xl object-cover mb-7"
-            >
-              Sorry, your browser does not support embedded videos.
-            </video>
-          ) : (
-            <img src={product.img} alt={product.name} className="w-full max-w-xs sm:max-w-sm md:max-w-sm lg:max-w-xs rounded-2xl shadow-xl object-cover mb-7" />
-          )}
+          {product.video ? (() => {
+            const embedUrl = getYouTubeEmbedUrl(product.video);
+            return embedUrl ? (
+              <div className="w-full max-w-xs sm:max-w-sm md:max-w-sm lg:max-w-xs rounded-2xl shadow-xl mb-7 overflow-hidden aspect-video">
+                <iframe
+                  src={embedUrl}
+                  title={product.name}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
+              </div>
+            ) : null;
+          })() : null}
         </div>
         {/* Product Info */}
         <div className="flex-[1.5] flex flex-col justify-center">
@@ -513,50 +488,22 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             <div
               key={r.slug}
               className="bg-zinc-900 rounded-xl shadow-md p-3 flex flex-col items-center"
-              onMouseEnter={() => onRelatedEnter(r.slug, !!r.video)}
-              onMouseLeave={() => onRelatedLeave(r.slug)}
             >
               <div className="relative w-full h-32 sm:h-40 rounded-lg mb-2 overflow-hidden">
-                <img
-                  src={r.img}
-                  alt={r.name}
-                  className="absolute inset-0 w-full h-full object-cover rounded-lg transition-opacity duration-200"
-                  style={{ opacity: hoveredRelated === r.slug && r.video ? 0 : 1 }}
-                />
-                {r.video && (
-                  <video
-                    ref={(el) => { relatedVideoRefs.current[r.slug] = el; }}
-                    src={r.video}
-                    poster={r.img}
-                    playsInline
-                    muted={(relatedMuted[r.slug] ?? true)}
-                    preload="metadata"
-                    className={`absolute inset-0 w-full h-full object-cover rounded-lg transition-opacity duration-200 ${hoveredRelated === r.slug ? 'opacity-100' : 'opacity-0'}`}
-                  >
-                    Sorry, your browser does not support embedded videos.
-                  </video>
-                )}
-                {hoveredRelated === r.slug && r.video && (
-                  <button
-                    aria-label={(relatedMuted[r.slug] ?? true) ? 'Unmute audio' : 'Mute audio'}
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleRelatedMute(r.slug); }}
-                    className="absolute bottom-2 right-2 bg-black/70 text-white rounded-full w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center"
-                    title={(relatedMuted[r.slug] ?? true) ? 'Unmute' : 'Mute'}
-                  >
-                    {(relatedMuted[r.slug] ?? true) ? (
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M3 9v6h4l5 5V4L7 9H3z"></path>
-                        <path d="M16 9l5 5m0-5l-5 5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-                      </svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M3 9v6h4l5 5V4L7 9H3z"></path>
-                        <path d="M16 8a5 5 0 010 8" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-                        <path d="M18 6a8 8 0 010 12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-                      </svg>
-                    )}
-                  </button>
-                )}
+                {r.video ? (() => {
+                  const embedUrl = getYouTubeEmbedUrl(r.video);
+                  return embedUrl ? (
+                    <div className="w-full h-full rounded-lg overflow-hidden aspect-video">
+                      <iframe
+                        src={embedUrl}
+                        title={r.name}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="w-full h-full"
+                      />
+                    </div>
+                  ) : null;
+                })() : null}
               </div>
               <span className="text-zinc-200 font-semibold text-lg mb-1">{r.name}</span>
               <div className="text-xs text-zinc-500">{formatPrice(r.price)}</div>

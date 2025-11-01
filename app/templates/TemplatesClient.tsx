@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
+import { getYouTubeEmbedUrl } from '../../lib/utils';
 
 type Template = {
   slug: string;
@@ -35,9 +36,6 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
   const [featuredFilter, setFeaturedFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('newest');
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
-  const [hovered, setHovered] = useState<string | null>(null);
-  const [mutedMap, setMutedMap] = useState<Record<string, boolean>>({});
 
   // Debug: Log templates
   useEffect(() => {
@@ -79,34 +77,6 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
     checkSubscription();
   }, [user]);
 
-  const handleMouseEnter = (slug: string, hasVideo: boolean) => {
-    if (!hasVideo) return;
-    setHovered(slug);
-    const vid = videoRefs.current[slug];
-    if (vid) {
-      vid.currentTime = 0;
-      const isMuted = mutedMap[slug] ?? true;
-      vid.muted = isMuted;
-      const p = vid.play();
-      if (p && typeof p.catch === 'function') p.catch(() => {});
-    }
-  };
-
-  const handleMouseLeave = (slug: string) => {
-    const vid = videoRefs.current[slug];
-    if (vid) {
-      vid.pause();
-      vid.currentTime = 0;
-    }
-    setHovered((h) => (h === slug ? null : h));
-  };
-
-  const toggleMute = (slug: string) => {
-    const nextMuted = !(mutedMap[slug] ?? true);
-    setMutedMap((m) => ({ ...m, [slug]: nextMuted }));
-    const vid = videoRefs.current[slug];
-    if (vid) vid.muted = nextMuted;
-  };
 
   const handleDownload = async (slug: string) => {
     try {
@@ -337,12 +307,6 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
                 key={template.slug} 
                 template={template} 
                 isSubscribed={isSubscribed}
-                hovered={hovered}
-                mutedMap={mutedMap}
-                videoRefs={videoRefs}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-                onToggleMute={toggleMute}
                 onDownload={handleDownload}
               />
             ))}
@@ -356,22 +320,10 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
 function TemplateCard({ 
   template, 
   isSubscribed,
-  hovered,
-  mutedMap,
-  videoRefs,
-  onMouseEnter,
-  onMouseLeave,
-  onToggleMute,
   onDownload,
 }: { 
   template: Template; 
   isSubscribed: boolean;
-  hovered: string | null;
-  mutedMap: Record<string, boolean>;
-  videoRefs: React.MutableRefObject<Record<string, HTMLVideoElement | null>>;
-  onMouseEnter: (slug: string, hasVideo: boolean) => void;
-  onMouseLeave: (slug: string) => void;
-  onToggleMute: (slug: string) => void;
   onDownload: (slug: string) => void;
 }) {
   const hasActiveLimitedOffer = useMemo(() => {
@@ -399,8 +351,6 @@ function TemplateCard({
   return (
     <div
       className="bg-zinc-900 rounded-2xl shadow-lg p-3 sm:p-4 flex flex-col items-center transition-all duration-200 relative"
-      onMouseEnter={() => onMouseEnter(template.slug, !!template.video)}
-      onMouseLeave={() => onMouseLeave(template.slug)}
     >
       {hasActiveLimitedOffer && (
         <div className="absolute top-3 left-3 z-20 bg-white text-black px-2 py-1 rounded-lg text-xs font-semibold border border-black/20">
@@ -408,48 +358,20 @@ function TemplateCard({
         </div>
       )}
       <div className="relative w-full h-40 sm:h-48 md:h-40 rounded-xl mb-3 sm:mb-4 overflow-hidden">
-        {template.img && (
-          <img
-            src={template.img}
-            alt={template.name || 'Template'}
-            className="absolute inset-0 w-full h-full object-cover rounded-xl transition-opacity duration-200"
-            style={{ opacity: hovered === template.slug && template.video ? 0 : 1 }}
-          />
-        )}
-        {template.video && (
-          <video
-            ref={(el) => { videoRefs.current[template.slug] = el; }}
-            src={template.video}
-            poster={template.img || undefined}
-            playsInline
-            muted={(mutedMap[template.slug] ?? true)}
-            preload="metadata"
-            className={`absolute inset-0 w-full h-full object-cover rounded-xl transition-opacity duration-200 ${hovered === template.slug ? 'opacity-100' : 'opacity-0'}`}
-          >
-            Sorry, your browser does not support embedded videos.
-          </video>
-        )}
-        {hovered === template.slug && template.video && (
-          <button
-            aria-label={(mutedMap[template.slug] ?? true) ? 'Unmute audio' : 'Mute audio'}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleMute(template.slug); }}
-            className="absolute bottom-2 right-2 bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center"
-            title={(mutedMap[template.slug] ?? true) ? 'Unmute' : 'Mute'}
-          >
-            {(mutedMap[template.slug] ?? true) ? (
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                <path d="M3 9v6h4l5 5V4L7 9H3z"></path>
-                <path d="M16 9l5 5m0-5l-5 5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                <path d="M3 9v6h4l5 5V4L7 9H3z"></path>
-                <path d="M16 8a5 5 0 010 8" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-                <path d="M18 6a8 8 0 010 12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-              </svg>
-            )}
-          </button>
-        )}
+        {template.video ? (() => {
+          const embedUrl = getYouTubeEmbedUrl(template.video);
+          return embedUrl ? (
+            <div className="w-full h-full rounded-xl overflow-hidden">
+              <iframe
+                src={embedUrl}
+                title={template.name || 'Template'}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full"
+              />
+            </div>
+          ) : null;
+        })() : null}
       </div>
       <h3 className="text-base sm:text-lg font-semibold text-white mb-1 text-center">{template.name}</h3>
       {hasActiveLimitedOffer && (

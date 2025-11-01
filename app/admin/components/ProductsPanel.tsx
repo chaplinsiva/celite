@@ -24,8 +24,6 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   const [isEditing, setIsEditing] = useState(false);
   const [originalSlug, setOriginalSlug] = useState<string | null>(null);
 
-  const thumbInputRef = useRef<HTMLInputElement | null>(null);
-  const videoInputRef = useRef<HTMLInputElement | null>(null);
   const sourceInputRef = useRef<HTMLInputElement | null>(null);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
 
@@ -101,7 +99,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
     }
   }, [form.category_id, subcategories]);
 
-  const uploadFile = async (kind: 'thumbnail' | 'video' | 'source', file: File) => {
+  const uploadFile = async (kind: 'source', file: File) => {
     const supabase = getSupabaseBrowserClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
@@ -112,8 +110,6 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
     const res = await fetch('/api/admin/upload-file', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: fd });
     const json = await res.json();
     if (json.ok) {
-      if (kind === 'thumbnail' && json.url) setForm((f) => ({ ...f, img: json.url }));
-      if (kind === 'video' && json.url) setForm((f) => ({ ...f, video: json.url }));
       if (kind === 'source' && json.path) setForm((f) => ({ ...f, source_path: json.path }));
     }
   };
@@ -132,8 +128,8 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
         <ul className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
           {templates.map((t) => (
             <li key={t.slug} className="rounded-2xl border border-white/10 bg-white/5 p-3 flex flex-col">
-              <div className="h-28 w-full overflow-hidden rounded-xl mb-3">
-                <img src={t.img || '/Logo.png'} alt={t.name} className="w-full h-full object-cover" />
+              <div className="h-28 w-full overflow-hidden rounded-xl mb-3 bg-zinc-800 flex items-center justify-center">
+                <span className="text-xs text-zinc-500">YouTube Preview</span>
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium">{t.name}</p>
@@ -201,7 +197,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                 templates: [
                   {
                     slug: form.slug.trim(), name: form.name.trim(), subtitle: form.subtitle.trim(), description: form.description.trim(),
-                    price: Number(form.price) || 0, img: form.img.trim() || null, video: form.video.trim() || null, source_path: form.source_path.trim() || null,
+                    price: Number(form.price) || 0, img: null, video: form.video.trim() || null, source_path: form.source_path.trim() || null,
                     features: form.features ? form.features.split(',').map(s=>s.trim()).filter(Boolean) : [],
                     software: form.software ? form.software.split(',').map(s=>s.trim()).filter(Boolean) : [],
                     plugins: form.plugins ? form.plugins.split(',').map(s=>s.trim()).filter(Boolean) : [],
@@ -267,16 +263,10 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
             ))}
           </select>
 
-          <div className="flex items-center gap-2">
-            <input value={form.img} onChange={(e)=>setForm({...form, img:e.target.value})} placeholder="image URL" className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
-            <button type="button" onClick={() => thumbInputRef.current?.click()} className="rounded-full border border-white/30 px-3 py-2 text-xs hover:bg-white/10">Upload</button>
-            <input ref={thumbInputRef} type="file" accept="image/*" hidden onChange={(e)=>{ const file=e.target.files?.[0]; if (file) uploadFile('thumbnail', file); }} />
+          <div className="flex items-center gap-2 sm:col-span-2">
+            <input value={form.video} onChange={(e)=>setForm({...form, video:e.target.value})} placeholder="YouTube Video Link (e.g., https://www.youtube.com/watch?v=VIDEO_ID)" className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
           </div>
-          <div className="flex items-center gap-2">
-            <input value={form.video} onChange={(e)=>setForm({...form, video:e.target.value})} placeholder="video URL (optional)" className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
-            <button type="button" onClick={() => videoInputRef.current?.click()} className="rounded-full border border-white/30 px-3 py-2 text-xs hover:bg-white/10">Upload</button>
-            <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime" hidden onChange={(e)=>{ const file=e.target.files?.[0]; if (file) uploadFile('video', file); }} />
-          </div>
+          <p className="text-xs text-zinc-500 sm:col-span-2">Enter a YouTube video URL. The video will be embedded as a preview. Image uploads are no longer supported.</p>
           <div className="flex flex-col gap-2 sm:col-span-2">
             <label className="text-xs text-zinc-400">Source File (Private)</label>
             <div className="flex items-center gap-2">

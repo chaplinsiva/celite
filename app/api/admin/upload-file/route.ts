@@ -29,23 +29,9 @@ export async function POST(req: Request) {
     if (!file || !kind) return NextResponse.json({ ok: false, error: 'Missing file or kind' }, { status: 400 });
 
     const blob = await file.arrayBuffer();
-    const ext = filename ? extFromName(filename) : extFromName(file.name) || (kind === 'thumbnail' ? '.jpg' : kind === 'video' ? '.mp4' : '.zip');
+    const ext = filename ? extFromName(filename) : extFromName(file.name) || '.zip';
 
-    if (kind === 'thumbnail' || kind === 'video') {
-      const bucket = 'templates';
-      const folder = kind === 'thumbnail' ? 'previews/IMAGEPREVIEW' : 'previews/VIDEOPREVIEW';
-      const objectPath = `${folder}/${filename || (slug ? `${slug} ${kind === 'thumbnail' ? 'thumb' : 'video'}${ext}` : file.name)}`;
-      const { error: upErr } = await admin.storage.from(bucket).upload(objectPath, blob, {
-        contentType: file.type || (kind === 'thumbnail' ? 'image/jpeg' : 'video/mp4'),
-        upsert: true,
-      });
-      if (upErr) return NextResponse.json({ ok: false, error: upErr.message }, { status: 500 });
-      const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      if (!base) return NextResponse.json({ ok: false, error: 'Missing NEXT_PUBLIC_SUPABASE_URL' }, { status: 500 });
-      const publicUrl = `${base}/storage/v1/object/public/${bucket}/${objectPath}`;
-      return NextResponse.json({ ok: true, url: publicUrl, path: objectPath, kind });
-    }
-
+    // Only support source file uploads - preview images/videos are replaced with YouTube links
     if (kind === 'source') {
       const bucket = 'templatesource';
       const objectPath = `${filename || (slug ? `${slug}${ext || '.zip'}` : file.name)}`;
@@ -56,6 +42,11 @@ export async function POST(req: Request) {
       if (upErr) return NextResponse.json({ ok: false, error: upErr.message }, { status: 500 });
       // Private bucket: return only object path
       return NextResponse.json({ ok: true, path: objectPath, kind });
+    }
+
+    // Thumbnail and video uploads are no longer supported - use YouTube links instead
+    if (kind === 'thumbnail' || kind === 'video') {
+      return NextResponse.json({ ok: false, error: 'Preview uploads are no longer supported. Please use YouTube video links instead.' }, { status: 400 });
     }
 
     return NextResponse.json({ ok: false, error: 'Unknown kind' }, { status: 400 });
