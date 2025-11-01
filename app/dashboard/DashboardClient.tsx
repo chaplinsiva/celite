@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useAppContext } from "../../context/AppContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { formatPrice } from "../../lib/currency";
@@ -22,7 +22,8 @@ type OrderItemRow = {
   price: number;
 };
 
-export default function DashboardClient() {
+// Component that uses search params (needs to be in Suspense)
+function DashboardContent() {
   const { user, logout } = useAppContext();
   const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Array<{ id: string; date: string; status: string; amount: string; item: string }>>([]);
@@ -589,6 +590,21 @@ function ManageSubscriptionPanel({ isActive, plan, validUntil, onCancel, onUpgra
         Close
       </button>
     </div>
+  );
+}
+
+// Main component with Suspense boundary
+export default function DashboardClient() {
+  return (
+    <Suspense fallback={
+      <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
+        <div className="max-w-6xl mx-auto text-center">
+          <p className="text-zinc-400">Loading dashboard...</p>
+        </div>
+      </main>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }
 
