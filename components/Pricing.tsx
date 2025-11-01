@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 
@@ -45,6 +46,7 @@ const basePlans: Plan[] = [
 ];
 
 export default function Pricing() {
+  const router = useRouter();
   const { user } = useAppContext();
   const [period, setPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [isActive, setIsActive] = useState(false);
@@ -123,78 +125,10 @@ export default function Pricing() {
     });
   }, [period, isActive, subPlan, monthlyINR, yearlyINR]);
 
-  const loadRazorpay = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
-      if (existing) return resolve();
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Razorpay'));
-      document.body.appendChild(script);
-    });
-  };
-
   const activate = async (selected: 'monthly' | 'yearly') => {
     if (!user) return;
-    const supabase = getSupabaseBrowserClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    try {
-      await loadRazorpay();
-      const res = await fetch('/api/payments/razorpay/subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: selected, currency: currency === 'INR' ? 'INR' : 'USD' }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.ok) {
-        alert(json.error || 'Subscription failed');
-        return;
-      }
-      const sub = json.subscription;
-      // Open Razorpay checkout for subscription
-      // @ts-ignore
-      const rzp = new window.Razorpay({
-        key: sub?.razorpay_key || '',
-        subscription_id: sub.id,
-        image: '/Logo.png',
-        handler: async (resp: any) => {
-          try {
-            // After payment, activate subscription in our DB
-            const activateRes = await fetch('/api/subscription/activate', {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ plan: selected }),
-            });
-            if (activateRes.ok) {
-              // Refresh subscription status
-              const { data } = await supabase
-                .from('subscriptions')
-                .select('is_active, plan, valid_until')
-                .eq('user_id', (user as any).id)
-                .maybeSingle();
-              if (data) {
-                const active = !!data.is_active && (!data.valid_until || new Date(data.valid_until).getTime() > Date.now());
-                setIsActive(active);
-                setSubPlan((data.plan === 'yearly' || data.plan === 'monthly') ? data.plan : null);
-                setValidUntil(data.valid_until ?? null);
-              }
-            }
-          } catch {}
-        },
-        prefill: {
-          email: (user as any)?.email || '',
-          name: (user as any)?.user_metadata?.first_name && (user as any)?.user_metadata?.last_name
-            ? `${(user as any).user_metadata.first_name} ${(user as any).user_metadata.last_name}`.trim()
-            : (user as any)?.email?.split('@')[0] || '',
-        },
-        theme: { color: '#ffffff' },
-      });
-      rzp.open();
-    } catch (e: any) {
-      alert(e?.message || 'Subscription failed to start');
-    }
+    // Redirect to checkout page with subscription type
+    router.push(`/checkout?subscription=${selected}`);
   };
 
   return (

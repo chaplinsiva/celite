@@ -4,7 +4,8 @@ import { getRazorpayCreds, razorpayRequest } from '../../../../../lib/razorpay';
 
 export async function POST(req: Request) {
   try {
-    const { plan, currency: reqCurrency } = await req.json(); // { plan: 'monthly' | 'yearly', currency?: 'USD' | 'INR' }
+    const body = await req.json();
+    const { plan, currency: reqCurrency, billing } = body; // { plan: 'monthly' | 'yearly', currency?: 'USD' | 'INR', billing?: {...} }
     if (!plan || (plan !== 'monthly' && plan !== 'yearly')) {
       return NextResponse.json({ ok: false, error: 'Invalid plan. Must be "monthly" or "yearly"' }, { status: 400 });
     }
@@ -18,13 +19,22 @@ export async function POST(req: Request) {
     let userEmail: string | null = null;
     let userName: string | null = null;
     
+    // Use billing info if provided, otherwise get from token
+    if (billing) {
+      userEmail = billing.email || null;
+      userName = billing.name || null;
+      if (billing.mobile) {
+        // Mobile can be stored in notes
+      }
+    }
+    
     if (token) {
       try {
         const parts = token.split('.');
         if (parts.length === 3) {
           const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
           if (payload.sub) userId = payload.sub;
-          if (payload.email) userEmail = payload.email;
+          if (!userEmail && payload.email) userEmail = payload.email;
         }
       } catch {}
       
@@ -33,14 +43,16 @@ export async function POST(req: Request) {
           const { data: me } = await admin.auth.getUser(token);
           if (me?.user?.id) {
             userId = me.user.id;
-            userEmail = me.user.email || null;
+            if (!userEmail) userEmail = me.user.email || null;
             const metadata = me.user.user_metadata as any;
-            if (metadata?.first_name && metadata?.last_name) {
-              userName = `${metadata.first_name} ${metadata.last_name}`.trim();
-            } else if (metadata?.first_name) {
-              userName = metadata.first_name;
-            } else if (userEmail) {
-              userName = userEmail.split('@')[0];
+            if (!userName) {
+              if (metadata?.first_name && metadata?.last_name) {
+                userName = `${metadata.first_name} ${metadata.last_name}`.trim();
+              } else if (metadata?.first_name) {
+                userName = metadata.first_name;
+              } else if (userEmail) {
+                userName = userEmail.split('@')[0];
+              }
             }
           }
         } catch {}
@@ -107,6 +119,12 @@ export async function POST(req: Request) {
     // Add customer details to notes
     if (userEmail) subscriptionBody.notes.customer_email = userEmail;
     if (userName) subscriptionBody.notes.customer_name = userName;
+    if (billing) {
+      subscriptionBody.notes.billing_name = billing.name || '';
+      subscriptionBody.notes.billing_email = billing.email || '';
+      subscriptionBody.notes.billing_mobile = billing.mobile || '';
+      subscriptionBody.notes.billing_company = billing.company || '';
+    }
     
     // Add customer_id if we have one
     if (customerId) {
