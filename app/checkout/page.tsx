@@ -45,6 +45,7 @@ export default function CheckoutPage() {
             name: data.name,
             price: Number(data.price),
             img: data.img,
+            quantity: 1,
           });
         }
       };
