@@ -32,6 +32,17 @@ function CheckoutContent() {
   const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'yearly' | null>(null);
   const [subscriptionPrice, setSubscriptionPrice] = useState<number | null>(null);
 
+  // Update billing email and name when user changes
+  useEffect(() => {
+    if (user?.email) {
+      setBilling(prev => ({
+        ...prev,
+        email: prev.email || user.email, // Only update if email is empty
+        name: prev.name || user.email.split("@")[0], // Only update if name is empty
+      }));
+    }
+  }, [user]);
+
   // Handle subscription checkout (from Pricing page)
   useEffect(() => {
     const subscriptionType = searchParams?.get('subscription') as 'monthly' | 'yearly' | null;
@@ -287,6 +298,10 @@ function CheckoutContent() {
         }
 
         // Open Razorpay checkout
+        // Ensure email is always populated from user if billing email is empty
+        const checkoutEmail = billing.email || user?.email || '';
+        const checkoutName = billing.name || user?.email?.split("@")[0] || '';
+        
         // @ts-ignore
         const rzp = new window.Razorpay({
           key: json.key,
@@ -297,8 +312,8 @@ function CheckoutContent() {
           image: '/Logo.png',
           order_id: json.order.id,
           prefill: {
-            name: billing.name,
-            email: billing.email,
+            name: checkoutName,
+            email: checkoutEmail,
             contact: `+91${cleanMobile}`,
           },
           handler: async (resp: any) => {
