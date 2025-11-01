@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { formatPriceWithDecimal } from "../../lib/currency";
@@ -14,7 +14,8 @@ type BillingDetails = {
   company?: string;
 };
 
-export default function CheckoutPage() {
+// Component to handle search params (needs to be in Suspense)
+function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, cartItems, cartCount, resetCart, addToCart } = useAppContext();
@@ -374,6 +375,21 @@ export default function CheckoutPage() {
         </aside>
       </div>
     </main>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <main className="bg-black min-h-screen pt-24 pb-24 px-6 text-white">
+        <div className="max-w-6xl mx-auto text-center">
+          <p className="text-zinc-400">Loading checkout...</p>
+        </div>
+      </main>
+    }>
+      <CheckoutContent />
+    </Suspense>
   );
 }
 
