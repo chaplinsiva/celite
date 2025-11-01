@@ -325,7 +325,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
           50% { background-position: 100% 50%; }
         }
       `}} />
-      <main className="bg-black min-h-screen pt-0 sm:pt-16 px-1 sm:px-0">
+      <main className="bg-black min-h-screen pt-0 sm:pt-16 px-1 sm:px-0 -mt-0 sm:mt-0">
       <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-10 mb-14 mt-10 py-8 sm:py-12 px-3 sm:px-8 bg-zinc-900/80 rounded-3xl shadow-lg">
         {/* Product Gallery */}
         <div className="flex-1 flex flex-col items-center md:items-start w-full">
