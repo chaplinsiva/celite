@@ -16,32 +16,49 @@ function ResetPasswordContent() {
   const [isValidToken, setIsValidToken] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Check if we have the hash token from the email link
-    // Supabase sends password reset links with hash fragments like: #access_token=...&type=recovery
-    const hash = window.location.hash;
     const supabase = getSupabaseBrowserClient();
     
-    if (hash && hash.includes('type=recovery')) {
-      // Supabase will automatically handle the session from the hash
-      // We just need to verify the session exists
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          setIsValidToken(true);
-        } else {
-          setIsValidToken(false);
+    // Check if we have a hash fragment with recovery token
+    const hash = window.location.hash;
+    const hasRecoveryToken = hash && hash.includes('type=recovery');
+    
+    // Set up auth state listener to handle when Supabase processes the hash
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (session && hasRecoveryToken)) {
+        // Valid recovery session
+        setIsValidToken(true);
+        // Clear the hash from URL after processing
+        if (hasRecoveryToken) {
+          window.history.replaceState(null, '', window.location.pathname);
         }
-      });
-    } else {
-      // Check if we already have a session (user might have clicked the link)
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session && session.user) {
-          setIsValidToken(true);
-        } else {
-          setIsValidToken(false);
-        }
-      });
-    }
-  }, [searchParams]);
+      } else if (event === 'SIGNED_IN' && session) {
+        // User might already have a session
+        setIsValidToken(true);
+      } else if (event === 'SIGNED_OUT' && !hasRecoveryToken) {
+        // No session and no recovery token
+        setIsValidToken(false);
+      }
+    });
+
+    // Also check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (hasRecoveryToken) {
+        // If we have recovery token, wait for auth state change
+        // The session might not be created yet
+        return;
+      }
+      
+      if (session && session.user) {
+        setIsValidToken(true);
+      } else {
+        setIsValidToken(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
