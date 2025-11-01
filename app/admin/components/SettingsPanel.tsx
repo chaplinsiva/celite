@@ -7,6 +7,7 @@ export default function SettingsPanel() {
   const [geminiKey, setGeminiKey] = useState('');
   const [rzpKeyId, setRzpKeyId] = useState('');
   const [rzpSecret, setRzpSecret] = useState('');
+  const [rzpWebhookSecret, setRzpWebhookSecret] = useState('');
   const [rzpCurrency, setRzpCurrency] = useState('INR');
   const [rzpMonthly, setRzpMonthly] = useState('799'); // ₹799 in Rupees
   const [rzpYearly, setRzpYearly] = useState('5499'); // ₹5,499 in Rupees
@@ -24,6 +25,7 @@ export default function SettingsPanel() {
         setGeminiKey(json.settings.GEMINI_FLASH_API_KEY || '');
         setRzpKeyId(json.settings.RAZORPAY_KEY_ID || '');
         setRzpSecret(json.settings.RAZORPAY_KEY_SECRET || '');
+        setRzpWebhookSecret(json.settings.RAZORPAY_WEBHOOK_SECRET || '');
         setRzpCurrency(json.settings.RAZORPAY_CURRENCY || 'INR');
         
         // Convert from paise (database) to rupees (display)
@@ -65,6 +67,7 @@ export default function SettingsPanel() {
           GEMINI_FLASH_API_KEY: geminiKey,
           RAZORPAY_KEY_ID: rzpKeyId,
           RAZORPAY_KEY_SECRET: rzpSecret,
+          RAZORPAY_WEBHOOK_SECRET: rzpWebhookSecret,
           RAZORPAY_CURRENCY: rzpCurrency,
           RAZORPAY_MONTHLY_AMOUNT: monthlyPaise,
           RAZORPAY_YEARLY_AMOUNT: yearlyPaise,
@@ -116,6 +119,11 @@ export default function SettingsPanel() {
           <div>
             <label className="block text-xs text-zinc-400 mb-1">Key Secret</label>
             <input type="password" value={rzpSecret} onChange={(e)=>setRzpSecret(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">Webhook Secret</label>
+            <input type="password" value={rzpWebhookSecret} onChange={(e)=>setRzpWebhookSecret(e.target.value)} placeholder="Enter webhook secret" className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-sm" />
+            <p className="mt-1 text-[11px] text-zinc-500">Used for webhook signature verification</p>
           </div>
           <div>
             <label className="block text-xs text-zinc-400 mb-1">Currency</label>
