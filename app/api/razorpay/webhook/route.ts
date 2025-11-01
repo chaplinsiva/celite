@@ -65,7 +65,12 @@ export async function POST(req: Request) {
 
         // Also update subscriptions table for compatibility with existing code
         const subscriptionEntity = payload.subscription?.entity || payload.invoice?.entity;
-        const razorpaySubscriptionId = subscriptionEntity?.id || null;
+        // Get subscription ID from subscription entity or invoice entity's subscription_id field
+        const razorpaySubscriptionId = 
+          subscriptionEntity?.id || 
+          payload.invoice?.entity?.subscription_id || 
+          payload.subscription?.entity?.id || 
+          null;
         const plan = subscriptionEntity?.plan_id
           ? subscriptionEntity.plan_id.includes('yearly')
             ? 'yearly'

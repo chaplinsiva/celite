@@ -48,22 +48,36 @@ export async function POST(req: Request) {
       // Continue anyway - we'll still try to cancel in database
     }
 
+    console.log('Razorpay subscription ID:', razorpaySubscriptionId);
+
     // Cancel subscription in Razorpay if subscription ID exists
+    let razorpayCancelSuccess = false;
+    let razorpayCancelError: string | null = null;
+    
     if (razorpaySubscriptionId) {
       try {
+        console.log(`Attempting to cancel Razorpay subscription: ${razorpaySubscriptionId}`);
+        
         // Cancel the subscription in Razorpay
-        // This will stop future recurring payments
-        await razorpayRequest(`/subscriptions/${razorpaySubscriptionId}/cancel`, {
+        // According to Razorpay docs, cancel endpoint accepts empty body or cancel_at_cycle_end
+        const cancelResponse = await razorpayRequest(`/subscriptions/${razorpaySubscriptionId}/cancel`, {
           method: 'POST',
           body: {
             cancel_at_cycle_end: 0, // Cancel immediately (0 = now, 1 = at end of current cycle)
           },
         });
+        
+        console.log('Razorpay cancellation successful:', cancelResponse);
+        razorpayCancelSuccess = true;
       } catch (razorpayError: any) {
-        // If subscription already cancelled or doesn't exist, continue with DB update
-        console.error('Razorpay cancellation error:', razorpayError);
+        // Log the full error for debugging
+        const errorMessage = razorpayError?.message || JSON.stringify(razorpayError);
+        console.error('Razorpay cancellation error:', errorMessage);
+        razorpayCancelError = errorMessage;
         // Still update database even if Razorpay cancel fails
       }
+    } else {
+      console.log('No Razorpay subscription ID found, skipping Razorpay cancellation');
     }
 
     // Update subscription to inactive in database
@@ -74,11 +88,17 @@ export async function POST(req: Request) {
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     
+    // Return detailed response about what happened
     return NextResponse.json({ 
       ok: true, 
       message: razorpaySubscriptionId 
-        ? 'Subscription cancelled in Razorpay and database' 
-        : 'Subscription cancelled in database (no Razorpay subscription ID found)' 
+        ? (razorpayCancelSuccess 
+            ? 'Subscription cancelled in Razorpay and database' 
+            : `Subscription cancelled in database. Razorpay cancellation ${razorpayCancelError ? `failed: ${razorpayCancelError}` : 'skipped'}`)
+        : 'Subscription cancelled in database (no Razorpay subscription ID found)',
+      razorpay_cancelled: razorpayCancelSuccess,
+      razorpay_error: razorpayCancelError,
+      razorpay_subscription_id: razorpaySubscriptionId
     });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || 'Unknown error' }, { status: 500 });
