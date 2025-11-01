@@ -126,7 +126,26 @@ export async function POST(req: Request) {
       }
     }
     
-    return NextResponse.json({ ok: true, order_id: dbOrder.id });
+    return NextResponse.json({ 
+      ok: true, 
+      order_id: dbOrder.id,
+      total: totalAmount,
+      items: cartItems && Array.isArray(cartItems) && cartItems.length > 0
+        ? cartItems.map((item: any) => ({
+            item_id: item.slug,
+            item_name: item.name,
+            price: Number(item.price) || 0,
+            quantity: 1,
+          }))
+        : slug && name
+        ? [{
+            item_id: slug,
+            item_name: name,
+            price: totalAmount,
+            quantity: 1,
+          }]
+        : []
+    });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || 'Verify error' }, { status: 500 });
   }

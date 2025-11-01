@@ -7,6 +7,7 @@ import { useAppContext, TemplateCartItem } from '../../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { formatPrice } from '../../../lib/currency';
 import { useLoginModal } from '../../../context/LoginModalContext';
+import { trackViewItem, trackAddToCart } from '../../../lib/gtag';
 import type { Template } from '../../../data/templateData';
 interface Review {
   name: string;
@@ -34,6 +35,16 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   const [purchased, setPurchased] = useState<boolean>(false);
   const [purchaseStatus, setPurchaseStatus] = useState<string | null>(null);
   const [paying, setPaying] = useState<boolean>(false);
+
+  // Track view_item event when product page loads
+  useEffect(() => {
+    trackViewItem({
+      item_id: product.slug,
+      item_name: product.name,
+      price: product.price,
+      currency: 'INR',
+    });
+  }, [product.slug, product.name, product.price]);
 
   useEffect(() => {
     const loadSub = async () => {
@@ -257,6 +268,13 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
       img: product.img,
     };
     addToCart(cartItem);
+    // Track add_to_cart event
+    trackAddToCart({
+      item_id: product.slug,
+      item_name: product.name,
+      price: priceToUse,
+      currency: 'INR',
+    });
     setFeedback('Template added to your cart.');
     setTimeout(() => setFeedback(null), 2500);
   };

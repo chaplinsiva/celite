@@ -6,6 +6,7 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { formatPriceWithDecimal } from "../../lib/currency";
+import { trackBeginCheckout, trackPurchase, trackSubscribe } from "../../lib/gtag";
 
 type BillingDetails = {
   name: string;
@@ -102,6 +103,23 @@ function CheckoutContent() {
   const subtotal = subscriptionPlan && subscriptionPrice 
     ? subscriptionPrice 
     : cartItems.reduce((sum, item) => sum + item.price, 0);
+
+  // Track begin_checkout event when checkout page loads with items
+  useEffect(() => {
+    // Only track if not subscription and has cart items
+    if (!subscriptionPlan && cartItems.length > 0) {
+      trackBeginCheckout(
+        cartItems.map((item) => ({
+          item_id: item.slug,
+          item_name: item.name,
+          price: item.price,
+          quantity: 1,
+        })),
+        subtotal,
+        'INR'
+      );
+    }
+  }, [subscriptionPlan, cartItems.length]); // Track when cart items change or subscription plan is set
 
   if (!user) {
     return (
@@ -232,6 +250,15 @@ function CheckoutContent() {
               });
               
               if (activateRes.ok) {
+                // Track subscription event
+                trackSubscribe({
+                  method: 'razorpay',
+                  plan_id: subscriptionPlan,
+                  plan_name: subscriptionPlan === 'yearly' ? 'Yearly Pro Plan' : 'Monthly Pro Plan',
+                  value: subscriptionPrice || 0,
+                  currency: 'INR',
+                });
+                
                 // Redirect to dashboard
                 router.push("/dashboard?payment=success");
               } else {
@@ -326,6 +353,19 @@ function CheckoutContent() {
 
               const verifyJson = await verifyRes.json();
               if (verifyRes.ok && verifyJson.ok) {
+                // Track purchase event
+                trackPurchase({
+                  transaction_id: verifyJson.order_id || resp.razorpay_order_id,
+                  value: subtotal,
+                  currency: 'INR',
+                  items: cartItems.map((item) => ({
+                    item_id: item.slug,
+                    item_name: item.name,
+                    price: item.price,
+                    quantity: 1,
+                  })),
+                });
+                
                 // Clear cart
                 await resetCart();
                 // Redirect to dashboard
