@@ -304,7 +304,7 @@ export default function TemplateCarousel() {
           </button>
           <div
             ref={featuredListRef}
-            className="flex gap-6 sm:gap-8 overflow-x-auto md:overflow-x-visible snap-x md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-8 px-1 sm:px-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900"
+            className="flex gap-6 sm:gap-8 overflow-x-auto md:overflow-x-visible snap-x md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-8 px-1 sm:px-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
             style={{ scrollSnapType: 'x mandatory' }}
           >
             {featured.map((tpl) => (

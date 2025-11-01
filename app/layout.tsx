@@ -62,11 +62,11 @@ export default function RootLayout({
         />
         <AppProvider>
           <LoginModalProvider>
-            <div className="flex flex-col min-h-screen">
-              <Header />
-              <GoogleAnalytics />
+            <div className="isolate flex flex-col min-h-screen">
+            <Header />
+            <GoogleAnalytics />
               <main className="flex-1">
-                {children}
+            {children}
               </main>
               <Footer />
             </div>

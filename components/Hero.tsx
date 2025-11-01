@@ -1,14 +1,15 @@
 ﻿"use client";
 
 import Link from 'next/link';
+import { TextReveal } from '@/components/ui/text-reveal';
 
 export default function Hero() {
   return (
     <section className="relative w-full min-h-[60vh] flex items-center justify-center px-6 py-20 sm:py-32">
       <div className="max-w-5xl mx-auto text-center space-y-8">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white leading-tight">
+        <TextReveal variant="blur" className="text-4xl sm:text-5xl md:text-6xl font-bold text-white leading-tight">
           Built. Create. Inspire
-        </h1>
+        </TextReveal>
         <p className="text-lg sm:text-xl text-zinc-300 max-w-2xl mx-auto">
           Elevate your videos with premium templates for logo reveals, slideshows, and cinematic effects.
         </p>
