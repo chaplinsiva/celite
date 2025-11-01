@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useAppContext } from "../../context/AppContext";
 import { useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
@@ -24,10 +23,8 @@ type OrderItemRow = {
 
 export default function DashboardClient() {
   const { user, logout } = useAppContext();
-  const router = useRouter();
   const [orders, setOrders] = useState<Array<{ id: string; date: string; status: string; amount: string; item: string }>>([]);
   const [sub, setSub] = useState<{ is_active: boolean; plan: string | null; valid_until: string | null } | null>(null);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [purchases, setPurchases] = useState<Array<{ slug: string; name: string; price: number; img: string }>>([]);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -47,21 +44,6 @@ export default function DashboardClient() {
           first_name: currentUser.user_metadata.first_name || null,
           last_name: currentUser.user_metadata.last_name || null,
         });
-      }
-      
-      // Check subscription_status from users table (if exists)
-      try {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('subscription_status')
-          .eq('id', (user as any).id)
-          .maybeSingle();
-        if (userData?.subscription_status) {
-          setSubscriptionStatus(userData.subscription_status);
-        }
-      } catch (e) {
-        // users table might not exist or might not have subscription_status column
-        // Fallback to subscriptions table
       }
       
       // Load subscription
@@ -256,28 +238,6 @@ export default function DashboardClient() {
 
   const isActive = !!sub?.is_active;
   const subscriptionTier = isActive ? (sub?.plan || 'Pro') : 'Free';
-  // Check subscription_status from users table - show subscription ended UI if inactive
-  const shouldShowSubscriptionEnded = subscriptionStatus === 'inactive' && !isActive;
-
-  // Show subscription ended UI
-  if (shouldShowSubscriptionEnded && user) {
-    return (
-      <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
-        <div className="max-w-3xl mx-auto text-center rounded-3xl border border-red-500/30 bg-red-500/10 p-12">
-          <h2 className="text-3xl font-semibold text-red-400 mb-4">Subscription Ended</h2>
-          <p className="mt-4 text-zinc-300 mb-8">
-            Your subscription has ended. Please renew to continue using Celite.
-          </p>
-          <button
-            onClick={() => router.push('/pricing')}
-            className="inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
-          >
-            Renew Now
-          </button>
-        </div>
-      </main>
-    );
-  }
 
   if (!user) {
     return (
