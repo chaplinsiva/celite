@@ -149,6 +149,7 @@ export default function Pricing() {
       const rzp = new window.Razorpay({
         key: sub?.razorpay_key || '',
         subscription_id: sub.id,
+        image: '/Logo.png',
         handler: async (resp: any) => {
           try {
             // After payment, activate subscription in our DB
