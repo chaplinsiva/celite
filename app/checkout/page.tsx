@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { formatPriceWithDecimal } from "../../lib/currency";
@@ -26,14 +26,21 @@ export default function CheckoutPage() {
   });
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const addedProductRef = useRef<string | null>(null); // Track if we've already added a product
   
   // Handle direct product checkout (from Buy Now)
   useEffect(() => {
     const productSlug = searchParams?.get('product');
     if (productSlug && cartCount === 0) {
+      // Don't add if we've already processed this product
+      if (addedProductRef.current === productSlug) return;
+      
       // Check if item is already in cart to avoid duplicate adds
       const alreadyInCart = cartItems.some(item => item.slug === productSlug);
-      if (alreadyInCart) return;
+      if (alreadyInCart) {
+        addedProductRef.current = productSlug;
+        return;
+      }
       
       // Fetch product and add to cart
       const fetchProduct = async () => {
@@ -46,7 +53,8 @@ export default function CheckoutPage() {
         if (data) {
           // Double-check cartItems haven't changed during async operation
           const stillNotInCart = !cartItems.some(item => item.slug === data.slug);
-          if (stillNotInCart) {
+          if (stillNotInCart && addedProductRef.current !== productSlug) {
+            addedProductRef.current = productSlug;
             addToCart({
               slug: data.slug,
               name: data.name,
