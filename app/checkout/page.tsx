@@ -494,11 +494,16 @@ function CheckoutContent() {
             <span>{subscriptionPrice ? `₹${subscriptionPrice.toLocaleString('en-IN')}` : `₹${subtotal.toLocaleString('en-IN')}`}</span>
           </div>
           <p className="text-xs text-zinc-500">
-            Payments are processed securely. Template downloads will be available immediately after checkout.
+            {subscriptionPlan 
+              ? 'Payments are processed securely. Your subscription will be activated immediately after payment.'
+              : 'Payments are processed securely. Template downloads will be available immediately after checkout.'
+            }
           </p>
-          <Link href="/cart" className="text-xs text-blue-300 hover:underline">
-            Return to cart
-          </Link>
+          {!subscriptionPlan && (
+            <Link href="/cart" className="text-xs text-blue-300 hover:underline">
+              Return to cart
+            </Link>
+          )}
         </aside>
       </div>
     </main>
