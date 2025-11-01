@@ -6,10 +6,11 @@ import { cn } from '@/lib/utils';
 
 interface TextRevealProps {
   children: React.ReactNode;
-  variant?: 'blur' | 'slide' | 'fade';
+  variant?: 'blur' | 'fade';
   className?: string;
   delay?: number;
   duration?: number;
+  style?: React.CSSProperties;
 }
 
 export function TextReveal({
@@ -18,6 +19,7 @@ export function TextReveal({
   className,
   delay = 0,
   duration = 0.5,
+  style,
 }: TextRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
@@ -34,10 +36,6 @@ export function TextReveal({
       initial: { opacity: 0, filter: 'blur(10px)' },
       animate: { opacity: 1, filter: 'blur(0px)' },
     },
-    slide: {
-      initial: { opacity: 0, y: 20 },
-      animate: { opacity: 1, y: 0 },
-    },
     fade: {
       initial: { opacity: 0 },
       animate: { opacity: 1 },
@@ -48,7 +46,7 @@ export function TextReveal({
 
   return (
     <div ref={ref} className={cn('inline-block', className)}>
-      <motion.div
+      <motion.span
         initial={currentVariant.initial}
         animate={hasAnimated ? currentVariant.animate : currentVariant.initial}
         transition={{
@@ -56,9 +54,17 @@ export function TextReveal({
           delay,
           ease: [0.25, 0.1, 0.25, 1],
         }}
+        style={{ 
+          display: 'inline-block',
+          fontStyle: 'normal',
+          fontSynthesis: 'none',
+          transform: 'none',
+          fontVariationSettings: 'normal',
+          ...style,
+        }}
       >
         {children}
-      </motion.div>
+      </motion.span>
     </div>
   );
 }

@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import GoogleAnalytics from "../components/GoogleAnalytics";
 import { AppProvider } from "../context/AppContext";
 import { LoginModalProvider } from "../context/LoginModalContext";
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   title: "Celite - Professional After Effects Templates",
@@ -28,7 +37,7 @@ export default function RootLayout({
   
   return (
     <html lang="en">
-      <body className="antialiased">
+      <body className={`${inter.variable} antialiased`} style={{ fontStyle: 'normal', fontSynthesis: 'none' }}>
         <Script
           strategy="afterInteractive"
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}

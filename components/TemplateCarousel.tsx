@@ -162,7 +162,7 @@ export default function TemplateCarousel() {
     const hasActiveLimitedOffer = !!tpl.hasActiveLimitedOffer;
     return (
     <div
-      className="group min-w-[85vw] sm:min-w-[350px] md:min-w-0 bg-gradient-to-br from-zinc-900/90 via-zinc-800/90 to-zinc-900/90 rounded-2xl shadow-xl border border-white/10 hover:border-white/30 p-4 sm:p-5 flex flex-col items-center snap-center transition-all duration-300 relative overflow-hidden hover:scale-[1.02] hover:shadow-2xl backdrop-blur-sm"
+      className="group min-w-[85vw] sm:min-w-[350px] md:min-w-0 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 rounded-2xl shadow-xl border border-white/5 hover:border-white/20 p-4 sm:p-5 flex flex-col items-center snap-center transition-all duration-300 relative overflow-hidden hover:scale-[1.02] hover:shadow-2xl backdrop-blur-sm"
       onMouseEnter={() => handleMouseEnter(tpl.slug)}
       onMouseLeave={() => handleMouseLeave(tpl.slug)}
     >
@@ -221,7 +221,7 @@ export default function TemplateCarousel() {
           </button>
         )}
       </div>
-      <h3 className="text-lg sm:text-xl font-bold text-white mb-2 text-center group-hover:text-blue-400 transition-colors">{tpl.name}</h3>
+      <h3 className="text-lg sm:text-xl font-normal text-white mb-2 text-center group-hover:text-blue-400 transition-colors tracking-tight leading-snug">{tpl.name}</h3>
       {hasActiveLimitedOffer && (
         <div className="mb-3 px-3 py-1 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-lg text-xs text-yellow-300 font-semibold text-center">
           {isSubscribed ? (
@@ -235,13 +235,13 @@ export default function TemplateCarousel() {
         <div className="flex gap-2 w-full mt-auto">
           <Link 
             href={`/product/${tpl.slug}`} 
-            className="flex-1 px-4 py-2.5 text-sm rounded-lg bg-gradient-to-r from-white to-zinc-100 text-black font-semibold hover:from-zinc-100 hover:to-zinc-200 transition-all duration-200 text-center shadow-md hover:shadow-lg"
+            className="flex-1 px-4 py-2.5 text-sm rounded-lg bg-gradient-to-r from-white to-zinc-100 text-black font-medium hover:from-zinc-100 hover:to-zinc-200 transition-all duration-200 text-center shadow-md hover:shadow-lg tracking-tight"
           >
             View
           </Link>
           <button
             onClick={() => handleDownload(tpl.slug)}
-            className="flex-1 px-4 py-2.5 text-sm rounded-lg bg-gradient-to-r from-zinc-800 to-zinc-900 text-white font-semibold border border-white/20 hover:from-zinc-700 hover:to-zinc-800 transition-all duration-200 text-center shadow-md hover:shadow-lg"
+            className="flex-1 px-4 py-2.5 text-sm rounded-lg bg-gradient-to-r from-zinc-800 to-zinc-900 text-white font-medium border border-white/20 hover:from-zinc-700 hover:to-zinc-800 transition-all duration-200 text-center shadow-md hover:shadow-lg tracking-tight"
           >
             Download
           </button>
@@ -249,7 +249,7 @@ export default function TemplateCarousel() {
       ) : (
         <Link 
           href={`/product/${tpl.slug}`} 
-          className="w-full sm:w-auto px-6 py-2.5 text-sm rounded-full bg-gradient-to-r from-white to-zinc-100 text-black font-semibold shadow-lg hover:from-zinc-100 hover:to-zinc-200 hover:shadow-xl transition-all duration-200 text-center mt-auto"
+          className="w-full sm:w-auto px-6 py-2.5 text-sm rounded-full bg-gradient-to-r from-white to-zinc-100 text-black font-medium shadow-lg hover:from-zinc-100 hover:to-zinc-200 hover:shadow-xl transition-all duration-200 text-center mt-auto tracking-tight"
         >
           View Template
         </Link>
@@ -274,10 +274,10 @@ export default function TemplateCarousel() {
           <div className="inline-block mb-4">
             <span className="text-sm font-semibold text-blue-400 uppercase tracking-wider">Featured</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold text-white mb-4 tracking-tight leading-tight">
             Premium After Effects Templates
           </h2>
-          <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
+          <p className="text-lg text-zinc-400 max-w-2xl mx-auto font-light tracking-wide">
             Discover our handpicked collection of professional templates designed to elevate your creative projects
           </p>
         </div>

@@ -241,7 +241,7 @@ export default function ShowcasesSection() {
         <div className="text-center mt-12">
           <Link
             href="/templates"
-            className="inline-flex items-center px-8 py-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+            className="inline-flex items-center px-8 py-3 rounded-full bg-white text-black font-semibold hover:bg-zinc-200 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
           >
             View All Showcases
             <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -7,8 +7,13 @@ export default function Hero() {
   return (
     <section className="relative w-full min-h-[60vh] flex items-center justify-center px-6 py-20 sm:py-32">
       <div className="max-w-5xl mx-auto text-center space-y-8">
-        <TextReveal variant="blur" className="text-4xl sm:text-5xl md:text-6xl font-bold text-white leading-tight">
-          Built. Create. Inspire
+        <TextReveal 
+          variant="blur" 
+          className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight not-italic"
+          style={{ fontStyle: 'normal', fontSynthesis: 'none' }}
+        >
+          <span className="text-white">Built. Create. </span>
+          <span className="text-zinc-400">Inspire</span>
         </TextReveal>
         <p className="text-lg sm:text-xl text-zinc-300 max-w-2xl mx-auto">
           Elevate your videos with premium templates for logo reveals, slideshows, and cinematic effects.
