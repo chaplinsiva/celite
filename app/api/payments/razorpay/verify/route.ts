@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseAdminClient } from '../../../../../lib/supabaseAdmin';
 import { getRazorpayCreds, razorpayRequest } from '../../../../../lib/razorpay';
+import { sendEmail, generatePurchaseEmail } from '../../../../../lib/email';
 
 export async function POST(req: Request) {
   try {
@@ -124,6 +125,39 @@ export async function POST(req: Request) {
           img: img || '' 
         });
       }
+    }
+    
+    // Send purchase confirmation email
+    try {
+      // Get product names from cartItems or order items
+      let productNames: string[] = [];
+      if (cartItems && Array.isArray(cartItems) && cartItems.length > 0) {
+        productNames = cartItems.map((item: any) => item.name || 'Template');
+      } else {
+        // Fallback: get from order_items
+        const { data: orderItemsData } = await admin
+          .from('order_items')
+          .select('name')
+          .eq('order_id', dbOrder.id);
+        if (orderItemsData) {
+          productNames = orderItemsData.map((item: any) => item.name || 'Template');
+        }
+      }
+      
+      // Get user details for email
+      const userName = billingName || billingEmail?.split('@')[0] || 'User';
+      
+      if (productNames.length > 0 && billingEmail) {
+        const emailHtml = generatePurchaseEmail(productNames, billingEmail, userName);
+        await sendEmail({
+          to: billingEmail,
+          subject: `Purchase Successful - ${productNames.length} Template${productNames.length > 1 ? 's' : ''} from Celite`,
+          html: emailHtml,
+        });
+      }
+    } catch (emailError: any) {
+      // Don't fail payment if email fails
+      console.error('Failed to send purchase confirmation email:', emailError);
     }
     
     return NextResponse.json({ ok: true, order_id: dbOrder.id });
