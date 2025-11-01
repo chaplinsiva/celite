@@ -54,59 +54,32 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         const active = !!data.is_active && (!data.valid_until || new Date(data.valid_until).getTime() > Date.now());
         setIsSubActive(active);
 
-        // Check purchase status from purchases table
-        try {
-          const { data: purchaseData } = await supabase
-            .from('purchases')
-            .select('status')
-            .eq('user_id', (user as any).id)
-            .eq('product_id', product.slug)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          if (purchaseData) {
-            setPurchaseStatus(purchaseData.status);
-            setPurchased(purchaseData.status === 'paid');
+        // Check purchase status - use orders table (purchases table may not exist)
+        const { data: orders } = await supabase
+          .from('orders')
+          .select('id, status')
+          .eq('user_id', (user as any).id);
+        const orderIds = (orders ?? []).map((o: any) => o.id);
+        if (orderIds.length > 0) {
+          const { data: items } = await supabase
+            .from('order_items')
+            .select('order_id')
+            .in('order_id', orderIds)
+            .eq('slug', product.slug)
+            .limit(1);
+          const hasPurchase = (items ?? []).length > 0;
+          setPurchased(hasPurchase);
+          
+          // If purchase exists, check if status is failed
+          if (hasPurchase && orders && orders.length > 0) {
+            const failedOrder = orders.find((o: any) => o.status === 'failed');
+            setPurchaseStatus(failedOrder ? 'failed' : 'paid');
           } else {
             setPurchaseStatus(null);
-            // Fallback to checking orders table
-            const { data: orders } = await supabase
-              .from('orders')
-              .select('id, status')
-              .eq('user_id', (user as any).id);
-            const orderIds = (orders ?? []).map((o: any) => o.id);
-            if (orderIds.length > 0) {
-              const { data: items } = await supabase
-                .from('order_items')
-                .select('order_id')
-                .in('order_id', orderIds)
-                .eq('slug', product.slug)
-                .limit(1);
-              setPurchased((items ?? []).length > 0);
-              setPurchaseStatus(null);
-            } else {
-              setPurchased(false);
-              setPurchaseStatus(null);
-            }
           }
-        } catch (e) {
-          // purchases table might not exist, fallback to orders
-          const { data: orders } = await supabase
-            .from('orders')
-            .select('id')
-            .eq('user_id', (user as any).id);
-          const orderIds = (orders ?? []).map((o: any) => o.id);
-          if (orderIds.length > 0) {
-            const { data: items } = await supabase
-              .from('order_items')
-              .select('order_id')
-              .in('order_id', orderIds)
-              .eq('slug', product.slug)
-              .limit(1);
-            setPurchased((items ?? []).length > 0);
-          } else {
-            setPurchased(false);
-          }
+        } else {
+          setPurchased(false);
+          setPurchaseStatus(null);
         }
       } catch {
         setIsSubActive(false);
@@ -368,30 +341,14 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
     if (vid) vid.muted = nextMuted;
   };
 
-  const retryPayment = async (purchaseId: string) => {
+  const retryPayment = () => {
     // Navigate to checkout or retry payment
     router.push(`/checkout?product=${product.slug}`);
   };
 
-  // Show payment failed UI if purchase status is failed
-  if (purchaseStatus === 'failed' && user) {
-    return (
-      <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
-        <div className="max-w-3xl mx-auto text-center rounded-3xl border border-red-500/30 bg-red-500/10 p-12">
-          <h2 className="text-3xl font-semibold text-red-400 mb-4">Payment Failed</h2>
-          <p className="mt-4 text-zinc-300 mb-8">
-            Your payment didn't go through. Please try again.
-          </p>
-          <button
-            onClick={() => retryPayment(product.slug)}
-            className="inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
-          >
-            Try Again
-          </button>
-        </div>
-      </main>
-    );
-  }
+  // Show payment failed UI if purchase status is failed (only if we have a purchase but status is failed)
+  // Note: We only show this if there's actually a purchase attempt that failed
+  // If purchaseStatus is null, we don't show the failed UI
 
   return (
     <>
