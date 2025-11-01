@@ -36,30 +36,12 @@ export default function TemplatesSection() {
         setIsSubscribed(!!sub?.is_active);
       }
 
-      // Load recent templates (mix of featured and non-featured for variety)
-      // Try to get non-featured first, then fill with featured if needed
-      const { data: nonFeatured } = await supabase
+      // Load latest templates (all templates, ordered by created_at)
+      const { data } = await supabase
         .from('templates')
         .select('slug,name,subtitle,price,img,video')
-        .eq('is_featured', false)
         .order('created_at', { ascending: false })
         .limit(6);
-      
-      let data = nonFeatured;
-      
-      // If we don't have enough non-featured, get some featured ones
-      if (!data || data.length < 6) {
-        const { data: featured } = await supabase
-          .from('templates')
-          .select('slug,name,subtitle,price,img,video')
-          .eq('is_featured', true)
-          .order('created_at', { ascending: false })
-          .limit(6 - (data?.length || 0));
-        
-        if (featured) {
-          data = [...(data || []), ...featured].slice(0, 6);
-        }
-      }
       
       if (data) {
         const mapped: Template[] = data.map((r: any) => ({
