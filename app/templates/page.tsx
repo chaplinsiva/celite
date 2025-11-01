@@ -6,6 +6,10 @@ export const metadata = {
   description: 'Browse and search through our complete collection of After Effects templates',
 };
 
+// Force dynamic rendering so new templates appear immediately
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function TemplatesPage() {
   const supabase = getSupabaseServerClient();
   

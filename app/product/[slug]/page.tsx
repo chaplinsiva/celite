@@ -67,10 +67,14 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
   };
 }
 
+// Force dynamic rendering so new templates appear immediately
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+// Optional: Pre-generate some common pages for SEO (but allow dynamic generation for new ones)
 export async function generateStaticParams() {
-  const supabase = getSupabaseServerClient();
-  const { data } = await supabase.from('templates').select('slug');
-  return (data ?? []).map((item) => ({ slug: item.slug }));
+  // Return empty array to disable pre-generation, allowing all pages to be generated dynamically
+  return [];
 }
 
 export default async function ProductPage(props: { params: Promise<{ slug: string }> }) {

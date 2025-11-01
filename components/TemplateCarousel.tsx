@@ -47,7 +47,7 @@ export default function TemplateCarousel() {
       }
 
       // Load featured templates with limited offer info and category/subcategory
-      const { data } = await supabase
+      const { data, error: templateError } = await supabase
         .from('templates')
         .select(`
           slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured,
@@ -58,6 +58,13 @@ export default function TemplateCarousel() {
         `)
         .eq('is_featured', true)
         .limit(8);
+      
+      // Log for debugging: show how many templates were found
+      if (templateError) {
+        console.error('Error loading featured templates:', templateError);
+      } else {
+        console.log(`[TemplateCarousel] Loaded ${data?.length || 0} featured templates`);
+      }
       
       const now = new Date();
       const mapped: FeaturedTemplate[] = (data ?? []).map((r: any) => {
