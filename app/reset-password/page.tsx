@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Suspense, useState, useEffect, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
+import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 
 function ResetPasswordContent() {
   const router = useRouter();
