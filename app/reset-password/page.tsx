@@ -17,17 +17,29 @@ function ResetPasswordContent() {
 
   useEffect(() => {
     // Check if we have the hash token from the email link
+    // Supabase sends password reset links with hash fragments like: #access_token=...&type=recovery
     const hash = window.location.hash;
-    if (hash && hash.includes('access_token')) {
-      setIsValidToken(true);
+    const supabase = getSupabaseBrowserClient();
+    
+    if (hash && hash.includes('type=recovery')) {
+      // Supabase will automatically handle the session from the hash
+      // We just need to verify the session exists
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          setIsValidToken(true);
+        } else {
+          setIsValidToken(false);
+        }
+      });
     } else {
-      // Check URL params for token
-      const token = searchParams.get('token');
-      if (token) {
-        setIsValidToken(true);
-      } else {
-        setIsValidToken(false);
-      }
+      // Check if we already have a session (user might have clicked the link)
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session && session.user) {
+          setIsValidToken(true);
+        } else {
+          setIsValidToken(false);
+        }
+      });
     }
   }, [searchParams]);
 
