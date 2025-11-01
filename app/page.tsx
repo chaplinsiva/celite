@@ -1,7 +1,6 @@
 import Hero from '../components/Hero';
 import TemplateCarousel from '../components/TemplateCarousel';
 import ShowcasesSection from '../components/ShowcasesSection';
-import TemplatesSection from '../components/TemplatesSection';
 
 export default function Home() {
   return (
@@ -9,7 +8,6 @@ export default function Home() {
       <Hero />
       <TemplateCarousel />
       <ShowcasesSection />
-      <TemplatesSection />
     </main>
   );
 }

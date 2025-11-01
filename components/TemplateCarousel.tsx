@@ -162,20 +162,23 @@ export default function TemplateCarousel() {
     const hasActiveLimitedOffer = !!tpl.hasActiveLimitedOffer;
     return (
     <div
-      className="min-w-[85vw] sm:min-w-[350px] md:min-w-0 bg-zinc-900 rounded-2xl shadow-lg p-3 sm:p-4 flex flex-col items-center snap-center transition-all duration-200 relative"
+      className="group min-w-[85vw] sm:min-w-[350px] md:min-w-0 bg-gradient-to-br from-zinc-900/90 via-zinc-800/90 to-zinc-900/90 rounded-2xl shadow-xl border border-white/10 hover:border-white/30 p-4 sm:p-5 flex flex-col items-center snap-center transition-all duration-300 relative overflow-hidden hover:scale-[1.02] hover:shadow-2xl backdrop-blur-sm"
       onMouseEnter={() => handleMouseEnter(tpl.slug)}
       onMouseLeave={() => handleMouseLeave(tpl.slug)}
     >
+      {/* Decorative Gradient Corner */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       {hasActiveLimitedOffer && (
-        <div className="absolute top-3 left-3 z-20 bg-white text-black px-2 py-1 rounded-lg text-xs font-semibold border border-black/20">
+        <div className="absolute top-3 left-3 z-20 bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-3 py-1.5 rounded-lg text-xs font-bold border-2 border-black/30 shadow-lg animate-pulse">
           LIMITED
         </div>
       )}
-      <div className="relative w-full h-40 sm:h-48 md:h-40 rounded-xl mb-3 sm:mb-4 overflow-hidden">
+      <div className="relative w-full h-48 sm:h-56 md:h-52 rounded-xl mb-4 sm:mb-5 overflow-hidden bg-zinc-950 border border-white/5 group-hover:border-white/20 transition-colors">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-10"></div>
         <img
           src={tpl.img}
           alt={tpl.name}
-          className="absolute inset-0 w-full h-full object-cover rounded-xl transition-opacity duration-200"
+          className="absolute inset-0 w-full h-full object-cover rounded-xl transition-all duration-300 group-hover:scale-110"
           style={{ opacity: hovered === tpl.slug && tpl.video ? 0 : 1 }}
         />
         {tpl.video && (
@@ -186,7 +189,7 @@ export default function TemplateCarousel() {
             playsInline
             muted={(mutedMap[tpl.slug] ?? true)}
             preload="metadata"
-            className={`absolute inset-0 w-full h-full object-cover rounded-xl transition-opacity duration-200 ${hovered === tpl.slug ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute inset-0 w-full h-full object-cover rounded-xl transition-all duration-300 group-hover:scale-110 ${hovered === tpl.slug ? 'opacity-100' : 'opacity-0'}`}
           >
             Sorry, your browser does not support embedded videos.
           </video>
@@ -195,7 +198,7 @@ export default function TemplateCarousel() {
           <button
             aria-label={(mutedMap[tpl.slug] ?? true) ? 'Unmute audio' : 'Mute audio'}
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleMute(tpl.slug); }}
-            className="absolute bottom-2 right-2 bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center"
+            className="absolute bottom-3 right-3 z-20 bg-black/80 backdrop-blur-sm text-white rounded-full w-10 h-10 flex items-center justify-center border border-white/20 hover:bg-black/90 hover:scale-110 transition-all duration-200 shadow-lg"
             title={(mutedMap[tpl.slug] ?? true) ? 'Unmute' : 'Mute'}
           >
             {(mutedMap[tpl.slug] ?? true) ? (
@@ -215,50 +218,90 @@ export default function TemplateCarousel() {
           </button>
         )}
       </div>
-      <h3 className="text-base sm:text-lg font-semibold text-white mb-1 text-center">{tpl.name}</h3>
+      <h3 className="text-lg sm:text-xl font-bold text-white mb-2 text-center group-hover:text-blue-400 transition-colors">{tpl.name}</h3>
       {hasActiveLimitedOffer && (
-        <div className="mb-2 text-xs text-white font-medium text-center">
+        <div className="mb-3 px-3 py-1 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-lg text-xs text-yellow-300 font-semibold text-center">
           {isSubscribed ? (
-            'Only for Subscribed Users'
+            'Free for Subscribers'
           ) : (
             tpl.daysRemaining !== undefined && `${tpl.daysRemaining} ${tpl.daysRemaining === 1 ? 'day' : 'days'} remaining`
           )}
         </div>
       )}
       {isSubscribed ? (
-        <div className="flex gap-2 w-full">
-          <Link href={`/product/${tpl.slug}`} className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-white text-black font-medium hover:bg-zinc-200 transition text-center">View</Link>
+        <div className="flex gap-2 w-full mt-auto">
+          <Link 
+            href={`/product/${tpl.slug}`} 
+            className="flex-1 px-4 py-2.5 text-sm rounded-lg bg-gradient-to-r from-white to-zinc-100 text-black font-semibold hover:from-zinc-100 hover:to-zinc-200 transition-all duration-200 text-center shadow-md hover:shadow-lg"
+          >
+            View
+          </Link>
           <button
             onClick={() => handleDownload(tpl.slug)}
-            className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-black text-white font-medium border border-white/20 hover:bg-zinc-800 transition text-center"
+            className="flex-1 px-4 py-2.5 text-sm rounded-lg bg-gradient-to-r from-zinc-800 to-zinc-900 text-white font-semibold border border-white/20 hover:from-zinc-700 hover:to-zinc-800 transition-all duration-200 text-center shadow-md hover:shadow-lg"
           >
             Download
           </button>
         </div>
       ) : (
-        <Link href={`/product/${tpl.slug}`} className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm rounded-full bg-white text-black font-medium shadow hover:bg-zinc-200 transition text-center">View Template</Link>
+        <Link 
+          href={`/product/${tpl.slug}`} 
+          className="w-full sm:w-auto px-6 py-2.5 text-sm rounded-full bg-gradient-to-r from-white to-zinc-100 text-black font-semibold shadow-lg hover:from-zinc-100 hover:to-zinc-200 hover:shadow-xl transition-all duration-200 text-center mt-auto"
+        >
+          View Template
+        </Link>
       )}
+      {/* Hover Glow Effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-purple-500/5 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
     </div>
     );
   };
 
   return (
-    <>
-      <section className="w-full max-w-7xl mx-auto px-1 sm:px-4 md:px-8 py-10 sm:py-14">
-        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6 sm:mb-8 text-center">Featured After Effects Templates</h2>
+    <section className="relative w-full py-16 sm:py-20 overflow-hidden">
+      {/* Decorative Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-500/10 via-pink-500/10 to-blue-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+        {/* Section Header */}
+        <div className="text-center mb-12">
+          <div className="inline-block mb-4">
+            <span className="text-sm font-semibold text-blue-400 uppercase tracking-wider">Featured</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4">
+            Premium After Effects Templates
+          </h2>
+          <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
+            Discover our handpicked collection of professional templates designed to elevate your creative projects
+          </p>
+        </div>
+
         <div className="relative">
-          {/* Overlay controls with spacing, not covering cards */}
-          <button aria-label="Scroll left" onClick={() => scrollFeatured(-360)}
-            className="hidden md:flex absolute -left-6 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-zinc-800/80 text-white hover:bg-zinc-700/90 shadow-lg items-center justify-center focus:outline-none">
-            <svg width="20" height="20" viewBox="0 0 20 20"><path d="M12.7 5.3a1 1 0 0 0-1.4 0l-4 4a1 1 0 0 0 0 1.4l4 4a1 1 0 1 0 1.4-1.4L9.42 10l3.3-3.3a1 1 0 0 0 0-1.4z" fill="currentColor"/></svg>
+          {/* Navigation Controls */}
+          <button 
+            aria-label="Scroll left" 
+            onClick={() => scrollFeatured(-360)}
+            className="hidden md:flex absolute -left-12 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 text-white hover:from-zinc-700 hover:to-zinc-800 shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 items-center justify-center focus:outline-none group backdrop-blur-sm"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" className="group-hover:-translate-x-0.5 transition-transform">
+              <path d="M12.7 5.3a1 1 0 0 0-1.4 0l-4 4a1 1 0 0 0 0 1.4l4 4a1 1 0 1 0 1.4-1.4L9.42 10l3.3-3.3a1 1 0 0 0 0-1.4z" fill="currentColor"/>
+            </svg>
           </button>
-          <button aria-label="Scroll right" onClick={() => scrollFeatured(360)}
-            className="hidden md:flex absolute -right-6 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-zinc-800/80 text-white hover:bg-zinc-700/90 shadow-lg items-center justify-center focus:outline-none">
-            <svg width="20" height="20" viewBox="0 0 20 20"><path d="M7.3 14.7a1 1 0 0 1 0-1.4l3.3-3.3-3.3-3.3a1 1 0 1 1 1.4-1.4l4 4a1 1 0 0 1 0 1.4l-4 4a1 1 0 0 1-1.4 0z" fill="currentColor"/></svg>
+          <button 
+            aria-label="Scroll right" 
+            onClick={() => scrollFeatured(360)}
+            className="hidden md:flex absolute -right-12 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 text-white hover:from-zinc-700 hover:to-zinc-800 shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 items-center justify-center focus:outline-none group backdrop-blur-sm"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" className="group-hover:translate-x-0.5 transition-transform">
+              <path d="M7.3 14.7a1 1 0 0 1 0-1.4l3.3-3.3-3.3-3.3a1 1 0 1 1 1.4-1.4l4 4a1 1 0 0 1 0 1.4l-4 4a1 1 0 0 1-1.4 0z" fill="currentColor"/>
+            </svg>
           </button>
           <div
             ref={featuredListRef}
-            className="flex gap-5 sm:gap-7 overflow-x-auto md:overflow-x-visible snap-x md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-7 px-1 sm:px-2 scrollbar-thin scrollbar-thumb-zinc-800"
+            className="flex gap-6 sm:gap-8 overflow-x-auto md:overflow-x-visible snap-x md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-8 px-1 sm:px-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900"
             style={{ scrollSnapType: 'x mandatory' }}
           >
             {featured.map((tpl) => (
@@ -268,7 +311,7 @@ export default function TemplateCarousel() {
             ))}
           </div>
         </div>
-      </section>
-    </>
+      </div>
+    </section>
   );
 }
