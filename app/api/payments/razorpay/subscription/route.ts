@@ -46,12 +46,12 @@ export async function POST(req: Request) {
             if (!userEmail) userEmail = me.user.email || null;
             const metadata = me.user.user_metadata as any;
             if (!userName) {
-              if (metadata?.first_name && metadata?.last_name) {
-                userName = `${metadata.first_name} ${metadata.last_name}`.trim();
-              } else if (metadata?.first_name) {
-                userName = metadata.first_name;
-              } else if (userEmail) {
-                userName = userEmail.split('@')[0];
+            if (metadata?.first_name && metadata?.last_name) {
+              userName = `${metadata.first_name} ${metadata.last_name}`.trim();
+            } else if (metadata?.first_name) {
+              userName = metadata.first_name;
+            } else if (userEmail) {
+              userName = userEmail.split('@')[0];
               }
             }
           }

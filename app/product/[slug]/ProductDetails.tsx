@@ -17,10 +17,7 @@ interface Review {
 }
 
 interface ProductDetailsProps {
-  product: Template & {
-    category?: { id: string; name: string; slug: string } | null;
-    subcategory?: { id: string; name: string; slug: string } | null;
-  };
+  product: Template;
   related: Template[];
   reviews: Review[];
 }
@@ -358,21 +355,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         {/* Product Info */}
         <div className="flex-[1.5] flex flex-col justify-center">
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{product.name}</h1>
-          <h2 className="text-lg text-zinc-300 mb-3 font-medium">{product.subtitle}</h2>
-          {(product.category || product.subcategory) && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              {product.category && (
-                <span className="px-3 py-1 text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full">
-                  {product.category.name}
-                </span>
-              )}
-              {product.subcategory && (
-                <span className="px-3 py-1 text-xs font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full">
-                  {product.subcategory.name}
-                </span>
-              )}
-            </div>
-          )}
+          <h2 className="text-lg text-zinc-300 mb-4 font-medium">{product.subtitle}</h2>
           <div className="text-zinc-200 leading-relaxed mb-5">{product.desc}</div>
           <ul className="list-disc pl-6 text-zinc-400 mb-4 text-sm">
             {product.features.map((f, idx) => <li key={idx}>{f}</li>)}

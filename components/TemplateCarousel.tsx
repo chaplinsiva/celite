@@ -354,8 +354,8 @@ export default function TemplateCarousel() {
               </Fragment>
             ))}
           </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
   );
 }
