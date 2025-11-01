@@ -53,7 +53,7 @@ export default function Header() {
           </ul>
         </div>
         {/* Right: Auth + Cart + Mobile Menu */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           {/* Desktop: Cart + Auth */}
           <div className="hidden md:flex items-center space-x-3">
             <Link
@@ -100,6 +100,50 @@ export default function Header() {
               </>
             )}
           </div>
+          
+          {/* Mobile: Cart Icon */}
+          <Link
+            href="/cart"
+            className="md:hidden relative inline-flex items-center justify-center p-2 rounded-md text-white hover:bg-white/10 transition-colors"
+            aria-label="Cart"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-white">
+              <path d="M7 4h-2l-1 2H1v2h2l3.6 7.59L5.25 18c-.41.75-.13 1.68.62 2.09.75.41 1.68.13 2.09-.62L9 16h7c.75 0 1.41-.41 1.75-1.03L21.58 7H6.42l-.7-1.4L7 4zm2 14a2 2 0 100 4 2 2 0 000-4zm8 0a2 2 0 100 4 2 2 0 000-4z"/>
+            </svg>
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-white/90 px-1.5 text-xs font-semibold text-black">
+                {cartCount > 99 ? '99+' : cartCount}
+              </span>
+            )}
+          </Link>
+          
+          {/* Mobile: Profile Icon */}
+          {user && (
+            <Link
+              href="/dashboard"
+              className="md:hidden relative inline-flex items-center justify-center"
+            >
+              {isSubscribed ? (
+                <div 
+                  className="h-8 w-8 rounded-full flex items-center justify-center font-semibold uppercase cursor-pointer relative"
+                  style={{
+                    padding: '2px',
+                    background: 'linear-gradient(90deg, #ec4899, #3b82f6, #ec4899, #3b82f6)',
+                    backgroundSize: '200% 200%',
+                    animation: 'gradient-border 3s ease infinite',
+                  }}
+                >
+                  <span className="relative z-10 bg-black rounded-full w-full h-full flex items-center justify-center text-white text-sm">
+                    {(user.email || '?').charAt(0)}
+                  </span>
+                </div>
+              ) : (
+                <div className="h-8 w-8 rounded-full bg-white text-black flex items-center justify-center font-semibold uppercase cursor-pointer hover:bg-zinc-200 transition-colors text-sm">
+                  {(user.email || '?').charAt(0)}
+                </div>
+              )}
+            </Link>
+          )}
           
           {/* Mobile: Hamburger Menu Button */}
           <button
