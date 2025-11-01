@@ -83,7 +83,7 @@ export async function POST(req: Request) {
     const billingMobile = billing?.mobile || notes.billing_mobile || notes.customer_mobile || '';
     const billingCompany = billing?.company || notes.billing_company || null;
 
-    // Record order in DB with billing details
+    // Record order in DB with billing details (note: billing_mobile is stored in Razorpay notes but not in orders table)
     const { data: dbOrder, error: oErr } = await admin
       .from('orders')
       .insert({ 
@@ -92,7 +92,6 @@ export async function POST(req: Request) {
         status: 'paid',
         billing_name: billingName || null,
         billing_email: billingEmail || null,
-        billing_mobile: billingMobile || null,
         billing_company: billingCompany || null,
       })
       .select('id')
