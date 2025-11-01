@@ -6,40 +6,35 @@ The application now sends automatic email notifications for:
 1. **Individual Product Purchases** - Confirmation email with purchased template names
 2. **Subscription Payments** - Confirmation email when subscription is activated/renewed
 
-## Email Service Options
+**All email configuration is stored in Supabase settings table** - no need to set environment variables!
 
-### Option 1: Resend API (Recommended - Easiest)
+## Email Configuration via Supabase Settings
 
-1. Sign up at [resend.com](https://resend.com)
-2. Get your API key from the dashboard
-3. Verify your domain (or use Resend's default domain for testing)
-4. Set environment variables in Netlify:
+### Setup Steps:
 
-```
-RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxx
-RESEND_FROM_EMAIL=Celite <noreply@yourdomain.com>
-```
+1. **Sign up at Resend.com** (if you haven't already)
+   - Visit [resend.com](https://resend.com)
+   - Create a free account (generous free tier available)
+   - Get your API key from the dashboard
 
-**For Netlify:**
-- Go to Site Settings → Environment Variables
-- Add `RESEND_API_KEY` with your Resend API key
-- Add `RESEND_FROM_EMAIL` with your sender email (e.g., `Celite <noreply@yourdomain.com>`)
+2. **Verify your domain** (or use Resend's default domain for testing)
+   - For production: Verify your domain in Resend dashboard
+   - For testing: Use Resend's default domain `onboarding@resend.dev`
 
-### Option 2: SMTP (Custom Email Server)
+3. **Configure in Admin Panel**
+   - Go to Admin Dashboard → Settings
+   - Scroll to "Email (Resend API)" section
+   - Enter your Resend API Key: `re_xxxxxxxxxxxxxxxxxxxxxxxx`
+   - Enter From Email: `Celite <noreply@yourdomain.com>` or `Celite <onboarding@resend.dev>` (for testing)
+   - Click "Save Email Settings"
 
-If you prefer using your own SMTP server:
+**That's it!** All email settings are now stored securely in Supabase settings table.
 
-1. Set environment variables:
+### Fallback to Environment Variables
 
-```
-SMTP_HOST=smtp.yourdomain.com
-SMTP_PORT=587
-SMTP_USER=your-email@yourdomain.com
-SMTP_PASS=your-password
-SMTP_FROM=Celite <noreply@yourdomain.com>
-```
-
-**Note:** SMTP functionality requires additional implementation. Currently, only Resend API is fully implemented.
+If you prefer using environment variables (optional fallback):
+- Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` in Netlify environment variables
+- The system will use Supabase settings first, then fall back to environment variables
 
 ## Email Templates
 
@@ -85,17 +80,25 @@ To test email functionality:
 
 ### Emails Not Sending?
 
-1. **Check Environment Variables:**
-   - Verify `RESEND_API_KEY` is set in Netlify
-   - Verify `RESEND_FROM_EMAIL` is set
+1. **Check Supabase Settings:**
+   - Go to Admin Dashboard → Settings
+   - Verify `RESEND_API_KEY` is saved in Supabase settings table
+   - Verify `RESEND_FROM_EMAIL` is saved
+   - Make sure you clicked "Save Email Settings" button
 
 2. **Check Logs:**
    - View Netlify function logs for email errors
    - Check Resend dashboard for delivery status
+   - Look for "Email sent successfully via Resend" in logs
 
 3. **Verify Domain (Resend):**
-   - For production, verify your domain in Resend
+   - For production, verify your domain in Resend dashboard
    - Use verified domain for `RESEND_FROM_EMAIL`
+   - For testing, use `onboarding@resend.dev`
+
+4. **Fallback to Environment Variables:**
+   - If Supabase settings don't work, set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` in Netlify
+   - System will use Supabase settings first, then fall back to env vars
 
 ### Email Format Issues?
 
@@ -106,8 +109,9 @@ To test email functionality:
 ## Production Checklist
 
 - [ ] Set up Resend account and verify domain
-- [ ] Add `RESEND_API_KEY` to Netlify environment variables
-- [ ] Add `RESEND_FROM_EMAIL` to Netlify environment variables
+- [ ] Configure `RESEND_API_KEY` in Admin Panel → Settings → Email
+- [ ] Configure `RESEND_FROM_EMAIL` in Admin Panel → Settings → Email
+- [ ] Verify settings are saved in Supabase settings table
 - [ ] Test purchase confirmation email
 - [ ] Test subscription confirmation email
 - [ ] Verify emails are delivered correctly

@@ -1,12 +1,14 @@
 /**
  * Email utility for sending transactional emails
- * Uses environment variables for email configuration
+ * Uses Supabase settings table for email configuration
+ * Falls back to environment variables if not in Supabase
  * 
- * You can use:
- * - Resend API (recommended): Set RESEND_API_KEY
- * - SMTP with nodemailer: Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
- * - Or integrate with Supabase Edge Functions
+ * Email configuration is stored in Supabase settings table:
+ * - RESEND_API_KEY: Resend API key
+ * - RESEND_FROM_EMAIL: Sender email address
  */
+
+import { getSupabaseAdminClient } from './supabaseAdmin';
 
 type EmailOptions = {
   to: string;
@@ -15,26 +17,59 @@ type EmailOptions = {
   text?: string;
 };
 
+type EmailConfig = {
+  resendApiKey: string | null;
+  resendFromEmail: string | null;
+  smtpHost?: string | null;
+  smtpPort?: string | null;
+  smtpUser?: string | null;
+  smtpPass?: string | null;
+};
+
 /**
- * Send email using available service
+ * Get email configuration from Supabase settings (fallback to env)
+ */
+async function getEmailConfig(): Promise<EmailConfig> {
+  const supabase = getSupabaseAdminClient();
+  let settingsMap: Record<string, string> = {};
+  
+  try {
+    const { data: settings } = await supabase.from('settings').select('key,value');
+    (settings ?? []).forEach((row: any) => { settingsMap[row.key] = row.value; });
+  } catch (e) {
+    console.log('Settings table not accessible, using environment variables');
+  }
+  
+  return {
+    resendApiKey: settingsMap.RESEND_API_KEY || process.env.RESEND_API_KEY || null,
+    resendFromEmail: settingsMap.RESEND_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || 'Celite <noreply@celite.netlify.app>',
+    smtpHost: settingsMap.SMTP_HOST || process.env.SMTP_HOST || null,
+    smtpPort: settingsMap.SMTP_PORT || process.env.SMTP_PORT || null,
+    smtpUser: settingsMap.SMTP_USER || process.env.SMTP_USER || null,
+    smtpPass: settingsMap.SMTP_PASS || process.env.SMTP_PASS || null,
+  };
+}
+
+/**
+ * Send email using available service from Supabase settings
  * Falls back to console log if no email service is configured
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
-    // Try Resend API first (if API key is set)
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (resendApiKey) {
-      return await sendEmailWithResend(options, resendApiKey);
+    const config = await getEmailConfig();
+    
+    // Try Resend API first (from Supabase settings or env)
+    if (config.resendApiKey) {
+      return await sendEmailWithResend(options, config.resendApiKey, config.resendFromEmail || 'Celite <noreply@celite.netlify.app>');
     }
 
-    // Try SMTP (if configured)
-    const smtpHost = process.env.SMTP_HOST;
-    if (smtpHost) {
-      return await sendEmailWithSMTP(options);
+    // Try SMTP (if configured in Supabase settings or env)
+    if (config.smtpHost) {
+      return await sendEmailWithSMTP(options, config);
     }
 
     // Fallback: Log email (for development)
-    console.log('Email would be sent:', {
+    console.log('Email would be sent (no email service configured in Supabase settings):', {
       to: options.to,
       subject: options.subject,
       html: options.html,
@@ -49,7 +84,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 /**
  * Send email using Resend API
  */
-async function sendEmailWithResend(options: EmailOptions, apiKey: string): Promise<boolean> {
+async function sendEmailWithResend(options: EmailOptions, apiKey: string, fromEmail: string): Promise<boolean> {
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -58,7 +93,7 @@ async function sendEmailWithResend(options: EmailOptions, apiKey: string): Promi
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL || 'Celite <noreply@celite.netlify.app>',
+        from: fromEmail,
         to: options.to,
         subject: options.subject,
         html: options.html,
@@ -71,6 +106,7 @@ async function sendEmailWithResend(options: EmailOptions, apiKey: string): Promi
       throw new Error(data.message || 'Resend API error');
     }
 
+    console.log('Email sent successfully via Resend:', { to: options.to, subject: options.subject });
     return true;
   } catch (error: any) {
     console.error('Resend email error:', error);
@@ -81,10 +117,10 @@ async function sendEmailWithResend(options: EmailOptions, apiKey: string): Promi
 /**
  * Send email using SMTP
  */
-async function sendEmailWithSMTP(options: EmailOptions): Promise<boolean> {
+async function sendEmailWithSMTP(options: EmailOptions, config: EmailConfig): Promise<boolean> {
   // For SMTP, you would need to install nodemailer
   // For now, we'll just log that SMTP is not yet implemented
-  console.log('SMTP email sending not implemented yet. Please use Resend API.');
+  console.log('SMTP email sending not implemented yet. Please configure Resend API in Supabase settings.');
   return false;
 }
 
