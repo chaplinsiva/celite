@@ -43,8 +43,14 @@ export async function POST(req: Request) {
     }
     
     const { key_id } = await getRazorpayCreds();
-    const { amount, product } = await req.json();
+    const body = await req.json();
+    const { amount, product, billing } = body;
     if (!amount || !product?.slug) return NextResponse.json({ ok: false, error: 'Missing amount or product' }, { status: 400 });
+
+    // Use billing info from request if provided, otherwise fallback to user data
+    const billingName = billing?.name || userName || '';
+    const billingEmail = billing?.email || userEmail || '';
+    const billingMobile = billing?.mobile || '';
 
     // Build a short receipt (Razorpay requires <= 40 chars)
     const shortSlug = String(product.slug || '').replace(/[^a-zA-Z0-9\-_.]/g, '').slice(0, 20);
@@ -62,8 +68,13 @@ export async function POST(req: Request) {
         price: String(product.price || ''),
         img: product.img || '',
         user_id: userId || '', // Store user_id in notes
-        customer_email: userEmail || '',
-        customer_name: userName || '',
+        customer_email: billingEmail,
+        customer_name: billingName,
+        customer_mobile: billingMobile,
+        billing_name: billingName,
+        billing_email: billingEmail,
+        billing_mobile: billingMobile,
+        billing_company: billing?.company || '',
       },
     };
 

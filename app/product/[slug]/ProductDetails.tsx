@@ -189,59 +189,9 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         return;
       }
       
-      // Otherwise, proceed with Razorpay payment
-      await loadRazorpay();
-      // Create order in backend (amount in paise) - use effective price (limited offer if available)
-      const priceToUse = hasActiveLimitedOffer ? effectivePrice : product.price;
-      const res = await fetch('/api/payments/razorpay/order', {
-        method: 'POST', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ amount: priceToUse * 100, product: { slug: product.slug, name: product.name, price: priceToUse, img: product.img } })
-      });
-      const json = await res.json();
-      if (!res.ok || !json.ok) { setFeedback(json.error || 'Payment init failed'); setPaying(false); return; }
-      const options: any = {
-        key: json.key,
-        amount: json.order.amount,
-        currency: json.order.currency,
-        name: 'Celite',
-        description: product.name,
-        image: '/Logo.png',
-        order_id: json.order.id,
-        handler: async (resp: any) => {
-          try {
-            // Get fresh session inside handler
-            const supabase = getSupabaseBrowserClient();
-            const { data: { session: currentSession } } = await supabase.auth.getSession();
-            if (!currentSession) {
-              setFeedback('Session expired. Please log in again.');
-              return;
-            }
-            const verify = await fetch('/api/payments/razorpay/verify', {
-              method: 'POST', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${currentSession.access_token}` },
-              body: JSON.stringify({ razorpay_order_id: resp.razorpay_order_id, razorpay_payment_id: resp.razorpay_payment_id, razorpay_signature: resp.razorpay_signature })
-            });
-            const vjson = await verify.json();
-            if (verify.ok && vjson.ok) {
-              setPurchased(true);
-              setFeedback('Payment successful. You can download now.');
-            } else {
-              setFeedback(vjson.error || 'Payment verify failed');
-            }
-          } catch (e: any) {
-            setFeedback(e?.message || 'Payment verify failed');
-          }
-        },
-        prefill: {
-          email: (user as any)?.email || '',
-          name: (user as any)?.user_metadata?.first_name && (user as any)?.user_metadata?.last_name
-            ? `${(user as any).user_metadata.first_name} ${(user as any).user_metadata.last_name}`.trim()
-            : (user as any)?.email?.split('@')[0] || '',
-        },
-        theme: { color: '#ffffff' },
-      };
-      // @ts-ignore
-      const rzp = new window.Razorpay(options);
-      rzp.open();
+      // Redirect to checkout page instead of direct payment
+      router.push(`/checkout?product=${product.slug}`);
+      setPaying(false);
     } catch (e) {
       setFeedback('Payment failed to start');
     } finally {

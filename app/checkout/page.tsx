@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { formatPriceWithDecimal } from "../../lib/currency";
@@ -10,18 +10,48 @@ import { formatPriceWithDecimal } from "../../lib/currency";
 type BillingDetails = {
   name: string;
   email: string;
+  mobile: string;
   company?: string;
 };
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { user, cartItems, cartCount, resetCart } = useAppContext();
+  const searchParams = useSearchParams();
+  const { user, cartItems, cartCount, resetCart, addToCart } = useAppContext();
   const [billing, setBilling] = useState<BillingDetails>({
     name: user?.email.split("@")[0] ?? "",
     email: user?.email ?? "",
+    mobile: "",
     company: "",
   });
   const [processing, setProcessing] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  
+  // Handle direct product checkout (from Buy Now)
+  useEffect(() => {
+    const productSlug = searchParams?.get('product');
+    if (productSlug && cartCount === 0) {
+      // Fetch product and add to cart
+      const fetchProduct = async () => {
+        const supabase = getSupabaseBrowserClient();
+        const { data } = await supabase
+          .from('templates')
+          .select('slug, name, price, img')
+          .eq('slug', productSlug)
+          .maybeSingle();
+        if (data) {
+          addToCart({
+            slug: data.slug,
+            name: data.name,
+            price: Number(data.price),
+            img: data.img,
+          });
+        }
+      };
+      fetchProduct();
+    }
+  }, [searchParams, cartCount, addToCart]);
+
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   if (!user) {
@@ -57,44 +87,142 @@ export default function CheckoutPage() {
     );
   }
 
+  const loadRazorpay = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+      if (existing) return resolve();
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load Razorpay'));
+      document.body.appendChild(script);
+    });
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    
+    // Validate mobile number (Indian format: 10 digits, optionally with +91)
+    const mobileRegex = /^(\+91)?[6-9]\d{9}$/;
+    const cleanMobile = billing.mobile.replace(/\s+/g, '').replace(/\+91/g, '');
+    if (!mobileRegex.test(cleanMobile)) {
+      setPaymentError('Please enter a valid 10-digit mobile number');
+      return;
+    }
+
     setProcessing(true);
+    setPaymentError(null);
+    
     try {
       const supabase = getSupabaseBrowserClient();
-      const total = subtotal;
-      // Create order
-      const { data: order, error: orderErr } = await supabase
-        .from('orders')
-        .insert({
-          user_id: (user as any).id,
-          total,
-          billing_name: billing.name,
-          billing_email: billing.email,
-          billing_company: billing.company || null,
-          status: 'paid',
-        })
-        .select('id')
-        .single();
-      if (orderErr) throw orderErr;
-      // Insert order items
-      const items = cartItems.map((it) => ({
-        order_id: order.id,
-        slug: it.slug,
-        name: it.name,
-        price: it.price,
-        quantity: it.quantity,
-        img: it.img,
-      }));
-      const { error: itemsErr } = await supabase.from('order_items').insert(items);
-      if (itemsErr) throw itemsErr;
-      // Clear cart
-      await resetCart();
-      router.push("/dashboard");
-    } catch (e) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setPaymentError('Session expired. Please log in again.');
+        setProcessing(false);
+        return;
+      }
+
+      // Load Razorpay
+      await loadRazorpay();
+
+      // Calculate total amount in paise
+      const amountInPaise = Math.round(subtotal * 100);
+
+      // Create Razorpay order for all cart items
+      // For multiple items, we'll create a combined order
+      const productInfo = cartItems.length === 1 
+        ? cartItems[0]
+        : { slug: 'multiple', name: `${cartItems.length} Templates`, price: subtotal, img: cartItems[0]?.img || '' };
+
+      const res = await fetch('/api/payments/razorpay/order', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ 
+          amount: amountInPaise,
+          product: productInfo,
+          billing: {
+            name: billing.name,
+            email: billing.email,
+            mobile: cleanMobile,
+            company: billing.company || null,
+          },
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error || 'Payment initialization failed');
+      }
+
+      // Open Razorpay checkout
+      // @ts-ignore
+      const rzp = new window.Razorpay({
+        key: json.key,
+        amount: json.order.amount,
+        currency: json.order.currency,
+        name: 'Celite',
+        description: cartItems.length === 1 ? cartItems[0].name : `${cartItems.length} Templates`,
+        image: '/Logo.png',
+        order_id: json.order.id,
+        prefill: {
+          name: billing.name,
+          email: billing.email,
+          contact: `+91${cleanMobile}`,
+        },
+        handler: async (resp: any) => {
+          try {
+            // Verify payment
+            const verifyRes = await fetch('/api/payments/razorpay/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                razorpay_order_id: resp.razorpay_order_id,
+                razorpay_payment_id: resp.razorpay_payment_id,
+                razorpay_signature: resp.razorpay_signature,
+                billing: {
+                  name: billing.name,
+                  email: billing.email,
+                  mobile: cleanMobile,
+                  company: billing.company || null,
+                },
+                cartItems: cartItems,
+              }),
+            });
+
+            const verifyJson = await verifyRes.json();
+            if (verifyRes.ok && verifyJson.ok) {
+              // Clear cart
+              await resetCart();
+              // Redirect to dashboard
+              router.push("/dashboard?payment=success");
+            } else {
+              setPaymentError(verifyJson.error || 'Payment verification failed');
+              setProcessing(false);
+            }
+          } catch (e: any) {
+            setPaymentError(e?.message || 'Payment verification failed');
+            setProcessing(false);
+          }
+        },
+        theme: { color: '#ffffff' },
+        modal: {
+          ondismiss: () => {
+            setProcessing(false);
+          },
+        },
+      });
+
+      rzp.open();
+    } catch (e: any) {
       console.error(e);
+      setPaymentError(e?.message || 'Something went wrong processing your payment.');
       setProcessing(false);
-      alert('Something went wrong saving your order.');
     }
   };
 
@@ -129,6 +257,24 @@ export default function CheckoutPage() {
                     required
                   />
                 </label>
+                <label className="flex flex-col gap-2 text-sm text-zinc-200">
+                  Mobile Number
+                  <input
+                    type="tel"
+                    value={billing.mobile}
+                    onChange={(evt) => {
+                      const value = evt.target.value.replace(/\D/g, ''); // Only allow digits
+                      if (value.length <= 10) {
+                        setBilling((prev) => ({ ...prev, mobile: value }));
+                      }
+                    }}
+                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20"
+                    placeholder="9876543210"
+                    maxLength={10}
+                    required
+                  />
+                  <span className="text-xs text-zinc-500">10-digit mobile number (e.g., 9876543210)</span>
+                </label>
                 <label className="flex flex-col gap-2 text-sm text-zinc-200 sm:col-span-2">
                   Company / Studio (optional)
                   <input
@@ -143,36 +289,8 @@ export default function CheckoutPage() {
 
             <div className="space-y-3">
               <h2 className="text-lg font-semibold">Payment</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="flex flex-col gap-2 text-sm text-zinc-200 sm:col-span-2">
-                  Card number
-                  <input
-                    autoComplete="off"
-                    inputMode="numeric"
-                    maxLength={19}
-                    placeholder="4242 4242 4242 4242"
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20"
-                    required
-                  />
-                </label>
-                <label className="flex flex-col gap-2 text-sm text-zinc-200">
-                  Expiry
-                  <input
-                    placeholder="MM/YY"
-                    maxLength={5}
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20"
-                    required
-                  />
-                </label>
-                <label className="flex flex-col gap-2 text-sm text-zinc-200">
-                  CVC
-                  <input
-                    placeholder="123"
-                    maxLength={4}
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20"
-                    required
-                  />
-                </label>
+              <div className="rounded-xl border border-white/10 bg-black/40 p-4 text-sm text-zinc-300">
+                <p>Payment will be processed securely through Razorpay. You'll be redirected to a secure payment gateway after submitting your details.</p>
               </div>
             </div>
 
@@ -186,6 +304,12 @@ export default function CheckoutPage() {
                 Email me about new template drops.
               </label>
             </div>
+
+            {paymentError && (
+              <div className="rounded-xl border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-300">
+                {paymentError}
+              </div>
+            )}
 
             <button
               type="submit"

@@ -5,7 +5,8 @@ import { getRazorpayCreds, razorpayRequest } from '../../../../../lib/razorpay';
 
 export async function POST(req: Request) {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
+    const body = await req.json();
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, billing, cartItems } = body;
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return NextResponse.json({ ok: false, error: 'Missing params' }, { status: 400 });
     }
@@ -20,11 +21,16 @@ export async function POST(req: Request) {
     // Fetch order to retrieve product notes
     const order = await razorpayRequest(`/orders/${razorpay_order_id}`);
     const notes = order?.notes || {};
-    const slug = notes.slug as string | undefined;
-    const name = notes.name as string | undefined;
-    const price = Number(notes.price || 0);
-    const img = notes.img as string | undefined;
     let userId = notes.user_id as string | undefined;
+    
+    // For multiple items, calculate total from cartItems
+    let totalAmount = 0;
+    if (cartItems && Array.isArray(cartItems) && cartItems.length > 0) {
+      totalAmount = cartItems.reduce((sum: number, item: any) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+    } else {
+      // Single product fallback
+      totalAmount = Number(notes.price || 0);
+    }
 
     const admin = getSupabaseAdminClient();
 
@@ -71,16 +77,56 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: `Failed to verify user: ${e?.message}` }, { status: 400 });
     }
 
-    // Record order in DB
+    // Get billing info from request or notes
+    const billingName = billing?.name || notes.billing_name || notes.customer_name || '';
+    const billingEmail = billing?.email || notes.billing_email || notes.customer_email || '';
+    const billingMobile = billing?.mobile || notes.billing_mobile || notes.customer_mobile || '';
+    const billingCompany = billing?.company || notes.billing_company || null;
+
+    // Record order in DB with billing details
     const { data: dbOrder, error: oErr } = await admin
       .from('orders')
-      .insert({ user_id: userId, total: price, status: 'paid' })
+      .insert({ 
+        user_id: userId, 
+        total: totalAmount, 
+        status: 'paid',
+        billing_name: billingName || null,
+        billing_email: billingEmail || null,
+        billing_mobile: billingMobile || null,
+        billing_company: billingCompany || null,
+      })
       .select('id')
       .single();
     if (oErr) return NextResponse.json({ ok: false, error: oErr.message }, { status: 500 });
-    if (slug && name) {
-      await admin.from('order_items').insert({ order_id: dbOrder.id, slug, name, price, quantity: 1, img });
+
+    // Insert order items - handle multiple cart items
+    if (cartItems && Array.isArray(cartItems) && cartItems.length > 0) {
+      const orderItems = cartItems.map((item: any) => ({
+        order_id: dbOrder.id,
+        slug: item.slug,
+        name: item.name,
+        price: Number(item.price) || 0,
+        quantity: Number(item.quantity) || 1,
+        img: item.img || '',
+      }));
+      await admin.from('order_items').insert(orderItems);
+    } else {
+      // Fallback for single product
+      const slug = notes.slug as string | undefined;
+      const name = notes.name as string | undefined;
+      const img = notes.img as string | undefined;
+      if (slug && name) {
+        await admin.from('order_items').insert({ 
+          order_id: dbOrder.id, 
+          slug, 
+          name, 
+          price: totalAmount, 
+          quantity: 1, 
+          img: img || '' 
+        });
+      }
     }
+    
     return NextResponse.json({ ok: true, order_id: dbOrder.id });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || 'Verify error' }, { status: 500 });

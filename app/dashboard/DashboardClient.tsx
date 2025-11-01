@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAppContext } from "../../context/AppContext";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { formatPrice } from "../../lib/currency";
 import PurchaseDownloadButton from "./PurchaseDownloadButton";
@@ -23,6 +24,7 @@ type OrderItemRow = {
 
 export default function DashboardClient() {
   const { user, logout } = useAppContext();
+  const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Array<{ id: string; date: string; status: string; amount: string; item: string }>>([]);
   const [sub, setSub] = useState<{ is_active: boolean; plan: string | null; valid_until: string | null } | null>(null);
   const [purchases, setPurchases] = useState<Array<{ slug: string; name: string; price: number; img: string }>>([]);
@@ -32,6 +34,16 @@ export default function DashboardClient() {
   const [userMetadata, setUserMetadata] = useState<{ first_name: string | null; last_name: string | null }>({ first_name: null, last_name: null });
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Show success message if redirected from payment
+  useEffect(() => {
+    if (searchParams?.get('payment') === 'success') {
+      setMessage('Payment successful! Your purchase is now available.');
+      setTimeout(() => setMessage(null), 5000);
+      // Remove query param from URL
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, [searchParams]);
   useEffect(() => {
     const load = async () => {
       if (!user) return;
