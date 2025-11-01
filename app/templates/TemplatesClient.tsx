@@ -23,9 +23,13 @@ type Template = {
   is_limited_offer?: boolean;
   limited_offer_duration_days?: number | null;
   limited_offer_start_date?: string | null;
+  category_id?: string | null;
+  subcategory_id?: string | null;
+  category?: { id: string; name: string; slug: string } | null;
+  subcategory?: { id: string; name: string; slug: string } | null;
 };
 
-export default function TemplatesClient({ initialTemplates }: { initialTemplates: Template[] }) {
+export default function TemplatesClient({ initialTemplates, allCategories = [] }: { initialTemplates: Template[]; allCategories?: Array<{ id: string; name: string; slug: string }> }) {
   const router = useRouter();
   const { user } = useAppContext();
   const { openLoginModal } = useLoginModal();
@@ -48,12 +52,28 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
     }
   }, [initialTemplates]);
 
-  // Get unique categories from tags
-  const categories = useMemo(() => {
-    const allTags = initialTemplates.flatMap(t => t.tags || []);
-    const uniqueTags = Array.from(new Set(allTags));
-    return uniqueTags.sort();
-  }, [initialTemplates]);
+  // Get unique categories from database category relationship
+  // Also include allCategories passed from server to ensure filter dropdown shows all categories
+  const availableCategories = useMemo(() => {
+    const categoryMap = new Map<string, { id: string; name: string; slug: string }>();
+    
+    // First, add categories from templates that have category relationships
+    initialTemplates.forEach(t => {
+      if (t.category && typeof t.category === 'object' && t.category.id && !categoryMap.has(t.category.id)) {
+        categoryMap.set(t.category.id, t.category);
+      }
+    });
+    
+    // Also add all categories from the allCategories prop to ensure they show in filter
+    allCategories.forEach(cat => {
+      if (!categoryMap.has(cat.id)) {
+        categoryMap.set(cat.id, cat);
+      }
+    });
+    
+    const categories = Array.from(categoryMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return categories;
+  }, [initialTemplates, allCategories]);
 
   // Get unique software
   const softwareList = useMemo(() => {
@@ -170,10 +190,10 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
       );
     }
 
-    // Category filter
+    // Category filter (filter by category_id)
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(t => 
-        t.tags && Array.isArray(t.tags) && t.tags.includes(selectedCategory)
+        t.category_id === selectedCategory
       );
     }
 
@@ -261,8 +281,8 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
               className="px-4 py-2 rounded-lg bg-zinc-900 border border-white/10 text-white focus:outline-none focus:border-white/30 transition"
             >
               <option value="all">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
+              {availableCategories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
             </select>
 
@@ -452,6 +472,20 @@ function TemplateCard({
         )}
       </div>
       <h3 className="text-base sm:text-lg font-semibold text-white mb-1 text-center">{template.name}</h3>
+      {(template.category || template.subcategory) && (
+        <div className="flex flex-wrap gap-1.5 justify-center mb-2">
+          {template.category && (
+            <span className="px-2 py-0.5 text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full">
+              {template.category.name}
+            </span>
+          )}
+          {template.subcategory && (
+            <span className="px-2 py-0.5 text-xs font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full">
+              {template.subcategory.name}
+            </span>
+          )}
+        </div>
+      )}
       {hasActiveLimitedOffer && (
         <div className="mb-2 text-xs text-white font-medium text-center">
           {isSubscribed ? (

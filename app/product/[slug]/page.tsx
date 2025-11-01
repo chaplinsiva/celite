@@ -78,11 +78,44 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured,is_limited_offer,limited_offer_duration_days,limited_offer_start_date')
+    .select(`
+      slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured,
+      is_limited_offer,limited_offer_duration_days,limited_offer_start_date,
+      category_id,subcategory_id,
+      categories(id,name,slug),
+      subcategories(id,name,slug)
+    `)
     .eq('slug', params.slug)
     .maybeSingle();
   if (!row) return notFound();
-  const prod: Template & { is_limited_offer?: boolean; limited_offer_duration_days?: number; limited_offer_start_date?: string } = {
+  
+  // Handle category/subcategory from Supabase join
+  let category = null;
+  let subcategory = null;
+  
+  if (row.categories) {
+    if (Array.isArray(row.categories) && row.categories.length > 0) {
+      category = row.categories[0];
+    } else if (typeof row.categories === 'object' && row.categories.id) {
+      category = row.categories;
+    }
+  }
+  
+  if (row.subcategories) {
+    if (Array.isArray(row.subcategories) && row.subcategories.length > 0) {
+      subcategory = row.subcategories[0];
+    } else if (typeof row.subcategories === 'object' && row.subcategories.id) {
+      subcategory = row.subcategories;
+    }
+  }
+  
+  const prod: Template & { 
+    is_limited_offer?: boolean; 
+    limited_offer_duration_days?: number; 
+    limited_offer_start_date?: string;
+    category?: { id: string; name: string; slug: string } | null;
+    subcategory?: { id: string; name: string; slug: string } | null;
+  } = {
     slug: row.slug,
     name: row.name,
     subtitle: row.subtitle,
@@ -98,6 +131,8 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
     is_limited_offer: (row as any).is_limited_offer ?? false,
     limited_offer_duration_days: (row as any).limited_offer_duration_days ?? null,
     limited_offer_start_date: (row as any).limited_offer_start_date ?? null,
+    category: category ? { id: category.id, name: category.name, slug: category.slug } : null,
+    subcategory: subcategory ? { id: subcategory.id, name: subcategory.name, slug: subcategory.slug } : null,
   };
   const { data: relatedRows } = await supabase
     .from('templates')
