@@ -1,6 +1,6 @@
 "use client";
 
-type TabKey = 'overview' | 'products' | 'analytics' | 'users' | 'settings';
+type TabKey = 'overview' | 'products' | 'categories' | 'analytics' | 'users' | 'settings';
 
 export default function AdminSidebar({ active, onChange }: { active: TabKey; onChange: (key: TabKey) => void }) {
   return (
@@ -9,6 +9,7 @@ export default function AdminSidebar({ active, onChange }: { active: TabKey; onC
       <nav className="mt-4 flex flex-col gap-1 text-sm">
         <button onClick={() => onChange('overview')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='overview'?'bg-white/10':''}`}>Overview</button>
         <button onClick={() => onChange('products')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='products'?'bg-white/10':''}`}>Products</button>
+        <button onClick={() => onChange('categories')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='categories'?'bg-white/10':''}`}>Categories</button>
         <button onClick={() => onChange('analytics')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='analytics'?'bg-white/10':''}`}>Analytics</button>
         <button onClick={() => onChange('users')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='users'?'bg-white/10':''}`}>User Management</button>
         <button onClick={() => onChange('settings')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='settings'?'bg-white/10':''}`}>Settings</button>

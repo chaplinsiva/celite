@@ -250,6 +250,11 @@ function DashboardContent() {
       </main>
     );
   }
+  
+  // Get display name - prefer first/last name, fallback to email username
+  const displayName = userMetadata.first_name || userMetadata.last_name
+    ? `${userMetadata.first_name || ''} ${userMetadata.last_name || ''}`.trim()
+    : user.email.split("@")[0];
 
   return (
     <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
@@ -257,7 +262,7 @@ function DashboardContent() {
         <section className="flex flex-col gap-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-8 shadow-xl md:flex-row md:items-center md:justify-between">
           <div>
             <p className="uppercase tracking-[0.35em] text-xs text-white/70">Dashboard</p>
-            <h1 className="mt-3 text-3xl font-bold">Welcome back, {user.email.split("@")[0]}</h1>
+            <h1 className="mt-3 text-3xl font-bold">Welcome back, {displayName}</h1>
             <p className="mt-2 text-zinc-300">Manage your Celite purchases, billing, and profile preferences.</p>
           </div>
           <div className="rounded-2xl border border-white/15 bg-black/40 px-6 py-4 text-right">

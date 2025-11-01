@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import AdminSidebar from './components/AdminSidebar';
 import OverviewPanel from './components/OverviewPanel';
 import ProductsPanel from './components/ProductsPanel';
+import CategoriesPanel from './components/CategoriesPanel';
 import AnalyticsPanel from './components/AnalyticsPanel';
 import UsersPanel from './components/UsersPanel';
 import SettingsPanel from './components/SettingsPanel';
@@ -18,7 +19,7 @@ export default function AdminClient() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [templates, setTemplates] = useState<TemplateRow[]>([]);
   const [stats, setStats] = useState<{ templates: number; orders: number; revenue: number } | null>(null);
-  const [active, setActive] = useState<'overview' | 'products' | 'analytics' | 'users' | 'settings'>('overview');
+  const [active, setActive] = useState<'overview' | 'products' | 'categories' | 'analytics' | 'users' | 'settings'>('overview');
 
   
 
@@ -71,6 +72,8 @@ export default function AdminClient() {
           {active === 'overview' && (<OverviewPanel stats={stats} onSeed={runSeed} onUpload={runUpload} />)}
 
           {active === 'products' && (<ProductsPanel templates={templates} onDelete={deleteTemplate} onCreated={refreshTemplates} />)}
+
+          {active === 'categories' && (<CategoriesPanel />)}
 
           {active === 'analytics' && (<AnalyticsPanel />)}
 

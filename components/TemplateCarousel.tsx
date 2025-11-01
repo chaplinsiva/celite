@@ -13,6 +13,8 @@ type FeaturedTemplate = Template & {
   limited_offer_start_date?: string | null;
   daysRemaining?: number;
   hasActiveLimitedOffer?: boolean;
+  category?: { id: string; name: string; slug: string } | null;
+  subcategory?: { id: string; name: string; slug: string } | null;
 };
 
 export default function TemplateCarousel() {
@@ -44,15 +46,24 @@ export default function TemplateCarousel() {
         setIsSubscribed(false);
       }
 
-      // Load featured templates with limited offer info
+      // Load featured templates with limited offer info and category/subcategory
       const { data } = await supabase
         .from('templates')
-        .select('slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured,is_limited_offer,limited_offer_duration_days,limited_offer_start_date')
+        .select(`
+          slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured,
+          is_limited_offer,limited_offer_duration_days,limited_offer_start_date,
+          category_id,subcategory_id,
+          categories(id,name,slug),
+          subcategories(id,name,slug)
+        `)
         .eq('is_featured', true)
         .limit(8);
       
       const now = new Date();
       const mapped: FeaturedTemplate[] = (data ?? []).map((r: any) => {
+        const category = r.categories ? (Array.isArray(r.categories) ? r.categories[0] : r.categories) : null;
+        const subcategory = r.subcategories ? (Array.isArray(r.subcategories) ? r.subcategories[0] : r.subcategories) : null;
+        
         const template: FeaturedTemplate = {
           slug: r.slug,
           name: r.name,
@@ -69,6 +80,8 @@ export default function TemplateCarousel() {
           is_limited_offer: !!r.is_limited_offer,
           limited_offer_duration_days: r.limited_offer_duration_days,
           limited_offer_start_date: r.limited_offer_start_date,
+          category: category ? { id: category.id, name: category.name, slug: category.slug } : null,
+          subcategory: subcategory ? { id: subcategory.id, name: subcategory.name, slug: subcategory.slug } : null,
         };
 
         // Calculate days remaining if it's a limited offer
@@ -144,6 +157,20 @@ export default function TemplateCarousel() {
       if (!res.ok) {
         return;
       }
+      
+      // Check if response is JSON (redirect to external URL)
+      const contentType = res.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        const json = await res.json();
+        if (json.redirect && json.url) {
+          // Redirect to external drive link
+          window.open(json.url, '_blank');
+          return;
+        }
+        return; // If it's JSON but no redirect, return early
+      }
+      
+      // Otherwise, download as blob (Supabase storage file)
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -222,6 +249,20 @@ export default function TemplateCarousel() {
         )}
       </div>
       <h3 className="text-lg sm:text-xl font-bold text-white mb-2 text-center group-hover:text-blue-400 transition-colors">{tpl.name}</h3>
+      {(tpl.category || tpl.subcategory) && (
+        <div className="flex flex-wrap gap-1.5 justify-center mb-2">
+          {tpl.category && (
+            <span className="px-2 py-1 text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full">
+              {tpl.category.name}
+            </span>
+          )}
+          {tpl.subcategory && (
+            <span className="px-2 py-1 text-xs font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full">
+              {tpl.subcategory.name}
+            </span>
+          )}
+        </div>
+      )}
       {hasActiveLimitedOffer && (
         <div className="mb-3 px-3 py-1 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-lg text-xs text-yellow-300 font-semibold text-center">
           {isSubscribed ? (

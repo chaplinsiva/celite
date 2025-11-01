@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 
 type TemplateRow = { slug: string; name: string; price: number; img: string | null };
@@ -14,8 +14,11 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({
     slug: '', name: '', subtitle: '', description: '', price: '', img: '', video: '', source_path: '', features: '', software: '', plugins: '', tags: '', is_featured: false,
-    is_limited_offer: false, limited_offer_duration_days: '',
+    is_limited_offer: false, limited_offer_duration_days: '', category_id: '', subcategory_id: '',
   });
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string }>>([]);
+  const [subcategories, setSubcategories] = useState<Array<{ id: string; category_id: string; name: string; slug: string }>>([]);
+  const [filteredSubcategories, setFilteredSubcategories] = useState<Array<{ id: string; category_id: string; name: string; slug: string }>>([]);
   const [seo, setSeo] = useState<{ score: number; title: string; subtitle?: string; metaTitle?: string; metaDescription?: string; description: string; rationale: string; slug?: string; tags?: string[]; features?: string[] } | null>(null);
   const [checkingSeo, setCheckingSeo] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -24,6 +27,79 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   const thumbInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const sourceInputRef = useRef<HTMLInputElement | null>(null);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+
+  // Function to generate slug from title
+  const generateSlug = (title: string): string => {
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+      .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+  };
+
+  // Auto-generate slug from name when name changes (only for new entries or if slug hasn't been manually edited)
+  const handleNameChange = (name: string) => {
+    setForm((f) => ({
+      ...f,
+      name,
+      slug: !isEditing && !slugManuallyEdited ? generateSlug(name) : f.slug,
+    }));
+  };
+
+  // Handle manual slug editing
+  const handleSlugChange = (slug: string) => {
+    setSlugManuallyEdited(true);
+    setForm((f) => ({ ...f, slug }));
+  };
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      try {
+        const [catsRes, subsRes] = await Promise.all([
+          fetch('/api/admin/categories', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }),
+          fetch('/api/admin/subcategories', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }),
+        ]);
+        
+        const catsJson = await catsRes.json();
+        const subsJson = await subsRes.json();
+        
+        if (catsJson.ok) {
+          setCategories((catsJson.categories || []).map((cat: any) => ({ id: cat.id, name: cat.name, slug: cat.slug })));
+        }
+        if (subsJson.ok) {
+          const subs = (subsJson.subcategories || []).map((sub: any) => ({ id: sub.id, category_id: sub.category_id, name: sub.name, slug: sub.slug }));
+          setSubcategories(subs);
+          setFilteredSubcategories(subs);
+        }
+      } catch (e) {
+        console.error('Failed to load categories/subcategories:', e);
+      }
+    };
+    loadCategories();
+  }, []);
+
+  useEffect(() => {
+    if (form.category_id) {
+      setFilteredSubcategories(subcategories.filter(s => s.category_id === form.category_id));
+      if (form.subcategory_id && !subcategories.find(s => s.id === form.subcategory_id && s.category_id === form.category_id)) {
+        setForm(f => ({ ...f, subcategory_id: '' }));
+      }
+    } else {
+      setFilteredSubcategories([]);
+      setForm(f => ({ ...f, subcategory_id: '' }));
+    }
+  }, [form.category_id, subcategories]);
 
   const uploadFile = async (kind: 'thumbnail' | 'video' | 'source', file: File) => {
     const supabase = getSupabaseBrowserClient();
@@ -70,7 +146,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                       const supabase = getSupabaseBrowserClient();
                       const { data } = await supabase
                         .from('templates')
-                        .select('slug,name,subtitle,description,price,img,video,source_path,features,software,plugins,tags,is_featured,is_limited_offer,limited_offer_duration_days,limited_offer_start_date')
+                        .select('slug,name,subtitle,description,price,img,video,source_path,features,software,plugins,tags,is_featured,is_limited_offer,limited_offer_duration_days,limited_offer_start_date,category_id,subcategory_id')
                         .eq('slug', t.slug)
                         .maybeSingle();
                       if (!data) return;
@@ -90,10 +166,13 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                         is_featured: !!data.is_featured,
                         is_limited_offer: !!data.is_limited_offer,
                         limited_offer_duration_days: String(data.limited_offer_duration_days ?? ''),
+                        category_id: data.category_id || '',
+                        subcategory_id: data.subcategory_id || '',
                       });
                       setSeo(null);
                       setIsEditing(true);
                       setOriginalSlug(data.slug || null);
+                      setSlugManuallyEdited(false);
                       setTab('add');
                     } catch {}
                   }}
@@ -131,6 +210,8 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                     is_limited_offer: !!form.is_limited_offer,
                     limited_offer_duration_days: form.is_limited_offer ? (Number(form.limited_offer_duration_days) || 0) : null,
                     limited_offer_start_date: startDate,
+                    category_id: form.category_id || null,
+                    subcategory_id: form.subcategory_id || null,
                   }
                 ]
               };
@@ -138,18 +219,53 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               if (!res.ok) throw new Error('Create failed');
               await onCreated();
               setTab('list');
-              setForm({ slug:'', name:'', subtitle:'', description:'', price:'', img:'', video:'', source_path:'', features:'', software:'', plugins:'', tags:'', is_featured:false, is_limited_offer: false, limited_offer_duration_days: '' });
+              setForm({ slug:'', name:'', subtitle:'', description:'', price:'', img:'', video:'', source_path:'', features:'', software:'', plugins:'', tags:'', is_featured:false, is_limited_offer: false, limited_offer_duration_days: '', category_id: '', subcategory_id: '' });
               setIsEditing(false);
               setOriginalSlug(null);
+              setSlugManuallyEdited(false);
             } catch {}
             finally { setCreating(false); }
           }}
           className="grid gap-4 sm:grid-cols-2"
         >
-          <input value={form.slug} onChange={(e)=>setForm({...form, slug:e.target.value})} placeholder="slug" required disabled={isEditing} className="px-3 py-2 rounded-lg bg-black/40 border border-white/10 disabled:opacity-60" />
-          <input value={form.name} onChange={(e)=>setForm({...form, name:e.target.value})} placeholder="name" required className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+          <input value={form.name} onChange={(e)=>handleNameChange(e.target.value)} placeholder="name (title)" required className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+          <div className="flex items-center gap-2">
+            <input 
+              value={form.slug} 
+              onChange={(e)=>handleSlugChange(e.target.value)} 
+              placeholder="slug (auto-generated)" 
+              required 
+              disabled={isEditing}
+              className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 disabled:opacity-60 disabled:cursor-not-allowed" 
+            />
+            {!isEditing && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSlugManuallyEdited(false);
+                  setForm((f) => ({ ...f, slug: generateSlug(f.name) }));
+                }}
+                className="rounded-full border border-white/30 px-3 py-2 text-xs hover:bg-white/10 whitespace-nowrap"
+                title="Regenerate slug from name"
+              >
+                Auto
+              </button>
+            )}
+          </div>
           <input value={form.subtitle} onChange={(e)=>setForm({...form, subtitle:e.target.value})} placeholder="subtitle" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
           <input value={form.price} onChange={(e)=>setForm({...form, price:e.target.value})} placeholder="price (INR)" type="number" min="0" step="0.01" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+          <select value={form.category_id} onChange={(e)=>setForm({...form, category_id:e.target.value})} className="px-3 py-2 rounded-lg bg-black/40 border border-white/10">
+            <option value="">Select Category</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+          <select value={form.subcategory_id} onChange={(e)=>setForm({...form, subcategory_id:e.target.value})} disabled={!form.category_id} className="px-3 py-2 rounded-lg bg-black/40 border border-white/10 disabled:opacity-60">
+            <option value="">Select Subcategory</option>
+            {filteredSubcategories.map((sub) => (
+              <option key={sub.id} value={sub.id}>{sub.name}</option>
+            ))}
+          </select>
 
           <div className="flex items-center gap-2">
             <input value={form.img} onChange={(e)=>setForm({...form, img:e.target.value})} placeholder="image URL" className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
@@ -161,10 +277,25 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
             <button type="button" onClick={() => videoInputRef.current?.click()} className="rounded-full border border-white/30 px-3 py-2 text-xs hover:bg-white/10">Upload</button>
             <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime" hidden onChange={(e)=>{ const file=e.target.files?.[0]; if (file) uploadFile('video', file); }} />
           </div>
-          <div className="flex items-center gap-2">
-            <input value={form.source_path} onChange={(e)=>setForm({...form, source_path:e.target.value})} placeholder="source path (private) e.g. Dude.rar" className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
-            <button type="button" onClick={() => sourceInputRef.current?.click()} className="rounded-full border border-white/30 px-3 py-2 text-xs hover:bg-white/10">Upload</button>
-            <input ref={sourceInputRef} type="file" accept="application/zip,application/x-rar-compressed,.zip,.rar" hidden onChange={(e)=>{ const file=e.target.files?.[0]; if (file) uploadFile('source', file); }} />
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs text-zinc-400">Source File (Private)</label>
+            <div className="flex items-center gap-2">
+              <input 
+                value={form.source_path} 
+                onChange={(e)=>setForm({...form, source_path:e.target.value})} 
+                placeholder="Upload file or paste direct drive link (Google Drive, Dropbox, etc.)" 
+                className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10" 
+              />
+              <button 
+                type="button" 
+                onClick={() => sourceInputRef.current?.click()} 
+                className="rounded-full border border-white/30 px-3 py-2 text-xs hover:bg-white/10 whitespace-nowrap"
+              >
+                Upload File
+              </button>
+              <input ref={sourceInputRef} type="file" accept="application/zip,application/x-rar-compressed,.zip,.rar" hidden onChange={(e)=>{ const file=e.target.files?.[0]; if (file) uploadFile('source', file); }} />
+            </div>
+            <p className="text-xs text-zinc-500">You can either upload a zip/rar file or paste a direct download link (Google Drive shareable link, Dropbox link, etc.)</p>
           </div>
 
           <textarea value={form.description} onChange={(e)=>setForm({...form, description:e.target.value})} placeholder="description" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10 sm:col-span-2" />
@@ -227,7 +358,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
 
           <div className="sm:col-span-2 flex gap-3">
             <button disabled={creating} className="rounded-full bg-white text-black px-5 py-2 text-sm font-semibold hover:bg-zinc-200">{creating ? (isEditing ? 'Saving…' : 'Creating…') : (isEditing ? 'Save Changes' : 'Create Product')}</button>
-            <button type="button" onClick={()=>{ setTab('list'); setIsEditing(false); setOriginalSlug(null); }} className="rounded-full border border-white/30 px-5 py-2 text-sm hover:bg-white/10">Cancel</button>
+            <button type="button" onClick={()=>{ setTab('list'); setIsEditing(false); setOriginalSlug(null); setSlugManuallyEdited(false); }} className="rounded-full border border-white/30 px-5 py-2 text-sm hover:bg-white/10">Cancel</button>
           </div>
         </form>
       )}

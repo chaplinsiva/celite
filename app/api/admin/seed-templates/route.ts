@@ -26,6 +26,8 @@ export async function POST(req: Request) {
       is_limited_offer: !!(t.is_limited_offer ?? false),
       limited_offer_duration_days: t.limited_offer_duration_days ?? null,
       limited_offer_start_date: t.limited_offer_start_date ?? null,
+      category_id: t.category_id || null,
+      subcategory_id: t.subcategory_id || null,
     }));
     const { data, error } = await supabase
       .from('templates')

@@ -122,6 +122,20 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
       if (!res.ok) {
         return;
       }
+      
+      // Check if response is JSON (redirect to external URL)
+      const contentType = res.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        const json = await res.json();
+        if (json.redirect && json.url) {
+          // Redirect to external drive link
+          window.open(json.url, '_blank');
+          return;
+        }
+        return; // If it's JSON but no redirect, return early
+      }
+      
+      // Otherwise, download as blob (Supabase storage file)
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');

@@ -59,22 +59,30 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       .select('source_path')
       .eq('slug', slug)
       .maybeSingle();
-    const objectPath = tpl?.source_path as string | undefined;
-    if (!objectPath) {
+    const sourcePath = tpl?.source_path as string | undefined;
+    if (!sourcePath) {
       return NextResponse.json({ ok: false, error: 'No source file registered for this template' }, { status: 404 });
     }
 
-    // Stream the file directly instead of exposing a shareable signed URL
+    // Check if source_path is a direct URL (Google Drive, Dropbox, etc.)
+    const isDirectUrl = sourcePath.startsWith('http://') || sourcePath.startsWith('https://');
+    
+    if (isDirectUrl) {
+      // For direct URLs, return JSON with redirect URL for client to handle
+      return NextResponse.json({ ok: true, redirect: true, url: sourcePath });
+    }
+
+    // For file paths in storage, download from Supabase storage
     const { data: fileData, error: dlErr } = await admin
       .storage
       .from('templatesource')
-      .download(objectPath);
+      .download(sourcePath);
     if (dlErr || !fileData) {
       return NextResponse.json({ ok: false, error: dlErr?.message || 'Download failed' }, { status: 500 });
     }
     const arrayBuffer = await fileData.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const filename = path.basename(objectPath);
+    const filename = path.basename(sourcePath);
     return new Response(buffer, {
       status: 200,
       headers: {
