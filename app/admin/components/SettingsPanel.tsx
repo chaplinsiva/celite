@@ -11,8 +11,6 @@ export default function SettingsPanel() {
   const [rzpCurrency, setRzpCurrency] = useState('INR');
   const [rzpMonthly, setRzpMonthly] = useState('799'); // ₹799 in Rupees
   const [rzpYearly, setRzpYearly] = useState('5499'); // ₹5,499 in Rupees
-  const [resendApiKey, setResendApiKey] = useState('');
-  const [resendFromEmail, setResendFromEmail] = useState('Celite <noreply@celite.netlify.app>');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -29,8 +27,6 @@ export default function SettingsPanel() {
         setRzpSecret(json.settings.RAZORPAY_KEY_SECRET || '');
         setRzpWebhookSecret(json.settings.RAZORPAY_WEBHOOK_SECRET || '');
         setRzpCurrency(json.settings.RAZORPAY_CURRENCY || 'INR');
-        setResendApiKey(json.settings.RESEND_API_KEY || '');
-        setResendFromEmail(json.settings.RESEND_FROM_EMAIL || 'Celite <noreply@celite.netlify.app>');
         
         // Convert from paise (database) to rupees (display)
         let monthlyPaise = Number(json.settings.RAZORPAY_MONTHLY_AMOUNT || '79900');
@@ -75,8 +71,6 @@ export default function SettingsPanel() {
           RAZORPAY_CURRENCY: rzpCurrency,
           RAZORPAY_MONTHLY_AMOUNT: monthlyPaise,
           RAZORPAY_YEARLY_AMOUNT: yearlyPaise,
-          RESEND_API_KEY: resendApiKey,
-          RESEND_FROM_EMAIL: resendFromEmail,
         } }),
       });
       const json = await res.json();
@@ -147,38 +141,6 @@ export default function SettingsPanel() {
           </div>
           <div className="sm:col-span-2">
             <button onClick={save} disabled={saving} className="h-9 rounded-full bg-white px-4 text-sm font-semibold text-black hover:bg-zinc-200 disabled:opacity-60">{saving ? 'Saving…' : 'Save Razorpay'}</button>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        <h3 className="text-sm font-semibold text-white">Email (Resend API)</h3>
-        <p className="mt-1 text-xs text-zinc-400 mb-3">Configure email service for sending purchase and subscription confirmations.</p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="block text-xs text-zinc-400 mb-1">Resend API Key</label>
-            <input
-              type="password"
-              value={resendApiKey}
-              onChange={(e) => setResendApiKey(e.target.value)}
-              placeholder="re_xxxxxxxxxxxxxxxxxxxxxxxx"
-              className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-sm"
-            />
-            <p className="mt-1 text-[11px] text-zinc-500">Get your API key from <a href="https://resend.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">resend.com</a></p>
-          </div>
-          <div>
-            <label className="block text-xs text-zinc-400 mb-1">From Email</label>
-            <input
-              type="text"
-              value={resendFromEmail}
-              onChange={(e) => setResendFromEmail(e.target.value)}
-              placeholder="Celite <noreply@celite.netlify.app>"
-              className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-sm"
-            />
-            <p className="mt-1 text-[11px] text-zinc-500">Sender email address (must be verified in Resend)</p>
-          </div>
-          <div className="sm:col-span-2">
-            <button onClick={save} disabled={saving} className="h-9 rounded-full bg-white px-4 text-sm font-semibold text-black hover:bg-zinc-200 disabled:opacity-60">{saving ? 'Saving…' : 'Save Email Settings'}</button>
           </div>
         </div>
       </div>

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
-import { sendEmail, generateSubscriptionEmail } from '../../../../lib/email';
 
 export async function POST(req: Request) {
   try {
@@ -131,56 +130,6 @@ export async function POST(req: Request) {
             );
           
           console.log(`Subscription reactivated for user: ${userId}, plan: ${finalPlan}`);
-          
-          // Send subscription confirmation email
-          try {
-            // Get user email from auth or notes
-            let userEmail: string | null = null;
-            let userName: string = 'User';
-            
-            if (invoiceEntity?.customer_email) {
-              userEmail = invoiceEntity.customer_email;
-            } else if (subscriptionEntity?.notes?.customer_email) {
-              userEmail = subscriptionEntity.notes.customer_email;
-            } else {
-              // Get from Supabase auth
-              const { data: userData } = await admin.auth.admin.getUserById(userId);
-              if (userData?.user?.email) {
-                userEmail = userData.user.email;
-                const metadata = userData.user.user_metadata as any;
-                if (metadata?.first_name) {
-                  userName = metadata.first_name + (metadata?.last_name ? ` ${metadata.last_name}` : '');
-                } else {
-                  userName = userEmail.split('@')[0];
-                }
-              }
-            }
-            
-            if (userEmail) {
-              // Validate finalPlan is 'monthly' or 'yearly' before calling generateSubscriptionEmail
-              if (finalPlan === 'monthly' || finalPlan === 'yearly') {
-                const emailHtml = generateSubscriptionEmail(finalPlan, userEmail, userName, validUntil.toISOString());
-                await sendEmail({
-                  to: userEmail,
-                  subject: `Subscription Activated - ${finalPlan === 'yearly' ? 'Yearly' : 'Monthly'} Pro Plan`,
-                  html: emailHtml,
-                });
-                console.log(`Subscription confirmation email sent to: ${userEmail}`);
-              } else {
-                // Fallback to monthly if plan is invalid or null
-                console.warn(`Invalid plan value: ${finalPlan}, defaulting to monthly for email`);
-                const emailHtml = generateSubscriptionEmail('monthly', userEmail, userName, validUntil.toISOString());
-                await sendEmail({
-                  to: userEmail,
-                  subject: `Subscription Activated - Monthly Pro Plan`,
-                  html: emailHtml,
-                });
-              }
-            }
-          } catch (emailError: any) {
-            // Don't fail webhook if email fails
-            console.error('Failed to send subscription confirmation email:', emailError);
-          }
         }
       }
     }
