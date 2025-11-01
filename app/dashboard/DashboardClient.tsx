@@ -271,11 +271,13 @@ export default function DashboardClient() {
           <div className="rounded-2xl border border-white/15 bg-black/40 px-6 py-4 text-right">
             <p className="text-sm text-white/70">Subscription</p>
             <p className="mt-1 text-2xl font-semibold text-white">{subscriptionTier}</p>
-            <p className={`mt-1 text-xs ${isActive ? 'text-green-300' : 'text-zinc-400'}`}>
-              {isActive ? 'Active' : 'Inactive'}
-              {sub?.plan ? ` • ${sub.plan === 'yearly' ? 'Yearly' : 'Monthly'}` : ''}
-              {sub?.valid_until ? ` • renews ${new Date(sub.valid_until).toLocaleDateString()}` : ''}
-            </p>
+            {/* Only show subscription details if there's an active subscription */}
+            {isActive && (
+              <p className={`mt-1 text-xs text-green-300`}>
+                Active{sub?.plan ? ` • ${sub.plan === 'yearly' ? 'Yearly' : 'Monthly'}` : ''}
+                {sub?.valid_until ? ` • renews ${new Date(sub.valid_until).toLocaleDateString()}` : ''}
+              </p>
+            )}
             {!isActive && (
               <div className="mt-3 flex gap-2 justify-end">
                 <button onClick={() => activate('monthly')} className="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-zinc-200">
