@@ -31,6 +31,10 @@ export default function CheckoutPage() {
   useEffect(() => {
     const productSlug = searchParams?.get('product');
     if (productSlug && cartCount === 0) {
+      // Check if item is already in cart to avoid duplicate adds
+      const alreadyInCart = cartItems.some(item => item.slug === productSlug);
+      if (alreadyInCart) return;
+      
       // Fetch product and add to cart
       const fetchProduct = async () => {
         const supabase = getSupabaseBrowserClient();
@@ -40,18 +44,22 @@ export default function CheckoutPage() {
           .eq('slug', productSlug)
           .maybeSingle();
         if (data) {
-          addToCart({
-            slug: data.slug,
-            name: data.name,
-            price: Number(data.price),
-            img: data.img,
-            quantity: 1,
-          });
+          // Double-check cartItems haven't changed during async operation
+          const stillNotInCart = !cartItems.some(item => item.slug === data.slug);
+          if (stillNotInCart) {
+            addToCart({
+              slug: data.slug,
+              name: data.name,
+              price: Number(data.price),
+              img: data.img,
+              quantity: 1,
+            });
+          }
         }
       };
       fetchProduct();
     }
-  }, [searchParams, cartCount, addToCart]);
+  }, [searchParams, cartCount, addToCart, cartItems]);
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
