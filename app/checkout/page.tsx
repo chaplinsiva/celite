@@ -214,14 +214,18 @@ function CheckoutContent() {
 
         const sub = subJson.subscription;
         // Open Razorpay checkout for subscription
+        // Ensure email is always populated from user if billing email is empty
+        const checkoutEmail = billing.email || user?.email || '';
+        const checkoutName = billing.name || user?.email?.split("@")[0] || '';
+        
         // @ts-ignore
         const rzp = new window.Razorpay({
           key: sub?.razorpay_key || '',
           subscription_id: sub.id,
           image: '/Logo.png',
           prefill: {
-            name: billing.name,
-            email: billing.email,
+            name: checkoutName,
+            email: checkoutEmail,
             contact: `+91${cleanMobile}`,
           },
           handler: async (resp: any) => {
