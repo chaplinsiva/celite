@@ -47,144 +47,206 @@ export async function POST(req: Request) {
 
     const admin = getSupabaseAdminClient();
 
-    // ✅ SUBSCRIPTION LOGIC
-    if (event === 'subscription.activated' || event === 'invoice.paid') {
+    // ✅ SUBSCRIPTION LOGIC - Activation/Payment Success
+    if (event === 'subscription.activated' || event === 'invoice.paid' || event === 'invoice.payment_succeeded') {
       const userId =
         payload.subscription?.entity?.notes?.user_id ||
-        payload.invoice?.entity?.notes?.user_id;
+        payload.invoice?.entity?.notes?.user_id ||
+        payload.payment?.entity?.notes?.user_id;
 
       if (userId) {
-        // Update users table with subscription status
-        await admin
-          .from('users')
-          .update({
-            subscription_status: 'active',
-            last_payment_status: 'success',
-          })
-          .eq('id', userId);
+        // Check if this is a subscription payment (not one-time)
+        const invoiceEntity = payload.invoice?.entity;
+        const subscriptionEntity = payload.subscription?.entity;
+        const paymentEntity = payload.payment?.entity;
+        
+        // Determine if this payment is for a subscription (has subscription_id in invoice or payment)
+        const isSubscriptionPayment = 
+          invoiceEntity?.subscription_id || 
+          subscriptionEntity?.id ||
+          paymentEntity?.invoice_id; // Payments linked to invoices are subscription payments
 
-        // Also update subscriptions table for compatibility with existing code
-        const subscriptionEntity = payload.subscription?.entity || payload.invoice?.entity;
-        // Get subscription ID from subscription entity or invoice entity's subscription_id field
-        const razorpaySubscriptionId = 
-          subscriptionEntity?.id || 
-          payload.invoice?.entity?.subscription_id || 
-          payload.subscription?.entity?.id || 
-          null;
-        const plan = subscriptionEntity?.plan_id
-          ? subscriptionEntity.plan_id.includes('yearly')
-            ? 'yearly'
-            : 'monthly'
-          : null;
+        if (isSubscriptionPayment) {
+          console.log(`Reactivating subscription for user: ${userId}`);
+          
+          // Update users table with subscription status
+          await admin
+            .from('users')
+            .update({
+              subscription_status: 'active',
+              last_payment_status: 'success',
+            })
+            .eq('id', userId);
 
-        if (plan) {
+          // Get subscription ID from various sources
+          const razorpaySubscriptionId = 
+            subscriptionEntity?.id || 
+            invoiceEntity?.subscription_id || 
+            payload.subscription?.entity?.id || 
+            null;
+          
+          // Determine plan from subscription entity or invoice
+          const subscriptionForPlan = subscriptionEntity || invoiceEntity;
+          const plan = subscriptionForPlan?.plan_id
+            ? subscriptionForPlan.plan_id.includes('yearly')
+              ? 'yearly'
+              : 'monthly'
+            : null;
+
+          // If we can't determine plan from webhook, try to get it from existing subscription
+          let finalPlan = plan;
+          if (!finalPlan) {
+            const { data: existingSub } = await admin
+              .from('subscriptions')
+              .select('plan')
+              .eq('user_id', userId)
+              .maybeSingle();
+            finalPlan = existingSub?.plan === 'yearly' || existingSub?.plan === 'monthly' 
+              ? existingSub.plan 
+              : 'monthly'; // Default to monthly
+          }
+
           // Calculate valid_until based on plan
           const now = new Date();
           const validUntil = new Date(now);
-          if (plan === 'yearly') {
+          if (finalPlan === 'yearly') {
             validUntil.setFullYear(validUntil.getFullYear() + 1);
           } else {
             validUntil.setMonth(validUntil.getMonth() + 1);
           }
 
-          // Upsert subscription with Razorpay subscription ID
+          // Upsert subscription with Razorpay subscription ID - REACTIVATE
           await admin
             .from('subscriptions')
             .upsert(
               {
                 user_id: userId,
                 is_active: true,
-                plan,
+                plan: finalPlan,
                 valid_until: validUntil.toISOString(),
                 razorpay_subscription_id: razorpaySubscriptionId,
               },
               { onConflict: 'user_id' }
             );
+          
+          console.log(`Subscription reactivated for user: ${userId}, plan: ${finalPlan}`);
         }
       }
     }
 
-    if (event === 'payment.failed' || event === 'subscription.cancelled') {
+    // ✅ SUBSCRIPTION LOGIC - Cancellation/Payment Failure
+    if (event === 'payment.failed' || event === 'subscription.cancelled' || event === 'invoice.payment_failed') {
       const userId =
         payload.subscription?.entity?.notes?.user_id ||
         payload.payment?.entity?.notes?.user_id ||
         payload.invoice?.entity?.notes?.user_id;
 
       if (userId) {
-        // Update users table
-        await admin
-          .from('users')
-          .update({
-            subscription_status: 'inactive',
-            last_payment_status: 'failed',
-          })
-          .eq('id', userId);
+        // Check if this is a subscription payment failure (not one-time)
+        const invoiceEntity = payload.invoice?.entity;
+        const paymentEntity = payload.payment?.entity;
+        const subscriptionEntity = payload.subscription?.entity;
+        
+        // Determine if this payment failure is for a subscription
+        // Subscription payments are linked to invoices or have subscription_id
+        const isSubscriptionPayment = 
+          subscriptionEntity?.id ||
+          invoiceEntity?.subscription_id ||
+          paymentEntity?.invoice_id || // If payment is linked to an invoice, it's subscription
+          event === 'subscription.cancelled' ||
+          event === 'invoice.payment_failed';
 
-        // Also update subscriptions table
-        await admin
-          .from('subscriptions')
-          .update({
-            is_active: false,
-          })
-          .eq('user_id', userId);
+        if (isSubscriptionPayment) {
+          console.log(`Cancelling subscription due to payment failure for user: ${userId}`);
+          
+          // Update users table
+          await admin
+            .from('users')
+            .update({
+              subscription_status: 'inactive',
+              last_payment_status: 'failed',
+            })
+            .eq('id', userId);
+
+          // Update subscriptions table - CANCEL SUBSCRIPTION
+          await admin
+            .from('subscriptions')
+            .update({
+              is_active: false,
+            })
+            .eq('user_id', userId);
+          
+          console.log(`Subscription cancelled for user: ${userId}`);
+        }
+        // If it's a one-time payment failure, we'll handle it in the ONE-TIME PRODUCT LOGIC section below
       }
     }
 
     // ✅ ONE-TIME PRODUCT LOGIC
+    // Only process if this is NOT a subscription payment
     if (event === 'payment.captured') {
       const purchaseId = payload.payment?.entity?.notes?.purchase_id;
       const orderId = payload.payment?.entity?.order_id;
+      const invoiceId = payload.payment?.entity?.invoice_id;
 
-      if (purchaseId) {
-        // Update purchases table
-        await admin
-          .from('purchases')
-          .update({
-            status: 'paid',
-          })
-          .eq('id', purchaseId);
-      }
+      // Skip if this payment is linked to an invoice (subscription payment)
+      if (!invoiceId && (purchaseId || orderId)) {
+        if (purchaseId) {
+          // Update purchases table
+          await admin
+            .from('purchases')
+            .update({
+              status: 'paid',
+            })
+            .eq('id', purchaseId);
+        }
 
-      // Also update orders table for compatibility
-      if (orderId) {
-        // Extract order_id from Razorpay order_id format
-        // Razorpay order_id is like "order_xxxxx", we might need to map it
-        // For now, we'll update any orders that match
-        await admin
-          .from('orders')
-          .update({
-            status: 'paid',
-          })
-          .eq('razorpay_order_id', orderId)
-          .then(() => {
-            // If no match by razorpay_order_id, try to find by notes
-            // This is a fallback since we might not have stored razorpay_order_id
-          });
+        // Also update orders table for compatibility
+        if (orderId) {
+          // Extract order_id from Razorpay order_id format
+          // Razorpay order_id is like "order_xxxxx", we might need to map it
+          // For now, we'll update any orders that match
+          await admin
+            .from('orders')
+            .update({
+              status: 'paid',
+            })
+            .eq('razorpay_order_id', orderId)
+            .then(() => {
+              // If no match by razorpay_order_id, try to find by notes
+              // This is a fallback since we might not have stored razorpay_order_id
+            });
+        }
       }
     }
 
+    // Handle one-time payment failures (not subscription)
     if (event === 'payment.failed') {
       const purchaseId = payload.payment?.entity?.notes?.purchase_id;
       const orderId = payload.payment?.entity?.order_id;
+      const invoiceId = payload.payment?.entity?.invoice_id;
 
-      if (purchaseId) {
-        // Update purchases table
-        await admin
-          .from('purchases')
-          .update({
-            status: 'failed',
-          })
-          .eq('id', purchaseId);
-      }
+      // Only process one-time payments (not subscription invoices)
+      if (!invoiceId && (purchaseId || orderId)) {
+        if (purchaseId) {
+          // Update purchases table
+          await admin
+            .from('purchases')
+            .update({
+              status: 'failed',
+            })
+            .eq('id', purchaseId);
+        }
 
-      // Also update orders table for compatibility
-      if (orderId) {
-        await admin
-          .from('orders')
-          .update({
-            status: 'failed',
-          })
-          .eq('razorpay_order_id', orderId);
+        // Also update orders table for compatibility
+        if (orderId) {
+          await admin
+            .from('orders')
+            .update({
+              status: 'failed',
+            })
+            .eq('razorpay_order_id', orderId);
+        }
       }
     }
 
