@@ -80,6 +80,11 @@ function LoginContent() {
             autoComplete="current-password"
             required
           />
+          <div className="flex justify-end">
+            <Link href="/forgot-password" className="text-sm text-blue-400 hover:underline">
+              Forgot password?
+            </Link>
+          </div>
           <button
             type="submit"
             disabled={isSubmitting}
