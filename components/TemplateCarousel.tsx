@@ -173,13 +173,16 @@ export default function TemplateCarousel() {
           LIMITED
         </div>
       )}
-      <div className="relative w-full h-48 sm:h-56 md:h-52 rounded-xl mb-4 sm:mb-5 overflow-hidden bg-zinc-950 border border-white/5 group-hover:border-white/20 transition-colors">
+      {/* 16:9 Aspect Ratio Container */}
+      <div className="relative w-full aspect-video rounded-xl mb-4 sm:mb-5 overflow-hidden bg-zinc-950 border border-white/5 group-hover:border-white/20 transition-colors">
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-10"></div>
         <img
           src={tpl.img}
           alt={tpl.name}
-          className="absolute inset-0 w-full h-full object-cover rounded-xl transition-all duration-300 group-hover:scale-110"
-          style={{ opacity: hovered === tpl.slug && tpl.video ? 0 : 1 }}
+          className="absolute inset-0 w-full h-full object-cover rounded-xl transition-transform duration-500 ease-out scale-110 group-hover:scale-100"
+          style={{ 
+            opacity: hovered === tpl.slug && tpl.video ? 0 : 1
+          }}
         />
         {tpl.video && (
           <video
@@ -189,7 +192,7 @@ export default function TemplateCarousel() {
             playsInline
             muted={(mutedMap[tpl.slug] ?? true)}
             preload="metadata"
-            className={`absolute inset-0 w-full h-full object-cover rounded-xl transition-all duration-300 group-hover:scale-110 ${hovered === tpl.slug ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute inset-0 w-full h-full object-cover rounded-xl transition-all duration-500 ease-out scale-110 group-hover:scale-100 ${hovered === tpl.slug ? 'opacity-100' : 'opacity-0'}`}
           >
             Sorry, your browser does not support embedded videos.
           </video>
