@@ -22,9 +22,9 @@ export const metadata: Metadata = {
   title: "Celite - Professional After Effects Templates",
   description: "Discover premium After Effects templates for logo reveals, slideshows, and more",
   icons: {
-    icon: '/Logo.png',
-    shortcut: '/Logo.png',
-    apple: '/Logo.png',
+    icon: '/celite.png',
+    shortcut: '/celite.png',
+    apple: '/celite.png',
   },
 };
 
