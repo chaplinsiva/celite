@@ -29,9 +29,6 @@ export default function CheckoutPage() {
       <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
         <div className="max-w-3xl mx-auto text-center rounded-3xl border border-white/10 bg-white/5 p-12">
           <h1 className="text-3xl font-semibold">Sign in to checkout</h1>
-          <p className="mt-4 text-zinc-300">
-            Use <span className="font-mono">celite@gmail.com</span> / <span className="font-mono">123</span> to experience the full flow.
-          </p>
           <Link
             href="/login"
             className="mt-6 inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
