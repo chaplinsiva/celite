@@ -89,23 +89,6 @@ export default function DashboardClient() {
     load();
   }, [user]);
 
-  const activate = async (plan: 'monthly' | 'yearly') => {
-    const supabase = getSupabaseBrowserClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    await fetch('/api/subscription/activate', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan }),
-    });
-    // reload sub
-    const { data: s } = await supabase
-      .from('subscriptions')
-      .select('is_active, plan, valid_until')
-      .eq('user_id', (user as any).id)
-      .maybeSingle();
-    if (s) setSub({ is_active: !!s.is_active, plan: s.plan ?? null, valid_until: s.valid_until ?? null });
-  };
 
   const handleEditProfile = async (firstName: string, lastName: string) => {
     try {
@@ -280,12 +263,12 @@ export default function DashboardClient() {
             )}
             {!isActive && (
               <div className="mt-3 flex gap-2 justify-end">
-                <button onClick={() => activate('monthly')} className="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-zinc-200">
+                <Link href="/pricing" className="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-zinc-200">
                   Activate Monthly (₹799)
-                </button>
-                <button onClick={() => activate('yearly')} className="inline-flex items-center rounded-full border border-white/30 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/10">
+                </Link>
+                <Link href="/pricing" className="inline-flex items-center rounded-full border border-white/30 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/10">
                   Activate Yearly (₹5,499)
-                </button>
+                </Link>
               </div>
             )}
           </div>
