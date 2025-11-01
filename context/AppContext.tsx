@@ -11,7 +11,6 @@ type User = {
 
 export type TemplateCartItem = Pick<Template, 'slug' | 'name' | 'price'> & {
   img: string;
-  quantity: number;
 };
 
 type AppContextValue = {
@@ -61,7 +60,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const supabase = getSupabaseBrowserClient();
     const { data, error } = await supabase
       .from('cart_items')
-      .select('slug,name,price,img,quantity')
+      .select('slug,name,price,img')
       .eq('user_id', userId);
     if (error) return;
     const items: TemplateCartItem[] = (data ?? []).map((row: any) => ({
@@ -69,11 +68,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       name: row.name,
       price: Number(row.price),
       img: row.img,
-      quantity: Number(row.quantity),
     }));
     setCartItems(items);
-    const totalQty = items.reduce((sum, it) => sum + it.quantity, 0);
-    setCartCount(totalQty);
+    setCartCount(items.length);
   };
 
   const login = async (email: string, password: string) => {
@@ -120,34 +117,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const addToCart = async (item: TemplateCartItem) => {
-    // Update local state optimistically
-    setCartItems((prev) => {
-      const existing = prev.find((entry) => entry.slug === item.slug);
-      if (existing) {
-        return prev.map((entry) => entry.slug === item.slug ? { ...entry, quantity: entry.quantity + 1 } : entry);
-      }
-      return [...prev, { ...item, quantity: 1 }];
-    });
+    // Check if item already exists in cart
+    const existing = cartItems.find((entry) => entry.slug === item.slug);
+    if (existing) {
+      // Item already in cart, don't add again
+      return;
+    }
+
+    // Update local state
+    setCartItems((prev) => [...prev, item]);
     setCartCount((prev) => prev + 1);
 
     // Persist to Supabase if logged in
     if (user) {
       const supabase = getSupabaseBrowserClient();
-      // Read current quantity
-      const { data } = await supabase
-        .from('cart_items')
-        .select('quantity')
-        .eq('user_id', user.id)
-        .eq('slug', item.slug)
-        .maybeSingle();
-      const nextQty = (data?.quantity ?? 0) + 1;
       await supabase.from('cart_items').upsert({
         user_id: user.id,
         slug: item.slug,
         name: item.name,
         price: item.price,
         img: item.img,
-        quantity: nextQty,
       }, { onConflict: 'user_id,slug' });
     }
   };
@@ -162,33 +151,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const removeFromCart = async (slug: string) => {
-    let removedOne = false;
-    setCartItems((prev) => {
-      const existing = prev.find((entry) => entry.slug === slug);
-      if (!existing) return prev;
-      removedOne = true;
-      const newItems = prev
-        .map((entry) => entry.slug === slug ? { ...entry, quantity: entry.quantity - 1 } : entry)
-        .filter((entry) => entry.quantity > 0);
-      return newItems;
-    });
-    if (removedOne) setCartCount((prev) => Math.max(prev - 1, 0));
+    // Remove item from cart
+    setCartItems((prev) => prev.filter((entry) => entry.slug !== slug));
+    setCartCount((prev) => Math.max(prev - 1, 0));
 
+    // Remove from Supabase if logged in
     if (user) {
       const supabase = getSupabaseBrowserClient();
-      const { data } = await supabase
-        .from('cart_items')
-        .select('quantity')
-        .eq('user_id', user.id)
-        .eq('slug', slug)
-        .maybeSingle();
-      const currentQty = Number(data?.quantity ?? 0);
-      const nextQty = Math.max(currentQty - 1, 0);
-      if (nextQty === 0) {
-        await supabase.from('cart_items').delete().eq('user_id', user.id).eq('slug', slug);
-      } else {
-        await supabase.from('cart_items').upsert({ user_id: user.id, slug, quantity: nextQty }, { onConflict: 'user_id,slug' });
-      }
+      await supabase.from('cart_items').delete().eq('user_id', user.id).eq('slug', slug);
     }
   };
 

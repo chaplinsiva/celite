@@ -255,7 +255,6 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
       name: product.name,
       price: priceToUse,
       img: product.img,
-      quantity: 1,
     };
     addToCart(cartItem);
     setFeedback('Template added to your cart.');

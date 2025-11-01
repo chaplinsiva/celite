@@ -82,7 +82,7 @@ function DashboardContent() {
       const merged = (ords ?? []).map((o) => {
         const f = firstItemByOrder[o.id];
         const amount = formatPrice(Number(o.total));
-        const itemLabel = f ? `${f.name}${f.quantity > 1 ? ` × ${f.quantity}` : ''}` : 'Order';
+        const itemLabel = f ? f.name : 'Order';
         return {
           id: `#${o.id.slice(0, 8)}`,
           date: new Date(o.created_at).toLocaleDateString(),

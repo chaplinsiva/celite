@@ -105,7 +105,7 @@ export async function POST(req: Request) {
         slug: item.slug,
         name: item.name,
         price: Number(item.price) || 0,
-        quantity: Number(item.quantity) || 1,
+        quantity: 1,
         img: item.img || '',
       }));
       await admin.from('order_items').insert(orderItems);

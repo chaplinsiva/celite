@@ -69,7 +69,7 @@ export default function AnalyticsPanel() {
             <tbody>
               {orders.map((o) => {
                 const list = items.filter((it) => it.order_id === o.id);
-                const label = list.map((l) => `${l.name}${l.quantity > 1 ? ` × ${l.quantity}` : ''}`).join(', ');
+                const label = list.map((l) => l.name).join(', ');
                 return (
                   <tr key={o.id} className="border-t border-white/10">
                     <td className="px-4 py-3 text-white">{o.id.slice(0,8)}</td>

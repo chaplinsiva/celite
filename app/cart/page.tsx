@@ -26,7 +26,7 @@ export default function CartPage() {
     );
   }
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price, 0);
 
   if (!user) {
     return (
@@ -83,10 +83,9 @@ export default function CartPage() {
                   <div className="flex flex-1 flex-col justify-between">
                     <div>
                       <h2 className="text-lg font-semibold text-white">{item.name}</h2>
-                      <p className="text-sm text-zinc-400">Quantity: {item.quantity}</p>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-white">{formatPriceWithDecimal(item.price * item.quantity)}</span>
+                      <span className="font-semibold text-white">{formatPriceWithDecimal(item.price)}</span>
                       <button
                         onClick={() => removeFromCart(item.slug)}
                         className="text-xs font-semibold uppercase tracking-widest text-red-300 hover:text-red-100"

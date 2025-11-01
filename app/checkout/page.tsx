@@ -91,7 +91,6 @@ function CheckoutContent() {
               name: data.name,
               price: Number(data.price),
               img: data.img,
-              quantity: 1,
             });
           }
         }
@@ -102,7 +101,7 @@ function CheckoutContent() {
 
   const subtotal = subscriptionPlan && subscriptionPrice 
     ? subscriptionPrice 
-    : cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    : cartItems.reduce((sum, item) => sum + item.price, 0);
 
   if (!user) {
     return (
@@ -473,8 +472,8 @@ function CheckoutContent() {
             <ul className="space-y-4 text-sm text-zinc-300">
               {cartItems.map((item) => (
                 <li key={item.slug} className="flex items-center justify-between">
-                  <span>{item.name} × {item.quantity}</span>
-                  <span>{formatPriceWithDecimal(item.price * item.quantity)}</span>
+                  <span>{item.name}</span>
+                  <span>{formatPriceWithDecimal(item.price)}</span>
                 </li>
               ))}
             </ul>
