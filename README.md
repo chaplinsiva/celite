@@ -58,3 +58,9 @@ import { getSupabaseBrowserClient } from './lib/supabaseClient';
 const supabase = getSupabaseBrowserClient();
 // Example: const { data, error } = await supabase.from('your_table').select('*');
 ```
+
+## Features
+
+- **YouTube Preview System**: Templates use YouTube video links for previews instead of storage bucket images/videos
+- **Database Migrations**: Complete SQL migration scripts available in `supabase_migrations/` directory
+- **Admin Panel**: Manage templates, categories, and users with admin access
