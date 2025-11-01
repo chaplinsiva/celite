@@ -114,7 +114,7 @@ export async function POST(req: Request) {
       const slug = notes.slug as string | undefined;
       const name = notes.name as string | undefined;
       const img = notes.img as string | undefined;
-      if (slug && name) {
+    if (slug && name) {
         await admin.from('order_items').insert({ 
           order_id: dbOrder.id, 
           slug, 
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
           quantity: 1, 
           img: img || '' 
         });
-      }
+    }
     }
     
     // Extract slug and name from notes for single product fallback
