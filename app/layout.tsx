@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import Header from "../components/Header";
+import Footer from "../components/Footer";
 import GoogleAnalytics from "../components/GoogleAnalytics";
 import { AppProvider } from "../context/AppContext";
 import { LoginModalProvider } from "../context/LoginModalContext";
@@ -59,9 +60,14 @@ export default function RootLayout({
         />
         <AppProvider>
           <LoginModalProvider>
-            <Header />
-            <GoogleAnalytics />
-            {children}
+            <div className="flex flex-col min-h-screen">
+              <Header />
+              <GoogleAnalytics />
+              <main className="flex-1">
+                {children}
+              </main>
+              <Footer />
+            </div>
           </LoginModalProvider>
         </AppProvider>
       </body>
