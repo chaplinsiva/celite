@@ -104,15 +104,24 @@ export default function Pricing() {
     const yearlyPrice = `₹${yearlyINR.toLocaleString('en-IN')}`;
     
     return basePlans.map((p) => {
-      if (p.name !== 'Pro') return { ...p, tagline: isActive ? null : 'Current Plan' };
+      if (p.name !== 'Pro') {
+        // Free plan - only show "Current Plan" if user has no active subscription
+        return { ...p, tagline: isActive ? null : 'Current Plan' };
+      }
+      
+      // Pro plan - show "Current Plan" tagline only for the active plan type
+      const isMonthlyActive = isActive && subPlan === 'monthly';
+      const isYearlyActive = isActive && subPlan === 'yearly';
+      const showCurrentPlanTagline = (isMonthlyActive && period === 'monthly') || (isYearlyActive && period === 'yearly');
+      
       return {
         ...p,
         price: period === 'monthly' ? monthlyPrice : yearlyPrice,
         cta: isActive ? 'Manage' : (period === 'monthly' ? 'Upgrade Monthly' : 'Upgrade Yearly'),
-        tagline: isActive ? 'Current Plan' : null,
+        tagline: showCurrentPlanTagline ? 'Current Plan' : null,
       };
     });
-  }, [period, isActive, monthlyINR, yearlyINR]);
+  }, [period, isActive, subPlan, monthlyINR, yearlyINR]);
 
   const loadRazorpay = (): Promise<void> => {
     return new Promise((resolve, reject) => {
@@ -252,16 +261,27 @@ export default function Pricing() {
                   const monthlyPriceText = `₹${monthlyINR.toLocaleString('en-IN')}`;
                   const yearlyPriceText = `₹${yearlyINR.toLocaleString('en-IN')}`;
                   
-                  if (isYearlyActive) {
+                  // Show "Current Plan" only for the active plan type based on period toggle
+                  if (isYearlyActive && period === 'yearly') {
                     ctaText = 'Current Plan';
                     disabled = true;
-                  } else if (isMonthlyActive) {
+                  } else if (isMonthlyActive && period === 'monthly') {
+                    ctaText = 'Current Plan';
+                    disabled = true;
+                  } else if (isYearlyActive && period === 'monthly') {
+                    // User has yearly, but viewing monthly - show upgrade option
+                    ctaText = period === 'monthly' ? `Upgrade Monthly (${monthlyPriceText})` : `Upgrade Yearly (${yearlyPriceText})`;
+                    target = period;
+                    disabled = false;
+                  } else if (isMonthlyActive && period === 'yearly') {
+                    // User has monthly, but viewing yearly - show upgrade to yearly
                     ctaText = `Upgrade to Yearly (${yearlyPriceText})`;
                     target = 'yearly';
                     disabled = false;
                   } else {
+                    // No active subscription
                     ctaText = period === 'yearly' ? `Upgrade Yearly (${yearlyPriceText})` : `Upgrade Monthly (${monthlyPriceText})`;
-                    target = period; // Ensure target matches the period toggle
+                    target = period;
                   }
                 }
                 return (
