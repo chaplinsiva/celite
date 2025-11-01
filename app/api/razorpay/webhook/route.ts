@@ -157,13 +157,25 @@ export async function POST(req: Request) {
             }
             
             if (userEmail) {
-              const emailHtml = generateSubscriptionEmail(finalPlan, userEmail, userName, validUntil.toISOString());
-              await sendEmail({
-                to: userEmail,
-                subject: `Subscription Activated - ${finalPlan === 'yearly' ? 'Yearly' : 'Monthly'} Pro Plan`,
-                html: emailHtml,
-              });
-              console.log(`Subscription confirmation email sent to: ${userEmail}`);
+              // Validate finalPlan is 'monthly' or 'yearly' before calling generateSubscriptionEmail
+              if (finalPlan === 'monthly' || finalPlan === 'yearly') {
+                const emailHtml = generateSubscriptionEmail(finalPlan, userEmail, userName, validUntil.toISOString());
+                await sendEmail({
+                  to: userEmail,
+                  subject: `Subscription Activated - ${finalPlan === 'yearly' ? 'Yearly' : 'Monthly'} Pro Plan`,
+                  html: emailHtml,
+                });
+                console.log(`Subscription confirmation email sent to: ${userEmail}`);
+              } else {
+                // Fallback to monthly if plan is invalid or null
+                console.warn(`Invalid plan value: ${finalPlan}, defaulting to monthly for email`);
+                const emailHtml = generateSubscriptionEmail('monthly', userEmail, userName, validUntil.toISOString());
+                await sendEmail({
+                  to: userEmail,
+                  subject: `Subscription Activated - Monthly Pro Plan`,
+                  html: emailHtml,
+                });
+              }
             }
           } catch (emailError: any) {
             // Don't fail webhook if email fails
