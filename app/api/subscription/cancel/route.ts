@@ -14,21 +14,46 @@ export async function POST(req: Request) {
 
     const userId = user.id;
 
-    // Get user's subscription with Razorpay subscription ID
-    const { data: subscription, error: subError } = await admin
+    // Get user's subscription with Razorpay subscription ID (if column exists)
+    let razorpaySubscriptionId: string | null = null;
+    
+    // Try to get subscription with razorpay_subscription_id column
+    // If column doesn't exist, we'll get an error and fall back to selecting all columns
+    const { data: sub, error: subError } = await admin
       .from('subscriptions')
       .select('razorpay_subscription_id')
       .eq('user_id', userId)
       .maybeSingle();
-
-    if (subError) return NextResponse.json({ ok: false, error: subError.message }, { status: 400 });
+    
+    // If error indicates column doesn't exist, try selecting all columns
+    if (subError && (subError.message?.includes('column') || subError.message?.includes('does not exist'))) {
+      console.log('razorpay_subscription_id column may not exist, trying select *');
+      
+      // Fallback: select all columns and extract razorpay_subscription_id if it exists
+      const { data: subAll } = await admin
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (subAll) {
+        razorpaySubscriptionId = (subAll as any).razorpay_subscription_id || null;
+      }
+    } else if (!subError && sub) {
+      // Successfully got subscription with razorpay_subscription_id column
+      razorpaySubscriptionId = sub.razorpay_subscription_id || null;
+    } else if (subError) {
+      // Some other error occurred
+      console.error('Error fetching subscription:', subError);
+      // Continue anyway - we'll still try to cancel in database
+    }
 
     // Cancel subscription in Razorpay if subscription ID exists
-    if (subscription?.razorpay_subscription_id) {
+    if (razorpaySubscriptionId) {
       try {
         // Cancel the subscription in Razorpay
         // This will stop future recurring payments
-        await razorpayRequest(`/subscriptions/${subscription.razorpay_subscription_id}/cancel`, {
+        await razorpayRequest(`/subscriptions/${razorpaySubscriptionId}/cancel`, {
           method: 'POST',
           body: {
             cancel_at_cycle_end: 0, // Cancel immediately (0 = now, 1 = at end of current cycle)
@@ -51,7 +76,7 @@ export async function POST(req: Request) {
     
     return NextResponse.json({ 
       ok: true, 
-      message: subscription?.razorpay_subscription_id 
+      message: razorpaySubscriptionId 
         ? 'Subscription cancelled in Razorpay and database' 
         : 'Subscription cancelled in database (no Razorpay subscription ID found)' 
     });
