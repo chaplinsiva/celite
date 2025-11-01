@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Set outputFileTracingRoot to avoid workspace detection issues with parent directory
+  outputFileTracingRoot: __dirname,
 };
 
 export default nextConfig;

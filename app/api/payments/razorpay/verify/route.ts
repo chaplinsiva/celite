@@ -126,6 +126,10 @@ export async function POST(req: Request) {
       }
     }
     
+    // Extract slug and name from notes for single product fallback
+    const slug = notes.slug as string | undefined;
+    const name = notes.name as string | undefined;
+    
     return NextResponse.json({ 
       ok: true, 
       order_id: dbOrder.id,
