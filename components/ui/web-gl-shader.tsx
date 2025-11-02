@@ -59,11 +59,55 @@ export function WebGLShader() {
       }
     `
 
+    const handleResize = () => {
+      if (!refs.renderer || !refs.uniforms) return
+      const width = window.innerWidth
+      const height = window.innerHeight
+      refs.renderer.setSize(width, height, false)
+      refs.uniforms.resolution.value = [width, height]
+    }
+
     const initScene = () => {
-      refs.scene = new THREE.Scene()
-      refs.renderer = new THREE.WebGLRenderer({ canvas })
-      refs.renderer.setPixelRatio(window.devicePixelRatio)
-      refs.renderer.setClearColor(new THREE.Color(0x000000))
+      // Check if WebGL is supported before attempting to create renderer
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+      if (!gl) {
+        console.warn('WebGL is not supported or disabled in this browser')
+        // Set a fallback background
+        if (canvas) {
+          canvas.style.backgroundColor = '#000000'
+        }
+        return
+      }
+
+      try {
+        refs.scene = new THREE.Scene()
+        
+        try {
+          refs.renderer = new THREE.WebGLRenderer({ 
+            canvas,
+            antialias: true,
+            alpha: false,
+            powerPreference: 'default'
+          })
+        } catch (rendererError) {
+          console.error('Failed to create WebGL renderer:', rendererError)
+          // Set fallback background
+          if (canvas) {
+            canvas.style.backgroundColor = '#000000'
+          }
+          return
+        }
+
+        if (!refs.renderer) {
+          console.error('WebGL renderer is null')
+          if (canvas) {
+            canvas.style.backgroundColor = '#000000'
+          }
+          return
+        }
+
+        refs.renderer.setPixelRatio(window.devicePixelRatio)
+        refs.renderer.setClearColor(new THREE.Color(0x000000))
 
       refs.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, -1)
 
@@ -99,30 +143,55 @@ export function WebGLShader() {
       refs.scene.add(refs.mesh)
 
       handleResize()
+      } catch (err) {
+        console.error('Error initializing WebGL scene:', err)
+        // Set fallback background on error
+        if (canvas) {
+          canvas.style.backgroundColor = '#000000'
+        }
+        // Clean up on error
+        if (refs.renderer) {
+          refs.renderer.dispose()
+          refs.renderer = null
+        }
+        return
+      }
     }
 
     const animate = () => {
+      // Only animate if renderer was successfully created
+      if (!refs.renderer || !refs.scene || !refs.camera) {
+        return
+      }
+
       if (refs.uniforms) refs.uniforms.time.value += 0.01
-      if (refs.renderer && refs.scene && refs.camera) {
+      try {
         refs.renderer.render(refs.scene, refs.camera)
+      } catch (err) {
+        console.error('Error rendering WebGL scene:', err)
+        return
       }
       refs.animationId = requestAnimationFrame(animate)
     }
 
-    const handleResize = () => {
-      if (!refs.renderer || !refs.uniforms) return
-      const width = window.innerWidth
-      const height = window.innerHeight
-      refs.renderer.setSize(width, height, false)
-      refs.uniforms.resolution.value = [width, height]
+    // Only initialize if WebGL is supported
+    let initialized = false
+    try {
+      initScene()
+      if (refs.renderer && refs.scene && refs.camera) {
+        initialized = true
+        animate()
+        window.addEventListener("resize", handleResize)
+      }
+    } catch (initErr) {
+      console.error('Failed to initialize WebGL shader:', initErr)
     }
 
-    initScene()
-    animate()
-    window.addEventListener("resize", handleResize)
-
     return () => {
-      if (refs.animationId) cancelAnimationFrame(refs.animationId)
+      if (refs.animationId) {
+        cancelAnimationFrame(refs.animationId)
+        refs.animationId = null
+      }
       window.removeEventListener("resize", handleResize)
       if (refs.mesh) {
         refs.scene?.remove(refs.mesh)
@@ -130,15 +199,22 @@ export function WebGLShader() {
         if (refs.mesh.material instanceof THREE.Material) {
           refs.mesh.material.dispose()
         }
+        refs.mesh = null
       }
-      refs.renderer?.dispose()
+      if (refs.renderer) {
+        refs.renderer.dispose()
+        refs.renderer = null
+      }
+      refs.scene = null
+      refs.camera = null
+      refs.uniforms = null
     }
   }, [])
 
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 w-full h-full block z-0"
+      className="absolute inset-0 w-full h-full block z-0 bg-black"
     />
   )
 }
