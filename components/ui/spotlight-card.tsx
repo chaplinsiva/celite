@@ -64,7 +64,7 @@ const GlowCard: React.FC<GlowCardProps> = ({
   };
 
   const getInlineStyles = () => {
-    const baseStyles: CSSProperties & Record<string, string | number> = {
+    const baseStyles: Record<string, string | number> = {
       '--base': base,
       '--spread': spread,
       '--radius': '14',
@@ -89,17 +89,15 @@ const GlowCard: React.FC<GlowCardProps> = ({
       border: 'var(--border-size) solid var(--backup-border)',
       position: 'relative',
       touchAction: 'none',
-    } as CSSProperties & Record<string, string | number>;
+    };
 
-    // Add width and height if provided
-    if (width !== undefined) {
-      baseStyles.width = typeof width === 'number' ? `${width}px` : width;
-    }
-    if (height !== undefined) {
-      baseStyles.height = typeof height === 'number' ? `${height}px` : height;
-    }
+    const styles: CSSProperties = {
+      ...baseStyles,
+      ...(width !== undefined ? { width: typeof width === 'number' ? `${width}px` : width } : {}),
+      ...(height !== undefined ? { height: typeof height === 'number' ? `${height}px` : height } : {}),
+    } as CSSProperties;
 
-    return baseStyles;
+    return styles;
   };
 
   const beforeAfterStyles = `
