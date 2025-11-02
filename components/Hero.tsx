@@ -21,7 +21,9 @@ export default function Hero() {
   return (
     <section className="relative w-full min-h-[60vh] flex items-center justify-center px-6 py-24 sm:py-36 md:py-40 overflow-hidden">
       {/* WebGL Shader Background */}
-      <WebGLShader />
+      <div className="absolute inset-0 w-full h-full">
+        <WebGLShader />
+      </div>
       {/* Overlay for better text readability */}
       <div className="absolute inset-0 bg-black/60 z-10"></div>
       {/* Content */}

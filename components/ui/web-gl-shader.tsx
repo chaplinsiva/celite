@@ -25,8 +25,6 @@ export function WebGLShader() {
     if (!canvasRef.current) return
 
     const canvas = canvasRef.current
-    if (!canvas) return
-
     const { current: refs } = sceneRef
 
     const vertexShader = `
@@ -62,95 +60,51 @@ export function WebGLShader() {
     `
 
     const initScene = () => {
-      if (!canvas) return
+      refs.scene = new THREE.Scene()
+      refs.renderer = new THREE.WebGLRenderer({ canvas })
+      refs.renderer.setPixelRatio(window.devicePixelRatio)
+      refs.renderer.setClearColor(new THREE.Color(0x000000))
 
-      try {
-        // Check if WebGL is supported
-        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
-        if (!gl) {
-          console.warn('WebGL is not supported in this browser')
-          return
-        }
+      refs.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, -1)
 
-        refs.scene = new THREE.Scene()
-        
-        try {
-          refs.renderer = new THREE.WebGLRenderer({ 
-            canvas,
-            antialias: true,
-            alpha: false,
-            powerPreference: 'default'
-          })
-        } catch (rendererError) {
-          console.error('Failed to create WebGL renderer:', rendererError)
-          return
-        }
-
-        if (!refs.renderer) {
-          console.error('WebGL renderer is null')
-          return
-        }
-
-        refs.renderer.setPixelRatio(window.devicePixelRatio)
-        refs.renderer.setClearColor(new THREE.Color(0x000000))
-
-        refs.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, -1)
-
-        refs.uniforms = {
-          resolution: { value: [window.innerWidth, window.innerHeight] },
-          time: { value: 0.0 },
-          xScale: { value: 1.0 },
-          yScale: { value: 0.5 },
-          distortion: { value: 0.05 },
-        }
-
-        const position = [
-          -1.0, -1.0, 0.0,
-           1.0, -1.0, 0.0,
-          -1.0,  1.0, 0.0,
-           1.0, -1.0, 0.0,
-          -1.0,  1.0, 0.0,
-           1.0,  1.0, 0.0,
-        ]
-
-        const positions = new THREE.BufferAttribute(new Float32Array(position), 3)
-        const geometry = new THREE.BufferGeometry()
-        geometry.setAttribute("position", positions)
-
-        const material = new THREE.RawShaderMaterial({
-          vertexShader,
-          fragmentShader,
-          uniforms: refs.uniforms,
-          side: THREE.DoubleSide,
-        })
-
-        refs.mesh = new THREE.Mesh(geometry, material)
-        refs.scene.add(refs.mesh)
-
-        handleResize()
-      } catch (err) {
-        console.error('Error initializing WebGL scene:', err)
-        // Clean up on error
-        if (refs.renderer) {
-          refs.renderer.dispose()
-          refs.renderer = null
-        }
-        return
+      refs.uniforms = {
+        resolution: { value: [window.innerWidth, window.innerHeight] },
+        time: { value: 0.0 },
+        xScale: { value: 1.0 },
+        yScale: { value: 0.5 },
+        distortion: { value: 0.05 },
       }
+
+      const position = [
+        -1.0, -1.0, 0.0,
+         1.0, -1.0, 0.0,
+        -1.0,  1.0, 0.0,
+         1.0, -1.0, 0.0,
+        -1.0,  1.0, 0.0,
+         1.0,  1.0, 0.0,
+      ]
+
+      const positions = new THREE.BufferAttribute(new Float32Array(position), 3)
+      const geometry = new THREE.BufferGeometry()
+      geometry.setAttribute("position", positions)
+
+      const material = new THREE.RawShaderMaterial({
+        vertexShader,
+        fragmentShader,
+        uniforms: refs.uniforms,
+        side: THREE.DoubleSide,
+      })
+
+      refs.mesh = new THREE.Mesh(geometry, material)
+      refs.scene.add(refs.mesh)
+
+      handleResize()
     }
 
     const animate = () => {
-      // Only animate if renderer was successfully created
-      if (!refs.renderer || !refs.scene || !refs.camera) {
-        return
-      }
-
       if (refs.uniforms) refs.uniforms.time.value += 0.01
-      try {
+      if (refs.renderer && refs.scene && refs.camera) {
         refs.renderer.render(refs.scene, refs.camera)
-      } catch (err) {
-        console.error('Error rendering WebGL scene:', err)
-        return
       }
       refs.animationId = requestAnimationFrame(animate)
     }
@@ -163,24 +117,12 @@ export function WebGLShader() {
       refs.uniforms.resolution.value = [width, height]
     }
 
-    // Only initialize if WebGL is supported
-    let initialized = false
-    try {
-      initScene()
-      if (refs.renderer && refs.scene && refs.camera) {
-        initialized = true
-        animate()
-        window.addEventListener("resize", handleResize)
-      }
-    } catch (initErr) {
-      console.error('Failed to initialize WebGL shader:', initErr)
-    }
+    initScene()
+    animate()
+    window.addEventListener("resize", handleResize)
 
     return () => {
-      if (refs.animationId) {
-        cancelAnimationFrame(refs.animationId)
-        refs.animationId = null
-      }
+      if (refs.animationId) cancelAnimationFrame(refs.animationId)
       window.removeEventListener("resize", handleResize)
       if (refs.mesh) {
         refs.scene?.remove(refs.mesh)
@@ -188,15 +130,8 @@ export function WebGLShader() {
         if (refs.mesh.material instanceof THREE.Material) {
           refs.mesh.material.dispose()
         }
-        refs.mesh = null
       }
-      if (refs.renderer) {
-        refs.renderer.dispose()
-        refs.renderer = null
-      }
-      refs.scene = null
-      refs.camera = null
-      refs.uniforms = null
+      refs.renderer?.dispose()
     }
   }, [])
 

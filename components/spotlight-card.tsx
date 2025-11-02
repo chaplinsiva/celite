@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, ReactNode } from 'react';
+import type { CSSProperties } from 'react';
 
 interface GlowCardProps {
   children: ReactNode;
@@ -63,7 +64,7 @@ const GlowCard: React.FC<GlowCardProps> = ({
   };
 
   const getInlineStyles = () => {
-    const baseStyles = {
+    const baseStyles: Record<string, string | number> & CSSProperties = {
       '--base': base,
       '--spread': spread,
       '--radius': '14',
@@ -86,19 +87,17 @@ const GlowCard: React.FC<GlowCardProps> = ({
       backgroundPosition: '50% 50%',
       backgroundAttachment: 'fixed',
       border: 'var(--border-size) solid var(--backup-border)',
-      position: 'relative' as const,
-      touchAction: 'none' as const,
+      position: 'relative',
+      touchAction: 'none',
+    } as Record<string, string | number> & CSSProperties;
+
+    const styles: CSSProperties = {
+      ...baseStyles,
+      ...(width !== undefined ? { width: typeof width === 'number' ? `${width}px` : width } : {}),
+      ...(height !== undefined ? { height: typeof height === 'number' ? `${height}px` : height } : {}),
     };
 
-    // Add width and height if provided
-    if (width !== undefined) {
-      baseStyles.width = typeof width === 'number' ? `${width}px` : width;
-    }
-    if (height !== undefined) {
-      baseStyles.height = typeof height === 'number' ? `${height}px` : height;
-    }
-
-    return baseStyles;
+    return styles;
   };
 
   const beforeAfterStyles = `
