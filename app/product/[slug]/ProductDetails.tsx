@@ -9,6 +9,8 @@ import { formatPrice } from '../../../lib/currency';
 import { useLoginModal } from '../../../context/LoginModalContext';
 import { trackViewItem, trackAddToCart } from '../../../lib/gtag';
 import { getYouTubeEmbedUrl } from '../../../lib/utils';
+import YouTubeVideoPlayer from '../../../components/YouTubeVideoPlayer';
+import { ShinyButton } from '../../../components/ui/shiny-button';
 import type { Template } from '../../../data/templateData';
 interface Review {
   name: string;
@@ -312,20 +314,16 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
       <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-10 mb-14 mt-10 py-8 sm:py-12 px-3 sm:px-8 bg-zinc-900/80 rounded-3xl shadow-lg">
         {/* Product Gallery */}
         <div className="flex-1 flex flex-col items-center md:items-start w-full">
-          {product.video ? (() => {
-            const embedUrl = getYouTubeEmbedUrl(product.video);
-            return embedUrl ? (
-              <div className="w-full max-w-xs sm:max-w-sm md:max-w-sm lg:max-w-xs rounded-2xl shadow-xl mb-7 overflow-hidden aspect-video">
-                <iframe
-                  src={embedUrl}
-                  title={product.name}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full"
-                />
-              </div>
-            ) : null;
-          })() : null}
+          {product.video ? (
+            <div className="w-full max-w-xs sm:max-w-sm md:max-w-sm lg:max-w-xs rounded-2xl shadow-xl mb-7 overflow-hidden aspect-video">
+              <YouTubeVideoPlayer 
+                videoUrl={product.video}
+                title={product.name}
+                className="w-full h-full"
+                showFullscreen={true}
+              />
+            </div>
+          ) : null}
         </div>
         {/* Product Info */}
         <div className="flex-[1.5] flex flex-col justify-center">
@@ -408,19 +406,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                   )}
                   <div className="flex items-center gap-3">
                   {hasActiveLimitedOffer && !isSubActive ? (
-                    <Link
-                      href="/pricing"
-                      className="relative inline-flex items-center justify-center px-7 py-3 rounded-full text-white font-semibold group"
-                      style={{
-                        padding: '2px',
-                        background: 'linear-gradient(90deg, #ec4899, #3b82f6, #ec4899, #3b82f6)',
-                        backgroundSize: '200% 200%',
-                        animation: 'gradient-border 3s ease infinite',
-                      }}
-                    >
-                      <span className="relative z-10 bg-black rounded-full px-7 py-3 w-full h-full flex items-center justify-center">
+                    <Link href="/pricing" className="inline-block">
+                      <ShinyButton>
                         Subscribe Now
-                      </span>
+                      </ShinyButton>
                     </Link>
                   ) : (
                       <>
@@ -444,19 +433,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                   </div>
                 </div>
                 {!isSubActive && !hasActiveLimitedOffer && (
-                  <Link
-                    href="/pricing"
-                    className="relative inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-black text-white text-sm font-semibold group"
-                    style={{
-                      padding: '2px',
-                      background: 'linear-gradient(90deg, #ec4899, #3b82f6, #ec4899, #3b82f6)',
-                      backgroundSize: '200% 200%',
-                      animation: 'gradient-border 3s ease infinite',
-                    }}
-                  >
-                    <span className="relative z-10 bg-black rounded-lg px-5 py-2.5 w-full h-full flex items-center justify-center">
+                  <Link href="/pricing" className="inline-block">
+                    <ShinyButton>
                       Subscribe to Unlock everything
-                    </span>
+                    </ShinyButton>
                   </Link>
                 )}
               </div>
@@ -490,20 +470,13 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               className="bg-zinc-900 rounded-xl shadow-md p-3 flex flex-col items-center"
             >
               <div className="relative w-full h-32 sm:h-40 rounded-lg mb-2 overflow-hidden">
-                {r.video ? (() => {
-                  const embedUrl = getYouTubeEmbedUrl(r.video);
-                  return embedUrl ? (
-                    <div className="w-full h-full rounded-lg overflow-hidden aspect-video">
-                      <iframe
-                        src={embedUrl}
-                        title={r.name}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        className="w-full h-full"
-                      />
-                    </div>
-                  ) : null;
-                })() : null}
+                {r.video ? (
+                  <YouTubeVideoPlayer 
+                    videoUrl={r.video}
+                    title={r.name}
+                    className="w-full h-full"
+                  />
+                ) : null}
               </div>
               <span className="text-zinc-200 font-semibold text-lg mb-1">{r.name}</span>
               <div className="text-xs text-zinc-500">{formatPrice(r.price)}</div>

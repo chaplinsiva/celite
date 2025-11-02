@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { getSupabaseServerClient } from '../../lib/supabaseServer';
 import TemplatesClient from './TemplatesClient';
 
@@ -22,6 +23,10 @@ export default async function TemplatesPage() {
     console.error('Error fetching templates:', error);
   }
 
-  return <TemplatesClient initialTemplates={templates || []} />;
+  return (
+    <Suspense fallback={<div className="bg-black min-h-screen pt-24 pb-20 px-4 sm:px-6 lg:px-8"><div className="max-w-7xl mx-auto"><p className="text-white">Loading...</p></div></div>}>
+      <TemplatesClient initialTemplates={templates || []} />
+    </Suspense>
+  );
 }
 

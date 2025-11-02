@@ -62,3 +62,50 @@ export function getYouTubeEmbedUrl(url: string | null | undefined): string | nul
   return null;
 }
 
+/**
+ * Extracts the YouTube video ID from a YouTube URL
+ * Supports various YouTube URL formats:
+ * - https://www.youtube.com/watch?v=VIDEO_ID
+ * - https://youtu.be/VIDEO_ID
+ * - https://www.youtube.com/embed/VIDEO_ID
+ * Returns the video ID or null if invalid
+ */
+export function getYouTubeVideoId(url: string | null | undefined): string | null {
+  if (!url || typeof url !== 'string') return null;
+  
+  const trimmedUrl = url.trim();
+  if (!trimmedUrl) return null;
+  
+  // Extract video ID from various YouTube URL formats
+  let videoId: string | null = null;
+  
+  // Format: https://www.youtube.com/watch?v=VIDEO_ID
+  const watchMatch = trimmedUrl.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+  if (watchMatch) {
+    videoId = watchMatch[1];
+  }
+  
+  // Format: https://youtu.be/VIDEO_ID
+  if (!videoId) {
+    const shortMatch = trimmedUrl.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+    if (shortMatch) {
+      videoId = shortMatch[1];
+    }
+  }
+  
+  // Format: https://www.youtube.com/embed/VIDEO_ID
+  if (!videoId) {
+    const embedMatch = trimmedUrl.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+    if (embedMatch) {
+      videoId = embedMatch[1];
+    }
+  }
+  
+  // If it looks like a direct video ID (11 characters), use it
+  if (!videoId && /^[a-zA-Z0-9_-]{11}$/.test(trimmedUrl)) {
+    videoId = trimmedUrl;
+  }
+  
+  return videoId;
+}
+

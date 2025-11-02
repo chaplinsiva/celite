@@ -5,11 +5,22 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAppContext } from '../context/AppContext';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
+import { NavBar } from './ui/tubelight-navbar';
+import { Home, LayoutGrid, Info, DollarSign, Mail } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 export default function Header() {
   const { cartCount, user, logout } = useAppContext();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  const navItems = [
+    { name: 'Home', url: '/', icon: Home },
+    { name: 'Templates', url: '/templates', icon: LayoutGrid },
+    { name: 'About', url: '/about', icon: Info },
+    { name: 'Pricing', url: '/pricing', icon: DollarSign },
+    { name: 'Contact', url: '/contact', icon: Mail },
+  ];
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -42,15 +53,9 @@ export default function Header() {
         <Link href="/" className="flex items-center py-1 px-1 focus:outline-none hover:opacity-80 transition-opacity">
           <Image src="/Logo.png" alt="Celite Logo" width={120} height={32} priority className="h-8 w-auto" />
         </Link>
-        {/* Center: Nav */}
+        {/* Center: Nav - Using Tubelight Navbar */}
         <div className="hidden md:flex flex-1 items-center justify-center">
-          <ul className="flex space-x-10 text-[16px] font-light text-zinc-200">
-            <li><Link href="/" className="hover:text-white transition-colors">Home</Link></li>
-            <li><Link href="/templates" className="hover:text-white transition-colors">Templates</Link></li>
-            <li><Link href="/about" className="hover:text-white transition-colors">About</Link></li>
-            <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-            <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
-          </ul>
+          <NavBar items={navItems} />
         </div>
         {/* Right: Auth + Cart + Mobile Menu */}
         <div className="flex items-center space-x-2 sm:space-x-3">

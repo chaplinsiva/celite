@@ -64,6 +64,47 @@
       transform: translateY(calc(-100% - var(--gap)));
     }
   }
+
+  --animate-rainbow: rainbow var(--speed, 2s) infinite linear;
+
+  --color-color-5: var(----color-5);
+
+  --color-color-4: var(----color-4);
+
+  --color-color-3: var(----color-3);
+
+  --color-color-2: var(----color-2);
+
+  --color-color-1: var(----color-1);
+
+  --color-brand-foreground: var(----brand-foreground);
+
+  --color-brand: var(----brand);
+  /*---break---*/
+  @keyframes rainbow {
+    0% {
+      background-position: 0%;
+    }
+    100% {
+      background-position: 200%;
+    }
+  }
+  @keyframes rainbow {
+  0% {
+    background-position: 0%;
+    }
+  100% {
+    background-position: 200%;
+    }
+  }
+  @keyframes marquee {
+  from {
+    transform: translateX(0);
+    }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
 }
 
 :root {
@@ -100,6 +141,13 @@
   --sidebar-accent-foreground: oklch(0.21 0.034 264.665);
   --sidebar-border: oklch(0.928 0.006 264.531);
   --sidebar-ring: oklch(0.707 0.022 261.325);
+  --color-1: hsl(0 100% 63%);
+  --color-2: hsl(270 100% 63%);
+  --color-3: hsl(210 100% 63%);
+  --color-4: hsl(195 100% 63%);
+  --color-5: hsl(90 100% 63%);
+  --brand: hsl(266 100% 50%);
+  --brand-foreground: hsl(270 100% 98%);
 }
 
 .dark {
@@ -135,6 +183,8 @@
   --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+  --brand: hsl(266 70% 60%);
+  --brand-foreground: hsl(270 100% 98%);
 }
 
 /** Global Styles **/
@@ -158,7 +208,7 @@
     font-style: normal !important;
     font-variation-settings: normal;
   }
-  
+
   /* Ensure all fonts render normally - no italic */
   h1, h2, h3, h4, h5, h6, p, span, div, a, button, input, textarea, label {
     font-style: normal !important;
@@ -167,7 +217,7 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
+
   /* Force non-italic for all text elements */
   * {
     font-synthesis: none;
@@ -217,4 +267,13 @@ html {
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji');
   --font-mono: ui-monospace, SFMono-Regular, 'Monaco', 'Cascadia Code', 'Menlo', 'Consolas', 
     'Liberation Mono', 'Courier New', monospace;
+}
+/*---break---*/
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }

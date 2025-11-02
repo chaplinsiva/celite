@@ -7,6 +7,8 @@ import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { useLoginModal } from '../context/LoginModalContext';
 import { getYouTubeEmbedUrl } from '../lib/utils';
+import YouTubeVideoPlayer from './YouTubeVideoPlayer';
+import { GlowCard } from './ui/spotlight-card';
 
 type FeaturedTemplate = Template & {
   is_limited_offer?: boolean;
@@ -44,7 +46,8 @@ export default function TemplateCarousel() {
         setIsSubscribed(false);
       }
 
-      // Load featured templates with limited offer info and category/subcategory
+      // Load templates with limited offer info and category/subcategory
+      // Load more than needed to randomize from a larger pool
       const { data, error: templateError } = await supabase
         .from('templates')
         .select(`
@@ -54,18 +57,21 @@ export default function TemplateCarousel() {
           categories(id,name,slug),
           subcategories(id,name,slug)
         `)
-        .eq('is_featured', true)
-        .limit(8);
+        .limit(50); // Load more templates to randomize from
       
       // Log for debugging: show how many templates were found
       if (templateError) {
-        console.error('Error loading featured templates:', templateError);
+        console.error('Error loading templates:', templateError);
       } else {
-        console.log(`[TemplateCarousel] Loaded ${data?.length || 0} featured templates`);
+        console.log(`[TemplateCarousel] Loaded ${data?.length || 0} templates`);
       }
       
+      // Randomize templates and take 10
+      const shuffled = (data ?? []).sort(() => Math.random() - 0.5);
+      const randomTemplates = shuffled.slice(0, 10);
+      
       const now = new Date();
-      const mapped: FeaturedTemplate[] = (data ?? []).map((r: any) => {
+      const mapped: FeaturedTemplate[] = randomTemplates.map((r: any) => {
         const category = r.categories ? (Array.isArray(r.categories) ? r.categories[0] : r.categories) : null;
         const subcategory = r.subcategories ? (Array.isArray(r.subcategories) ? r.subcategories[0] : r.subcategories) : null;
         
@@ -164,55 +170,34 @@ export default function TemplateCarousel() {
 
   const renderTemplateCard = (tpl: FeaturedTemplate) => {
     const hasActiveLimitedOffer = !!tpl.hasActiveLimitedOffer;
+    const daysRemaining = tpl.daysRemaining;
     return (
-    <div
-      className="group min-w-[85vw] sm:min-w-[350px] md:min-w-0 bg-gradient-to-br from-zinc-950/95 via-zinc-900/95 to-zinc-950/95 rounded-2xl shadow-xl border border-white/10 hover:border-white/30 p-4 sm:p-5 flex flex-col items-center snap-center transition-all duration-300 relative overflow-hidden hover:scale-[1.02] hover:shadow-2xl backdrop-blur-sm"
+    <GlowCard
+      glowColor="purple"
+      customSize={true}
+      className="flex-shrink-0 w-[calc(100%-1rem)] sm:w-[calc(50%-0.75rem)] md:w-[calc(50%-1rem)] lg:w-[calc(33.333%-1.33rem)] bg-zinc-900 shadow-lg p-3 sm:p-4 flex flex-col items-center snap-center transition-all duration-200 relative"
     >
-      {/* Decorative Gradient Corner */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       {hasActiveLimitedOffer && (
-        <div className="absolute top-3 left-3 z-20 bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-3 py-1.5 rounded-lg text-xs font-bold border-2 border-black/30 shadow-lg animate-pulse">
+        <div className="absolute top-3 left-3 z-20 bg-white text-black px-2 py-1 rounded-lg text-xs font-semibold border border-black/20">
           LIMITED
         </div>
       )}
-      {/* 16:9 Aspect Ratio Container */}
-      <div className="relative w-full aspect-video rounded-xl mb-4 sm:mb-5 overflow-hidden bg-zinc-950 border border-white/5 group-hover:border-white/20 transition-colors">
-        {tpl.video ? (() => {
-          const embedUrl = getYouTubeEmbedUrl(tpl.video);
-          return embedUrl ? (
-            <div className="w-full h-full rounded-xl overflow-hidden">
-              <iframe
-                src={embedUrl}
-                title={tpl.name}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="w-full h-full"
-              />
-            </div>
-          ) : null;
-        })() : null}
+      <div className="relative w-full h-40 sm:h-48 md:h-40 rounded-xl mb-3 sm:mb-4 overflow-hidden">
+        {tpl.video ? (
+          <YouTubeVideoPlayer 
+            videoUrl={tpl.video}
+            title={tpl.name}
+            className="w-full h-full"
+          />
+        ) : null}
       </div>
-      <h3 className="text-lg sm:text-xl font-bold text-white mb-2 text-center group-hover:text-blue-400 transition-colors">{tpl.name}</h3>
-      {(tpl.category || tpl.subcategory) && (
-        <div className="flex flex-wrap gap-1.5 justify-center mb-2">
-          {tpl.category && (
-            <span className="px-2 py-1 text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full">
-              {tpl.category.name}
-            </span>
-          )}
-          {tpl.subcategory && (
-            <span className="px-2 py-1 text-xs font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full">
-              {tpl.subcategory.name}
-            </span>
-          )}
-        </div>
-      )}
+      <h3 className="text-base sm:text-lg font-semibold text-white mb-1 text-center">{tpl.name}</h3>
       {hasActiveLimitedOffer && (
-        <div className="mb-3 px-3 py-1 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-lg text-xs text-yellow-300 font-semibold text-center">
+        <div className="mb-2 text-xs text-white font-medium text-center">
           {isSubscribed ? (
-            'Free for Subscribers'
+            'Only for Subscribed Users'
           ) : (
-            tpl.daysRemaining !== undefined && `${tpl.daysRemaining} ${tpl.daysRemaining === 1 ? 'day' : 'days'} remaining`
+            daysRemaining !== undefined ? `${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'} remaining` : ''
           )}
         </div>
       )}
@@ -220,13 +205,13 @@ export default function TemplateCarousel() {
         <div className="flex gap-2 w-full mt-auto">
           <Link 
             href={`/product/${tpl.slug}`} 
-            className="flex-1 px-4 py-2.5 text-sm rounded-lg bg-gradient-to-r from-white to-zinc-100 text-black font-semibold hover:from-zinc-100 hover:to-zinc-200 transition-all duration-200 text-center shadow-md hover:shadow-lg"
+            className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-white text-black font-medium hover:bg-zinc-200 transition text-center"
           >
             View
           </Link>
           <button
             onClick={() => handleDownload(tpl.slug)}
-            className="flex-1 px-4 py-2.5 text-sm rounded-lg bg-gradient-to-r from-zinc-800 to-zinc-900 text-white font-semibold border border-white/20 hover:from-zinc-700 hover:to-zinc-800 transition-all duration-200 text-center shadow-md hover:shadow-lg"
+            className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-black text-white font-medium border border-white/20 hover:bg-zinc-800 transition text-center"
           >
             Download
           </button>
@@ -234,19 +219,17 @@ export default function TemplateCarousel() {
       ) : (
         <Link 
           href={`/product/${tpl.slug}`} 
-          className="w-full sm:w-auto px-6 py-2.5 text-sm rounded-full bg-gradient-to-r from-white to-zinc-100 text-black font-semibold shadow-lg hover:from-zinc-100 hover:to-zinc-200 hover:shadow-xl transition-all duration-200 text-center mt-auto"
+          className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm rounded-full bg-white text-black font-medium shadow hover:bg-zinc-200 transition text-center"
         >
           View Template
         </Link>
       )}
-      {/* Hover Glow Effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-purple-500/5 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl"></div>
-    </div>
+    </GlowCard>
     );
   };
 
   return (
-    <section className="relative w-full py-16 sm:py-20 overflow-hidden">
+    <section className="relative w-full py-20 sm:py-24 md:py-28 overflow-hidden">
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
@@ -256,11 +239,8 @@ export default function TemplateCarousel() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <div className="inline-block mb-4">
-            <span className="text-sm font-semibold text-blue-400 uppercase tracking-wider">Featured</span>
-          </div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4">
-            Premium After Effects Templates
+            Premium <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">After Effects Templates</span>
           </h2>
           <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
             Discover our handpicked collection of professional templates designed to elevate your creative projects
@@ -289,7 +269,7 @@ export default function TemplateCarousel() {
           </button>
           <div
             ref={featuredListRef}
-            className="flex gap-6 sm:gap-8 overflow-x-auto md:overflow-x-visible snap-x md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-8 px-1 sm:px-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            className="flex gap-4 sm:gap-6 md:gap-8 overflow-x-auto snap-x px-4 sm:px-6 md:px-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
             style={{ scrollSnapType: 'x mandatory' }}
           >
             {featured.map((tpl) => (

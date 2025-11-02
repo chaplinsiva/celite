@@ -2,11 +2,13 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppContext } from '../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
 import { getYouTubeEmbedUrl } from '../../lib/utils';
+import YouTubeVideoPlayer from '../../components/YouTubeVideoPlayer';
+import { GlowCard } from '../../components/ui/spotlight-card';
 
 type Template = {
   slug: string;
@@ -28,9 +30,10 @@ type Template = {
 
 export default function TemplatesClient({ initialTemplates }: { initialTemplates: Template[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAppContext();
   const { openLoginModal } = useLoginModal();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [priceFilter, setPriceFilter] = useState<string>('all');
   const [featuredFilter, setFeaturedFilter] = useState<string>('all');
@@ -349,8 +352,10 @@ function TemplateCard({
   }, [hasActiveLimitedOffer, template.limited_offer_start_date, template.limited_offer_duration_days]);
 
   return (
-    <div
-      className="bg-zinc-900 rounded-2xl shadow-lg p-3 sm:p-4 flex flex-col items-center transition-all duration-200 relative"
+    <GlowCard
+      glowColor="purple"
+      customSize={true}
+      className="bg-zinc-900 shadow-lg p-3 sm:p-4 flex flex-col items-center transition-all duration-200 relative"
     >
       {hasActiveLimitedOffer && (
         <div className="absolute top-3 left-3 z-20 bg-white text-black px-2 py-1 rounded-lg text-xs font-semibold border border-black/20">
@@ -358,20 +363,13 @@ function TemplateCard({
         </div>
       )}
       <div className="relative w-full h-40 sm:h-48 md:h-40 rounded-xl mb-3 sm:mb-4 overflow-hidden">
-        {template.video ? (() => {
-          const embedUrl = getYouTubeEmbedUrl(template.video);
-          return embedUrl ? (
-            <div className="w-full h-full rounded-xl overflow-hidden">
-              <iframe
-                src={embedUrl}
-                title={template.name || 'Template'}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="w-full h-full"
-              />
-            </div>
-          ) : null;
-        })() : null}
+        {template.video ? (
+          <YouTubeVideoPlayer 
+            videoUrl={template.video}
+            title={template.name || 'Template'}
+            className="w-full h-full"
+          />
+        ) : null}
       </div>
       <h3 className="text-base sm:text-lg font-semibold text-white mb-1 text-center">{template.name}</h3>
       {hasActiveLimitedOffer && (
@@ -399,7 +397,7 @@ function TemplateCard({
       ) : (
         <Link href={`/product/${template.slug}`} className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm rounded-full bg-white text-black font-medium shadow hover:bg-zinc-200 transition text-center">View Template</Link>
       )}
-    </div>
+    </GlowCard>
   );
 }
 
