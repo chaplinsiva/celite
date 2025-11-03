@@ -27,6 +27,33 @@ export function WebGLShader() {
     const canvas = canvasRef.current
     const { current: refs } = sceneRef
 
+    // Clean up any existing renderer to avoid context conflicts
+    if (refs.renderer) {
+      try {
+        refs.renderer.dispose()
+      } catch (e) {
+        // Ignore disposal errors
+      }
+      refs.renderer = null
+    }
+
+    // Clean up any existing WebGL context that might exist on the canvas
+    // This prevents "Canvas has an existing context" errors
+    const existingContext = canvas.getContext('webgl') || canvas.getContext('webgl2') || canvas.getContext('experimental-webgl')
+    if (existingContext) {
+      // Canvas already has a context, we'll let THREE.js handle it
+      // but we should dispose it first if possible
+      try {
+        const gl = existingContext as WebGLRenderingContext
+        const loseContext = gl.getExtension('WEBGL_lose_context')
+        if (loseContext) {
+          loseContext.loseContext()
+        }
+      } catch (e) {
+        // Ignore errors when trying to lose context
+      }
+    }
+
     const vertexShader = `
       attribute vec3 position;
       void main() {
@@ -68,14 +95,20 @@ export function WebGLShader() {
     }
 
     const initScene = () => {
-      // Check if WebGL is supported before attempting to create renderer
-      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
-      if (!gl) {
-        console.warn('WebGL is not supported or disabled in this browser')
-        // Set a fallback background
-        if (canvas) {
-          canvas.style.backgroundColor = '#000000'
+      // Check WebGL support using a temporary canvas to avoid context conflicts
+      const checkWebGLSupport = () => {
+        try {
+          const testCanvas = document.createElement('canvas')
+          const gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl')
+          return !!gl
+        } catch {
+          return false
         }
+      }
+
+      if (!checkWebGLSupport()) {
+        console.warn('WebGL is not supported or disabled in this browser')
+        canvas.style.backgroundColor = '#000000'
         return
       }
 
@@ -89,12 +122,10 @@ export function WebGLShader() {
             alpha: false,
             powerPreference: 'default'
           })
-        } catch (rendererError) {
+        } catch (rendererError: any) {
           console.error('Failed to create WebGL renderer:', rendererError)
           // Set fallback background
-          if (canvas) {
-            canvas.style.backgroundColor = '#000000'
-          }
+          canvas.style.backgroundColor = '#000000'
           return
         }
 
