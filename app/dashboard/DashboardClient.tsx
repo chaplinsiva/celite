@@ -234,7 +234,11 @@ function DashboardContent() {
 
   const isActive = !!sub?.is_active;
   const hasExpiredPlan = !isActive && sub?.plan; // Subscription expired but plan type preserved
-  const subscriptionTier = isActive ? (sub?.plan || 'Pro') : hasExpiredPlan ? 'Plan Expired' : 'Free';
+  const subscriptionTier = isActive 
+    ? (sub?.plan || 'Pro') 
+    : hasExpiredPlan 
+    ? `${sub?.plan === 'weekly' ? 'Weekly' : sub?.plan === 'yearly' ? 'Yearly' : 'Monthly'} Plan Expired`
+    : 'Free';
 
   if (!user) {
     return (
@@ -572,7 +576,7 @@ function ManageSubscriptionPanel({ isActive, plan, validUntil, onCancel, onUpgra
           {isActive 
             ? `${planDisplayName} Plan - Active` 
             : hasExpiredPlan 
-            ? 'Plan Expired' 
+            ? `${planDisplayName} Plan Expired` 
             : 'No Active Subscription'}
         </p>
         {validUntil && (
