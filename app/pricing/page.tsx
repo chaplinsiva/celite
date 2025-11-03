@@ -8,6 +8,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { formatPrice } from '@/lib/currency';
 
 function PricingContent() {
+  const [weeklyPrice, setWeeklyPrice] = useState(199);
   const [monthlyPrice, setMonthlyPrice] = useState(799);
   const [yearlyPrice, setYearlyPrice] = useState(5499);
   const [loading, setLoading] = useState(true);
@@ -21,12 +22,16 @@ function PricingContent() {
         (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
         
         // Get amounts in paise
+        let weeklyPaise = Number(settingsMap.RAZORPAY_WEEKLY_AMOUNT || '19900');
         let monthlyPaise = Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '79900');
         let yearlyPaise = Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
         
         // Convert from paise to INR
-        // If >= 10000 for monthly or >= 100000 for yearly, it's in paise, divide by 100
+        // If >= 1000 for weekly, >= 10000 for monthly or >= 100000 for yearly, it's in paise, divide by 100
         // Otherwise, it's already in rupees
+        if (weeklyPaise >= 1000) {
+          weeklyPaise = weeklyPaise / 100;
+        }
         if (monthlyPaise >= 10000) {
           monthlyPaise = monthlyPaise / 100;
         }
@@ -34,11 +39,13 @@ function PricingContent() {
           yearlyPaise = yearlyPaise / 100;
         }
         
+        setWeeklyPrice(Math.round(weeklyPaise));
         setMonthlyPrice(Math.round(monthlyPaise));
         setYearlyPrice(Math.round(yearlyPaise));
       } catch (error) {
         console.error('Error loading prices:', error);
         // Use defaults
+        setWeeklyPrice(199);
         setMonthlyPrice(799);
         setYearlyPrice(5499);
       } finally {
@@ -69,9 +76,9 @@ function PricingContent() {
 
       <section className="max-w-5xl mx-auto">
         <div className="rounded-xl border border-white/10 bg-black/40 p-4 md:p-6">
-          <div className="flex flex-col gap-6 md:flex-row md:items-stretch md:justify-center">
+          <div className="flex flex-col gap-6 md:flex-row md:items-stretch md:justify-center md:flex-wrap">
             {/* Free Plan */}
-            <div className="flex flex-col justify-between h-full flex-1 border border-white/10 bg-black/20 rounded-lg p-6 w-full md:w-[calc(33.333%-1rem)]">
+            <div className="flex flex-col justify-between h-full flex-1 border border-white/10 bg-black/20 rounded-lg p-6 w-full md:w-[calc(25%-1rem)]">
                   <div className="space-y-4 mb-6">
                     <div>
                       <h2 className="font-medium text-white text-lg mb-2">Free</h2>
@@ -92,8 +99,37 @@ function PricingContent() {
               </ul>
             </div>
 
+            {/* One Week Special Plan */}
+            <div className="flex flex-col justify-between h-full bg-gradient-to-br from-pink-500/20 via-purple-500/20 to-blue-500/20 border-2 border-pink-500/50 rounded-xl w-full md:w-[calc(25%-1rem)] p-6 md:p-8 relative overflow-hidden">
+              {/* Special Badge */}
+              <div className="absolute top-0 right-0 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-xl">
+                SPECIAL
+              </div>
+              <div className="space-y-4 mb-6">
+                <div>
+                  <h2 className="font-medium text-white text-lg mb-2">One Week Special</h2>
+                  <span className="block text-2xl font-semibold text-white mb-2">{formatPrice(weeklyPrice)} / week</span>
+                  <p className="text-zinc-400 text-sm">Limited time offer - Full access</p>
+                </div>
+                <Button asChild className="w-full mt-4 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white border-0" variant="default">
+                  <Link href="/checkout?subscription=weekly">Get Special Offer</Link>
+                </Button>
+              </div>
+              <div className="mb-4">
+                <div className="text-sm font-medium text-white">Everything in Free, plus:</div>
+              </div>
+              <ul className="mt-0 space-y-3 text-sm flex-1">
+                {["Unlimited Premium Templates", "Full Source Files Access", "Priority Support", "Commercial License", "Regular Updates", "Early Access to New Templates", "Download Any Template"].map((item, index) => (
+                  <li key={index} className="flex items-start gap-2 text-zinc-300">
+                    <Check className="size-4 text-white flex-shrink-0 mt-0.5" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             {/* Monthly Plan */}
-            <div className="flex flex-col justify-between h-full bg-gradient-to-br from-white/10 to-white/5 border border-white/20 rounded-xl w-full md:w-[calc(33.333%-1rem)] p-6 md:p-8">
+            <div className="flex flex-col justify-between h-full bg-gradient-to-br from-white/10 to-white/5 border border-white/20 rounded-xl w-full md:w-[calc(25%-1rem)] p-6 md:p-8">
               <div className="space-y-4 mb-6">
                 <div>
                   <h2 className="font-medium text-white text-lg mb-2">Monthly</h2>
@@ -118,7 +154,7 @@ function PricingContent() {
             </div>
 
             {/* Yearly Plan */}
-            <div className="flex flex-col justify-between h-full flex-1 border border-white/10 bg-black/20 rounded-lg p-6 w-full md:w-[calc(33.333%-1rem)]">
+            <div className="flex flex-col justify-between h-full flex-1 border border-white/10 bg-black/20 rounded-lg p-6 w-full md:w-[calc(25%-1rem)]">
               <div className="space-y-4 mb-6">
                 <div>
                   <h2 className="font-medium text-white text-lg mb-2">Yearly</h2>

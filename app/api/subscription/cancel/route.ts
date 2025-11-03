@@ -80,10 +80,22 @@ export async function POST(req: Request) {
       console.log('No Razorpay subscription ID found, skipping Razorpay cancellation');
     }
 
-    // Update subscription to inactive in database
+    // Get existing subscription to preserve plan
+    const { data: existingSub } = await admin
+      .from('subscriptions')
+      .select('plan')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    // Update subscription to inactive in database but preserve plan
+    const updateData: any = { is_active: false };
+    if (existingSub?.plan) {
+      updateData.plan = existingSub.plan; // Preserve the plan so user can renew with same plan
+    }
+    
     const { error } = await admin
       .from('subscriptions')
-      .update({ is_active: false })
+      .update(updateData)
       .eq('user_id', userId);
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });

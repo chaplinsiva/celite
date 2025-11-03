@@ -233,7 +233,8 @@ function DashboardContent() {
   };
 
   const isActive = !!sub?.is_active;
-  const subscriptionTier = isActive ? (sub?.plan || 'Pro') : 'Free';
+  const hasExpiredPlan = !isActive && sub?.plan; // Subscription expired but plan type preserved
+  const subscriptionTier = isActive ? (sub?.plan || 'Pro') : hasExpiredPlan ? 'Plan Expired' : 'Free';
 
   if (!user) {
     return (
@@ -271,17 +272,30 @@ function DashboardContent() {
             {/* Only show subscription details if there's an active subscription */}
             {isActive && (
               <p className={`mt-1 text-xs text-green-300`}>
-                Active{sub?.plan ? ` • ${sub.plan === 'yearly' ? 'Yearly' : 'Monthly'}` : ''}
+                Active{sub?.plan ? ` • ${sub.plan === 'yearly' ? 'Yearly' : sub.plan === 'weekly' ? 'Weekly' : 'Monthly'}` : ''}
                 {sub?.valid_until ? ` • renews ${new Date(sub.valid_until).toLocaleDateString()}` : ''}
               </p>
             )}
-            {!isActive && (
-              <div className="mt-3 flex gap-2 justify-end">
+            {hasExpiredPlan && (
+              <div className="mt-3 flex flex-wrap gap-2 justify-end">
+                <Link 
+                  href="/pricing" 
+                  className="inline-flex items-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:from-pink-600 hover:to-purple-600"
+                >
+                  Renew Plan
+                </Link>
+              </div>
+            )}
+            {!isActive && !hasExpiredPlan && (
+              <div className="mt-3 flex flex-wrap gap-2 justify-end">
+                <Link href="/checkout?subscription=weekly" className="inline-flex items-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:from-pink-600 hover:to-purple-600">
+                  Special (₹199)
+                </Link>
                 <Link href="/pricing" className="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-zinc-200">
-                  Activate Monthly (₹799)
+                  Monthly (₹799)
                 </Link>
                 <Link href="/pricing" className="inline-flex items-center rounded-full border border-white/30 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/10">
-                  Activate Yearly (₹5,499)
+                  Yearly (₹5,499)
                 </Link>
               </div>
             )}
@@ -547,16 +561,25 @@ function ManageSubscriptionPanel({ isActive, plan, validUntil, onCancel, onUpgra
   onClose: () => void;
   loading: boolean;
 }) {
+  const hasExpiredPlan = !isActive && plan; // Subscription expired but plan type preserved
+  const planDisplayName = plan === 'yearly' ? 'Yearly' : plan === 'weekly' ? 'Weekly' : 'Monthly';
+  
   return (
     <div className="space-y-4">
       <div className="p-4 rounded-lg bg-black/40 border border-white/10">
         <p className="text-sm text-zinc-300 mb-2">Current Status</p>
         <p className="text-lg font-semibold text-white">
-          {isActive ? `${plan === 'yearly' ? 'Yearly' : 'Monthly'} Plan - Active` : 'No Active Subscription'}
+          {isActive 
+            ? `${planDisplayName} Plan - Active` 
+            : hasExpiredPlan 
+            ? 'Plan Expired' 
+            : 'No Active Subscription'}
         </p>
         {validUntil && (
-          <p className="text-xs text-zinc-400 mt-1">
-            Valid until: {new Date(validUntil).toLocaleDateString()}
+          <p className={`text-xs mt-1 ${isActive ? 'text-zinc-400' : 'text-red-400'}`}>
+            {isActive 
+              ? `Valid until: ${new Date(validUntil).toLocaleDateString()}`
+              : `Expired on: ${new Date(validUntil).toLocaleDateString()}`}
           </p>
         )}
       </div>
@@ -572,6 +595,18 @@ function ManageSubscriptionPanel({ isActive, plan, validUntil, onCancel, onUpgra
           </button>
           <p className="text-xs text-zinc-400">
             Cancelling will end your subscription after the current billing period. You'll lose access to premium features.
+          </p>
+        </div>
+      ) : hasExpiredPlan ? (
+        <div className="space-y-3">
+          <Link
+            href="/pricing"
+            className="block w-full px-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold hover:from-pink-600 hover:to-purple-600 transition text-center"
+          >
+            Renew Plan
+          </Link>
+          <p className="text-xs text-zinc-400">
+            Renew your subscription to regain access to all premium templates.
           </p>
         </div>
       ) : (

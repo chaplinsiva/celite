@@ -62,7 +62,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from('cart_items')
       .select('slug,name,price,img')
       .eq('user_id', userId);
-    if (error) return;
+    if (error) {
+      // Silently handle errors (table might not exist yet or RLS issue)
+      // Don't show errors to user - cart will work locally
+      console.warn('Failed to load cart from database:', error.message);
+      return;
+    }
     const items: TemplateCartItem[] = (data ?? []).map((row: any) => ({
       slug: row.slug,
       name: row.name,
@@ -131,13 +136,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Persist to Supabase if logged in
     if (user) {
       const supabase = getSupabaseBrowserClient();
-      await supabase.from('cart_items').upsert({
+      const { error } = await supabase.from('cart_items').upsert({
         user_id: user.id,
         slug: item.slug,
         name: item.name,
         price: item.price,
         img: item.img,
       }, { onConflict: 'user_id,slug' });
+      // Silently handle errors - cart will still work locally
+      if (error) console.warn('Failed to save cart item to database:', error.message);
     }
   };
 
@@ -146,7 +153,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCartItems([]);
     if (user) {
       const supabase = getSupabaseBrowserClient();
-      await supabase.from('cart_items').delete().eq('user_id', user.id);
+      const { error } = await supabase.from('cart_items').delete().eq('user_id', user.id);
+      // Silently handle errors - cart will still work locally
+      if (error) console.warn('Failed to clear cart from database:', error.message);
     }
   };
 
@@ -158,7 +167,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Remove from Supabase if logged in
     if (user) {
       const supabase = getSupabaseBrowserClient();
-      await supabase.from('cart_items').delete().eq('user_id', user.id).eq('slug', slug);
+      const { error } = await supabase.from('cart_items').delete().eq('user_id', user.id).eq('slug', slug);
+      // Silently handle errors - cart will still work locally
+      if (error) console.warn('Failed to remove cart item from database:', error.message);
     }
   };
 

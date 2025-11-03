@@ -12,19 +12,21 @@ export async function POST(req: Request) {
     if (error || !userRes.user) return NextResponse.json({ ok: false, error: 'Invalid session' }, { status: 401 });
     const userId = userRes.user.id;
 
-    // optional body: { plan: 'monthly' | 'yearly', razorpay_subscription_id?: string }
-    let plan: 'monthly' | 'yearly' = 'monthly';
+    // optional body: { plan: 'weekly' | 'monthly' | 'yearly', razorpay_subscription_id?: string }
+    let plan: 'weekly' | 'monthly' | 'yearly' = 'monthly';
     let razorpaySubscriptionId: string | null = null;
     try {
       const body = await req.json();
-      if (body && (body.plan === 'monthly' || body.plan === 'yearly')) plan = body.plan;
+      if (body && (body.plan === 'weekly' || body.plan === 'monthly' || body.plan === 'yearly')) plan = body.plan;
       if (body?.razorpay_subscription_id) razorpaySubscriptionId = body.razorpay_subscription_id;
     } catch {}
 
-    // compute valid_until for monthly/yearly
+    // compute valid_until for weekly/monthly/yearly
     const now = Date.now();
     const expiresAt = plan === 'yearly'
       ? new Date(now + 365 * 24 * 60 * 60 * 1000)
+      : plan === 'weekly'
+      ? new Date(now + 7 * 24 * 60 * 60 * 1000)
       : new Date(now + 30 * 24 * 60 * 60 * 1000);
 
     const updateData: any = { 

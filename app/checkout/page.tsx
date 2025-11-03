@@ -30,13 +30,13 @@ function CheckoutContent() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const addedProductRef = useRef<string | null>(null); // Track if we've already added a product
   
-  const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'yearly' | null>(null);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<'weekly' | 'monthly' | 'yearly' | null>(null);
   const [subscriptionPrice, setSubscriptionPrice] = useState<number | null>(null);
 
   // Handle subscription checkout (from Pricing page)
   useEffect(() => {
-    const subscriptionType = searchParams?.get('subscription') as 'monthly' | 'yearly' | null;
-    if (subscriptionType && (subscriptionType === 'monthly' || subscriptionType === 'yearly')) {
+    const subscriptionType = searchParams?.get('subscription') as 'weekly' | 'monthly' | 'yearly' | null;
+    if (subscriptionType && (subscriptionType === 'weekly' || subscriptionType === 'monthly' || subscriptionType === 'yearly')) {
       setSubscriptionPlan(subscriptionType);
       // Load subscription price from database
       const loadSubscriptionPrice = async () => {
@@ -46,7 +46,9 @@ function CheckoutContent() {
         (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
         
         let amountPaise = 0;
-        if (subscriptionType === 'monthly') {
+        if (subscriptionType === 'weekly') {
+          amountPaise = Number(settingsMap.RAZORPAY_WEEKLY_AMOUNT || '19900');
+        } else if (subscriptionType === 'monthly') {
           amountPaise = Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '79900');
         } else {
           amountPaise = Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
@@ -254,7 +256,7 @@ function CheckoutContent() {
                 trackSubscribe({
                   method: 'razorpay',
                   plan_id: subscriptionPlan,
-                  plan_name: subscriptionPlan === 'yearly' ? 'Yearly Pro Plan' : 'Monthly Pro Plan',
+                  plan_name: subscriptionPlan === 'weekly' ? 'Weekly Pro Plan' : subscriptionPlan === 'yearly' ? 'Yearly Pro Plan' : 'Monthly Pro Plan',
                   value: subscriptionPrice || 0,
                   currency: 'INR',
                 });
@@ -404,7 +406,7 @@ function CheckoutContent() {
             <h1 className="text-3xl font-semibold">{subscriptionPlan ? 'Subscribe' : 'Checkout'}</h1>
             <p className="mt-2 text-sm text-zinc-400">
               {subscriptionPlan 
-                ? `Secure payment for ${subscriptionPlan === 'monthly' ? 'monthly' : 'yearly'} Pro subscription.`
+                ? `Secure payment for ${subscriptionPlan === 'weekly' ? 'weekly' : subscriptionPlan === 'monthly' ? 'monthly' : 'yearly'} Pro subscription.`
                 : 'Secure payment for cinematic After Effects templates.'
               }
             </p>
@@ -501,7 +503,7 @@ function CheckoutContent() {
             <h2 className="text-xl font-semibold">{subscriptionPlan ? 'Subscription Summary' : 'Order summary'}</h2>
             {subscriptionPlan ? (
               <p className="mt-1 text-sm text-zinc-400">
-                {subscriptionPlan === 'monthly' ? 'Monthly' : 'Yearly'} Pro Subscription
+                {subscriptionPlan === 'weekly' ? 'Weekly' : subscriptionPlan === 'monthly' ? 'Monthly' : 'Yearly'} Pro Subscription
               </p>
             ) : (
               <p className="mt-1 text-sm text-zinc-400">{cartCount} template{cartCount === 1 ? '' : 's'} in your cart.</p>
@@ -510,7 +512,7 @@ function CheckoutContent() {
           {subscriptionPlan ? (
             <div className="space-y-4 text-sm text-zinc-300">
               <div className="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-black/40">
-                <span>Pro {subscriptionPlan === 'monthly' ? 'Monthly' : 'Yearly'} Plan</span>
+                <span>Pro {subscriptionPlan === 'weekly' ? 'Weekly' : subscriptionPlan === 'monthly' ? 'Monthly' : 'Yearly'} Plan</span>
                 <span>{subscriptionPrice ? formatPriceWithDecimal(subscriptionPrice) : 'Loading...'}</span>
               </div>
             </div>

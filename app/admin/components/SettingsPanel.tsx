@@ -9,6 +9,7 @@ export default function SettingsPanel() {
   const [rzpSecret, setRzpSecret] = useState('');
   const [rzpWebhookSecret, setRzpWebhookSecret] = useState('');
   const [rzpCurrency, setRzpCurrency] = useState('INR');
+  const [rzpWeekly, setRzpWeekly] = useState('199'); // ₹199 in Rupees
   const [rzpMonthly, setRzpMonthly] = useState('799'); // ₹799 in Rupees
   const [rzpYearly, setRzpYearly] = useState('5499'); // ₹5,499 in Rupees
   const [saving, setSaving] = useState(false);
@@ -29,12 +30,17 @@ export default function SettingsPanel() {
         setRzpCurrency(json.settings.RAZORPAY_CURRENCY || 'INR');
         
         // Convert from paise (database) to rupees (display)
+        let weeklyPaise = Number(json.settings.RAZORPAY_WEEKLY_AMOUNT || '19900');
         let monthlyPaise = Number(json.settings.RAZORPAY_MONTHLY_AMOUNT || '79900');
         let yearlyPaise = Number(json.settings.RAZORPAY_YEARLY_AMOUNT || '549900');
         
+        // Weekly: if >= 1000, it's in paise, convert to rupees (divide by 100)
         // Monthly: if >= 10000, it's in paise, convert to rupees (divide by 100)
         // Yearly: if >= 100000, it's in paise, convert to rupees (divide by 100)
         // Otherwise, it's already in rupees, use as is
+        if (weeklyPaise >= 1000) {
+          weeklyPaise = weeklyPaise / 100;
+        }
         if (monthlyPaise >= 10000) {
           monthlyPaise = monthlyPaise / 100;
         }
@@ -42,6 +48,7 @@ export default function SettingsPanel() {
           yearlyPaise = yearlyPaise / 100;
         }
         
+        setRzpWeekly(String(Math.round(weeklyPaise)));
         setRzpMonthly(String(Math.round(monthlyPaise)));
         setRzpYearly(String(Math.round(yearlyPaise)));
       }
@@ -57,6 +64,7 @@ export default function SettingsPanel() {
       if (!session) return;
       
       // Convert from rupees (input) to paise (database storage)
+      const weeklyPaise = String(Math.round(Number(rzpWeekly) * 100));
       const monthlyPaise = String(Math.round(Number(rzpMonthly) * 100));
       const yearlyPaise = String(Math.round(Number(rzpYearly) * 100));
       
@@ -69,6 +77,7 @@ export default function SettingsPanel() {
           RAZORPAY_KEY_SECRET: rzpSecret,
           RAZORPAY_WEBHOOK_SECRET: rzpWebhookSecret,
           RAZORPAY_CURRENCY: rzpCurrency,
+          RAZORPAY_WEEKLY_AMOUNT: weeklyPaise,
           RAZORPAY_MONTHLY_AMOUNT: monthlyPaise,
           RAZORPAY_YEARLY_AMOUNT: yearlyPaise,
         } }),
@@ -129,7 +138,11 @@ export default function SettingsPanel() {
             <label className="block text-xs text-zinc-400 mb-1">Currency</label>
             <input type="text" value={rzpCurrency} onChange={(e)=>setRzpCurrency(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-sm" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">Weekly Amount (₹ Rupees)</label>
+              <input type="number" value={rzpWeekly} onChange={(e)=>setRzpWeekly(e.target.value)} placeholder="199" className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-sm" />
+            </div>
             <div>
               <label className="block text-xs text-zinc-400 mb-1">Monthly Amount (₹ Rupees)</label>
               <input type="number" value={rzpMonthly} onChange={(e)=>setRzpMonthly(e.target.value)} placeholder="799" className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-sm" />
