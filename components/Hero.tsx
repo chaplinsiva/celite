@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TextReveal } from '@/components/ui/text-reveal';
-import { WebGLShader } from '@/components/ui/web-gl-shader';
 import { LiquidButton } from '@/components/ui/liquid-glass-button';
 
 export default function Hero() {
@@ -20,9 +19,20 @@ export default function Hero() {
 
   return (
     <section className="relative w-full min-h-[60vh] flex items-center justify-center px-6 py-24 sm:py-36 md:py-40 overflow-hidden">
-      {/* WebGL Shader Background */}
+      {/* Video Background */}
       <div className="absolute inset-0 w-full h-full">
-        <WebGLShader />
+        <video
+          src="/VIDEOBG.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="w-full h-full object-cover"
+          style={{
+            filter: 'brightness(0.3)',
+          }}
+        />
       </div>
       {/* Overlay for better text readability */}
       <div className="absolute inset-0 bg-black/60 z-10"></div>
