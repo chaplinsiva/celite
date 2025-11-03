@@ -81,47 +81,55 @@ export async function POST(req: Request) {
             payload.subscription?.entity?.id || 
             null;
           
-          // Determine plan from subscription entity or invoice
-          const subscriptionForPlan = subscriptionEntity || invoiceEntity;
-          const planFromWebhook = subscriptionForPlan?.plan_id
-            ? subscriptionForPlan.plan_id.includes('yearly')
-              ? 'yearly'
-              : subscriptionForPlan.plan_id.includes('weekly')
-              ? 'weekly'
-              : 'monthly'
-            : null;
-
-          // Determine final plan:
-          // 1. Use plan from webhook if available
-          // 2. If subscription was cancelled (is_active: false), use existing plan (preserved)
-          // 3. If active subscription exists, use existing plan
-          // 4. Default to monthly only if no existing subscription
-          let finalPlan = planFromWebhook;
-          if (!finalPlan) {
-            if (existingSub?.plan) {
-              // Use existing plan if subscription exists (preserves cancelled plan)
-              finalPlan = existingSub.plan;
-            } else {
-              // Only default to monthly if no existing subscription
-              finalPlan = 'monthly';
-            }
-          } else if (existingSub && !existingSub.is_active && existingSub.plan) {
-            // If subscription was cancelled, preserve the cancelled plan instead of using webhook plan
-            // This prevents cancelled yearly from becoming active monthly
+          // CRITICAL: ALWAYS prioritize existing subscription's plan if it exists
+          // This is the source of truth - don't override it based on webhook payload
+          let finalPlan: string | null = null;
+          
+          // Priority order:
+          // 1. ALWAYS use existing subscription's plan if it exists (most reliable)
+          // 2. Only if no existing subscription, try to parse from webhook
+          // 3. Only if no existing subscription and can't parse, default to monthly
+          
+          if (existingSub?.plan) {
+            // Existing subscription has a plan - USE IT (this is the source of truth)
             finalPlan = existingSub.plan;
+            console.log(`Using existing subscription plan for user ${userId}: ${finalPlan}`);
+          } else {
+            // No existing subscription - try to parse from webhook
+            const subscriptionForPlan = subscriptionEntity || invoiceEntity;
+            const planFromWebhook = subscriptionForPlan?.plan_id
+              ? subscriptionForPlan.plan_id.includes('yearly')
+                ? 'yearly'
+                : subscriptionForPlan.plan_id.includes('weekly')
+                ? 'weekly'
+                : 'monthly'
+              : null;
+            
+            if (planFromWebhook) {
+              finalPlan = planFromWebhook;
+              console.log(`Parsed plan from webhook for user ${userId}: ${finalPlan}`);
+            } else {
+              // Last resort: default to monthly only if no existing subscription
+              finalPlan = 'monthly';
+              console.log(`No plan found, defaulting to monthly for user ${userId} (new subscription)`);
+            }
           }
 
-          // Only reactivate if:
-          // 1. Existing subscription is active, OR
-          // 2. No existing subscription exists, OR
-          // 3. Subscription was cancelled but Razorpay subscription ID matches (renewal)
+          // CRITICAL: Only reactivate if subscription is already active OR it's a new subscription
+          // DO NOT reactivate cancelled subscriptions from webhook events unless explicitly a renewal
           const shouldReactivate = 
-            !existingSub || // New subscription
-            existingSub.is_active || // Already active
-            (razorpaySubscriptionId && existingSub.razorpay_subscription_id === razorpaySubscriptionId); // Same subscription renewed
+            !existingSub || // New subscription (no existing record)
+            (existingSub.is_active === true); // Existing subscription is already active
           
-          if (shouldReactivate) {
-            console.log(`Reactivating subscription for user: ${userId}`);
+          // DO NOT reactivate if subscription is cancelled (is_active: false)
+          // This prevents cancelled subscriptions from being reactivated by delayed webhook events
+          if (existingSub && existingSub.is_active === false) {
+            console.log(`Skipping reactivation: Subscription is cancelled for user ${userId}. Plan preserved: ${existingSub.plan}`);
+            return NextResponse.json({ status: 'ok', message: 'Subscription is cancelled, not reactivating' });
+          }
+          
+          if (shouldReactivate && finalPlan) {
+            console.log(`Reactivating subscription for user: ${userId}, plan: ${finalPlan}`);
             
             // Update users table with subscription status
             await admin
@@ -143,23 +151,42 @@ export async function POST(req: Request) {
               validUntil.setMonth(validUntil.getMonth() + 1);
             }
 
-            // Upsert subscription with Razorpay subscription ID - REACTIVATE
-            await admin
-              .from('subscriptions')
-              .upsert(
-                {
+            // Update subscription - but be very careful not to override cancelled subscriptions
+            if (existingSub) {
+              // Only update if subscription is currently active (extra safety check)
+              // We already checked above, but double-check here to be safe
+              if (existingSub.is_active === true) {
+                await admin
+                  .from('subscriptions')
+                  .update({
+                    is_active: true,
+                    plan: finalPlan, // This should be the existing plan (preserved above)
+                    valid_until: validUntil.toISOString(),
+                    razorpay_subscription_id: razorpaySubscriptionId,
+                  })
+                  .eq('user_id', userId)
+                  .eq('is_active', true); // Extra safety: only update if already active
+                console.log(`Updated active subscription for user ${userId} with plan: ${finalPlan}`);
+              } else {
+                console.error(`CRITICAL: Attempted to update inactive subscription for user ${userId}. This should not happen!`);
+              }
+            } else {
+              // New subscription - create it (only if no existing subscription)
+              await admin
+                .from('subscriptions')
+                .insert({
                   user_id: userId,
                   is_active: true,
                   plan: finalPlan,
                   valid_until: validUntil.toISOString(),
                   razorpay_subscription_id: razorpaySubscriptionId,
-                },
-                { onConflict: 'user_id' }
-              );
+                });
+              console.log(`Created new subscription for user ${userId} with plan: ${finalPlan}`);
+            }
             
-            console.log(`Subscription reactivated for user: ${userId}, plan: ${finalPlan}`);
+            console.log(`Subscription reactivated for user: ${userId}, plan: ${finalPlan}, valid_until: ${validUntil.toISOString()}`);
           } else {
-            console.log(`Skipping reactivation for cancelled subscription (user: ${userId}). Plan preserved: ${existingSub?.plan}`);
+            console.log(`Skipping reactivation for user: ${userId}. Should reactivate: ${shouldReactivate}, Final plan: ${finalPlan}, Existing sub:`, existingSub);
           }
         }
       }
