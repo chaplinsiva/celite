@@ -6,6 +6,8 @@ import LayoutWrapper from "../components/LayoutWrapper";
 import GoogleAnalytics from "../components/GoogleAnalytics";
 import { AppProvider } from "../context/AppContext";
 import { LoginModalProvider } from "../context/LoginModalContext";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -58,6 +60,8 @@ export default function RootLayout({
         <AppProvider>
           <LoginModalProvider>
             <GoogleAnalytics />
+            <SpeedInsights />
+            <Analytics />
             <LayoutWrapper>
               {children}
             </LayoutWrapper>
