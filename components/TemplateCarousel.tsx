@@ -177,7 +177,7 @@ export default function TemplateCarousel() {
     const [isLimitedHovered, setIsLimitedHovered] = useState<boolean>(false);
     
     return (
-      <div className="flex-shrink-0 w-[calc(25%-0.75rem)] snap-center">
+      <div className="flex-shrink-0 w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(25%-0.75rem)] snap-center">
         <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
           <GlowingEffect
             spread={40}
@@ -283,7 +283,7 @@ export default function TemplateCarousel() {
           <button 
             aria-label="Scroll left" 
             onClick={() => scrollFeatured(-360)}
-            className="hidden md:flex absolute -left-12 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-black/80 backdrop-blur-sm text-white hover:bg-white/10 shadow-xl border-[0.75px] border-white/20 hover:border-white/30 transition-all duration-300 items-center justify-center focus:outline-none group"
+            className="hidden lg:flex absolute -left-12 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-black/80 backdrop-blur-sm text-white hover:bg-white/10 shadow-xl border-[0.75px] border-white/20 hover:border-white/30 transition-all duration-300 items-center justify-center focus:outline-none group"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" className="group-hover:-translate-x-0.5 transition-transform">
               <path d="M12.7 5.3a1 1 0 0 0-1.4 0l-4 4a1 1 0 0 0 0 1.4l4 4a1 1 0 1 0 1.4-1.4L9.42 10l3.3-3.3a1 1 0 0 0 0-1.4z" fill="currentColor"/>
@@ -292,7 +292,7 @@ export default function TemplateCarousel() {
           <button 
             aria-label="Scroll right" 
             onClick={() => scrollFeatured(360)}
-            className="hidden md:flex absolute -right-12 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-black/80 backdrop-blur-sm text-white hover:bg-white/10 shadow-xl border-[0.75px] border-white/20 hover:border-white/30 transition-all duration-300 items-center justify-center focus:outline-none group"
+            className="hidden lg:flex absolute -right-12 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-black/80 backdrop-blur-sm text-white hover:bg-white/10 shadow-xl border-[0.75px] border-white/20 hover:border-white/30 transition-all duration-300 items-center justify-center focus:outline-none group"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" className="group-hover:translate-x-0.5 transition-transform">
               <path d="M7.3 14.7a1 1 0 0 1 0-1.4l3.3-3.3-3.3-3.3a1 1 0 1 1 1.4-1.4l4 4a1 1 0 0 1 0 1.4l-4 4a1 1 0 0 1-1.4 0z" fill="currentColor"/>

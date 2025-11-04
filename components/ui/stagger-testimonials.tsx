@@ -175,8 +175,8 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
         opacity: opacity,
         transform: `
           translate(-50%, -50%) 
-          translateX(${(cardSize / 1.5) * position}px)
-          translateY(${isCenter ? -65 : position % 2 ? 15 : -15}px)
+          translateX(${(cardSize / 2) * position}px)
+          translateY(${isCenter ? 0 : position % 2 ? 10 : -10}px)
           rotate(${isCenter ? 0 : position % 2 ? 2.5 : -2.5}deg)
         `,
         transition: 'opacity 700ms ease-out, transform 700ms ease-out',
@@ -191,25 +191,25 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
         borderWidth={3}
       />
       <div className={cn(
-        "relative h-full rounded-xl border-[0.75px] border-white/10 p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] flex flex-col justify-between transition-all duration-700 ease-out",
+        "relative h-full rounded-xl border-[0.75px] border-white/10 p-4 sm:p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] flex flex-col justify-between transition-all duration-700 ease-out",
         isCenter 
           ? "bg-gradient-to-br from-blue-500/30 via-purple-500/30 to-pink-500/30 backdrop-blur-sm" 
           : "bg-black/40"
       )}>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 sm:gap-4">
           <div className="w-fit rounded-lg border-[0.75px] border-white/10 bg-zinc-900/50 p-2">
             <img
               src={testimonial.imgSrc}
               alt={`${testimonial.by.split(',')[0]}`}
-              className="h-10 w-10 rounded-full bg-muted object-cover"
+              className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-muted object-cover"
             />
           </div>
-          <h3 className="text-base sm:text-lg font-medium text-white leading-tight">
+          <h3 className="text-sm sm:text-base md:text-lg font-medium text-white leading-tight">
             "{testimonial.testimonial}"
           </h3>
         </div>
         <p className={cn(
-          "mt-4 text-sm italic",
+          "mt-3 sm:mt-4 text-xs sm:text-sm italic",
           isCenter ? "text-white/80" : "text-zinc-400"
         )}>
           - {testimonial.by}
@@ -249,11 +249,14 @@ export const StaggerTestimonials: React.FC<StaggerTestimonialsProps> = ({ classN
     const updateSize = () => {
       const width = window.innerWidth;
       if (width >= 1024) {
+        // Desktop: larger cards
         setCardSize(320);
-      } else if (width >= 640) {
+      } else if (width >= 768) {
+        // Tablet: medium cards
         setCardSize(280);
       } else {
-        setCardSize(260);
+        // Mobile: smaller cards
+        setCardSize(240);
       }
     };
 
@@ -268,13 +271,13 @@ export const StaggerTestimonials: React.FC<StaggerTestimonialsProps> = ({ classN
         "relative w-full overflow-visible bg-black",
         className
       )}
-      style={{ minHeight: '600px', height: 'auto' }}
+      style={{ minHeight: '400px', height: 'auto' }}
     >
       {/* Dark Vignette on Left Edge */}
-      <div className="absolute left-0 top-0 bottom-0 w-64 z-30 pointer-events-none bg-gradient-to-r from-black via-black/80 to-transparent"></div>
+      <div className="absolute left-0 top-0 bottom-0 w-32 md:w-64 z-30 pointer-events-none bg-gradient-to-r from-black via-black/80 to-transparent"></div>
       
       {/* Dark Vignette on Right Edge */}
-      <div className="absolute right-0 top-0 bottom-0 w-64 z-30 pointer-events-none bg-gradient-to-l from-black via-black/80 to-transparent"></div>
+      <div className="absolute right-0 top-0 bottom-0 w-32 md:w-64 z-30 pointer-events-none bg-gradient-to-l from-black via-black/80 to-transparent"></div>
 
       {testimonialsList.map((testimonial, index) => {
         const position = testimonialsList.length % 2

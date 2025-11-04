@@ -109,3 +109,14 @@ export function getYouTubeVideoId(url: string | null | undefined): string | null
   return videoId;
 }
 
+/**
+ * Gets the YouTube thumbnail URL from a YouTube video URL or video ID
+ * Returns the maxresdefault thumbnail URL (highest quality) or null if invalid
+ * Format: https://img.youtube.com/vi/{VIDEO_ID}/maxresdefault.jpg
+ */
+export function getYouTubeThumbnailUrl(url: string | null | undefined): string | null {
+  const videoId = getYouTubeVideoId(url);
+  if (!videoId) return null;
+  return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+}
+

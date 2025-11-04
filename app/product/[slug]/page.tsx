@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import ProductDetails from './ProductDetails';
 import type { Template } from '../../../data/templateData';
 import { getSupabaseServerClient } from '../../../lib/supabaseServer';
+import { getYouTubeThumbnailUrl } from '../../../lib/utils';
 
 const reviews = [
   {
@@ -50,19 +51,41 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
       description: 'This After Effects template does not exist or was removed.',
     };
   }
+
+  // Get YouTube thumbnail if video exists, otherwise use img
+  const metaImage = prod.video 
+    ? getYouTubeThumbnailUrl(prod.video) 
+    : (prod.img || null);
+
+  // Fallback to default image if no image or video
+  // For relative URLs, we need to make them absolute
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://celite.com';
+  const finalImage = metaImage 
+    ? (metaImage.startsWith('http') ? metaImage : `${baseUrl}${metaImage}`)
+    : `${baseUrl}/Logo.png`;
+
   return {
     title: `${prod.name} • Celite AE Template`,
     description: prod.desc.slice(0, 155),
     openGraph: {
       title: `${prod.name} • Celite AE Template`,
       description: prod.desc.slice(0, 155),
-      images: [prod.img],
+      images: [
+        {
+          url: finalImage,
+          width: 1200,
+          height: 630,
+          alt: prod.name,
+        }
+      ],
+      type: 'website',
+      url: `${baseUrl}/product/${prod.slug}`,
     },
     twitter: {
       card: 'summary_large_image',
       title: `${prod.name} • Celite AE Template`,
       description: prod.desc.slice(0, 155),
-      images: [prod.img],
+      images: [finalImage],
     },
   };
 }
