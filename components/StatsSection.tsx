@@ -2,6 +2,7 @@
 
 import { FileText, Users, Download, Star } from "lucide-react";
 import RadialOrbitalTimeline from "@/components/ui/radial-orbital-timeline";
+import DatabaseWithRestApi from "@/components/ui/database-with-rest-api";
 
 const timelineData = [
   {
@@ -54,7 +55,37 @@ export default function StatsSection() {
   return (
     <section className="relative w-full py-8 sm:py-12 md:py-16 overflow-hidden bg-gradient-to-b from-black to-zinc-950">
       <div className="relative w-full h-[600px] sm:h-[700px] md:h-[800px] flex items-center justify-center">
-        <RadialOrbitalTimeline timelineData={timelineData} />
+        <div className="absolute inset-0 w-full h-full flex items-center justify-center" style={{ perspective: '1000px' }}>
+          {/* Stats Text Display */}
+          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 text-center space-y-2 z-10">
+            <div className="text-white text-lg sm:text-xl md:text-2xl font-semibold space-x-4 sm:space-x-8">
+              <span>500+ Premium Templates</span>
+              <span className="text-zinc-400">•</span>
+              <span>10K+ Happy Customers</span>
+              <span className="text-zinc-400">•</span>
+              <span>50K+ Downloads</span>
+              <span className="text-zinc-400">•</span>
+              <span>4.9 Average Rating</span>
+            </div>
+          </div>
+          
+          {/* DatabaseWithRestApi Component with Celite branding */}
+          <DatabaseWithRestApi
+            badgeTexts={{
+              first: "500+",
+              second: "10K+",
+              third: "50K+",
+              fourth: "4.9★"
+            }}
+            buttonTexts={{
+              first: "Celite",
+              second: "Templates"
+            }}
+            circleText="Celite"
+            title="Celite - Premium After Effects Templates"
+            lightColor="#00A6F5"
+          />
+        </div>
       </div>
     </section>
   );

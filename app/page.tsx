@@ -1,7 +1,6 @@
 import Hero from '../components/Hero';
 import TemplateCarousel from '../components/TemplateCarousel';
 import CategoriesSection from '../components/CategoriesSection';
-import StatsSection from '../components/StatsSection';
 import TestimonialsSection from '../components/TestimonialsSection';
 import CTASection from '../components/CTASection';
 
@@ -14,7 +13,6 @@ export default function Home() {
     <main className="bg-black min-h-screen pt-16">
       <Hero />
       <TemplateCarousel />
-      <StatsSection />
       <CategoriesSection />
       <TestimonialsSection />
       <CTASection />

@@ -1,63 +1,32 @@
-import { TestimonialsWithMarquee } from "@/components/ui/testimonials-with-marquee";
-
-const testimonials = [
-  {
-    author: {
-      name: "Sarah Johnson",
-      handle: "@sarahcreator",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face"
-    },
-    text: "The templates here saved me hours of work. The quality is outstanding and the support team is incredibly helpful. Highly recommend!",
-  },
-  {
-    author: {
-      name: "Michael Chen",
-      handle: "@michaelmarketing",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face"
-    },
-    text: "Best investment I've made for our marketing team. The variety is amazing and every template works perfectly out of the box.",
-  },
-  {
-    author: {
-      name: "Emily Rodriguez",
-      handle: "@emilydesigns",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face"
-    },
-    text: "As a freelancer, these templates help me deliver professional work quickly. My clients are always impressed with the final results.",
-  },
-  {
-    author: {
-      name: "Alex Thompson",
-      handle: "@alexvideo",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"
-    },
-    text: "The video templates are absolutely stunning. They've elevated my work to a professional level I never thought possible.",
-  },
-  {
-    author: {
-      name: "Jessica Martinez",
-      handle: "@jessicaproducer",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face"
-    },
-    text: "Outstanding quality and variety. These templates have become essential tools in my creative workflow. Worth every penny!",
-  },
-  {
-    author: {
-      name: "David Kim",
-      handle: "@davidmotion",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face"
-    },
-    text: "Incredible attention to detail. Every template is professionally crafted and ready to use. This has transformed my production process.",
-  },
-];
+import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 
 export default function TestimonialsSection() {
   return (
-    <TestimonialsWithMarquee
-      title="What Our Customers Say"
-      description="Don't just take our word for it. Here's what creators are saying about us"
-      testimonials={testimonials}
-    />
+    <section className="relative w-full py-20 sm:py-24 md:py-28 overflow-hidden bg-black">
+      {/* Colorful Background Gradients */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+        {/* Section Header */}
+        <div className="text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4">
+            What Our Customers Say
+          </h2>
+          <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
+            Don't just take our word for it. Here's what creators are saying about us
+          </p>
+        </div>
+      </div>
+
+      {/* Stagger Testimonials Component - Full Width */}
+      <div className="relative w-full -mx-4 sm:-mx-6 md:-mx-8">
+        <StaggerTestimonials />
+      </div>
+    </section>
   );
 }
 

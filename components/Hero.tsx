@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TextReveal } from '@/components/ui/text-reveal';
 import { LiquidButton } from '@/components/ui/liquid-glass-button';
+import TubesCursor from '@/components/ui/tubes-cursor';
 
 export default function Hero() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,21 +20,8 @@ export default function Hero() {
 
   return (
     <section className="relative w-full min-h-[60vh] flex items-center justify-center px-6 py-24 sm:py-36 md:py-40 overflow-hidden">
-      {/* Video Background */}
-      <div className="absolute inset-0 w-full h-full">
-        <video
-          src="/VIDEOBG.mp4"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          className="w-full h-full object-cover"
-          style={{
-            filter: 'brightness(0.3)',
-          }}
-        />
-      </div>
+      {/* TubesCursor Background */}
+      <TubesCursor />
       {/* Overlay for better text readability */}
       <div className="absolute inset-0 bg-black/60 z-10"></div>
       {/* Content */}
