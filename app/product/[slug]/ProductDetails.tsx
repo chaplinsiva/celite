@@ -11,6 +11,10 @@ import { trackViewItem, trackAddToCart } from '../../../lib/gtag';
 import { getYouTubeEmbedUrl } from '../../../lib/utils';
 import YouTubeVideoPlayer from '../../../components/YouTubeVideoPlayer';
 import { ShinyButton } from '../../../components/ui/shiny-button';
+import { Button } from '../../../components/ui/neon-button';
+import { GlowingEffect } from '../../../components/ui/glowing-effect';
+import { cn } from '../../../lib/utils';
+import { Liquid } from '../../../components/ui/button-1';
 import type { Template } from '../../../data/templateData';
 interface Review {
   name: string;
@@ -35,6 +39,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   const [purchased, setPurchased] = useState<boolean>(false);
   const [purchaseStatus, setPurchaseStatus] = useState<string | null>(null);
   const [paying, setPaying] = useState<boolean>(false);
+  const [isLimitedHovered, setIsLimitedHovered] = useState<boolean>(false);
 
   // Track view_item event when product page loads
   useEffect(() => {
@@ -311,7 +316,17 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         }
       `}} />
       <main className="bg-black min-h-screen pt-0 sm:pt-16 px-1 sm:px-0">
-      <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-10 mb-14 mt-10 py-8 sm:py-12 px-3 sm:px-8 bg-zinc-900/80 rounded-3xl shadow-lg">
+      <div className="max-w-5xl mx-auto mb-14 mt-10 px-4 sm:px-6 md:px-8">
+        <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
+          <GlowingEffect
+            spread={40}
+            glow={true}
+            disabled={false}
+            proximity={64}
+            inactiveZone={0.01}
+            borderWidth={3}
+          />
+          <div className="relative flex flex-col md:flex-row gap-10 overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 md:p-12 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
         {/* Product Gallery */}
         <div className="flex-1 flex flex-col items-center md:items-start w-full">
           {product.video ? (
@@ -348,33 +363,67 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             </div>
           </div>
           {isSubActive ? (
-            <div className="flex items-center gap-4 mb-6">
-              <button
+            <div className="flex items-center gap-4 mb-6 justify-start">
+              <Button
                 type="button"
                 onClick={handleDownload}
                 disabled={downloading}
-                className="px-7 py-3 rounded-full bg-white text-black font-semibold shadow hover:bg-zinc-200 transition disabled:opacity-70 disabled:cursor-not-allowed"
+                variant="default"
+                size="lg"
+                className="px-7 py-3 font-semibold disabled:opacity-70"
               >
                 {downloading ? 'Preparing…' : 'Download Now'}
-              </button>
+              </Button>
             </div>
           ) : purchased ? (
             <div className="flex items-center gap-4 mb-6">
-              <button
+              <Button
                 type="button"
                 onClick={handleDownload}
                 disabled={downloading}
-                className="px-7 py-3 rounded-full bg-white text-black font-semibold shadow hover:bg-zinc-200 transition disabled:opacity-70 disabled:cursor-not-allowed"
+                variant="default"
+                size="lg"
+                className="px-7 py-3 font-semibold disabled:opacity-70"
               >
                 {downloading ? 'Preparing…' : 'Download Now'}
-              </button>
+              </Button>
               <span className="text-xs text-green-300">Purchased</span>
             </div>
           ) : (
             <div className="flex flex-col gap-4 mb-6">
               {hasActiveLimitedOffer && (
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="px-2 py-1 rounded-lg bg-white text-black text-xs font-semibold border border-black/20">LIMITED</span>
+                <div className="flex items-center gap-2 mb-2">
+                  <div
+                    className="relative inline-block w-[100px] h-[28px] group"
+                    onMouseEnter={() => setIsLimitedHovered(true)}
+                    onMouseLeave={() => setIsLimitedHovered(false)}
+                  >
+                    <div className="relative w-full h-full overflow-hidden rounded-lg">
+                      <span className="absolute inset-0 rounded-lg bg-gradient-to-br from-pink-500/90 to-purple-500/90"></span>
+                      <Liquid isHovered={isLimitedHovered} colors={{
+                        color1: '#FFFFFF',
+                        color2: '#EC4899',
+                        color3: '#F472B6',
+                        color4: '#FCFCFE',
+                        color5: '#F9F9FD',
+                        color6: '#F9A8D4',
+                        color7: '#DB2777',
+                        color8: '#BE185D',
+                        color9: '#EC4899',
+                        color10: '#F472B6',
+                        color11: '#DB2777',
+                        color12: '#FBCFE8',
+                        color13: '#EC4899',
+                        color14: '#F9A8D4',
+                        color15: '#FBCFE8',
+                        color16: '#EC4899',
+                        color17: '#DB2777',
+                      }} />
+                    </div>
+                    <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-transparent pointer-events-none">
+                      <span className="text-white text-xs font-semibold tracking-wide whitespace-nowrap z-10">LIMITED</span>
+                    </span>
+                  </div>
                   {daysRemaining !== null && daysRemaining !== undefined && (
                     <span className="text-xs text-white">
                       {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} remaining
@@ -401,11 +450,26 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                         </>
                       )}
                     </div>
+                  ) : product.price === 0 ? (
+                    <span className="text-3xl sm:text-4xl font-black text-white">
+                      FREE
+                    </span>
                   ) : (
                     <span className="text-2xl font-bold text-white">{formatPrice(product.price)}</span>
                   )}
                   <div className="flex items-center gap-3">
-                  {hasActiveLimitedOffer && !isSubActive ? (
+                  {product.price === 0 ? (
+                    <Button
+                      type="button"
+                      onClick={handleDownload}
+                      disabled={downloading}
+                      variant="default"
+                      size="lg"
+                      className="px-7 py-3 font-semibold disabled:opacity-70"
+                    >
+                      {downloading ? 'Preparing…' : 'Download Now'}
+                    </Button>
+                  ) : hasActiveLimitedOffer && !isSubActive ? (
                     <Link href="/pricing" className="inline-block">
                       <ShinyButton>
                         Subscribe Now
@@ -413,21 +477,25 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                     </Link>
                   ) : (
                       <>
-                        <button
+                        <Button
                           type="button"
                           onClick={handleAddToCart}
-                          className="px-7 py-3 rounded-full bg-white text-black font-semibold shadow hover:bg-zinc-200 transition"
+                          variant="inverse"
+                          size="lg"
+                          className="px-7 py-3 font-semibold"
                         >
                           {hasActiveLimitedOffer && effectivePrice === 0 ? 'Claim Free' : 'Add to Cart'}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           type="button"
                           onClick={handleBuyNow}
                           disabled={paying}
-                          className="px-7 py-3 rounded-full border border-white/25 text-white font-semibold shadow hover:bg-white/10 transition disabled:opacity-70"
+                          variant="default"
+                          size="lg"
+                          className="px-7 py-3 font-semibold disabled:opacity-70"
                         >
                           {paying ? 'Processing…' : (hasActiveLimitedOffer && effectivePrice === 0 ? 'Get Free' : 'Buy Now')}
-                        </button>
+                        </Button>
                       </>
                     )}
                   </div>
@@ -458,54 +526,53 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             </div>
           )}
           {feedback && <p className="text-sm text-blue-300">{feedback}</p>}
+          </div>
+        </div>
         </div>
       </div>
       {/* Related Products */}
-      <section className="max-w-5xl mx-auto w-full mb-12">
+      <section className="max-w-5xl mx-auto w-full mb-12 px-4 sm:px-6 md:px-8">
         <h3 className="text-xl font-bold text-white mb-5">Related Products</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {related.map((r) => (
-            <div
-              key={r.slug}
-              className="bg-zinc-900 rounded-xl shadow-md p-3 flex flex-col items-center"
-            >
-              <div className="relative w-full h-32 sm:h-40 rounded-lg mb-2 overflow-hidden">
-                {r.video ? (
-                  <YouTubeVideoPlayer 
-                    videoUrl={r.video}
-                    title={r.name}
-                    className="w-full h-full"
-                  />
-                ) : null}
+            <div key={r.slug} className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
+              <GlowingEffect
+                spread={40}
+                glow={true}
+                disabled={false}
+                proximity={64}
+                inactiveZone={0.01}
+                borderWidth={3}
+              />
+              <div className="relative flex h-full flex-col overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-4 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+                <Link href={`/product/${r.slug}`} className="absolute inset-0 z-10" aria-label={r.name || 'Template'} />
+                <div className="relative w-full h-40 sm:h-48 md:h-40 rounded-lg mb-3 overflow-hidden pointer-events-none">
+                  {r.video ? (
+                    <YouTubeVideoPlayer 
+                      videoUrl={r.video}
+                      title={r.name || 'Template'}
+                      className="w-full h-full"
+                    />
+                  ) : null}
+                </div>
+                <div className="flex flex-col gap-2 flex-1 relative z-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-white text-center leading-tight">{r.name}</h3>
+                </div>
               </div>
-              <span className="text-zinc-200 font-semibold text-lg mb-1">{r.name}</span>
-              <div className="text-xs text-zinc-500">{formatPrice(r.price)}</div>
-              <Link
-                href={`/product/${r.slug}`}
-                className="px-4 py-1 mt-2 rounded-lg bg-white text-black text-sm font-medium shadow hover:bg-zinc-200 transition"
-              >
-                View
-              </Link>
             </div>
           ))}
         </div>
-      </section>
-      {/* Reviews/Comments */}
-      <section className="max-w-5xl mx-auto w-full mb-12">
-        <h3 className="text-xl font-bold text-white mb-5">Comments & Reviews</h3>
-        <div className="flex flex-col gap-7">
-          {reviews.map((rev, idx) => (
-            <div key={rev.name+rev.date+idx} className="bg-zinc-900 rounded-xl px-6 py-5 flex flex-col sm:flex-row items-start gap-4 shadow">
-              <div className="flex flex-col w-full">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-white">{rev.name}</span>
-                  <span className="text-yellow-400">{'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}</span>
-                  <span className="text-xs text-zinc-500 ml-2">{new Date(rev.date).toLocaleDateString()}</span>
-                </div>
-                <div className="text-zinc-300 text-sm">{rev.comment}</div>
-              </div>
-            </div>
-          ))}
+        <div className="flex justify-center mt-8">
+          <Button
+            variant="default"
+            size="lg"
+            className="px-7 py-3 font-semibold"
+            asChild
+          >
+            <Link href="/templates">
+              Explore More Templates
+            </Link>
+          </Button>
         </div>
       </section>
     </main>

@@ -7,6 +7,29 @@ import { Suspense, useState, useEffect, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppContext } from '../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
+import { SignInPage, Testimonial } from '../../components/ui/sign-in';
+import LoadingSpinner from '../../components/ui/loading-spinner';
+
+const sampleTestimonials: Testimonial[] = [
+  {
+    avatarSrc: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&q=80",
+    name: "Sarah Chen",
+    handle: "@sarahdigital",
+    text: "Amazing platform! The user experience is seamless and the features are exactly what I needed."
+  },
+  {
+    avatarSrc: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&q=80",
+    name: "Marcus Johnson",
+    handle: "@marcustech",
+    text: "This service has transformed how I work. Clean design, powerful features, and excellent support."
+  },
+  {
+    avatarSrc: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&q=80",
+    name: "David Martinez",
+    handle: "@davidcreates",
+    text: "I've tried many platforms, but this one stands out. Intuitive, reliable, and genuinely helpful for productivity."
+  },
+];
 
 function LoginContent() {
   const router = useRouter();
@@ -35,7 +58,6 @@ function LoginContent() {
 
     const success = await login(email, password);
     if (success) {
-      // Redirect to return URL or home page
       router.push(returnUrl || '/');
     } else {
       setError('Login failed. Check your email and password.');
@@ -54,79 +76,48 @@ function LoginContent() {
     }
   };
 
-  return (
-    <div className="min-h-screen flex flex-col justify-center items-center bg-black">
-      <div className="w-full max-w-md bg-zinc-900/90 p-10 rounded-2xl shadow-2xl mt-24">
-        <h2 className="text-2xl font-bold mb-8 text-center text-white">Login to Celite</h2>
-        {user ? (
+  const handleResetPassword = () => {
+    router.push('/forgot-password');
+  };
+
+  const handleCreateAccount = () => {
+    router.push('/signup');
+  };
+
+  if (user) {
+    return (
+      <div className="fixed inset-0 h-screen w-screen flex flex-col justify-center items-center bg-black">
+        <div className="w-full max-w-md bg-black/40 backdrop-blur-sm border border-white/10 p-10 rounded-2xl shadow-2xl">
           <p className="mb-6 text-center text-sm text-green-300">
             You are already logged in as {user.email}.
           </p>
-        ) : null}
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            className="px-4 py-3 rounded-lg bg-zinc-800 text-zinc-100 border border-zinc-800 focus:outline-none focus:border-blue-400 placeholder-zinc-400"
-            autoComplete="email"
-            required
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            className="px-4 py-3 rounded-lg bg-zinc-800 text-zinc-100 border border-zinc-800 focus:outline-none focus:border-blue-400 placeholder-zinc-400"
-            autoComplete="current-password"
-            required
-          />
-          <div className="flex justify-end">
-            <Link href="/forgot-password" className="text-sm text-blue-400 hover:underline">
-              Forgot password?
-            </Link>
-          </div>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="mt-2 w-full py-3 rounded-xl bg-white text-black font-semibold shadow hover:bg-zinc-200 transition disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {isSubmitting ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-        {error && <p className="mt-4 text-center text-sm text-red-400">{error}</p>}
-        <div className="my-6 flex items-center text-zinc-400 text-sm">
-          <div className="flex-1 h-px bg-zinc-700" />
-          <span className="px-4">Or</span>
-          <div className="flex-1 h-px bg-zinc-700" />
+          <Link href="/" className="block w-full text-center py-3 rounded-xl bg-white text-black font-semibold hover:bg-zinc-200 transition">
+            Go to Home
+          </Link>
         </div>
-        <div className="flex flex-col gap-3">
-          <button
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-white font-medium transition"
-            type="button"
-            onClick={handleGoogle}
-          >
-            <svg height="22" width="22" viewBox="0 0 24 24" fill="none"><path d="M21.6 12.227c0-.818-.073-1.604-.211-2.356H12v4.462h5.433a4.627 4.627 0 0 1-2.006 3.045v2.526h3.24c1.89-1.742 2.993-4.31 2.993-7.677z" fill="#4285F4"/><path d="M12 22c2.7 0 4.967-.89 6.623-2.415l-3.24-2.526c-.898.601-2.043.955-3.383.955-2.604 0-4.81-1.76-5.599-4.127H3.03v2.59A9.998 9.998 0 0 0 12 22z" fill="#34A853"/><path d="M6.401 13.887A5.996 5.996 0 0 1 6 12c0-.654.112-1.289.313-1.887v-2.59H3.031A10.001 10.001 0 0 0 2 12c0 1.585.376 3.085 1.031 4.477l3.37-2.59z" fill="#FBBC05"/><path d="M12 6.544c1.47 0 2.777.506 3.81 1.497l2.857-2.857C16.964 3.508 14.697 2.5 12 2.5A9.997 9.997 0 0 0 3.03 7.523l3.37 2.59c.789-2.367 2.995-4.127 5.6-4.127z" fill="#EA4335"/></svg>
-            Continue with Google
-          </button>
-        </div>
-        <p className="mt-6 text-center text-zinc-400 text-sm">
-          Don't have an account?{' '}
-          <Link href="/signup" className="text-blue-400 hover:underline">Sign up</Link>
-        </p>
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <SignInPage
+      title={<span className="font-light text-white tracking-tighter">Welcome to Celite</span>}
+      description="Access your account and continue your journey with premium After Effects templates"
+      heroImageSrc="https://images.unsplash.com/photo-1642615835477-d303d7dc9ee9?w=2160&q=80"
+      testimonials={sampleTestimonials}
+      onSignIn={handleSubmit}
+      onGoogleSignIn={handleGoogle}
+      onResetPassword={handleResetPassword}
+      onCreateAccount={handleCreateAccount}
+      isSubmitting={isSubmitting}
+      error={error}
+    />
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex flex-col justify-center items-center bg-black">
-        <div className="w-full max-w-md bg-zinc-900/90 p-10 rounded-2xl shadow-2xl mt-24">
-          <h2 className="text-2xl font-bold mb-8 text-center text-white">Loading...</h2>
-        </div>
-      </div>
-    }>
+    <Suspense fallback={<LoadingSpinner fullScreen />}>
       <LoginContent />
     </Suspense>
   );

@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
+import LayoutWrapper from "../components/LayoutWrapper";
 import GoogleAnalytics from "../components/GoogleAnalytics";
 import { AppProvider } from "../context/AppContext";
 import { LoginModalProvider } from "../context/LoginModalContext";
@@ -37,7 +36,7 @@ export default function RootLayout({
   
   return (
     <html lang="en">
-      <body className={`${inter.variable} antialiased`} style={{ fontStyle: 'normal', fontSynthesis: 'none' }}>
+      <body className={`${inter.variable} antialiased bg-black`} style={{ fontStyle: 'normal', fontSynthesis: 'none' }}>
         <Script
           strategy="afterInteractive"
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
@@ -58,14 +57,10 @@ export default function RootLayout({
         />
         <AppProvider>
           <LoginModalProvider>
-            <div className="isolate flex flex-col min-h-screen">
-            <Header />
             <GoogleAnalytics />
-              <main className="flex-1">
-            {children}
-              </main>
-              <Footer />
-            </div>
+            <LayoutWrapper>
+              {children}
+            </LayoutWrapper>
           </LoginModalProvider>
         </AppProvider>
       </body>

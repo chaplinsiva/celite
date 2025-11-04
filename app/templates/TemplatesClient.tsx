@@ -8,7 +8,10 @@ import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
 import { getYouTubeEmbedUrl } from '../../lib/utils';
 import YouTubeVideoPlayer from '../../components/YouTubeVideoPlayer';
-import { GlowCard } from '../../components/ui/spotlight-card';
+import { GlowingEffect } from '../../components/ui/glowing-effect';
+import { cn } from '../../lib/utils';
+import { Button } from '../../components/ui/neon-button';
+import { Liquid } from '../../components/ui/button-1';
 
 type Template = {
   slug: string;
@@ -304,7 +307,7 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-7">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredTemplates.map((template) => (
               <TemplateCard 
                 key={template.slug} 
@@ -329,6 +332,8 @@ function TemplateCard({
   isSubscribed: boolean;
   onDownload: (slug: string) => void;
 }) {
+  const [isLimitedHovered, setIsLimitedHovered] = useState<boolean>(false);
+  
   const hasActiveLimitedOffer = useMemo(() => {
     if (!template.is_limited_offer || !template.limited_offer_start_date || !template.limited_offer_duration_days) {
       return false;
@@ -352,52 +357,71 @@ function TemplateCard({
   }, [hasActiveLimitedOffer, template.limited_offer_start_date, template.limited_offer_duration_days]);
 
   return (
-    <GlowCard
-      glowColor="purple"
-      customSize={true}
-      className="bg-zinc-900 shadow-lg p-3 sm:p-4 flex flex-col items-center transition-all duration-200 relative"
-    >
-      {hasActiveLimitedOffer && (
-        <div className="absolute top-3 left-3 z-20 bg-white text-black px-2 py-1 rounded-lg text-xs font-semibold border border-black/20">
-          LIMITED
+    <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
+      <GlowingEffect
+        spread={40}
+        glow={true}
+        disabled={false}
+        proximity={64}
+        inactiveZone={0.01}
+        borderWidth={3}
+      />
+      <div className="relative flex h-full flex-col overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-4 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+        <Link href={`/product/${template.slug}`} className="absolute inset-0 z-10" aria-label={template.name || 'Template'} />
+        <div className="relative w-full h-40 sm:h-48 md:h-40 rounded-lg mb-3 overflow-hidden pointer-events-none">
+          {template.video ? (
+            <YouTubeVideoPlayer 
+              videoUrl={template.video}
+              title={template.name || 'Template'}
+              className="w-full h-full"
+            />
+          ) : null}
         </div>
-      )}
-      <div className="relative w-full h-40 sm:h-48 md:h-40 rounded-xl mb-3 sm:mb-4 overflow-hidden">
-        {template.video ? (
-          <YouTubeVideoPlayer 
-            videoUrl={template.video}
-            title={template.name || 'Template'}
-            className="w-full h-full"
-          />
-        ) : null}
-      </div>
-      <h3 className="text-base sm:text-lg font-semibold text-white mb-1 text-center">{template.name}</h3>
-      {hasActiveLimitedOffer && (
-        <div className="mb-2 text-xs text-white font-medium text-center">
-          {isSubscribed ? (
-            'Only for Subscribed Users'
-          ) : (
-            daysRemaining !== null ? `${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'} remaining` : ''
+        <div className="flex flex-col gap-2 flex-1 relative z-0">
+          <h3 className="text-base sm:text-lg font-semibold text-white text-center leading-tight">{template.name}</h3>
+          {hasActiveLimitedOffer && (
+            <div className="flex items-center justify-center gap-2 relative z-20">
+              <div
+                className="relative inline-block w-[90px] h-[26px] group"
+                onMouseEnter={() => setIsLimitedHovered(true)}
+                onMouseLeave={() => setIsLimitedHovered(false)}
+              >
+                <div className="relative w-full h-full overflow-hidden rounded-lg">
+                  <span className="absolute inset-0 rounded-lg bg-gradient-to-br from-pink-500/90 to-purple-500/90"></span>
+                  <Liquid isHovered={isLimitedHovered} colors={{
+                    color1: '#FFFFFF',
+                    color2: '#EC4899',
+                    color3: '#F472B6',
+                    color4: '#FCFCFE',
+                    color5: '#F9F9FD',
+                    color6: '#F9A8D4',
+                    color7: '#DB2777',
+                    color8: '#BE185D',
+                    color9: '#EC4899',
+                    color10: '#F472B6',
+                    color11: '#DB2777',
+                    color12: '#FBCFE8',
+                    color13: '#EC4899',
+                    color14: '#F9A8D4',
+                    color15: '#FBCFE8',
+                    color16: '#EC4899',
+                    color17: '#DB2777',
+                  }} />
+                </div>
+                <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-transparent pointer-events-none">
+                  <span className="text-white text-xs font-semibold tracking-wide whitespace-nowrap z-10">LIMITED</span>
+                </span>
+              </div>
+              {daysRemaining !== null && (
+                <span className="text-xs text-zinc-400 font-medium whitespace-nowrap">
+                  {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} remaining
+                </span>
+              )}
+            </div>
           )}
         </div>
-      )}
-      {isSubscribed ? (
-        <div className="flex gap-2 w-full mt-auto">
-          <Link href={`/product/${template.slug}`} className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-white text-black font-medium hover:bg-zinc-200 transition text-center">View</Link>
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              onDownload(template.slug);
-            }}
-            className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-black text-white font-medium border border-white/20 hover:bg-zinc-800 transition text-center"
-          >
-            Download
-          </button>
-        </div>
-      ) : (
-        <Link href={`/product/${template.slug}`} className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm rounded-full bg-white text-black font-medium shadow hover:bg-zinc-200 transition text-center">View Template</Link>
-      )}
-    </GlowCard>
+      </div>
+    </div>
   );
 }
 

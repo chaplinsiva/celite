@@ -95,8 +95,8 @@ const GridItem = ({ area, icon, title, description, href }: GridItemProps) => {
             inactiveZone={0.01}
             borderWidth={3}
           />
-          <div className="relative flex h-full flex-col justify-between gap-6 overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:p-6">
-            <div className="relative flex flex-1 flex-col justify-between gap-3">
+          <div className="relative flex h-full flex-col justify-between gap-4 overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:p-6">
+            <div className="relative flex flex-1 flex-col justify-between gap-2">
               <div className="w-fit rounded-lg border-[0.75px] border-white/10 bg-zinc-900/50 p-2">
                 <div className="text-white">
                   {icon}
@@ -120,7 +120,7 @@ const GridItem = ({ area, icon, title, description, href }: GridItemProps) => {
 
 export default function CategoriesSection() {
   return (
-    <section className="relative w-full py-20 sm:py-24 md:py-28 overflow-hidden bg-black">
+    <section className="relative w-full pt-20 sm:pt-24 md:pt-28 pb-2 sm:pb-3 md:pb-4 overflow-hidden bg-black">
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
@@ -129,8 +129,8 @@ export default function CategoriesSection() {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         {/* Section Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-3">
             What We Offer
           </h2>
           <p className="text-lg text-zinc-400 max-w-2xl mx-auto">

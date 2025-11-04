@@ -8,7 +8,10 @@ import { useAppContext } from '../context/AppContext';
 import { useLoginModal } from '../context/LoginModalContext';
 import { getYouTubeEmbedUrl } from '../lib/utils';
 import YouTubeVideoPlayer from './YouTubeVideoPlayer';
-import { GlowCard } from './ui/spotlight-card';
+import { GlowingEffect } from './ui/glowing-effect';
+import { cn } from '@/lib/utils';
+import { Button } from './ui/neon-button';
+import { Liquid } from './ui/button-1';
 
 type FeaturedTemplate = Template & {
   is_limited_offer?: boolean;
@@ -168,78 +171,106 @@ export default function TemplateCarousel() {
     }
   };
 
-  const renderTemplateCard = (tpl: FeaturedTemplate) => {
+  const TemplateCardComponent = ({ tpl, isSubscribed, handleDownload }: { tpl: FeaturedTemplate; isSubscribed: boolean; handleDownload: (slug: string) => void }) => {
     const hasActiveLimitedOffer = !!tpl.hasActiveLimitedOffer;
     const daysRemaining = tpl.daysRemaining;
+    const [isLimitedHovered, setIsLimitedHovered] = useState<boolean>(false);
+    
     return (
-    <GlowCard
-      glowColor="purple"
-      customSize={true}
-      className="flex-shrink-0 w-[calc(100%-1rem)] sm:w-[calc(50%-0.75rem)] md:w-[calc(50%-1rem)] lg:w-[calc(33.333%-1.33rem)] bg-zinc-900 shadow-lg p-3 sm:p-4 flex flex-col items-center snap-center transition-all duration-200 relative"
-    >
-      {hasActiveLimitedOffer && (
-        <div className="absolute top-3 left-3 z-20 bg-white text-black px-2 py-1 rounded-lg text-xs font-semibold border border-black/20">
-          LIMITED
-        </div>
-      )}
-      <div className="relative w-full h-40 sm:h-48 md:h-40 rounded-xl mb-3 sm:mb-4 overflow-hidden">
-        {tpl.video ? (
-          <YouTubeVideoPlayer 
-            videoUrl={tpl.video}
-            title={tpl.name}
-            className="w-full h-full"
+      <div className="flex-shrink-0 w-[calc(25%-0.75rem)] snap-center">
+        <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
+          <GlowingEffect
+            spread={40}
+            glow={true}
+            disabled={false}
+            proximity={64}
+            inactiveZone={0.01}
+            borderWidth={3}
           />
-        ) : null}
+          <div className="relative flex h-full flex-col overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-3 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+            <Link href={`/product/${tpl.slug}`} className="absolute inset-0 z-10" aria-label={tpl.name} />
+            <div className="relative w-full h-32 sm:h-36 md:h-32 rounded-lg mb-2 overflow-hidden pointer-events-none">
+              {tpl.video ? (
+                <YouTubeVideoPlayer 
+                  videoUrl={tpl.video}
+                  title={tpl.name}
+                  className="w-full h-full"
+                />
+              ) : null}
+            </div>
+            <div className="flex flex-col gap-1.5 flex-1 relative z-0">
+              <h3 className="text-sm font-semibold text-white text-center leading-tight line-clamp-2">{tpl.name}</h3>
+              {hasActiveLimitedOffer && (
+                <div className="flex items-center justify-center gap-2 relative z-20">
+                  <div
+                    className="relative inline-block w-[80px] h-[24px] group"
+                    onMouseEnter={() => setIsLimitedHovered(true)}
+                    onMouseLeave={() => setIsLimitedHovered(false)}
+                  >
+                    <div className="relative w-full h-full overflow-hidden rounded-lg">
+                      <span className="absolute inset-0 rounded-lg bg-gradient-to-br from-pink-500/90 to-purple-500/90"></span>
+                      <Liquid isHovered={isLimitedHovered} colors={{
+                        color1: '#FFFFFF',
+                        color2: '#EC4899',
+                        color3: '#F472B6',
+                        color4: '#FCFCFE',
+                        color5: '#F9F9FD',
+                        color6: '#F9A8D4',
+                        color7: '#DB2777',
+                        color8: '#BE185D',
+                        color9: '#EC4899',
+                        color10: '#F472B6',
+                        color11: '#DB2777',
+                        color12: '#FBCFE8',
+                        color13: '#EC4899',
+                        color14: '#F9A8D4',
+                        color15: '#FBCFE8',
+                        color16: '#EC4899',
+                        color17: '#DB2777',
+                      }} />
+                    </div>
+                    <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-transparent pointer-events-none">
+                      <span className="text-white text-[10px] font-semibold tracking-wide whitespace-nowrap z-10">LIMITED</span>
+                    </span>
+                  </div>
+                  {daysRemaining !== undefined && (
+                    <span className="text-[10px] text-zinc-400 font-medium whitespace-nowrap">
+                      {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} remaining
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-      <h3 className="text-base sm:text-lg font-semibold text-white mb-1 text-center">{tpl.name}</h3>
-      {hasActiveLimitedOffer && (
-        <div className="mb-2 text-xs text-white font-medium text-center">
-          {isSubscribed ? (
-            'Only for Subscribed Users'
-          ) : (
-            daysRemaining !== undefined ? `${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'} remaining` : ''
-          )}
-        </div>
-      )}
-      {isSubscribed ? (
-        <div className="flex gap-2 w-full mt-auto">
-          <Link 
-            href={`/product/${tpl.slug}`} 
-            className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-white text-black font-medium hover:bg-zinc-200 transition text-center"
-          >
-            View
-          </Link>
-          <button
-            onClick={() => handleDownload(tpl.slug)}
-            className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-black text-white font-medium border border-white/20 hover:bg-zinc-800 transition text-center"
-          >
-            Download
-          </button>
-        </div>
-      ) : (
-        <Link 
-          href={`/product/${tpl.slug}`} 
-          className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm rounded-full bg-white text-black font-medium shadow hover:bg-zinc-200 transition text-center"
-        >
-          View Template
-        </Link>
-      )}
-    </GlowCard>
+    );
+  };
+
+  const renderTemplateCard = (tpl: FeaturedTemplate) => {
+    return (
+      <TemplateCardComponent 
+        key={tpl.slug}
+        tpl={tpl} 
+        isSubscribed={isSubscribed}
+        handleDownload={handleDownload}
+      />
     );
   };
 
   return (
-    <section className="relative w-full py-20 sm:py-24 md:py-28 overflow-hidden">
+    <section className="relative w-full pt-20 sm:pt-24 md:pt-28 pb-12 sm:pb-16 md:pb-20 overflow-hidden bg-black">
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-500/10 via-pink-500/10 to-blue-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         {/* Section Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-3">
             Premium <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">After Effects Templates</span>
           </h2>
           <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
@@ -252,7 +283,7 @@ export default function TemplateCarousel() {
           <button 
             aria-label="Scroll left" 
             onClick={() => scrollFeatured(-360)}
-            className="hidden md:flex absolute -left-12 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 text-white hover:from-zinc-700 hover:to-zinc-800 shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 items-center justify-center focus:outline-none group backdrop-blur-sm"
+            className="hidden md:flex absolute -left-12 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-black/80 backdrop-blur-sm text-white hover:bg-white/10 shadow-xl border-[0.75px] border-white/20 hover:border-white/30 transition-all duration-300 items-center justify-center focus:outline-none group"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" className="group-hover:-translate-x-0.5 transition-transform">
               <path d="M12.7 5.3a1 1 0 0 0-1.4 0l-4 4a1 1 0 0 0 0 1.4l4 4a1 1 0 1 0 1.4-1.4L9.42 10l3.3-3.3a1 1 0 0 0 0-1.4z" fill="currentColor"/>
@@ -261,7 +292,7 @@ export default function TemplateCarousel() {
           <button 
             aria-label="Scroll right" 
             onClick={() => scrollFeatured(360)}
-            className="hidden md:flex absolute -right-12 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-900 text-white hover:from-zinc-700 hover:to-zinc-800 shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 items-center justify-center focus:outline-none group backdrop-blur-sm"
+            className="hidden md:flex absolute -right-12 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-black/80 backdrop-blur-sm text-white hover:bg-white/10 shadow-xl border-[0.75px] border-white/20 hover:border-white/30 transition-all duration-300 items-center justify-center focus:outline-none group"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" className="group-hover:translate-x-0.5 transition-transform">
               <path d="M7.3 14.7a1 1 0 0 1 0-1.4l3.3-3.3-3.3-3.3a1 1 0 1 1 1.4-1.4l4 4a1 1 0 0 1 0 1.4l-4 4a1 1 0 0 1-1.4 0z" fill="currentColor"/>
@@ -269,7 +300,7 @@ export default function TemplateCarousel() {
           </button>
           <div
             ref={featuredListRef}
-            className="flex gap-4 sm:gap-6 md:gap-8 overflow-x-auto snap-x px-4 sm:px-6 md:px-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            className="flex gap-4 overflow-x-auto snap-x py-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
             style={{ scrollSnapType: 'x mandatory' }}
           >
             {featured.map((tpl) => (

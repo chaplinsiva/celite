@@ -107,7 +107,7 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
     .from('templates')
     .select('slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured')
     .neq('slug', prod.slug)
-    .limit(3);
+    .limit(9);
   const related: Template[] = (relatedRows ?? []).map((r) => ({
     slug: r.slug,
     name: r.name,

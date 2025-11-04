@@ -7,6 +7,9 @@ import { useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { formatPrice } from "../../lib/currency";
 import PurchaseDownloadButton from "./PurchaseDownloadButton";
+import { GlowingEffect } from "../../components/ui/glowing-effect";
+import { cn } from "../../lib/utils";
+import LoadingSpinner from "../../components/ui/loading-spinner";
 
 type OrderRow = {
   id: string;
@@ -242,15 +245,33 @@ function DashboardContent() {
 
   if (!user) {
     return (
-      <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
-        <div className="max-w-3xl mx-auto text-center rounded-3xl border border-white/10 bg-white/5 p-12">
-          <h1 className="text-3xl font-semibold">Please sign in to view your dashboard</h1>
-          <Link
-            href="/login"
-            className="mt-8 inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
-          >
-            Go to Login
-          </Link>
+      <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white relative">
+        {/* Colorful Background Gradients */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+          <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+        </div>
+        <div className="relative max-w-3xl mx-auto text-center">
+          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              disabled={false}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={3}
+            />
+            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-12 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+              <h1 className="text-3xl font-semibold text-white">Please sign in to view your dashboard</h1>
+              <Link
+                href="/login"
+                className="mt-8 inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
+              >
+                Go to Login
+              </Link>
+            </div>
+          </div>
         </div>
       </main>
     );
@@ -262,15 +283,30 @@ function DashboardContent() {
     : user.email.split("@")[0];
 
   return (
-    <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
-      <div className="max-w-6xl mx-auto space-y-12">
-        <section className="flex flex-col gap-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-8 shadow-xl md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="uppercase tracking-[0.35em] text-xs text-white/70">Dashboard</p>
-            <h1 className="mt-3 text-3xl font-bold">Welcome back, {displayName}</h1>
-            <p className="mt-2 text-zinc-300">Manage your Celite purchases, billing, and profile preferences.</p>
-          </div>
-          <div className="rounded-2xl border border-white/15 bg-black/40 px-6 py-4 text-right">
+    <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white relative">
+      {/* Colorful Background Gradients */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+      </div>
+      <div className="relative max-w-6xl mx-auto space-y-4">
+        <section className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
+          <GlowingEffect
+            spread={40}
+            glow={true}
+            disabled={false}
+            proximity={64}
+            inactiveZone={0.01}
+            borderWidth={3}
+          />
+          <div className="relative flex flex-col gap-6 overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="uppercase tracking-[0.35em] text-xs text-zinc-400">Dashboard</p>
+              <h1 className="mt-3 text-3xl font-bold text-white">Welcome back, {displayName}</h1>
+              <p className="mt-2 text-zinc-300">Manage your Celite purchases, billing, and profile preferences.</p>
+            </div>
+            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/60 backdrop-blur-sm px-6 py-4 text-right">
             <p className="text-sm text-white/70">Subscription</p>
             <p className="mt-1 text-2xl font-semibold text-white">{subscriptionTier}</p>
             {/* Only show subscription details if there's an active subscription */}
@@ -303,18 +339,28 @@ function DashboardContent() {
                 </Link>
               </div>
             )}
+            </div>
           </div>
         </section>
 
-        <section className="grid gap-8 md:grid-cols-2">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-7 shadow-lg">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Order History</h2>
-              <Link href="/" className="text-sm text-blue-300 hover:underline">Browse Templates</Link>
-            </div>
-            <ul className="mt-6 space-y-5 text-sm text-zinc-200">
-              {orders.map((order) => (
-                <li key={order.id} className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3">
+        <section className="grid gap-4 md:grid-cols-2">
+          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              disabled={false}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={3}
+            />
+            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-7 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-white">Order History</h2>
+                <Link href="/" className="text-sm text-blue-300 hover:underline">Browse Templates</Link>
+              </div>
+              <ul className="mt-6 space-y-4 text-sm text-zinc-200">
+                {orders.map((order) => (
+                  <li key={order.id} className="relative rounded-xl border-[0.75px] border-white/10 bg-black/60 backdrop-blur-sm px-4 py-3">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium text-white">{order.item}</p>
@@ -328,34 +374,54 @@ function DashboardContent() {
                   <p className="mt-2 text-xs text-zinc-500">Order ID {order.id}</p>
                 </li>
               ))}
-            </ul>
+              </ul>
+            </div>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-7 shadow-lg">
-            <h2 className="text-xl font-semibold">Account Settings</h2>
-            <p className="mt-2 text-sm text-zinc-300">Control your profile and account preferences.</p>
-            <div className="mt-5 flex flex-wrap gap-3 text-xs">
-              <button onClick={() => setShowEditProfile(true)} className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:border-white hover:bg-white/10">Edit profile</button>
-              <button onClick={() => setShowChangePassword(true)} className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:border-white hover:bg-white/10">Change password</button>
-              <button onClick={() => setShowManageSubscription(true)} className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:border-white hover:bg-white/10">Manage subscription</button>
+          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              disabled={false}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={3}
+            />
+            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-7 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+              <h2 className="text-xl font-semibold text-white">Account Settings</h2>
+              <p className="mt-2 text-sm text-zinc-300">Control your profile and account preferences.</p>
+              <div className="mt-5 flex flex-wrap gap-3 text-xs">
+                <button onClick={() => setShowEditProfile(true)} className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:border-white hover:bg-white/10">Edit profile</button>
+                <button onClick={() => setShowChangePassword(true)} className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:border-white hover:bg-white/10">Change password</button>
+                <button onClick={() => setShowManageSubscription(true)} className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:border-white hover:bg-white/10">Manage subscription</button>
+              </div>
+              <p className="mt-5 text-xs text-zinc-400">
+                Payment methods are managed securely through Razorpay during checkout. Your subscription and orders are processed through our secure payment gateway.
+              </p>
             </div>
-            <p className="mt-5 text-xs text-zinc-400">
-              Payment methods are managed securely through Razorpay during checkout. Your subscription and orders are processed through our secure payment gateway.
-            </p>
           </div>
         </section>
 
-        <section className="rounded-3xl border border-white/10 bg-white/5 p-7 shadow-lg">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Your Purchases</h2>
-            <Link href="/" className="text-sm text-blue-300 hover:underline">Get more templates</Link>
-          </div>
-          {purchases.length === 0 ? (
-            <p className="mt-6 text-sm text-zinc-400">You haven\'t purchased any individual templates yet.</p>
-          ) : (
-            <ul className="mt-6 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-              {purchases.map((p) => (
-                <li key={p.slug} className="rounded-2xl border border-white/10 bg-black/40 p-3 flex flex-col">
+        <section className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
+          <GlowingEffect
+            spread={40}
+            glow={true}
+            disabled={false}
+            proximity={64}
+            inactiveZone={0.01}
+            borderWidth={3}
+          />
+          <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-7 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-white">Your Purchases</h2>
+              <Link href="/" className="text-sm text-blue-300 hover:underline">Get more templates</Link>
+            </div>
+            {purchases.length === 0 ? (
+              <p className="mt-6 text-sm text-zinc-400">You haven't purchased any individual templates yet.</p>
+            ) : (
+              <ul className="mt-6 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+                {purchases.map((p) => (
+                  <li key={p.slug} className="relative rounded-xl border-[0.75px] border-white/10 bg-black/60 backdrop-blur-sm p-3 flex flex-col">
                   <div className="h-28 w-full overflow-hidden rounded-xl mb-3">
                     <img src={p.img} alt={p.name} className="w-full h-full object-cover" />
                   </div>
@@ -366,25 +432,36 @@ function DashboardContent() {
                   <PurchaseDownloadButton slug={p.slug} />
                 </li>
               ))}
-            </ul>
-          )}
+              </ul>
+            )}
+          </div>
         </section>
 
-        <section className="rounded-3xl border border-red-500/40 bg-red-500/10 p-7 shadow-lg">
-          <h2 className="text-xl font-semibold text-red-100">Subscription</h2>
-          <p className="mt-3 text-sm text-red-200/90">
-            You are currently on the {subscriptionTier} plan. Upgrade for unlimited pro templates and priority support.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-4 text-sm">
-            <Link href="/pricing" className="rounded-full bg-white px-4 py-2 font-semibold text-black transition hover:bg-zinc-200">
-              Manage subscription
-            </Link>
-            <button
-              onClick={logout}
-              className="rounded-full border border-red-400 px-4 py-2 text-red-200 transition hover:bg-red-500/20"
-            >
-              Log out
-            </button>
+        <section className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
+          <GlowingEffect
+            spread={40}
+            glow={true}
+            disabled={false}
+            proximity={64}
+            inactiveZone={0.01}
+            borderWidth={3}
+          />
+          <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-7 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+            <h2 className="text-xl font-semibold text-white">Subscription</h2>
+            <p className="mt-3 text-sm text-zinc-300">
+              You are currently on the {subscriptionTier} plan. Upgrade for unlimited pro templates and priority support.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-4 text-sm">
+              <Link href="/pricing" className="rounded-full bg-white px-4 py-2 font-semibold text-black transition hover:bg-zinc-200">
+                Manage subscription
+              </Link>
+              <button
+                onClick={logout}
+                className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:bg-white/10"
+              >
+                Log out
+              </button>
+            </div>
           </div>
         </section>
       </div>
@@ -392,15 +469,25 @@ function DashboardContent() {
       {/* Edit Profile Modal */}
       {showEditProfile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowEditProfile(false)}>
-          <div className="bg-zinc-900 rounded-2xl shadow-xl border border-white/10 p-6 sm:p-8 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl font-semibold mb-4">Edit Profile</h2>
-            <EditProfileForm
-              firstName={userMetadata.first_name || ''}
-              lastName={userMetadata.last_name || ''}
-              onSubmit={handleEditProfile}
-              onCancel={() => setShowEditProfile(false)}
-              loading={loading}
+          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              disabled={false}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={3}
             />
+            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+              <h2 className="text-xl font-semibold mb-4 text-white">Edit Profile</h2>
+              <EditProfileForm
+                firstName={userMetadata.first_name || ''}
+                lastName={userMetadata.last_name || ''}
+                onSubmit={handleEditProfile}
+                onCancel={() => setShowEditProfile(false)}
+                loading={loading}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -408,13 +495,23 @@ function DashboardContent() {
       {/* Change Password Modal */}
       {showChangePassword && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowChangePassword(false)}>
-          <div className="bg-zinc-900 rounded-2xl shadow-xl border border-white/10 p-6 sm:p-8 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl font-semibold mb-4">Change Password</h2>
-            <ChangePasswordForm
-              onSubmit={handleChangePassword}
-              onCancel={() => setShowChangePassword(false)}
-              loading={loading}
+          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              disabled={false}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={3}
             />
+            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+              <h2 className="text-xl font-semibold mb-4 text-white">Change Password</h2>
+              <ChangePasswordForm
+                onSubmit={handleChangePassword}
+                onCancel={() => setShowChangePassword(false)}
+                loading={loading}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -422,25 +519,45 @@ function DashboardContent() {
       {/* Manage Subscription Modal */}
       {showManageSubscription && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowManageSubscription(false)}>
-          <div className="bg-zinc-900 rounded-2xl shadow-xl border border-white/10 p-6 sm:p-8 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl font-semibold mb-4">Manage Subscription</h2>
-            <ManageSubscriptionPanel
-              isActive={isActive}
-              plan={sub?.plan ?? null}
-              validUntil={sub?.valid_until ?? null}
-              onCancel={handleCancelSubscription}
-              onUpgrade={() => { setShowManageSubscription(false); window.location.href = '/pricing'; }}
-              onClose={() => setShowManageSubscription(false)}
-              loading={loading}
+          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              disabled={false}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={3}
             />
+            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+              <h2 className="text-xl font-semibold mb-4 text-white">Manage Subscription</h2>
+              <ManageSubscriptionPanel
+                isActive={isActive}
+                plan={sub?.plan ?? null}
+                validUntil={sub?.valid_until ?? null}
+                onCancel={handleCancelSubscription}
+                onUpgrade={() => { setShowManageSubscription(false); window.location.href = '/pricing'; }}
+                onClose={() => setShowManageSubscription(false)}
+                loading={loading}
+              />
+            </div>
           </div>
         </div>
       )}
 
       {/* Message Toast */}
       {message && (
-        <div className="fixed bottom-6 right-6 z-50 bg-zinc-800 border border-white/10 rounded-lg px-4 py-3 shadow-xl">
-          <p className="text-sm text-white">{message}</p>
+        <div className="fixed bottom-6 right-6 z-50 relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2">
+          <GlowingEffect
+            spread={40}
+            glow={true}
+            disabled={false}
+            proximity={64}
+            inactiveZone={0.01}
+            borderWidth={3}
+          />
+          <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm px-4 py-3 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+            <p className="text-sm text-white">{message}</p>
+          </div>
         </div>
       )}
     </main>
@@ -640,13 +757,7 @@ function ManageSubscriptionPanel({ isActive, plan, validUntil, onCancel, onUpgra
 // Main component with Suspense boundary
 export default function DashboardClient() {
   return (
-    <Suspense fallback={
-      <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
-        <div className="max-w-6xl mx-auto text-center">
-          <p className="text-zinc-400">Loading dashboard...</p>
-        </div>
-      </main>
-    }>
+    <Suspense fallback={<LoadingSpinner message="Loading dashboard..." fullScreen />}>
       <DashboardContent />
     </Suspense>
   );

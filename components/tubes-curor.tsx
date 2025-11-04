@@ -14,7 +14,7 @@ export default function TubesCursor() {
    * @param {number} count - The number of random colors to generate.
    * @returns {string[]} An array of color strings.
    */
-  const randomColors = (count) => {
+  const randomColors = (count: number) => {
     return new Array(count)
       .fill(0)
       .map(() => "#" + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0'));
@@ -27,6 +27,7 @@ export default function TubesCursor() {
     // to invalid geometry calculations. Delaying the initialization with setTimeout 
     // ensures the DOM is fully painted and ready.
     const initTimer = setTimeout(() => {
+      // @ts-ignore - CDN import
       import('https://cdn.jsdelivr.net/npm/threejs-components@0.0.19/build/cursors/tubes1.min.js')
         .then(module => {
           const TubesCursor = module.default;
@@ -54,8 +55,8 @@ export default function TubesCursor() {
     return () => {
       clearTimeout(initTimer);
       // Check if app was initialized and has a dispose method before calling
-      if (appRef.current && typeof appRef.current.dispose === 'function') {
-        appRef.current.dispose();
+      if (appRef.current && typeof (appRef.current as any).dispose === 'function') {
+        (appRef.current as any).dispose();
       }
     };
   }, []); // The empty dependency array ensures this effect runs only once
@@ -68,8 +69,8 @@ export default function TubesCursor() {
       const newLightColors = randomColors(4);
       
       // Update the colors in the running animation
-      appRef.current.tubes.setColors(newTubeColors);
-      appRef.current.tubes.setLightsColors(newLightColors);
+      (appRef.current as any).tubes?.setColors(newTubeColors);
+      (appRef.current as any).tubes?.setLightsColors(newLightColors);
     }
   };
 

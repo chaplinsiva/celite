@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
+import LoadingSpinner from '../../../components/ui/loading-spinner';
 
 function AuthCallbackContent() {
   const router = useRouter();
@@ -39,13 +40,7 @@ function AuthCallbackContent() {
 
 export default function AuthCallbackPage() {
   return (
-    <Suspense fallback={
-      <main className="min-h-screen flex items-center justify-center bg-black text-white">
-        <div className="text-center">
-          <h1 className="text-xl font-semibold">Loading…</h1>
-        </div>
-      </main>
-    }>
+    <Suspense fallback={<LoadingSpinner fullScreen />}>
       <AuthCallbackContent />
     </Suspense>
   );

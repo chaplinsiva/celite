@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Suspense, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
+import LoadingSpinner from '../../components/ui/loading-spinner';
 
 function ForgotPasswordContent() {
   const router = useRouter();
@@ -106,13 +107,7 @@ function ForgotPasswordContent() {
 
 export default function ForgotPasswordPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex flex-col justify-center items-center bg-black">
-        <div className="w-full max-w-md bg-zinc-900/90 p-10 rounded-2xl shadow-2xl mt-24">
-          <h2 className="text-2xl font-bold mb-8 text-center text-white">Loading...</h2>
-        </div>
-      </div>
-    }>
+    <Suspense fallback={<LoadingSpinner fullScreen />}>
       <ForgotPasswordContent />
     </Suspense>
   );

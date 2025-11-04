@@ -7,6 +7,9 @@ import { useAppContext } from "../../context/AppContext";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { formatPriceWithDecimal } from "../../lib/currency";
 import { trackBeginCheckout, trackPurchase, trackSubscribe } from "../../lib/gtag";
+import LoadingSpinner from "../../components/ui/loading-spinner";
+import { GlowingEffect } from "../../components/ui/glowing-effect";
+import { cn } from "../../lib/utils";
 
 type BillingDetails = {
   name: string;
@@ -125,15 +128,33 @@ function CheckoutContent() {
 
   if (!user) {
     return (
-      <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
-        <div className="max-w-3xl mx-auto text-center rounded-3xl border border-white/10 bg-white/5 p-12">
-          <h1 className="text-3xl font-semibold">Sign in to checkout</h1>
-          <Link
-            href="/login"
-            className="mt-6 inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
-          >
-            Sign in
-          </Link>
+      <main className="relative bg-black min-h-screen pt-24 pb-20 px-4 sm:px-6 text-white overflow-hidden">
+        {/* Colorful Background Gradients */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+          <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+        </div>
+        <div className="relative max-w-3xl mx-auto text-center">
+          <div className={cn(
+            "relative rounded-[1.25rem] md:rounded-[1.5rem] border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-8 md:p-12"
+          )}>
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              disabled={false}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={3}
+            />
+            <h1 className="text-3xl font-semibold text-white">Sign in to checkout</h1>
+            <Link
+              href="/login"
+              className="mt-6 inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
+            >
+              Sign in
+            </Link>
+          </div>
         </div>
       </main>
     );
@@ -142,16 +163,34 @@ function CheckoutContent() {
   // Show empty cart message only if not a subscription checkout
   if (cartCount === 0 && !subscriptionPlan) {
     return (
-      <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
-        <div className="max-w-4xl mx-auto rounded-3xl border border-white/10 bg-white/5 p-10 text-center">
-          <h1 className="text-3xl font-semibold">Your cart is empty</h1>
-          <p className="mt-4 text-zinc-300">Add templates to begin checkout.</p>
-          <Link
-            href="/"
-            className="mt-6 inline-flex items-center rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200"
-          >
-            Browse templates
-          </Link>
+      <main className="relative bg-black min-h-screen pt-24 pb-20 px-4 sm:px-6 text-white overflow-hidden">
+        {/* Colorful Background Gradients */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+          <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+        </div>
+        <div className="relative max-w-4xl mx-auto">
+          <div className={cn(
+            "relative rounded-[1.25rem] md:rounded-[1.5rem] border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-8 md:p-10 text-center"
+          )}>
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              disabled={false}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={3}
+            />
+            <h1 className="text-3xl font-semibold text-white">Your cart is empty</h1>
+            <p className="mt-4 text-zinc-300">Add templates to begin checkout.</p>
+            <Link
+              href="/"
+              className="mt-6 inline-flex items-center rounded-full bg-white px-5 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200"
+            >
+              Browse templates
+            </Link>
+          </div>
         </div>
       </main>
     );
@@ -399,9 +438,26 @@ function CheckoutContent() {
   };
 
   return (
-    <main className="bg-black min-h-screen pt-24 pb-24 px-6 text-white">
-      <div className="max-w-6xl mx-auto grid gap-10 lg:grid-cols-[1.7fr_1fr]">
-        <section className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-xl space-y-8">
+    <main className="relative bg-black min-h-screen pt-24 pb-24 px-4 sm:px-6 text-white overflow-hidden">
+      {/* Colorful Background Gradients */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+      </div>
+      
+      <div className="relative max-w-6xl mx-auto grid gap-6 lg:gap-8 lg:grid-cols-[1.7fr_1fr]">
+        <section className={cn(
+          "relative rounded-[1.25rem] md:rounded-[1.5rem] border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 md:p-8 shadow-xl space-y-8"
+        )}>
+          <GlowingEffect
+            spread={40}
+            glow={true}
+            disabled={false}
+            proximity={64}
+            inactiveZone={0.01}
+            borderWidth={3}
+          />
           <div>
             <h1 className="text-3xl font-semibold">{subscriptionPlan ? 'Subscribe' : 'Checkout'}</h1>
             <p className="mt-2 text-sm text-zinc-400">
@@ -420,7 +476,7 @@ function CheckoutContent() {
                   <input
                     value={billing.name}
                     onChange={(evt) => setBilling((prev) => ({ ...prev, name: evt.target.value }))}
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20"
+                    className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-violet-400/70 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-colors"
                     required
                   />
                 </label>
@@ -430,7 +486,7 @@ function CheckoutContent() {
                     type="email"
                     value={billing.email}
                     onChange={(evt) => setBilling((prev) => ({ ...prev, email: evt.target.value }))}
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20"
+                    className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-violet-400/70 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-colors"
                     required
                   />
                 </label>
@@ -445,7 +501,7 @@ function CheckoutContent() {
                         setBilling((prev) => ({ ...prev, mobile: value }));
                       }
                     }}
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20"
+                    className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-violet-400/70 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-colors"
                     placeholder="9876543210"
                     maxLength={10}
                     required
@@ -457,7 +513,7 @@ function CheckoutContent() {
                   <input
                     value={billing.company}
                     onChange={(evt) => setBilling((prev) => ({ ...prev, company: evt.target.value }))}
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20"
+                    className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-violet-400/70 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-colors"
                     placeholder="Celite Productions"
                   />
                 </label>
@@ -466,7 +522,9 @@ function CheckoutContent() {
 
             <div className="space-y-3">
               <h2 className="text-lg font-semibold">Payment</h2>
-              <div className="rounded-xl border border-white/10 bg-black/40 p-4 text-sm text-zinc-300">
+              <div className={cn(
+                "rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-4 text-sm text-zinc-300"
+              )}>
                 <p>Payment will be processed securely through Razorpay. You'll be redirected to a secure payment gateway after submitting your details.</p>
               </div>
             </div>
@@ -483,7 +541,7 @@ function CheckoutContent() {
             </div>
 
             {paymentError && (
-              <div className="rounded-xl border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-300">
+              <div className="rounded-2xl border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-300">
                 {paymentError}
               </div>
             )}
@@ -498,7 +556,17 @@ function CheckoutContent() {
           </form>
         </section>
 
-        <aside className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-xl">
+        <aside className={cn(
+          "relative space-y-6 rounded-[1.25rem] md:rounded-[1.5rem] border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 md:p-8 shadow-xl"
+        )}>
+          <GlowingEffect
+            spread={40}
+            glow={true}
+            disabled={false}
+            proximity={64}
+            inactiveZone={0.01}
+            borderWidth={3}
+          />
           <div>
             <h2 className="text-xl font-semibold">{subscriptionPlan ? 'Subscription Summary' : 'Order summary'}</h2>
             {subscriptionPlan ? (
@@ -511,7 +579,7 @@ function CheckoutContent() {
           </div>
           {subscriptionPlan ? (
             <div className="space-y-4 text-sm text-zinc-300">
-              <div className="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-black/40">
+              <div className="flex items-center justify-between p-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm">
                 <span>Pro {subscriptionPlan === 'weekly' ? 'Weekly' : subscriptionPlan === 'monthly' ? 'Monthly' : 'Yearly'} Plan</span>
                 <span>{subscriptionPrice ? formatPriceWithDecimal(subscriptionPrice) : 'Loading...'}</span>
               </div>
@@ -560,13 +628,7 @@ function CheckoutContent() {
 // Main page component with Suspense boundary
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={
-      <main className="bg-black min-h-screen pt-24 pb-24 px-6 text-white">
-        <div className="max-w-6xl mx-auto text-center">
-          <p className="text-zinc-400">Loading checkout...</p>
-        </div>
-      </main>
-    }>
+    <Suspense fallback={<LoadingSpinner message="Loading checkout..." fullScreen />}>
       <CheckoutContent />
     </Suspense>
   );

@@ -1,10 +1,12 @@
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { getSupabaseServerClient } from '../../lib/supabaseServer';
 import TemplatesClient from './TemplatesClient';
+import LoadingSpinnerServer from '../../components/ui/loading-spinner-server';
 
-export const metadata = {
-  title: 'Templates - Browse All After Effects Templates',
-  description: 'Browse and search through our complete collection of After Effects templates',
+export const metadata: Metadata = {
+  title: 'Templates - Browse All After Effects Templates | Celite',
+  description: 'Browse and search through our complete collection of After Effects templates. Find the perfect template for your project.',
 };
 
 // Force dynamic rendering so new templates appear immediately
@@ -24,7 +26,7 @@ export default async function TemplatesPage() {
   }
 
   return (
-    <Suspense fallback={<div className="bg-black min-h-screen pt-24 pb-20 px-4 sm:px-6 lg:px-8"><div className="max-w-7xl mx-auto"><p className="text-white">Loading...</p></div></div>}>
+    <Suspense fallback={<LoadingSpinnerServer message="Loading templates..." />}>
       <TemplatesClient initialTemplates={templates || []} />
     </Suspense>
   );
