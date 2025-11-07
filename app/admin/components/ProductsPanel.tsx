@@ -3,7 +3,29 @@
 import { useEffect, useRef, useState } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 
-type TemplateRow = { slug: string; name: string; price: number; img: string | null };
+type TemplateRow = { slug: string; name: string; price: number; img: string | null; video?: string | null };
+
+const extractYouTubeId = (url: string) => {
+  try {
+    if (!url) return null;
+    const parsed = new URL(url);
+    if (parsed.hostname.includes('youtube.com')) {
+      if (parsed.pathname === '/watch') return parsed.searchParams.get('v');
+      if (parsed.pathname.startsWith('/embed/')) return parsed.pathname.split('/embed/')[1];
+      const shortsMatch = parsed.pathname.match(/\/shorts\/([^/]+)/);
+      if (shortsMatch) return shortsMatch[1];
+    }
+    if (parsed.hostname === 'youtu.be') {
+      return parsed.pathname.slice(1);
+    }
+  } catch {}
+  return null;
+};
+
+const getYouTubeEmbedUrl = (url: string) => {
+  const id = extractYouTubeId(url);
+  return id ? `https://www.youtube.com/embed/${id}` : null;
+};
 
 export default function ProductsPanel({ templates, onDelete, onCreated }: {
   templates: TemplateRow[];
@@ -26,6 +48,8 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
 
   const sourceInputRef = useRef<HTMLInputElement | null>(null);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+
+  const videoPreviewUrl = getYouTubeEmbedUrl(form.video);
 
   // Function to generate slug from title
   const generateSlug = (title: string): string => {
@@ -126,11 +150,20 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
 
       {tab === 'list' && (
         <ul className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-          {templates.map((t) => (
-            <li key={t.slug} className="rounded-2xl border border-white/10 bg-white/5 p-3 flex flex-col">
-              <div className="h-28 w-full overflow-hidden rounded-xl mb-3 bg-zinc-800 flex items-center justify-center">
-                <span className="text-xs text-zinc-500">YouTube Preview</span>
-              </div>
+          {templates.map((t) => {
+            const youtubeId = extractYouTubeId(t.video || '');
+            const thumbnail = t.img || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : null);
+            return (
+              <li key={t.slug} className="rounded-2xl border border-white/10 bg-white/5 p-3 flex flex-col">
+                {thumbnail ? (
+                  <div className="h-28 w-full overflow-hidden rounded-xl mb-3 bg-zinc-900">
+                    <img src={thumbnail} alt={t.name} className="h-full w-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="h-28 w-full overflow-hidden rounded-xl mb-3 bg-zinc-800 flex items-center justify-center">
+                    <span className="text-xs text-zinc-500">No Thumbnail</span>
+                  </div>
+                )}
               <div className="flex-1">
                 <p className="text-sm font-medium">{t.name}</p>
                 <p className="text-xs text-zinc-400">{t.slug}</p>
@@ -178,8 +211,9 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                 </button>
                 <button onClick={() => onDelete(t.slug)} className="rounded-full border border-red-400 text-red-200 px-3 py-1 text-xs hover:bg-red-500/10">Delete</button>
               </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -263,8 +297,21 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
             ))}
           </select>
 
-          <div className="flex items-center gap-2 sm:col-span-2">
-            <input value={form.video} onChange={(e)=>setForm({...form, video:e.target.value})} placeholder="YouTube Video Link (e.g., https://www.youtube.com/watch?v=VIDEO_ID)" className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+          <div className="flex flex-col gap-3 sm:col-span-2">
+            <div className="flex items-center gap-2">
+              <input value={form.video} onChange={(e)=>setForm({...form, video:e.target.value})} placeholder="YouTube Video Link (e.g., https://www.youtube.com/watch?v=VIDEO_ID)" className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+            </div>
+            {videoPreviewUrl && (
+              <div className="aspect-video w-full max-w-md self-center overflow-hidden rounded-xl border border-white/10">
+                <iframe
+                  src={videoPreviewUrl}
+                  title={form.name || 'YouTube preview'}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="h-full w-full"
+                />
+              </div>
+            )}
           </div>
           <p className="text-xs text-zinc-500 sm:col-span-2">Enter a YouTube video URL. The video will be embedded as a preview. Image uploads are no longer supported.</p>
           <div className="flex flex-col gap-2 sm:col-span-2">
