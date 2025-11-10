@@ -19,7 +19,8 @@ export default async function TemplatesPage() {
   // Fetch all templates for initial load
   const { data: templates, error } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured,is_limited_offer,limited_offer_duration_days,limited_offer_start_date');
+    .select('slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured,is_limited_offer,limited_offer_duration_days,limited_offer_start_date,created_at')
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching templates:', error);

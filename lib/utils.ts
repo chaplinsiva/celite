@@ -48,6 +48,14 @@ export function getYouTubeEmbedUrl(url: string | null | undefined): string | nul
       videoId = embedMatch[1];
     }
   }
+
+  // Format: https://www.youtube.com/shorts/VIDEO_ID
+  if (!videoId) {
+    const shortsMatch = trimmedUrl.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+    if (shortsMatch) {
+      videoId = shortsMatch[1];
+    }
+  }
   
   // If we have a video ID, return embed URL
   if (videoId) {
@@ -98,6 +106,14 @@ export function getYouTubeVideoId(url: string | null | undefined): string | null
     const embedMatch = trimmedUrl.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
     if (embedMatch) {
       videoId = embedMatch[1];
+    }
+  }
+
+  // Format: https://www.youtube.com/shorts/VIDEO_ID
+  if (!videoId) {
+    const shortsMatch = trimmedUrl.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+    if (shortsMatch) {
+      videoId = shortsMatch[1];
     }
   }
   

@@ -31,6 +31,16 @@ export default function YouTubeVideoPlayer({ videoUrl, title, className = '', sh
 
   const videoId = getYouTubeVideoId(videoUrl);
   const embedUrl = getYouTubeEmbedUrl(videoUrl);
+  const thumbnailCandidates = videoId
+    ? [
+        `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+        `https://img.youtube.com/vi/${videoId}/sddefault.jpg`,
+        `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+        `https://img.youtube.com/vi/${videoId}/default.jpg`,
+      ]
+    : [];
+  const [thumbIndex, setThumbIndex] = useState(0);
 
   const initializePlayer = () => {
     if (!videoId || !containerRef.current || playerRef.current) return;
@@ -254,7 +264,7 @@ export default function YouTubeVideoPlayer({ videoUrl, title, className = '', sh
     return null;
   }
 
-  const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+  const thumbnailUrl = thumbnailCandidates[thumbIndex] || '';
 
   return (
     <div 
@@ -329,10 +339,21 @@ export default function YouTubeVideoPlayer({ videoUrl, title, className = '', sh
           src={thumbnailUrl}
           alt={title || 'Video thumbnail'}
           className="w-full h-full object-cover"
-          onError={(e) => {
-            // Fallback to hqdefault if maxresdefault fails
-            const target = e.target as HTMLImageElement;
-            target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+          onLoad={(e) => {
+            const img = e.currentTarget;
+            // YouTube returns 120x90 placeholder for unavailable sizes; step down if detected
+            if (img.naturalWidth <= 120 || img.naturalHeight <= 90) {
+              setThumbIndex((prev) => {
+                const next = prev + 1;
+                return next < thumbnailCandidates.length ? next : prev;
+              });
+            }
+          }}
+          onError={() => {
+            setThumbIndex((prev) => {
+              const next = prev + 1;
+              return next < thumbnailCandidates.length ? next : prev;
+            });
           }}
         />
       )}

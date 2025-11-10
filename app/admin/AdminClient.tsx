@@ -11,7 +11,7 @@ import AnalyticsPanel from './components/AnalyticsPanel';
 import UsersPanel from './components/UsersPanel';
 import SettingsPanel from './components/SettingsPanel';
 
-type TemplateRow = { slug: string; name: string; price: number; img: string | null };
+type TemplateRow = { slug: string; name: string; price: number; img: string | null; video?: string | null };
 
 export default function AdminClient() {
   const router = useRouter();
@@ -36,7 +36,7 @@ export default function AdminClient() {
     };
     const reload = async () => {
       const supabase = getSupabaseBrowserClient();
-      const { data } = await supabase.from('templates').select('slug,name,price,img').order('is_featured', { ascending: false });
+      const { data } = await supabase.from('templates').select('slug,name,price,img,video').order('is_featured', { ascending: false });
       setTemplates((data as any) ?? []);
       // stats via admin endpoint
       const res = await fetch('/api/admin/stats');
@@ -51,7 +51,7 @@ export default function AdminClient() {
   const runUpload = async () => { await fetch('/api/admin/upload-assets', { method: 'POST' }); };
   const refreshTemplates = async () => {
     const supabase = getSupabaseBrowserClient();
-    const { data } = await supabase.from('templates').select('slug,name,price,img');
+    const { data } = await supabase.from('templates').select('slug,name,price,img,video');
     setTemplates((data as any) ?? []);
   };
   const deleteTemplate = async (slug: string) => {

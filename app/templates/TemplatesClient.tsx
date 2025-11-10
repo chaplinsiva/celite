@@ -29,6 +29,7 @@ type Template = {
   is_limited_offer?: boolean;
   limited_offer_duration_days?: number | null;
   limited_offer_start_date?: string | null;
+  created_at?: string | null;
 };
 
 export default function TemplatesClient({ initialTemplates }: { initialTemplates: Template[] }) {
@@ -190,8 +191,18 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
     }
 
     // Sort
-    if (sortBy === 'oldest') {
-      filtered = filtered.reverse();
+    if (sortBy === 'newest') {
+      filtered = filtered.sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return tb - ta;
+      });
+    } else if (sortBy === 'oldest') {
+      filtered = filtered.sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return ta - tb;
+      });
     } else if (sortBy === 'price-low') {
       filtered = filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
     } else if (sortBy === 'price-high') {

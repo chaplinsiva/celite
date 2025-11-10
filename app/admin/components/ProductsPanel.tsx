@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
+import YouTubeVideoPlayer from '../../../components/YouTubeVideoPlayer';
 
 type TemplateRow = { slug: string; name: string; price: number; img: string | null; video?: string | null };
 
@@ -34,6 +35,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
 }) {
   const [tab, setTab] = useState<'list' | 'add'>('list');
   const [creating, setCreating] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [form, setForm] = useState({
     slug: '', name: '', subtitle: '', description: '', price: '', img: '', video: '', source_path: '', features: '', software: '', plugins: '', tags: '', is_featured: false,
     is_limited_offer: false, limited_offer_duration_days: '', category_id: '', subcategory_id: '',
@@ -149,13 +151,36 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
       </header>
 
       {tab === 'list' && (
+        <>
+        <div className="mb-4">
+          <input
+            value={searchTerm}
+            onChange={(e)=>setSearchTerm(e.target.value)}
+            placeholder="Search by name or slug"
+            className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10"
+          />
+        </div>
         <ul className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-          {templates.map((t) => {
+          {(templates || [])
+            .filter((t) => {
+              const q = searchTerm.trim().toLowerCase();
+              if (!q) return true;
+              return (t.name || '').toLowerCase().includes(q) || (t.slug || '').toLowerCase().includes(q);
+            })
+            .map((t) => {
             const youtubeId = extractYouTubeId(t.video || '');
-            const thumbnail = t.img || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : null);
+            const thumbnail = t.img || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : null);
             return (
               <li key={t.slug} className="rounded-2xl border border-white/10 bg-white/5 p-3 flex flex-col">
-                {thumbnail ? (
+                {t.video ? (
+                  <div className="h-28 w-full overflow-hidden rounded-xl mb-3 bg-zinc-900">
+                    <YouTubeVideoPlayer 
+                      videoUrl={t.video || ''}
+                      title={t.name}
+                      className="w-full h-full"
+                    />
+                  </div>
+                ) : thumbnail ? (
                   <div className="h-28 w-full overflow-hidden rounded-xl mb-3 bg-zinc-900">
                     <img src={thumbnail} alt={t.name} className="h-full w-full object-cover" />
                   </div>
@@ -215,6 +240,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
             );
           })}
         </ul>
+        </>
       )}
 
       {tab === 'add' && (
@@ -265,7 +291,6 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               onChange={(e)=>handleSlugChange(e.target.value)} 
               placeholder="slug (auto-generated)" 
               required 
-              disabled={isEditing}
               className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 disabled:opacity-60 disabled:cursor-not-allowed" 
             />
             {!isEditing && (

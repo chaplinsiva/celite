@@ -49,18 +49,18 @@ export default function TemplateCarousel() {
         setIsSubscribed(false);
       }
 
-      // Load templates with limited offer info and category/subcategory
-      // Load more than needed to randomize from a larger pool
+      // Load latest templates with limited offer info and category/subcategory
       const { data, error: templateError } = await supabase
         .from('templates')
         .select(`
-          slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured,
+          slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured,created_at,
           is_limited_offer,limited_offer_duration_days,limited_offer_start_date,
           category_id,subcategory_id,
           categories(id,name,slug),
           subcategories(id,name,slug)
         `)
-        .limit(50); // Load more templates to randomize from
+        .order('created_at', { ascending: false })
+        .limit(12); // show latest 12
       
       // Log for debugging: show how many templates were found
       if (templateError) {
@@ -69,12 +69,8 @@ export default function TemplateCarousel() {
         console.log(`[TemplateCarousel] Loaded ${data?.length || 0} templates`);
       }
       
-      // Randomize templates and take 10
-      const shuffled = (data ?? []).sort(() => Math.random() - 0.5);
-      const randomTemplates = shuffled.slice(0, 10);
-      
       const now = new Date();
-      const mapped: FeaturedTemplate[] = randomTemplates.map((r: any) => {
+      const mapped: FeaturedTemplate[] = (data ?? []).map((r: any) => {
         const category = r.categories ? (Array.isArray(r.categories) ? r.categories[0] : r.categories) : null;
         const subcategory = r.subcategories ? (Array.isArray(r.subcategories) ? r.subcategories[0] : r.subcategories) : null;
         
