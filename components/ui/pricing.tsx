@@ -46,7 +46,7 @@ export function PricingCard({
 
       {highlight && (
         <div className="mb-4">
-          <div className="text-sm font-medium text-white">Everything in Free, plus:</div>
+          <div className="text-sm font-medium text-white">Includes:</div>
         </div>
       )}
 

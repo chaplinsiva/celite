@@ -75,79 +75,8 @@ export default function PricingContent() {
 
       <section className="relative max-w-5xl mx-auto">
         <div className="flex flex-col gap-4 md:flex-row md:items-stretch md:justify-center md:flex-wrap">
-          {/* Free Plan */}
-          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 w-full md:w-[calc(25%-1rem)]">
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
-            />
-            <div className="relative flex flex-col justify-between h-full overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-                  <div className="space-y-4 mb-6">
-                    <div>
-                      <h2 className="font-medium text-white text-lg mb-2">Free</h2>
-                      <span className="block text-2xl font-semibold text-white mb-2">₹0 / mo</span>
-                      <p className="text-zinc-400 text-sm">Perfect to test the template experience</p>
-                    </div>
-                    <Button asChild className="w-full mt-4" variant="outline">
-                      <Link href="/templates">Browse Templates</Link>
-                    </Button>
-                  </div>
-              <ul className="border-t border-white/10 pt-4 space-y-3 text-sm flex-1">
-                {["Browse all templates", "Preview videos", "View template details", "Basic search and filters", "Email support"].map((item, index) => (
-                  <li key={index} className="flex items-start gap-2 text-zinc-300">
-                    <Check className="size-4 text-white flex-shrink-0 mt-0.5" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* One Week Special Plan */}
-          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 w-full md:w-[calc(25%-1rem)]">
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
-            />
-            <div className="relative flex flex-col justify-between h-full overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-gradient-to-br from-pink-500/20 via-purple-500/20 to-blue-500/20 backdrop-blur-sm p-6 md:p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-              {/* Special Badge */}
-              <div className="absolute top-4 right-4 z-20 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-xl">
-                SPECIAL
-              </div>
-              <div className="space-y-4 mb-6 relative">
-                <div>
-                  <h2 className="font-medium text-white text-lg mb-2">One Week Special</h2>
-                  <span className="block text-2xl font-semibold text-white mb-2">{formatPrice(weeklyPrice)} / week</span>
-                  <p className="text-zinc-400 text-sm">Limited time offer - Full access</p>
-                </div>
-                <Button asChild className="w-full mt-4 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white border-0" variant="default">
-                  <Link href="/checkout?subscription=weekly">Get Special Offer</Link>
-                </Button>
-              </div>
-              <div className="mb-4">
-                <div className="text-sm font-medium text-white">Everything in Free, plus:</div>
-              </div>
-              <ul className="mt-0 space-y-3 text-sm flex-1">
-                {["Unlimited Premium Templates", "Full Source Files Access", "Priority Support", "Commercial License", "Regular Updates", "Early Access to New Templates", "Download Any Template"].map((item, index) => (
-                  <li key={index} className="flex items-start gap-2 text-zinc-300">
-                    <Check className="size-4 text-white flex-shrink-0 mt-0.5" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
           {/* Monthly Plan */}
-          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 w-full md:w-[calc(25%-1rem)]">
+          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 w-full md:w-[calc(33.333%-1rem)] md:order-1">
             <GlowingEffect
               spread={40}
               glow={true}
@@ -167,10 +96,43 @@ export default function PricingContent() {
                   <Link href="/checkout?subscription=monthly">Subscribe Monthly</Link>
                 </Button>
               </div>
-              <div className="mb-4">
-                <div className="text-sm font-medium text-white">Everything in Free, plus:</div>
+              <ul className="border-t border-white/10 pt-4 space-y-3 text-sm flex-1">
+                {["Unlimited Premium Templates", "Full Source Files Access", "Priority Support", "Commercial License", "Regular Updates", "Early Access to New Templates", "Download Any Template"].map((item, index) => (
+                  <li key={index} className="flex items-start gap-2 text-zinc-300">
+                    <Check className="size-4 text-white flex-shrink-0 mt-0.5" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* One Week Special Plan */}
+          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 w-full md:w-[calc(33.333%-1rem)] md:order-2">
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              disabled={false}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={3}
+            />
+            <div className="relative flex flex-col justify-between h-full overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-gradient-to-br from-pink-500/20 via-purple-500/20 to-blue-500/20 backdrop-blur-sm p-6 md:p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+              {/* Special Badge */}
+              <div className="absolute top-4 right-4 z-20 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-xl">
+                SPECIAL
               </div>
-              <ul className="mt-0 space-y-3 text-sm flex-1">
+              <div className="space-y-4 mb-6 relative">
+                <div>
+                  <h2 className="font-medium text-white text-lg mb-2">Weekly</h2>
+                  <span className="block text-2xl font-semibold text-white mb-2">{formatPrice(weeklyPrice)} / week</span>
+                  <p className="text-zinc-400 text-sm">Limited time offer - Full access</p>
+                </div>
+                <Button asChild className="w-full mt-4 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white border-0" variant="default">
+                  <Link href="/checkout?subscription=weekly">Subscribe Weekly</Link>
+                </Button>
+              </div>
+              <ul className="border-t border-white/10 pt-4 space-y-3 text-sm flex-1">
                 {["Unlimited Premium Templates", "Full Source Files Access", "Priority Support", "Commercial License", "Regular Updates", "Early Access to New Templates", "Download Any Template"].map((item, index) => (
                   <li key={index} className="flex items-start gap-2 text-zinc-300">
                     <Check className="size-4 text-white flex-shrink-0 mt-0.5" />
@@ -182,7 +144,7 @@ export default function PricingContent() {
           </div>
 
           {/* Yearly Plan */}
-          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 w-full md:w-[calc(25%-1rem)]">
+          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 w-full md:w-[calc(33.333%-1rem)] md:order-3">
             <GlowingEffect
               spread={40}
               glow={true}

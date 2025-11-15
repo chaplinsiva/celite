@@ -6,22 +6,22 @@ import { cn } from '@/lib/utils';
 const founders = [
   {
     name: "T Thavasiva",
-    role: "CEO & Co-Founder",
+    role: "Founder and CEO",
     bio: "Visionary leader focused on transforming motion graphics through accessible, premium templates.",
   },
   {
     name: "S Sriram",
-    role: "Co-Founder",
+    role: "Co-Founder and CTO",
     bio: "Drives product direction and ensures every template blends technical precision with aesthetics.",
   },
   {
     name: "S Anandhakumaran",
-    role: "Co-Founder",
+    role: "Co-Founder and Creative Lead and Marketing",
     bio: "Crafts dynamic brand experiences and maintains our signature cinematic style.",
   },
   {
     name: "K Karthikeyan",
-    role: "Co-Founder",
+    role: "Co-Founder and COO",
     bio: "Leads platform experience, focusing on performance and effortless creator workflows.",
   },
 ];
