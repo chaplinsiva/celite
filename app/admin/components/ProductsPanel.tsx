@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import YouTubeVideoPlayer from '../../../components/YouTubeVideoPlayer';
 
-type TemplateRow = { slug: string; name: string; price: number; img: string | null; video?: string | null };
+type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null };
 
 const extractYouTubeId = (url: string) => {
   try {
@@ -37,8 +37,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   const [creating, setCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [form, setForm] = useState({
-    slug: '', name: '', subtitle: '', description: '', price: '', img: '', video: '', source_path: '', features: '', software: '', plugins: '', tags: '', is_featured: false,
-    is_limited_offer: false, limited_offer_duration_days: '', category_id: '', subcategory_id: '',
+    slug: '', name: '', subtitle: '', description: '', img: '', video: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '',
   });
   const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [subcategories, setSubcategories] = useState<Array<{ id: string; category_id: string; name: string; slug: string }>>([]);
@@ -200,7 +199,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                       const supabase = getSupabaseBrowserClient();
                       const { data } = await supabase
                         .from('templates')
-                        .select('slug,name,subtitle,description,price,img,video,source_path,features,software,plugins,tags,is_featured,is_limited_offer,limited_offer_duration_days,limited_offer_start_date,category_id,subcategory_id')
+                        .select('slug,name,subtitle,description,img,video,source_path,features,software,plugins,tags,category_id,subcategory_id')
                         .eq('slug', t.slug)
                         .maybeSingle();
                       if (!data) return;
@@ -209,7 +208,6 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                         name: data.name || '',
                         subtitle: data.subtitle || '',
                         description: data.description || '',
-                        price: String(data.price ?? ''),
                         img: data.img || '',
                         video: data.video || '',
                         source_path: data.source_path || '',
@@ -217,9 +215,6 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                         software: Array.isArray(data.software) ? data.software.join(', ') : '',
                         plugins: Array.isArray(data.plugins) ? data.plugins.join(', ') : '',
                         tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
-                        is_featured: !!data.is_featured,
-                        is_limited_offer: !!data.is_limited_offer,
-                        limited_offer_duration_days: String(data.limited_offer_duration_days ?? ''),
                         category_id: data.category_id || '',
                         subcategory_id: data.subcategory_id || '',
                       });
@@ -250,22 +245,15 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
             if (creating) return;
             setCreating(true);
             try {
-              // Automatically set start date to current date/time when limited offer is enabled
-              const startDate = form.is_limited_offer ? new Date().toISOString() : null;
-              
               const payload = {
                 templates: [
                   {
                     slug: form.slug.trim(), name: form.name.trim(), subtitle: form.subtitle.trim(), description: form.description.trim(),
-                    price: Number(form.price) || 0, img: null, video: form.video.trim() || null, source_path: form.source_path.trim() || null,
+                    img: null, video: form.video.trim() || null, source_path: form.source_path.trim() || null,
                     features: form.features ? form.features.split(',').map(s=>s.trim()).filter(Boolean) : [],
                     software: form.software ? form.software.split(',').map(s=>s.trim()).filter(Boolean) : [],
                     plugins: form.plugins ? form.plugins.split(',').map(s=>s.trim()).filter(Boolean) : [],
                     tags: form.tags ? form.tags.split(',').map(s=>s.trim()).filter(Boolean) : [],
-                    is_featured: !!form.is_featured,
-                    is_limited_offer: !!form.is_limited_offer,
-                    limited_offer_duration_days: form.is_limited_offer ? (Number(form.limited_offer_duration_days) || 0) : null,
-                    limited_offer_start_date: startDate,
                     category_id: form.category_id || null,
                     subcategory_id: form.subcategory_id || null,
                   }
@@ -275,7 +263,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               if (!res.ok) throw new Error('Create failed');
               await onCreated();
               setTab('list');
-              setForm({ slug:'', name:'', subtitle:'', description:'', price:'', img:'', video:'', source_path:'', features:'', software:'', plugins:'', tags:'', is_featured:false, is_limited_offer: false, limited_offer_duration_days: '', category_id: '', subcategory_id: '' });
+              setForm({ slug:'', name:'', subtitle:'', description:'', img:'', video:'', source_path:'', features:'', software:'', plugins:'', tags:'', category_id: '', subcategory_id: '' });
               setIsEditing(false);
               setOriginalSlug(null);
               setSlugManuallyEdited(false);
@@ -308,7 +296,6 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
             )}
           </div>
           <input value={form.subtitle} onChange={(e)=>setForm({...form, subtitle:e.target.value})} placeholder="subtitle" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
-          <input value={form.price} onChange={(e)=>setForm({...form, price:e.target.value})} placeholder="price (INR)" type="number" min="0" step="0.01" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
           <select value={form.category_id} onChange={(e)=>setForm({...form, category_id:e.target.value})} className="px-3 py-2 rounded-lg bg-black/40 border border-white/10">
             <option value="">Select Category</option>
             {categories.map((cat) => (
@@ -406,17 +393,6 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
           <input value={form.software} onChange={(e)=>setForm({...form, software:e.target.value})} placeholder="software (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10 sm:col-span-2" />
           <input value={form.plugins} onChange={(e)=>setForm({...form, plugins:e.target.value})} placeholder="plugins (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10 sm:col-span-2" />
           <input value={form.tags} onChange={(e)=>setForm({...form, tags:e.target.value})} placeholder="tags (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10 sm:col-span-2" />
-          <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={form.is_featured} onChange={(e)=>setForm({...form, is_featured:e.target.checked})} /> Featured</label>
-          
-          <div className="sm:col-span-2 rounded-lg border border-white/10 bg-white/5 p-4 space-y-3">
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_limited_offer} onChange={(e)=>setForm({...form, is_limited_offer:e.target.checked})} /> Limited Offer (Free for Subscribed Users)</label>
-            {form.is_limited_offer && (
-              <>
-                <input value={form.limited_offer_duration_days} onChange={(e)=>setForm({...form, limited_offer_duration_days:e.target.value})} placeholder="Duration (days)" type="number" min="1" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
-                <p className="text-xs text-green-300">During the limited time period, subscribed users can get this product for FREE. The offer will start immediately and last for the specified number of days. After the duration expires, the price will revert to the original price (₹{form.price || '0'}).</p>
-              </>
-            )}
-          </div>
 
           <div className="sm:col-span-2 flex gap-3">
             <button disabled={creating} className="rounded-full bg-white text-black px-5 py-2 text-sm font-semibold hover:bg-zinc-200">{creating ? (isEditing ? 'Saving…' : 'Creating…') : (isEditing ? 'Save Changes' : 'Create Product')}</button>

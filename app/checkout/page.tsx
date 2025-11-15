@@ -50,11 +50,17 @@ function CheckoutContent() {
         
         let amountPaise = 0;
         if (subscriptionType === 'weekly') {
-          amountPaise = Number(settingsMap.RAZORPAY_WEEKLY_AMOUNT || '19900');
+          const weeklyAmount = settingsMap.RAZORPAY_WEEKLY_AMOUNT;
+          if (!weeklyAmount) throw new Error('Weekly subscription price not found');
+          amountPaise = Number(weeklyAmount);
         } else if (subscriptionType === 'monthly') {
-          amountPaise = Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '79900');
+          const monthlyAmount = settingsMap.RAZORPAY_MONTHLY_AMOUNT;
+          if (!monthlyAmount) throw new Error('Monthly subscription price not found');
+          amountPaise = Number(monthlyAmount);
         } else {
-          amountPaise = Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
+          const yearlyAmount = settingsMap.RAZORPAY_YEARLY_AMOUNT;
+          if (!yearlyAmount) throw new Error('Yearly subscription price not found');
+          amountPaise = Number(yearlyAmount);
         }
         
         // Convert from paise to INR

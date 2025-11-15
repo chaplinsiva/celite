@@ -14,11 +14,6 @@ import { Button } from './ui/neon-button';
 import { Liquid } from './ui/button-1';
 
 type FeaturedTemplate = Template & {
-  is_limited_offer?: boolean;
-  limited_offer_duration_days?: number | null;
-  limited_offer_start_date?: string | null;
-  daysRemaining?: number;
-  hasActiveLimitedOffer?: boolean;
   category?: { id: string; name: string; slug: string } | null;
   subcategory?: { id: string; name: string; slug: string } | null;
 };
@@ -49,12 +44,11 @@ export default function TemplateCarousel() {
         setIsSubscribed(false);
       }
 
-      // Load latest templates with limited offer info and category/subcategory
+      // Load latest templates with category/subcategory
       const { data, error: templateError } = await supabase
         .from('templates')
         .select(`
-          slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured,created_at,
-          is_limited_offer,limited_offer_duration_days,limited_offer_start_date,
+          slug,name,subtitle,description,img,video,features,software,plugins,tags,created_at,
           category_id,subcategory_id,
           categories(id,name,slug),
           subcategories(id,name,slug)
@@ -79,38 +73,17 @@ export default function TemplateCarousel() {
           name: r.name,
           subtitle: r.subtitle,
           desc: r.description ?? '',
-          price: Number(r.price ?? 0),
+          price: 0,
           img: r.img,
           video: r.video,
           features: r.features ?? [],
           software: r.software ?? [],
           plugins: r.plugins ?? [],
           tags: r.tags ?? [],
-          isFeatured: !!r.is_featured,
-          is_limited_offer: !!r.is_limited_offer,
-          limited_offer_duration_days: r.limited_offer_duration_days,
-          limited_offer_start_date: r.limited_offer_start_date,
+          isFeatured: false,
           category: category ? { id: category.id, name: category.name, slug: category.slug } : null,
           subcategory: subcategory ? { id: subcategory.id, name: subcategory.name, slug: subcategory.slug } : null,
         };
-
-        // Calculate days remaining if it's a limited offer
-        if (r.is_limited_offer && r.limited_offer_start_date && r.limited_offer_duration_days) {
-          const startDate = new Date(r.limited_offer_start_date);
-          const durationDays = r.limited_offer_duration_days || 0;
-          const endDate = new Date(startDate);
-          endDate.setDate(endDate.getDate() + durationDays);
-          
-          if (endDate > now) {
-            const daysRemaining = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-            template.daysRemaining = daysRemaining;
-            template.hasActiveLimitedOffer = true;
-          } else {
-            template.hasActiveLimitedOffer = false;
-          }
-        } else {
-          template.hasActiveLimitedOffer = false;
-        }
 
         return template;
       });
@@ -168,9 +141,6 @@ export default function TemplateCarousel() {
   };
 
   const TemplateCardComponent = ({ tpl, isSubscribed, handleDownload }: { tpl: FeaturedTemplate; isSubscribed: boolean; handleDownload: (slug: string) => void }) => {
-    const hasActiveLimitedOffer = !!tpl.hasActiveLimitedOffer;
-    const daysRemaining = tpl.daysRemaining;
-    const [isLimitedHovered, setIsLimitedHovered] = useState<boolean>(false);
     
     return (
       <div className="flex-shrink-0 w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(25%-0.75rem)] snap-center">
@@ -196,46 +166,6 @@ export default function TemplateCarousel() {
             </div>
             <div className="flex flex-col gap-1.5 flex-1 relative z-0">
               <h3 className="text-sm font-semibold text-white text-center leading-tight line-clamp-2">{tpl.name}</h3>
-              {hasActiveLimitedOffer && (
-                <div className="flex items-center justify-center gap-2 relative z-20">
-                  <div
-                    className="relative inline-block w-[80px] h-[24px] group"
-                    onMouseEnter={() => setIsLimitedHovered(true)}
-                    onMouseLeave={() => setIsLimitedHovered(false)}
-                  >
-                    <div className="relative w-full h-full overflow-hidden rounded-lg">
-                      <span className="absolute inset-0 rounded-lg bg-gradient-to-br from-pink-500/90 to-purple-500/90"></span>
-                      <Liquid isHovered={isLimitedHovered} colors={{
-                        color1: '#FFFFFF',
-                        color2: '#EC4899',
-                        color3: '#F472B6',
-                        color4: '#FCFCFE',
-                        color5: '#F9F9FD',
-                        color6: '#F9A8D4',
-                        color7: '#DB2777',
-                        color8: '#BE185D',
-                        color9: '#EC4899',
-                        color10: '#F472B6',
-                        color11: '#DB2777',
-                        color12: '#FBCFE8',
-                        color13: '#EC4899',
-                        color14: '#F9A8D4',
-                        color15: '#FBCFE8',
-                        color16: '#EC4899',
-                        color17: '#DB2777',
-                      }} />
-                    </div>
-                    <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-transparent pointer-events-none">
-                      <span className="text-white text-[10px] font-semibold tracking-wide whitespace-nowrap z-10">LIMITED</span>
-                    </span>
-                  </div>
-                  {daysRemaining !== undefined && (
-                    <span className="text-[10px] text-zinc-400 font-medium whitespace-nowrap">
-                      {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} remaining
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>

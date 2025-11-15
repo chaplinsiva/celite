@@ -29,28 +29,40 @@ export default function SettingsPanel() {
         setRzpWebhookSecret(json.settings.RAZORPAY_WEBHOOK_SECRET || '');
         setRzpCurrency(json.settings.RAZORPAY_CURRENCY || 'INR');
         
-        // Convert from paise (database) to rupees (display)
-        let weeklyPaise = Number(json.settings.RAZORPAY_WEEKLY_AMOUNT || '19900');
-        let monthlyPaise = Number(json.settings.RAZORPAY_MONTHLY_AMOUNT || '79900');
-        let yearlyPaise = Number(json.settings.RAZORPAY_YEARLY_AMOUNT || '549900');
+        // Convert from paise (database) to rupees (display) - only from backend
+        const weeklyAmount = json.settings.RAZORPAY_WEEKLY_AMOUNT;
+        const monthlyAmount = json.settings.RAZORPAY_MONTHLY_AMOUNT;
+        const yearlyAmount = json.settings.RAZORPAY_YEARLY_AMOUNT;
         
-        // Weekly: if >= 1000, it's in paise, convert to rupees (divide by 100)
-        // Monthly: if >= 10000, it's in paise, convert to rupees (divide by 100)
-        // Yearly: if >= 100000, it's in paise, convert to rupees (divide by 100)
-        // Otherwise, it's already in rupees, use as is
-        if (weeklyPaise >= 1000) {
-          weeklyPaise = weeklyPaise / 100;
-        }
-        if (monthlyPaise >= 10000) {
-          monthlyPaise = monthlyPaise / 100;
-        }
-        if (yearlyPaise >= 100000) {
-          yearlyPaise = yearlyPaise / 100;
+        if (weeklyAmount) {
+          let weeklyPaise = Number(weeklyAmount);
+          // Weekly: if >= 1000, it's in paise, convert to rupees (divide by 100)
+          // Otherwise, it's already in rupees, use as is
+          if (weeklyPaise >= 1000) {
+            weeklyPaise = weeklyPaise / 100;
+          }
+          setRzpWeekly(String(Math.round(weeklyPaise)));
         }
         
-        setRzpWeekly(String(Math.round(weeklyPaise)));
-        setRzpMonthly(String(Math.round(monthlyPaise)));
-        setRzpYearly(String(Math.round(yearlyPaise)));
+        if (monthlyAmount) {
+          let monthlyPaise = Number(monthlyAmount);
+          // Monthly: if >= 10000, it's in paise, convert to rupees (divide by 100)
+          // Otherwise, it's already in rupees, use as is
+          if (monthlyPaise >= 10000) {
+            monthlyPaise = monthlyPaise / 100;
+          }
+          setRzpMonthly(String(Math.round(monthlyPaise)));
+        }
+        
+        if (yearlyAmount) {
+          let yearlyPaise = Number(yearlyAmount);
+          // Yearly: if >= 100000, it's in paise, convert to rupees (divide by 100)
+          // Otherwise, it's already in rupees, use as is
+          if (yearlyPaise >= 100000) {
+            yearlyPaise = yearlyPaise / 100;
+          }
+          setRzpYearly(String(Math.round(yearlyPaise)));
+        }
       }
     };
     load();

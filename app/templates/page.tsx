@@ -16,19 +16,26 @@ export const revalidate = 0;
 export default async function TemplatesPage() {
   const supabase = getSupabaseServerClient();
   
-  // Fetch all templates for initial load
+  // Fetch all templates for initial load with category_id and subcategory_id
   const { data: templates, error } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured,is_limited_offer,limited_offer_duration_days,limited_offer_start_date,created_at')
+    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,created_at,category_id,subcategory_id')
     .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching templates:', error);
   }
 
+  // Map templates to match Template type (add price and is_featured with defaults)
+  const mappedTemplates = (templates || []).map(t => ({
+    ...t,
+    price: 0,
+    is_featured: false,
+  }));
+
   return (
     <Suspense fallback={<LoadingSpinnerServer message="Loading templates..." />}>
-      <TemplatesClient initialTemplates={templates || []} />
+      <TemplatesClient initialTemplates={mappedTemplates as any} />
     </Suspense>
   );
 }

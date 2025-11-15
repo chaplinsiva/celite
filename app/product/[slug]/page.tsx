@@ -28,7 +28,7 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured')
+    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags')
     .eq('slug', params.slug)
     .maybeSingle();
   const prod = row ? ({
@@ -36,14 +36,14 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
     name: row.name,
     subtitle: row.subtitle,
     desc: row.description ?? '',
-    price: Number(row.price ?? 0),
+    price: 0,
     img: row.img,
     video: row.video,
     features: row.features ?? [],
     software: row.software ?? [],
     plugins: row.plugins ?? [],
     tags: row.tags ?? [],
-    isFeatured: !!row.is_featured,
+    isFeatured: false,
   } as Template) : null;
   if (!prod) {
     return {
@@ -105,30 +105,27 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured,is_limited_offer,limited_offer_duration_days,limited_offer_start_date')
+    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags')
     .eq('slug', params.slug)
     .maybeSingle();
   if (!row) return notFound();
-  const prod: Template & { is_limited_offer?: boolean; limited_offer_duration_days?: number; limited_offer_start_date?: string } = {
+  const prod: Template = {
     slug: row.slug,
     name: row.name,
     subtitle: row.subtitle,
     desc: row.description ?? '',
-    price: Number(row.price ?? 0),
+    price: 0,
     img: row.img,
     video: row.video,
     features: row.features ?? [],
     software: row.software ?? [],
     plugins: row.plugins ?? [],
     tags: row.tags ?? [],
-    isFeatured: !!row.is_featured,
-    is_limited_offer: (row as any).is_limited_offer ?? false,
-    limited_offer_duration_days: (row as any).limited_offer_duration_days ?? null,
-    limited_offer_start_date: (row as any).limited_offer_start_date ?? null,
+    isFeatured: false,
   };
   const { data: relatedRows } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,price,img,video,features,software,plugins,tags,is_featured')
+    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags')
     .neq('slug', prod.slug)
     .limit(9);
   const related: Template[] = (relatedRows ?? []).map((r) => ({
@@ -136,14 +133,14 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
     name: r.name,
     subtitle: r.subtitle,
     desc: r.description ?? '',
-    price: Number(r.price ?? 0),
+    price: 0,
     img: r.img,
     video: r.video,
     features: r.features ?? [],
     software: r.software ?? [],
     plugins: r.plugins ?? [],
     tags: r.tags ?? [],
-    isFeatured: !!r.is_featured,
+    isFeatured: false,
   }));
   return <ProductDetails product={prod} related={related} reviews={reviews} />;
 }

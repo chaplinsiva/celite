@@ -14,7 +14,6 @@ export async function POST(req: Request) {
       name: t.name,
       subtitle: t.subtitle,
       description: t.description ?? t.desc,
-      price: t.price,
       img: t.img,
       video: t.video,
       source_path: t.source_path ?? null,
@@ -22,10 +21,6 @@ export async function POST(req: Request) {
       software: t.software,
       plugins: t.plugins,
       tags: t.tags ?? [],
-      is_featured: !!(t.is_featured ?? t.isFeatured),
-      is_limited_offer: !!(t.is_limited_offer ?? false),
-      limited_offer_duration_days: t.limited_offer_duration_days ?? null,
-      limited_offer_start_date: t.limited_offer_start_date ?? null,
       category_id: t.category_id || null,
       subcategory_id: t.subcategory_id || null,
     }));

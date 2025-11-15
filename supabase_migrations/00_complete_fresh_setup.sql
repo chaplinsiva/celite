@@ -274,6 +274,7 @@ ON CONFLICT (category_id, slug) DO NOTHING;
 
 -- Insert default Razorpay settings
 INSERT INTO public.settings (key, value, description) VALUES
+  ('RAZORPAY_WEEKLY_AMOUNT', '19900', 'Weekly subscription amount in paise (₹199)'),
   ('RAZORPAY_MONTHLY_AMOUNT', '79900', 'Monthly subscription amount in paise (₹799)'),
   ('RAZORPAY_YEARLY_AMOUNT', '549900', 'Yearly subscription amount in paise (₹5,499)')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;

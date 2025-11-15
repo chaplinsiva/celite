@@ -11,9 +11,9 @@ import { cn } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 
 export default function PricingContent() {
-  const [weeklyPrice, setWeeklyPrice] = useState(199);
-  const [monthlyPrice, setMonthlyPrice] = useState(799);
-  const [yearlyPrice, setYearlyPrice] = useState(5499);
+  const [weeklyPrice, setWeeklyPrice] = useState<number | null>(null);
+  const [monthlyPrice, setMonthlyPrice] = useState<number | null>(null);
+  const [yearlyPrice, setYearlyPrice] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,10 +24,18 @@ export default function PricingContent() {
         const settingsMap: Record<string, string> = {};
         (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
         
-        // Get amounts in paise
-        let weeklyPaise = Number(settingsMap.RAZORPAY_WEEKLY_AMOUNT || '19900');
-        let monthlyPaise = Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '79900');
-        let yearlyPaise = Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
+        // Get amounts in paise from backend only
+        const weeklyPaiseStr = settingsMap.RAZORPAY_WEEKLY_AMOUNT;
+        const monthlyPaiseStr = settingsMap.RAZORPAY_MONTHLY_AMOUNT;
+        const yearlyPaiseStr = settingsMap.RAZORPAY_YEARLY_AMOUNT;
+        
+        if (!weeklyPaiseStr || !monthlyPaiseStr || !yearlyPaiseStr) {
+          throw new Error('Subscription prices not found in database');
+        }
+        
+        let weeklyPaise = Number(weeklyPaiseStr);
+        let monthlyPaise = Number(monthlyPaiseStr);
+        let yearlyPaise = Number(yearlyPaiseStr);
         
         // Convert from paise to INR
         // If >= 1000 for weekly, >= 10000 for monthly or >= 100000 for yearly, it's in paise, divide by 100
@@ -47,10 +55,7 @@ export default function PricingContent() {
         setYearlyPrice(Math.round(yearlyPaise));
       } catch (error) {
         console.error('Error loading prices:', error);
-        // Use defaults
-        setWeeklyPrice(199);
-        setMonthlyPrice(799);
-        setYearlyPrice(5499);
+        // Don't set default values - show error state
       } finally {
         setLoading(false);
       }
@@ -61,6 +66,14 @@ export default function PricingContent() {
 
   if (loading) {
     return <LoadingSpinner message="Loading pricing..." />;
+  }
+
+  if (weeklyPrice === null || monthlyPrice === null || yearlyPrice === null) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-400">Unable to load pricing information. Please try again later.</p>
+      </div>
+    );
   }
 
   return (
