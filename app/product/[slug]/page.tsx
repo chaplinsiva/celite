@@ -105,11 +105,11 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags')
+    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,source_path')
     .eq('slug', params.slug)
     .maybeSingle();
   if (!row) return notFound();
-  const prod: Template = {
+  const prod: Template & { source_path?: string | null } = {
     slug: row.slug,
     name: row.name,
     subtitle: row.subtitle,
@@ -122,6 +122,7 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
     plugins: row.plugins ?? [],
     tags: row.tags ?? [],
     isFeatured: false,
+    source_path: row.source_path ?? null,
   };
   const { data: relatedRows } = await supabase
     .from('templates')

@@ -23,7 +23,7 @@ interface Review {
 }
 
 interface ProductDetailsProps {
-  product: Template;
+  product: Template & { source_path?: string | null };
   related: Template[];
   reviews: Review[];
 }
@@ -114,42 +114,19 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         setDownloading(false);
         return;
       }
-      const res = await fetch(`/api/download/${product.slug}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!res.ok) {
-        let message = 'Download not available.';
-        try {
-          const j = await res.json();
-          message = j.error || message;
-        } catch {}
-        setFeedback(message);
-      } else {
-        // Check if response is JSON (redirect to external URL)
-        const contentType = res.headers.get('content-type');
-        if (contentType?.includes('application/json')) {
-          const json = await res.json();
-          if (json.redirect && json.url) {
-            // Redirect to external drive link
-            window.open(json.url, '_blank');
-            return;
-          }
-          return; // If it's JSON but no redirect, return early
-        }
-        
-        // Otherwise, download as blob (Supabase storage file)
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${product.slug}.rar`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
+      
+      // Check if source_path exists and is a URL
+      if (product.source_path) {
+        // Direct redirect to drive link
+        window.open(product.source_path, '_blank');
+        setDownloading(false);
+        return;
       }
+      
+      // If no source_path, show error
+      setFeedback('Download link not available for this template.');
     } catch (e) {
-      setFeedback('Something went wrong while generating download link.');
+      setFeedback('Something went wrong while opening download link.');
     } finally {
       setTimeout(() => setFeedback(null), 3000);
       setDownloading(false);
