@@ -39,14 +39,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const s = data.session;
       if (s?.user) {
         setUser({ id: s.user.id, email: s.user.email ?? '' });
-        // Load cart for this user
-        loadCart(s.user.id);
       }
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser({ id: session.user.id, email: session.user.email ?? '' });
-        loadCart(session.user.id);
       } else {
         setUser(null);
         setCartCount(0);
@@ -56,28 +53,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => { sub.subscription.unsubscribe(); };
   }, []);
 
-  const loadCart = async (userId: string) => {
-    const supabase = getSupabaseBrowserClient();
-    const { data, error } = await supabase
-      .from('cart_items')
-      .select('slug,name,price,img')
-      .eq('user_id', userId);
-    if (error) {
-      // Silently handle errors (table might not exist yet or RLS issue)
-      // Don't show errors to user - cart will work locally
-      console.warn('Failed to load cart from database:', error.message);
-      return;
-    }
-    const items: TemplateCartItem[] = (data ?? []).map((row: any) => ({
-      slug: row.slug,
-      name: row.name,
-      price: Number(row.price),
-      img: row.img,
-    }));
-    setCartItems(items);
-    setCartCount(items.length);
-  };
-
   const login = async (email: string, password: string) => {
     const supabase = getSupabaseBrowserClient();
     const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
@@ -86,7 +61,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return false;
     }
     setUser({ id: data.user.id, email: data.user.email ?? '' });
-    await loadCart(data.user.id);
     return true;
   };
 
@@ -129,48 +103,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Update local state
+    // Update local state only (no database persistence)
     setCartItems((prev) => [...prev, item]);
     setCartCount((prev) => prev + 1);
-
-    // Persist to Supabase if logged in
-    if (user) {
-      const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.from('cart_items').upsert({
-        user_id: user.id,
-        slug: item.slug,
-        name: item.name,
-        price: item.price,
-        img: item.img,
-      }, { onConflict: 'user_id,slug' });
-      // Silently handle errors - cart will still work locally
-      if (error) console.warn('Failed to save cart item to database:', error.message);
-    }
   };
 
   const resetCart = async () => {
     setCartCount(0);
     setCartItems([]);
-    if (user) {
-      const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.from('cart_items').delete().eq('user_id', user.id);
-      // Silently handle errors - cart will still work locally
-      if (error) console.warn('Failed to clear cart from database:', error.message);
-    }
   };
 
   const removeFromCart = async (slug: string) => {
-    // Remove item from cart
+    // Remove item from cart (local state only)
     setCartItems((prev) => prev.filter((entry) => entry.slug !== slug));
     setCartCount((prev) => Math.max(prev - 1, 0));
-
-    // Remove from Supabase if logged in
-    if (user) {
-      const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.from('cart_items').delete().eq('user_id', user.id).eq('slug', slug);
-      // Silently handle errors - cart will still work locally
-      if (error) console.warn('Failed to remove cart item from database:', error.message);
-    }
   };
 
   const value = useMemo(

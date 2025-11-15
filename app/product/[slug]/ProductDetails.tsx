@@ -66,34 +66,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         if (!data) { setIsSubActive(false); return; }
         const active = !!data.is_active && (!data.valid_until || new Date(data.valid_until).getTime() > Date.now());
         setIsSubActive(active);
-
-        // Check purchase status - use orders table (purchases table may not exist)
-        const { data: orders } = await supabase
-          .from('orders')
-          .select('id, status')
-          .eq('user_id', (user as any).id);
-        const orderIds = (orders ?? []).map((o: any) => o.id);
-        if (orderIds.length > 0) {
-          const { data: items } = await supabase
-            .from('order_items')
-            .select('order_id')
-            .in('order_id', orderIds)
-            .eq('slug', product.slug)
-            .limit(1);
-          const hasPurchase = (items ?? []).length > 0;
-          setPurchased(hasPurchase);
-          
-          // If purchase exists, check if status is failed
-          if (hasPurchase && orders && orders.length > 0) {
-            const failedOrder = orders.find((o: any) => o.status === 'failed');
-            setPurchaseStatus(failedOrder ? 'failed' : 'paid');
-          } else {
-            setPurchaseStatus(null);
-          }
-        } else {
-          setPurchased(false);
-          setPurchaseStatus(null);
-        }
+        
+        // No purchase check needed - subscription-only model
+        setPurchased(false);
+        setPurchaseStatus(null);
       } catch {
         setIsSubActive(false);
         setPurchased(false);
