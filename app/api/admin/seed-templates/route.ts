@@ -23,6 +23,8 @@ export async function POST(req: Request) {
       tags: t.tags ?? [],
       category_id: t.category_id || null,
       subcategory_id: t.subcategory_id || null,
+      meta_title: t.meta_title || null,
+      meta_description: t.meta_description || null,
     }));
     const { data, error } = await supabase
       .from('templates')

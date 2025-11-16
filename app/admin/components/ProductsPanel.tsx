@@ -37,7 +37,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   const [creating, setCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [form, setForm] = useState({
-    slug: '', name: '', subtitle: '', description: '', img: '', video: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '',
+    slug: '', name: '', subtitle: '', description: '', img: '', video: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', meta_title: '', meta_description: '',
   });
   const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [subcategories, setSubcategories] = useState<Array<{ id: string; category_id: string; name: string; slug: string }>>([]);
@@ -199,7 +199,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                       const supabase = getSupabaseBrowserClient();
                       const { data } = await supabase
                         .from('templates')
-                        .select('slug,name,subtitle,description,img,video,source_path,features,software,plugins,tags,category_id,subcategory_id')
+                        .select('slug,name,subtitle,description,img,video,source_path,features,software,plugins,tags,category_id,subcategory_id,meta_title,meta_description')
                         .eq('slug', t.slug)
                         .maybeSingle();
                       if (!data) return;
@@ -217,6 +217,8 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                         tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
                         category_id: data.category_id || '',
                         subcategory_id: data.subcategory_id || '',
+                        meta_title: data.meta_title || '',
+                        meta_description: data.meta_description || '',
                       });
                       setSeo(null);
                       setIsEditing(true);
@@ -256,6 +258,8 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                     tags: form.tags ? form.tags.split(',').map(s=>s.trim()).filter(Boolean) : [],
                     category_id: form.category_id || null,
                     subcategory_id: form.subcategory_id || null,
+                    meta_title: form.meta_title.trim() || null,
+                    meta_description: form.meta_description.trim() || null,
                   }
                 ]
               };
@@ -263,7 +267,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               if (!res.ok) throw new Error('Create failed');
               await onCreated();
               setTab('list');
-              setForm({ slug:'', name:'', subtitle:'', description:'', img:'', video:'', source_path:'', features:'', software:'', plugins:'', tags:'', category_id: '', subcategory_id: '' });
+              setForm({ slug:'', name:'', subtitle:'', description:'', img:'', video:'', source_path:'', features:'', software:'', plugins:'', tags:'', category_id: '', subcategory_id: '', meta_title: '', meta_description: '' });
               setIsEditing(false);
               setOriginalSlug(null);
               setSlugManuallyEdited(false);
@@ -272,44 +276,60 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
           }}
           className="grid gap-4 sm:grid-cols-2"
         >
-          <input value={form.name} onChange={(e)=>handleNameChange(e.target.value)} placeholder="name (title)" required className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
-          <div className="flex items-center gap-2">
-            <input 
-              value={form.slug} 
-              onChange={(e)=>handleSlugChange(e.target.value)} 
-              placeholder="slug (auto-generated)" 
-              required 
-              className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 disabled:opacity-60 disabled:cursor-not-allowed" 
-            />
-            {!isEditing && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSlugManuallyEdited(false);
-                  setForm((f) => ({ ...f, slug: generateSlug(f.name) }));
-                }}
-                className="rounded-full border border-white/30 px-3 py-2 text-xs hover:bg-white/10 whitespace-nowrap"
-                title="Regenerate slug from name"
-              >
-                Auto
-              </button>
-            )}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-zinc-400">Name (Title) *</label>
+            <input value={form.name} onChange={(e)=>handleNameChange(e.target.value)} placeholder="name (title)" required className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
           </div>
-          <input value={form.subtitle} onChange={(e)=>setForm({...form, subtitle:e.target.value})} placeholder="subtitle" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
-          <select value={form.category_id} onChange={(e)=>setForm({...form, category_id:e.target.value})} className="px-3 py-2 rounded-lg bg-black/40 border border-white/10">
-            <option value="">Select Category</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
-          <select value={form.subcategory_id} onChange={(e)=>setForm({...form, subcategory_id:e.target.value})} disabled={!form.category_id} className="px-3 py-2 rounded-lg bg-black/40 border border-white/10 disabled:opacity-60">
-            <option value="">Select Subcategory</option>
-            {filteredSubcategories.map((sub) => (
-              <option key={sub.id} value={sub.id}>{sub.name}</option>
-            ))}
-          </select>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-zinc-400">Slug *</label>
+            <div className="flex items-center gap-2">
+              <input 
+                value={form.slug} 
+                onChange={(e)=>handleSlugChange(e.target.value)} 
+                placeholder="slug (auto-generated)" 
+                required 
+                className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 disabled:opacity-60 disabled:cursor-not-allowed" 
+              />
+              {!isEditing && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSlugManuallyEdited(false);
+                    setForm((f) => ({ ...f, slug: generateSlug(f.name) }));
+                  }}
+                  className="rounded-full border border-white/30 px-3 py-2 text-xs hover:bg-white/10 whitespace-nowrap"
+                  title="Regenerate slug from name"
+                >
+                  Auto
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-zinc-400">Subtitle</label>
+            <input value={form.subtitle} onChange={(e)=>setForm({...form, subtitle:e.target.value})} placeholder="subtitle" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-zinc-400">Category</label>
+            <select value={form.category_id} onChange={(e)=>setForm({...form, category_id:e.target.value})} className="px-3 py-2 rounded-lg bg-black/40 border border-white/10">
+              <option value="">Select Category</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-zinc-400">Subcategory</label>
+            <select value={form.subcategory_id} onChange={(e)=>setForm({...form, subcategory_id:e.target.value})} disabled={!form.category_id} className="px-3 py-2 rounded-lg bg-black/40 border border-white/10 disabled:opacity-60">
+              <option value="">Select Subcategory</option>
+              {filteredSubcategories.map((sub) => (
+                <option key={sub.id} value={sub.id}>{sub.name}</option>
+              ))}
+            </select>
+          </div>
 
           <div className="flex flex-col gap-3 sm:col-span-2">
+            <label className="text-xs text-zinc-400">YouTube Video Link</label>
             <div className="flex items-center gap-2">
               <input value={form.video} onChange={(e)=>setForm({...form, video:e.target.value})} placeholder="YouTube Video Link (e.g., https://www.youtube.com/watch?v=VIDEO_ID)" className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
             </div>
@@ -347,7 +367,18 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
             <p className="text-xs text-zinc-500">You can either upload a zip/rar file or paste a direct download link (Google Drive shareable link, Dropbox link, etc.)</p>
           </div>
 
-          <textarea value={form.description} onChange={(e)=>setForm({...form, description:e.target.value})} placeholder="description" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10 sm:col-span-2" />
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs text-zinc-400">Description</label>
+            <textarea value={form.description} onChange={(e)=>setForm({...form, description:e.target.value})} placeholder="description" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+          </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs text-zinc-400">Meta Title (SEO)</label>
+            <input value={form.meta_title} onChange={(e)=>setForm({...form, meta_title:e.target.value})} placeholder="Meta Title (SEO)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+          </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs text-zinc-400">Meta Description (SEO)</label>
+            <textarea value={form.meta_description} onChange={(e)=>setForm({...form, meta_description:e.target.value})} placeholder="Meta Description (SEO)" rows={3} className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+          </div>
           <div className="sm:col-span-2 flex items-center gap-3">
             <button type="button" disabled={checkingSeo} onClick={async ()=>{
               try {
@@ -389,10 +420,22 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               <button type="button" onClick={()=>{ setForm(f=>({ ...f, /* keep original name & slug to preserve template identity */ name: f.name, slug: f.slug, subtitle: seo.subtitle || f.subtitle, description: seo.metaDescription || seo.description, tags: Array.isArray(seo.tags)? seo.tags.join(', '): f.tags, features: Array.isArray(seo.features)? seo.features.join(', '): f.features })); }} className="ml-auto rounded-full bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-zinc-200">Apply Suggestion</button>
             )}
           </div>
-          <input value={form.features} onChange={(e)=>setForm({...form, features:e.target.value})} placeholder="features (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10 sm:col-span-2" />
-          <input value={form.software} onChange={(e)=>setForm({...form, software:e.target.value})} placeholder="software (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10 sm:col-span-2" />
-          <input value={form.plugins} onChange={(e)=>setForm({...form, plugins:e.target.value})} placeholder="plugins (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10 sm:col-span-2" />
-          <input value={form.tags} onChange={(e)=>setForm({...form, tags:e.target.value})} placeholder="tags (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10 sm:col-span-2" />
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs text-zinc-400">Features (comma separated)</label>
+            <input value={form.features} onChange={(e)=>setForm({...form, features:e.target.value})} placeholder="features (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+          </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs text-zinc-400">Software (comma separated)</label>
+            <input value={form.software} onChange={(e)=>setForm({...form, software:e.target.value})} placeholder="software (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+          </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs text-zinc-400">Plugins (comma separated)</label>
+            <input value={form.plugins} onChange={(e)=>setForm({...form, plugins:e.target.value})} placeholder="plugins (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+          </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs text-zinc-400">Tags (comma separated)</label>
+            <input value={form.tags} onChange={(e)=>setForm({...form, tags:e.target.value})} placeholder="tags (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+          </div>
 
           <div className="sm:col-span-2 flex gap-3">
             <button disabled={creating} className="rounded-full bg-white text-black px-5 py-2 text-sm font-semibold hover:bg-zinc-200">{creating ? (isEditing ? 'Saving…' : 'Creating…') : (isEditing ? 'Save Changes' : 'Create Product')}</button>
