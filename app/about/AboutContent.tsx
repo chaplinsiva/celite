@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { GlowingEffect } from '@/components/ui/glowing-effect';
 import { cn } from '@/lib/utils';
 
@@ -8,21 +9,25 @@ const founders = [
     name: "T Thavasiva",
     role: "Founder and CEO",
     bio: "Visionary leader focused on transforming motion graphics through accessible, premium templates.",
+    image: "/thavasiva.jpg",
   },
   {
     name: "S Sriram",
     role: "Co-Founder and CTO",
     bio: "Drives product direction and ensures every template blends technical precision with aesthetics.",
+    image: "/sreram.jpg",
   },
   {
     name: "S Anandhakumaran",
     role: "Co-Founder and Creative Lead and Marketing",
     bio: "Crafts dynamic brand experiences and maintains our signature cinematic style.",
+    image: "/anandh.jpg",
   },
   {
     name: "K Karthikeyan",
     role: "Co-Founder and COO",
     bio: "Leads platform experience, focusing on performance and effortless creator workflows.",
+    image: "/Karthi.png",
   },
 ];
 
@@ -46,8 +51,8 @@ export default function AboutContent() {
         </p>
       </section>
 
-      <section className="relative max-w-5xl mx-auto">
-        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+      <section className="relative max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4">
           {founders.map((person) => (
             <article
               key={person.name}
@@ -61,17 +66,18 @@ export default function AboutContent() {
                 inactiveZone={0.01}
                 borderWidth={3}
               />
-              <div className="relative flex h-full flex-col justify-between gap-4 overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-                <div className="relative flex flex-1 flex-col justify-between gap-4">
-                  <div className="w-fit rounded-lg border-[0.75px] border-white/10 bg-zinc-900/50 p-3">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-lg text-xl font-semibold uppercase tracking-tight text-white">
-                      {person.name
-                        .split(' ')
-                        .map((part) => part[0])
-                        .join('')}
-                    </div>
-                  </div>
-                  <div className="space-y-3">
+              <div className="relative flex h-full flex-col overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+                <div className="relative w-full aspect-[3/4] overflow-hidden bg-zinc-900/50">
+                  <Image
+                    src={person.image}
+                    alt={person.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
+                  />
+                </div>
+                <div className="flex flex-col gap-4 p-6">
+                  <div className="space-y-2">
                     <h2 className="text-2xl font-semibold text-white">{person.name}</h2>
                     <p className="text-sm tracking-wider text-blue-200/80 uppercase">{person.role}</p>
                     <p className="text-sm leading-7 text-zinc-300">{person.bio}</p>
