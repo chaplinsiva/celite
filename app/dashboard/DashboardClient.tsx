@@ -237,7 +237,7 @@ function DashboardContent() {
   const now = Date.now();
   const validUntil = sub?.valid_until ? new Date(sub.valid_until).getTime() : null;
   const isActuallyActive = !!sub?.is_active && (!validUntil || validUntil > now);
-  const isPaused = !!sub?.is_active && validUntil && validUntil <= now; // is_active true but validity expired
+  const isPaused: boolean = !!(sub?.is_active && validUntil && validUntil <= now); // is_active true but validity expired
   const hasExpiredPlan = !sub?.is_active && sub?.plan; // Subscription expired and inactive
   const subscriptionTier = isActuallyActive 
     ? (sub?.plan || 'Pro') 
