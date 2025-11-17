@@ -91,76 +91,25 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         return;
       }
       
-      // If user is subscribed and source_path is available, use it as fallback
-      if (isSubActive && product.source_path && (product.source_path.startsWith('http://') || product.source_path.startsWith('https://'))) {
+      // If user is subscribed and source_path is available, redirect directly
+      if (isSubActive && product.source_path) {
         window.open(product.source_path, '_blank');
         setDownloading(false);
         return;
       }
       
-      const res = await fetch(`/api/download/${product.slug}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      
-      if (!res.ok) {
-        // If API fails but user is subscribed and we have source_path, use it directly
-        if (isSubActive && product.source_path && (product.source_path.startsWith('http://') || product.source_path.startsWith('https://'))) {
-          window.open(product.source_path, '_blank');
-          setDownloading(false);
-          return;
-        }
-        
-        if (res.status === 403) {
-          // Access denied - redirect to pricing
-          router.push('/pricing');
-          setFeedback('Please subscribe to download this template.');
-        } else if (res.status === 404) {
-          // Template not found or no source_path - try using product.source_path if available
-          if (isSubActive && product.source_path && (product.source_path.startsWith('http://') || product.source_path.startsWith('https://'))) {
-            window.open(product.source_path, '_blank');
-            setDownloading(false);
-            return;
-          }
-          setFeedback('Download link not available for this template.');
-        } else {
-          setFeedback('Download link not available for this template.');
-        }
+      // If not subscribed, redirect to pricing
+      if (!isSubActive) {
+        router.push('/pricing');
+        setFeedback('Please subscribe to download this template.');
         setDownloading(false);
         return;
       }
       
-      // Check if response is JSON (redirect to external URL)
-      const contentType = res.headers.get('content-type');
-      if (contentType?.includes('application/json')) {
-        const json = await res.json();
-        if (json.redirect && json.url) {
-          // Redirect to external drive link
-          window.open(json.url, '_blank');
-          setDownloading(false);
-          return;
-        }
-        setDownloading(false);
-        return;
-      }
-      
-      // Otherwise, download as blob (Supabase storage file)
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${product.slug}.rar`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      // If no source_path available
+      setFeedback('Download link not available for this template.');
       setDownloading(false);
     } catch (e) {
-      // If API call fails but user is subscribed and we have source_path, use it directly
-      if (isSubActive && product.source_path && (product.source_path.startsWith('http://') || product.source_path.startsWith('https://'))) {
-        window.open(product.source_path, '_blank');
-        setDownloading(false);
-        return;
-      }
       setFeedback('Something went wrong while opening download link.');
       setDownloading(false);
     } finally {
