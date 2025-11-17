@@ -2,6 +2,37 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
 
+async function resolveSubscriptionIdentifiers(admin: any, payload: any) {
+  const subscriptionEntity = payload.subscription?.entity;
+  const invoiceEntity = payload.invoice?.entity;
+  const paymentEntity = payload.payment?.entity;
+
+  const userIdFromNotes =
+    subscriptionEntity?.notes?.user_id ||
+    invoiceEntity?.notes?.user_id ||
+    paymentEntity?.notes?.user_id ||
+    null;
+
+  const razorpaySubscriptionId =
+    subscriptionEntity?.id ||
+    invoiceEntity?.subscription_id ||
+    paymentEntity?.subscription_id ||
+    null;
+
+  let userId = userIdFromNotes;
+
+  if (!userId && razorpaySubscriptionId) {
+    const { data: match } = await admin
+      .from('subscriptions')
+      .select('user_id')
+      .eq('razorpay_subscription_id', razorpaySubscriptionId)
+      .maybeSingle();
+    if (match?.user_id) userId = match.user_id;
+  }
+
+  return { userId, razorpaySubscriptionId };
+}
+
 export async function POST(req: Request) {
   try {
     // Get signature from headers
@@ -196,19 +227,32 @@ export async function POST(req: Request) {
 
     // ✅ SUBSCRIPTION LOGIC - Autopay mandate cancelled (do NOT cancel subscription)
     if (event === 'subscription.cancelled') {
-      const userId =
-        payload.subscription?.entity?.notes?.user_id ||
-        payload.payment?.entity?.notes?.user_id ||
-        payload.invoice?.entity?.notes?.user_id;
+      const { userId, razorpaySubscriptionId } = await resolveSubscriptionIdentifiers(admin, payload);
+
+      if (!userId && !razorpaySubscriptionId) {
+        console.log('subscription.cancelled event received but no user or subscription could be resolved. Skipping update.');
+        return NextResponse.json({ status: 'ok', message: 'No matching subscription found for cancellation event' });
+      }
+
+      console.log(
+        `Autopay/mandate cancelled for ${
+          userId ? `user ${userId}` : `subscription ${razorpaySubscriptionId}`
+        }. Keeping subscription active until payment fails.`,
+      );
+
+      const subscriptionUpdate = admin
+        .from('subscriptions')
+        .update({ autopay_enabled: false });
 
       if (userId) {
-        console.log(`Autopay/mandate cancelled for user: ${userId}. Keeping subscription active until payment fails.`);
+        subscriptionUpdate.eq('user_id', userId);
+      } else if (razorpaySubscriptionId) {
+        subscriptionUpdate.eq('razorpay_subscription_id', razorpaySubscriptionId);
+      }
 
-        await admin
-          .from('subscriptions')
-          .update({ autopay_enabled: false })
-          .eq('user_id', userId);
+      await subscriptionUpdate;
 
+      if (userId) {
         await admin
           .from('users')
           .update({
@@ -222,104 +266,118 @@ export async function POST(req: Request) {
 
     // ✅ SUBSCRIPTION LOGIC - Cancellation/Payment Failure
     if (event === 'payment.failed' || event === 'invoice.payment_failed') {
-      const userId =
-        payload.subscription?.entity?.notes?.user_id ||
-        payload.payment?.entity?.notes?.user_id ||
-        payload.invoice?.entity?.notes?.user_id;
+      const { userId: resolvedUserId, razorpaySubscriptionId } = await resolveSubscriptionIdentifiers(admin, payload);
+      let userId = resolvedUserId;
 
-      if (userId) {
-        // Check if this is a subscription payment failure (not one-time)
-        const invoiceEntity = payload.invoice?.entity;
-        const paymentEntity = payload.payment?.entity;
-        const subscriptionEntity = payload.subscription?.entity;
-        
-        // Determine if this payment failure is for a subscription
-        // Subscription payments are linked to invoices or have subscription_id
-        const isSubscriptionPayment = 
-          subscriptionEntity?.id ||
-          invoiceEntity?.subscription_id ||
-          paymentEntity?.invoice_id || // If payment is linked to an invoice, it's subscription
-          event === 'invoice.payment_failed';
+      // Check if this is a subscription payment failure (not one-time)
+      const invoiceEntity = payload.invoice?.entity;
+      const paymentEntity = payload.payment?.entity;
+      const subscriptionEntity = payload.subscription?.entity;
+      
+      // Determine if this payment failure is for a subscription
+      // Subscription payments are linked to invoices or have subscription_id
+      const isSubscriptionPayment = 
+        subscriptionEntity?.id ||
+        invoiceEntity?.subscription_id ||
+        paymentEntity?.invoice_id || // If payment is linked to an invoice, it's subscription
+        event === 'invoice.payment_failed';
 
-        if (isSubscriptionPayment) {
-          // Get existing subscription to preserve plan - THIS IS THE MOST RELIABLE SOURCE
-          const { data: existingSub } = await admin
+      if (isSubscriptionPayment) {
+        let existingSub: any = null;
+
+        if (userId) {
+          const { data } = await admin
             .from('subscriptions')
             .select('plan, autopay_enabled')
             .eq('user_id', userId)
             .maybeSingle();
-          
-          const autopayEnabled = existingSub?.autopay_enabled ?? true;
-          const isAutoCancellationEvent = event === 'subscription.cancelled';
-          
-          if (isAutoCancellationEvent && !autopayEnabled) {
-            console.log(`Skipping subscription.cancelled auto-cancel for user ${userId} because autopay/mandate is disabled`);
-            return NextResponse.json({ status: 'ok', message: 'Autopay disabled; subscription left active' });
+          existingSub = data;
+        } else if (razorpaySubscriptionId) {
+          const { data } = await admin
+            .from('subscriptions')
+            .select('user_id, plan, autopay_enabled')
+            .eq('razorpay_subscription_id', razorpaySubscriptionId)
+            .maybeSingle();
+          if (data?.user_id) {
+            userId = data.user_id;
           }
-          
-          console.log(`Cancelling subscription due to payment failure/cancellation for user: ${userId}`);
-          
-          // CRITICAL: ALWAYS prioritize existing subscription's plan (it's what the user actually had)
-          // This is the most reliable source - our database knows what plan the user had
-          // Do NOT try to override it from webhook payload
-          let planToPreserve = existingSub?.plan || null;
-          
-          // Only try to get plan from webhook payload if we don't have an existing subscription at all
-          // This should rarely happen, but if it does, we'll try to parse from webhook
-          if (!planToPreserve) {
-            const subscriptionForPlan = subscriptionEntity || invoiceEntity;
-            if (subscriptionForPlan?.plan_id) {
-              // Try to match plan name - Razorpay sometimes includes plan name in subscription
-              const planName = subscriptionForPlan.plan_name || subscriptionForPlan.item?.name || '';
-              if (planName.toLowerCase().includes('yearly')) {
-                planToPreserve = 'yearly';
-              } else if (planName.toLowerCase().includes('weekly')) {
-                planToPreserve = 'weekly';
-              } else if (planName.toLowerCase().includes('monthly')) {
-                planToPreserve = 'monthly';
-              } else if (subscriptionForPlan.plan_id.toLowerCase().includes('yearly')) {
-                planToPreserve = 'yearly';
-              } else if (subscriptionForPlan.plan_id.toLowerCase().includes('weekly')) {
-                planToPreserve = 'weekly';
-              } else if (subscriptionForPlan.plan_id.toLowerCase().includes('monthly')) {
-                planToPreserve = 'monthly';
-              }
+          existingSub = data;
+        }
+
+        if (!userId) {
+          console.log('Subscription payment failure received but user could not be resolved. Skipping cancellation.');
+          return NextResponse.json({ status: 'ok', message: 'No matching subscription found for payment failure' });
+        }
+        
+        console.log(`Cancelling subscription due to payment failure/cancellation for user: ${userId}`);
+        
+        // CRITICAL: ALWAYS prioritize existing subscription's plan (it's what the user actually had)
+        // This is the most reliable source - our database knows what plan the user had
+        // Do NOT try to override it from webhook payload
+        let planToPreserve = existingSub?.plan || null;
+        
+        // Only try to get plan from webhook payload if we don't have an existing subscription at all
+        // This should rarely happen, but if it does, we'll try to parse from webhook
+        if (!planToPreserve) {
+          const subscriptionForPlan = subscriptionEntity || invoiceEntity;
+          if (subscriptionForPlan?.plan_id) {
+            // Try to match plan name - Razorpay sometimes includes plan name in subscription
+            const planName = subscriptionForPlan.plan_name || subscriptionForPlan.item?.name || '';
+            if (planName.toLowerCase().includes('yearly')) {
+              planToPreserve = 'yearly';
+            } else if (planName.toLowerCase().includes('weekly')) {
+              planToPreserve = 'weekly';
+            } else if (planName.toLowerCase().includes('monthly')) {
+              planToPreserve = 'monthly';
+            } else if (subscriptionForPlan.plan_id.toLowerCase().includes('yearly')) {
+              planToPreserve = 'yearly';
+            } else if (subscriptionForPlan.plan_id.toLowerCase().includes('weekly')) {
+              planToPreserve = 'weekly';
+            } else if (subscriptionForPlan.plan_id.toLowerCase().includes('monthly')) {
+              planToPreserve = 'monthly';
             }
           }
-          
-          // Update users table
-          await admin
-            .from('users')
-            .update({
-              subscription_status: 'inactive',
-              last_payment_status: 'failed',
-            })
-            .eq('id', userId);
-
-          // Update subscriptions table - CANCEL SUBSCRIPTION but preserve plan
-          // Always update is_active to false, and ALWAYS preserve plan from existing subscription if it exists
-          const updateData: any = { is_active: false, autopay_enabled: false };
-          
-          // CRITICAL: Always preserve the plan from existing subscription if it exists
-          // This ensures yearly stays yearly, monthly stays monthly, etc.
-          // existingSub.plan is the most reliable source
-          if (existingSub?.plan) {
-            updateData.plan = existingSub.plan; // Preserve the plan so user can renew with same plan
-            planToPreserve = existingSub.plan; // Update for logging
-          } else if (planToPreserve) {
-            // Only use webhook-derived plan if we have no existing subscription at all
-            updateData.plan = planToPreserve;
-          }
-          
-          await admin
-            .from('subscriptions')
-            .update(updateData)
-            .eq('user_id', userId);
-          
-          console.log(`Subscription cancelled for user: ${userId}, plan preserved: ${planToPreserve || existingSub?.plan || 'none'}`);
         }
-        // If it's a one-time payment failure, we'll handle it in the ONE-TIME PRODUCT LOGIC section below
+        
+        // Update users table
+        await admin
+          .from('users')
+          .update({
+            subscription_status: 'inactive',
+            last_payment_status: 'failed',
+          })
+          .eq('id', userId);
+
+        // Update subscriptions table - CANCEL SUBSCRIPTION but preserve plan
+        // Always update is_active to false, and ALWAYS preserve plan from existing subscription if it exists
+        const updateData: any = { is_active: false, autopay_enabled: false };
+        
+        // CRITICAL: Always preserve the plan from existing subscription if it exists
+        // This ensures yearly stays yearly, monthly stays monthly, etc.
+        // existingSub.plan is the most reliable source
+        if (existingSub?.plan) {
+          updateData.plan = existingSub.plan; // Preserve the plan so user can renew with same plan
+          planToPreserve = existingSub.plan; // Update for logging
+        } else if (planToPreserve) {
+          // Only use webhook-derived plan if we have no existing subscription at all
+          updateData.plan = planToPreserve;
+        }
+        
+        const subscriptionUpdate = admin
+          .from('subscriptions')
+          .update(updateData);
+
+        if (userId) {
+          subscriptionUpdate.eq('user_id', userId);
+        } else if (razorpaySubscriptionId) {
+          subscriptionUpdate.eq('razorpay_subscription_id', razorpaySubscriptionId);
+        }
+
+        await subscriptionUpdate;
+        
+        console.log(`Subscription cancelled for user: ${userId}, plan preserved: ${planToPreserve || existingSub?.plan || 'none'}`);
       }
+      // If it's a one-time payment failure, we'll handle it in the ONE-TIME PRODUCT LOGIC section below
     }
 
     // ✅ ONE-TIME PRODUCT LOGIC
