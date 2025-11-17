@@ -35,7 +35,7 @@ export default function Header() {
       const now = Date.now();
       const validUntil = sub.valid_until ? new Date(sub.valid_until).getTime() : null;
       const actuallyActive = !!sub.is_active && (!validUntil || validUntil > now);
-      const expired = !!sub.is_active && validUntil && validUntil <= now;
+      const expired: boolean = !!(sub.is_active && validUntil && validUntil <= now);
       
       setIsSubscribed(actuallyActive);
       setIsExpired(expired);
