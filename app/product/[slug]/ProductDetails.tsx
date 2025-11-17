@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext, TemplateCartItem } from '../../../context/AppContext';
@@ -48,36 +48,85 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
     });
   }, [product.slug, product.name]);
 
-  useEffect(() => {
-    const loadSub = async () => {
-      try {
-        if (!user) {
-          setIsSubActive(false);
-          setPurchased(false);
-          setPurchaseStatus(null);
-          return;
-        }
-        const supabase = getSupabaseBrowserClient();
-        const { data } = await supabase
-          .from('subscriptions')
-          .select('is_active, valid_until')
-          .eq('user_id', (user as any).id)
-          .maybeSingle();
-        if (!data) { setIsSubActive(false); return; }
-        const active = !!data.is_active && (!data.valid_until || new Date(data.valid_until).getTime() > Date.now());
-        setIsSubActive(active);
-        
-        // No purchase check needed - subscription-only model
-        setPurchased(false);
-        setPurchaseStatus(null);
-      } catch {
+  // Function to load subscription status from backend
+  const loadSubscriptionStatus = useCallback(async () => {
+    try {
+      if (!user) {
         setIsSubActive(false);
         setPurchased(false);
         setPurchaseStatus(null);
+        return;
+      }
+      const supabase = getSupabaseBrowserClient();
+      // Force fresh fetch from backend
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('is_active, valid_until')
+        .eq('user_id', (user as any).id)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Subscription fetch error:', error);
+        setIsSubActive(false);
+        return;
+      }
+      
+      if (!data) { 
+        setIsSubActive(false); 
+        return; 
+      }
+      
+      // Check if subscription is active: is_active must be true AND valid_until must be in the future (if set)
+      const now = Date.now();
+      const validUntil = data.valid_until ? new Date(data.valid_until).getTime() : null;
+      const active = !!data.is_active && (!validUntil || validUntil > now);
+      
+      setIsSubActive(active);
+      
+      // No purchase check needed - subscription-only model
+      setPurchased(false);
+      setPurchaseStatus(null);
+    } catch (error) {
+      console.error('Error loading subscription:', error);
+      setIsSubActive(false);
+      setPurchased(false);
+      setPurchaseStatus(null);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadSubscriptionStatus();
+  }, [loadSubscriptionStatus, product.slug]);
+
+  // Refresh subscription status when page becomes visible (user returns to tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user) {
+        // Small delay to ensure backend has updated
+        setTimeout(() => {
+          loadSubscriptionStatus();
+        }, 500);
       }
     };
-    loadSub();
-  }, [user, product.slug]);
+    
+    const handleFocus = () => {
+      if (user) {
+        // Small delay to ensure backend has updated
+        setTimeout(() => {
+          loadSubscriptionStatus();
+        }, 500);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user, loadSubscriptionStatus]);
+
 
 
   const handleDownload = async () => {
