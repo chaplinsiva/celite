@@ -91,21 +91,52 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         return;
       }
       
-      // Check if source_path exists and is a URL
-      if (product.source_path) {
-        // Direct redirect to drive link
-        window.open(product.source_path, '_blank');
+      const res = await fetch(`/api/download/${product.slug}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      
+      if (!res.ok) {
+        if (res.status === 403) {
+          // Access denied - redirect to pricing
+          router.push('/pricing');
+          setFeedback('Please subscribe to download this template.');
+        } else {
+          setFeedback('Download link not available for this template.');
+        }
         setDownloading(false);
         return;
       }
       
-      // If no source_path, show error
-      setFeedback('Download link not available for this template.');
+      // Check if response is JSON (redirect to external URL)
+      const contentType = res.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        const json = await res.json();
+        if (json.redirect && json.url) {
+          // Redirect to external drive link
+          window.open(json.url, '_blank');
+          setDownloading(false);
+          return;
+        }
+        setDownloading(false);
+        return;
+      }
+      
+      // Otherwise, download as blob (Supabase storage file)
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${product.slug}.rar`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setDownloading(false);
     } catch (e) {
       setFeedback('Something went wrong while opening download link.');
+      setDownloading(false);
     } finally {
       setTimeout(() => setFeedback(null), 3000);
-      setDownloading(false);
     }
   };
 
@@ -234,20 +265,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               <div className="space-y-4">
                 <div className="flex items-center gap-4 flex-wrap justify-start">
                   <ShinyButton
-                    onClick={async () => {
-                      if (!user) {
-                        // Not logged in - show login/signup
-                        openLoginModal();
-                        return;
-                      }
-                      if (!isSubActive) {
-                        // Logged in but not subscribed - go to pricing
-                        router.push('/pricing');
-                        return;
-                      }
-                      // Subscribed - download the file
-                      await handleDownload();
-                    }}
+                    onClick={handleDownload}
                     className={downloading ? 'opacity-70 cursor-not-allowed' : ''}
                   >
                     {downloading ? 'Preparing…' : 'Download Now'}
