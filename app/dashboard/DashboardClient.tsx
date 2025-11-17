@@ -233,10 +233,16 @@ function DashboardContent() {
     }
   };
 
-  const isActive = !!sub?.is_active;
-  const hasExpiredPlan = !isActive && sub?.plan; // Subscription expired but plan type preserved
-  const subscriptionTier = isActive 
+  // Check if subscription is actually active (is_active AND valid_until in future)
+  const now = Date.now();
+  const validUntil = sub?.valid_until ? new Date(sub.valid_until).getTime() : null;
+  const isActuallyActive = !!sub?.is_active && (!validUntil || validUntil > now);
+  const isPaused = !!sub?.is_active && validUntil && validUntil <= now; // is_active true but validity expired
+  const hasExpiredPlan = !sub?.is_active && sub?.plan; // Subscription expired and inactive
+  const subscriptionTier = isActuallyActive 
     ? (sub?.plan || 'Pro') 
+    : isPaused
+    ? `${sub?.plan === 'weekly' ? 'Weekly' : sub?.plan === 'yearly' ? 'Yearly' : 'Monthly'} Plan - Paused`
     : hasExpiredPlan 
     ? `${sub?.plan === 'weekly' ? 'Weekly' : sub?.plan === 'yearly' ? 'Yearly' : 'Monthly'} Plan Expired`
     : 'Free';
@@ -307,12 +313,26 @@ function DashboardContent() {
             <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/60 backdrop-blur-sm px-6 py-4 text-right">
             <p className="text-sm text-white/70">Subscription</p>
             <p className="mt-1 text-2xl font-semibold text-white">{subscriptionTier}</p>
-            {/* Only show subscription details if there's an active subscription */}
-            {isActive && (
+            {/* Show subscription details */}
+            {isActuallyActive && sub?.valid_until && (
               <p className={`mt-1 text-xs text-green-300`}>
                 Active{sub?.plan ? ` • ${sub.plan === 'yearly' ? 'Yearly' : sub.plan === 'weekly' ? 'Weekly' : 'Monthly'}` : ''}
-                {sub?.valid_until ? ` • renews ${new Date(sub.valid_until).toLocaleDateString()}` : ''}
+                <br />
+                <span className="text-zinc-400">Valid until: {new Date(sub.valid_until).toLocaleDateString()} {new Date(sub.valid_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </p>
+            )}
+            {isPaused && sub?.valid_until && (
+              <div className="mt-2">
+                <p className="text-xs text-yellow-400 font-semibold">
+                  Paused - Waiting for next payment
+                </p>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Expired: {new Date(sub.valid_until).toLocaleDateString()} {new Date(sub.valid_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  Subscription will resume when payment is processed
+                </p>
+              </div>
             )}
             {hasExpiredPlan && (
               <div className="mt-3 flex flex-wrap gap-2 justify-end">
@@ -324,7 +344,7 @@ function DashboardContent() {
                 </Link>
               </div>
             )}
-            {!isActive && !hasExpiredPlan && (
+            {!isActuallyActive && !isPaused && !hasExpiredPlan && (
               <div className="mt-3 flex flex-wrap gap-2 justify-end">
                 <Link href="/checkout?subscription=weekly" className="inline-flex items-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:from-pink-600 hover:to-purple-600">
                   Special (₹199)
@@ -529,7 +549,8 @@ function DashboardContent() {
             <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
               <h2 className="text-xl font-semibold mb-4 text-white">Manage Subscription</h2>
               <ManageSubscriptionPanel
-                isActive={isActive}
+                isActive={isActuallyActive}
+                isPaused={isPaused}
                 plan={sub?.plan ?? null}
                 validUntil={sub?.valid_until ?? null}
                 onCancel={handleCancelSubscription}
@@ -671,8 +692,9 @@ function ChangePasswordForm({ onSubmit, onCancel, loading }: { onSubmit: (newPas
   );
 }
 
-function ManageSubscriptionPanel({ isActive, plan, validUntil, onCancel, onUpgrade, onClose, loading }: { 
+function ManageSubscriptionPanel({ isActive, isPaused, plan, validUntil, onCancel, onUpgrade, onClose, loading }: { 
   isActive: boolean; 
+  isPaused: boolean;
   plan: string | null; 
   validUntil: string | null; 
   onCancel: () => void; 
@@ -680,7 +702,7 @@ function ManageSubscriptionPanel({ isActive, plan, validUntil, onCancel, onUpgra
   onClose: () => void;
   loading: boolean;
 }) {
-  const hasExpiredPlan = !isActive && plan; // Subscription expired but plan type preserved
+  const hasExpiredPlan = !isActive && !isPaused && plan; // Subscription expired and inactive
   const planDisplayName = plan === 'yearly' ? 'Yearly' : plan === 'weekly' ? 'Weekly' : 'Monthly';
   
   return (
@@ -690,15 +712,19 @@ function ManageSubscriptionPanel({ isActive, plan, validUntil, onCancel, onUpgra
         <p className="text-lg font-semibold text-white">
           {isActive 
             ? `${planDisplayName} Plan - Active` 
+            : isPaused
+            ? `${planDisplayName} Plan - Paused`
             : hasExpiredPlan 
             ? `${planDisplayName} Plan Expired` 
             : 'No Active Subscription'}
         </p>
         {validUntil && (
-          <p className={`text-xs mt-1 ${isActive ? 'text-zinc-400' : 'text-red-400'}`}>
+          <p className={`text-xs mt-1 ${isActive ? 'text-zinc-400' : isPaused ? 'text-yellow-400' : 'text-red-400'}`}>
             {isActive 
-              ? `Valid until: ${new Date(validUntil).toLocaleDateString()}`
-              : `Expired on: ${new Date(validUntil).toLocaleDateString()}`}
+              ? `Valid until: ${new Date(validUntil).toLocaleDateString()} ${new Date(validUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+              : isPaused
+              ? `Expired: ${new Date(validUntil).toLocaleDateString()} ${new Date(validUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - Waiting for payment`
+              : `Expired on: ${new Date(validUntil).toLocaleDateString()} ${new Date(validUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
           </p>
         )}
       </div>
@@ -715,6 +741,21 @@ function ManageSubscriptionPanel({ isActive, plan, validUntil, onCancel, onUpgra
           <p className="text-xs text-zinc-400">
             Cancelling will end your subscription after the current billing period. You'll lose access to premium features.
           </p>
+        </div>
+      ) : isPaused ? (
+        <div className="space-y-3">
+          <p className="text-sm text-yellow-400 font-semibold">
+            Subscription Paused
+          </p>
+          <p className="text-xs text-zinc-400">
+            Your subscription validity has ended, but your recurring payment is set up. The subscription will automatically resume when the next payment is processed.
+          </p>
+          <Link
+            href="/pricing"
+            className="block w-full px-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold hover:from-pink-600 hover:to-purple-600 transition text-center"
+          >
+            Renew Now
+          </Link>
         </div>
       ) : hasExpiredPlan ? (
         <div className="space-y-3">
