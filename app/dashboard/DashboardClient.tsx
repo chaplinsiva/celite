@@ -35,6 +35,8 @@ function DashboardContent() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showManageSubscription, setShowManageSubscription] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showRenewConfirm, setShowRenewConfirm] = useState(false);
   const [userMetadata, setUserMetadata] = useState<{ first_name: string | null; last_name: string | null }>({ first_name: null, last_name: null });
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -196,10 +198,11 @@ function DashboardContent() {
   };
 
   const handleCancelSubscription = async () => {
-    if (!confirm('Are you sure you want to cancel your subscription? You will lose access to premium features.')) {
-      return;
-    }
+    setShowCancelConfirm(true);
+  };
 
+  const confirmCancelSubscription = async () => {
+    setShowCancelConfirm(false);
     try {
       setLoading(true);
       const supabase = getSupabaseBrowserClient();
@@ -234,10 +237,11 @@ function DashboardContent() {
   };
 
   const handleRenewSubscription = async () => {
-    if (!confirm('This will cancel your old subscription and start a new one. Continue?')) {
-      return;
-    }
+    setShowRenewConfirm(true);
+  };
 
+  const confirmRenewSubscription = async () => {
+    setShowRenewConfirm(false);
     try {
       setLoading(true);
       const supabase = getSupabaseBrowserClient();
@@ -607,6 +611,82 @@ function DashboardContent() {
                 onClose={() => setShowManageSubscription(false)}
                 loading={loading}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowCancelConfirm(false)}>
+          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              disabled={false}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={3}
+            />
+            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+              <h2 className="text-xl font-semibold mb-4 text-white">Cancel Subscription</h2>
+              <p className="text-sm text-zinc-300 mb-6">
+                Are you sure you want to cancel your subscription? You will lose access to premium features.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={confirmCancelSubscription}
+                  disabled={loading}
+                  className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition disabled:opacity-60"
+                >
+                  {loading ? 'Cancelling...' : 'Yes, Cancel'}
+                </button>
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  disabled={loading}
+                  className="px-4 py-2 rounded-lg border border-white/20 text-white hover:bg-white/10 transition"
+                >
+                  No, Keep It
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Renew Confirmation Modal */}
+      {showRenewConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowRenewConfirm(false)}>
+          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <GlowingEffect
+              spread={40}
+              glow={true}
+              disabled={false}
+              proximity={64}
+              inactiveZone={0.01}
+              borderWidth={3}
+            />
+            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+              <h2 className="text-xl font-semibold mb-4 text-white">Renew Subscription</h2>
+              <p className="text-sm text-zinc-300 mb-6">
+                This will cancel your old subscription and start a new one. Continue?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={confirmRenewSubscription}
+                  disabled={loading}
+                  className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold hover:from-pink-600 hover:to-purple-600 transition disabled:opacity-60"
+                >
+                  {loading ? 'Renewing...' : 'Yes, Renew'}
+                </button>
+                <button
+                  onClick={() => setShowRenewConfirm(false)}
+                  disabled={loading}
+                  className="px-4 py-2 rounded-lg border border-white/20 text-white hover:bg-white/10 transition"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

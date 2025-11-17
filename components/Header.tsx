@@ -11,7 +11,6 @@ export default function Header() {
   const { user, logout } = useAppContext();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
-  const [renewing, setRenewing] = useState(false);
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -44,54 +43,6 @@ export default function Header() {
     checkSubscription();
   }, [user]);
 
-  const handleRenew = async () => {
-    if (!user) return;
-    
-    try {
-      setRenewing(true);
-      const supabase = getSupabaseBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        alert('Session expired. Please log in again.');
-        return;
-      }
-
-      const res = await fetch('/api/subscription/renew', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      const json = await res.json();
-      if (!res.ok || !json.ok) {
-        throw new Error(json.error || 'Renewal failed');
-      }
-
-      // Refresh subscription status
-      const { data: sub } = await supabase
-        .from('subscriptions')
-        .select('is_active, valid_until')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (sub) {
-        const now = Date.now();
-        const validUntil = sub.valid_until ? new Date(sub.valid_until).getTime() : null;
-        const actuallyActive = !!sub.is_active && (!validUntil || validUntil > now);
-        const expired: boolean = !!(sub.is_active && validUntil && validUntil <= now);
-        
-        setIsSubscribed(actuallyActive);
-        setIsExpired(expired);
-      }
-
-      alert('Subscription renewed successfully!');
-    } catch (e: any) {
-      alert(e?.message || 'Failed to renew subscription');
-    } finally {
-      setRenewing(false);
-    }
-  };
 
   return (
     <>
@@ -111,16 +62,7 @@ export default function Header() {
         <div className="flex items-center space-x-2 sm:space-x-3">
           {/* Desktop: Subscribe + Auth */}
           <div className="hidden md:flex items-center space-x-3">
-            {isExpired && (
-              <button
-                onClick={handleRenew}
-                disabled={renewing}
-                className="px-5 py-2 text-sm font-semibold rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white transition hover:from-pink-600 hover:to-purple-600 disabled:opacity-60"
-              >
-                {renewing ? 'Renewing...' : 'Renew'}
-              </button>
-            )}
-            {!isSubscribed && !isExpired && (
+            {!isSubscribed && (
               <Link href={user ? "/pricing" : "/signup"} className="no-underline">
                 <ShinyButton className="!px-5 !py-2 !text-sm">
                   {user ? "Subscribe Now" : "Start Free"}
@@ -161,17 +103,8 @@ export default function Header() {
             )}
           </div>
           
-          {/* Mobile: Subscribe/Renew Button */}
-          {isExpired && (
-            <button
-              onClick={handleRenew}
-              disabled={renewing}
-              className="md:hidden px-4 py-2 text-xs font-semibold rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white transition hover:from-pink-600 hover:to-purple-600 disabled:opacity-60"
-            >
-              {renewing ? 'Renewing...' : 'Renew'}
-            </button>
-          )}
-          {!isSubscribed && !isExpired && (
+          {/* Mobile: Subscribe Button */}
+          {!isSubscribed && (
             <Link href={user ? "/pricing" : "/signup"} className="md:hidden no-underline">
               <ShinyButton className="!px-4 !py-2 !text-xs">
                 {user ? "Subscribe" : "Start Free"}
