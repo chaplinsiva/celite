@@ -91,15 +91,37 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         return;
       }
       
+      // If user is subscribed and source_path is available, use it as fallback
+      if (isSubActive && product.source_path && (product.source_path.startsWith('http://') || product.source_path.startsWith('https://'))) {
+        window.open(product.source_path, '_blank');
+        setDownloading(false);
+        return;
+      }
+      
       const res = await fetch(`/api/download/${product.slug}`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       
       if (!res.ok) {
+        // If API fails but user is subscribed and we have source_path, use it directly
+        if (isSubActive && product.source_path && (product.source_path.startsWith('http://') || product.source_path.startsWith('https://'))) {
+          window.open(product.source_path, '_blank');
+          setDownloading(false);
+          return;
+        }
+        
         if (res.status === 403) {
           // Access denied - redirect to pricing
           router.push('/pricing');
           setFeedback('Please subscribe to download this template.');
+        } else if (res.status === 404) {
+          // Template not found or no source_path - try using product.source_path if available
+          if (isSubActive && product.source_path && (product.source_path.startsWith('http://') || product.source_path.startsWith('https://'))) {
+            window.open(product.source_path, '_blank');
+            setDownloading(false);
+            return;
+          }
+          setFeedback('Download link not available for this template.');
         } else {
           setFeedback('Download link not available for this template.');
         }
@@ -133,6 +155,12 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
       URL.revokeObjectURL(url);
       setDownloading(false);
     } catch (e) {
+      // If API call fails but user is subscribed and we have source_path, use it directly
+      if (isSubActive && product.source_path && (product.source_path.startsWith('http://') || product.source_path.startsWith('https://'))) {
+        window.open(product.source_path, '_blank');
+        setDownloading(false);
+        return;
+      }
       setFeedback('Something went wrong while opening download link.');
       setDownloading(false);
     } finally {
