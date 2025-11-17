@@ -300,12 +300,12 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             <div className="flex flex-col gap-4 mb-6">
               <div className="space-y-4">
                 <div className="flex items-center gap-4 flex-wrap justify-start">
-                  <Button
+                  <ShinyButton
                     onClick={handleDownload}
                     className={downloading ? 'opacity-70 cursor-not-allowed' : ''}
                   >
                     {downloading ? 'Preparing…' : 'Download Now'}
-                  </Button>
+                  </ShinyButton>
                 </div>
                 {!isSubActive && user && (
                   <div className="flex items-center gap-2">
