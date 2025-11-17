@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
+import { razorpayRequest } from '../../../../lib/razorpay';
 
 export async function POST(req: Request) {
   try {
@@ -21,6 +22,29 @@ export async function POST(req: Request) {
       if (body?.razorpay_subscription_id) razorpaySubscriptionId = body.razorpay_subscription_id;
     } catch {}
 
+    // Cancel any existing Razorpay subscription before creating a new one
+    const { data: existingSub } = await admin
+      .from('subscriptions')
+      .select('razorpay_subscription_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existingSub?.razorpay_subscription_id) {
+      try {
+        console.log(`Cancelling existing Razorpay subscription: ${existingSub.razorpay_subscription_id}`);
+        await razorpayRequest(`/subscriptions/${existingSub.razorpay_subscription_id}/cancel`, {
+          method: 'POST',
+          body: {
+            cancel_at_cycle_end: 0, // Cancel immediately
+          },
+        });
+        console.log('Existing Razorpay subscription cancelled successfully');
+      } catch (razorpayError: any) {
+        console.error('Error cancelling existing Razorpay subscription:', razorpayError?.message);
+        // Continue with activation even if Razorpay cancel fails
+      }
+    }
+
     // compute valid_until for weekly/monthly/yearly
     const now = Date.now();
     const expiresAt = plan === 'yearly'
@@ -39,6 +63,9 @@ export async function POST(req: Request) {
     // Store Razorpay subscription ID if provided
     if (razorpaySubscriptionId) {
       updateData.razorpay_subscription_id = razorpaySubscriptionId;
+    } else {
+      // Clear old Razorpay subscription ID if not provided
+      updateData.razorpay_subscription_id = null;
     }
 
     const { error: upErr } = await admin

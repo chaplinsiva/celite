@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAppContext } from "../../context/AppContext";
 import { useEffect, useState, Suspense, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { formatPrice } from "../../lib/currency";
 import PurchaseDownloadButton from "./PurchaseDownloadButton";
@@ -29,6 +29,7 @@ type OrderItemRow = {
 function DashboardContent() {
   const { user, logout } = useAppContext();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [orders, setOrders] = useState<Array<{ id: string; date: string; status: string; amount: string; item: string }>>([]);
   const [sub, setSub] = useState<{ is_active: boolean; plan: string | null; valid_until: string | null } | null>(null);
   const [purchases, setPurchases] = useState<Array<{ slug: string; name: string; price: number; img: string }>>([]);
@@ -242,36 +243,12 @@ function DashboardContent() {
 
   const confirmRenewSubscription = async () => {
     setShowRenewConfirm(false);
-    try {
-      setLoading(true);
-      const supabase = getSupabaseBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setMessage('Session expired. Please log in again.');
-        return;
-      }
-
-      const res = await fetch('/api/subscription/renew', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json.error || 'Renewal failed');
-
-      // Reload all dashboard data
-      await reloadDashboardData();
-
-      setMessage('Subscription renewed successfully!');
-      setShowManageSubscription(false);
-      setTimeout(() => setMessage(null), 3000);
-    } catch (e: any) {
-      setMessage(e?.message || 'Failed to renew subscription');
-      setTimeout(() => setMessage(null), 3000);
-    } finally {
-      setLoading(false);
+    // Redirect to checkout with the subscription plan
+    if (sub?.plan) {
+      router.push(`/checkout?subscription=${sub.plan}`);
+    } else {
+      // If no plan found, redirect to pricing page
+      router.push('/pricing');
     }
   };
 
@@ -669,19 +646,17 @@ function DashboardContent() {
             <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
               <h2 className="text-xl font-semibold mb-4 text-white">Renew Subscription</h2>
               <p className="text-sm text-zinc-300 mb-6">
-                This will cancel your old subscription and start a new one. Continue?
+                You will be redirected to checkout to complete payment and renew your subscription. Continue?
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={confirmRenewSubscription}
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold hover:from-pink-600 hover:to-purple-600 transition disabled:opacity-60"
+                  className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold hover:from-pink-600 hover:to-purple-600 transition"
                 >
-                  {loading ? 'Renewing...' : 'Yes, Renew'}
+                  Continue to Checkout
                 </button>
                 <button
                   onClick={() => setShowRenewConfirm(false)}
-                  disabled={loading}
                   className="px-4 py-2 rounded-lg border border-white/20 text-white hover:bg-white/10 transition"
                 >
                   Cancel
