@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useAppContext } from "../../context/AppContext";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { formatPrice } from "../../lib/currency";
@@ -48,62 +48,71 @@ function DashboardContent() {
       window.history.replaceState({}, '', '/dashboard');
     }
   }, [searchParams]);
-  useEffect(() => {
-    const load = async () => {
-      if (!user) return;
-      const supabase = getSupabaseBrowserClient();
-      
-      // Load user metadata
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (currentUser?.user_metadata) {
-        setUserMetadata({
-          first_name: currentUser.user_metadata.first_name || null,
-          last_name: currentUser.user_metadata.last_name || null,
-        });
-      }
-      
-      // Load subscription
-      const { data: s } = await supabase
-        .from('subscriptions')
-        .select('is_active, plan, valid_until')
-        .eq('user_id', (user as any).id)
-        .maybeSingle();
-      if (s) setSub({ is_active: !!s.is_active, plan: s.plan ?? null, valid_until: s.valid_until ?? null });
-      const { data: ords } = await supabase
-        .from('orders')
-        .select('id, created_at, total, status')
-        .eq('user_id', (user as any).id)
-        .order('created_at', { ascending: false }) as unknown as { data: OrderRow[] };
-      const orderIds = (ords ?? []).map(o => o.id);
-      if (orderIds.length === 0) { setOrders([]); return; }
-      const { data: items } = await supabase
-        .from('order_items')
-        .select('order_id,name,quantity,price,slug,img')
-        .in('order_id', orderIds) as unknown as { data: OrderItemRow[] };
-      const firstItemByOrder: Record<string, OrderItemRow | undefined> = {};
-      (items ?? []).forEach((it) => { if (!firstItemByOrder[it.order_id]) firstItemByOrder[it.order_id] = it; });
-      const merged = (ords ?? []).map((o) => {
-        const f = firstItemByOrder[o.id];
-        const amount = formatPrice(Number(o.total));
-        const itemLabel = f ? f.name : 'Order';
-        return {
-          id: `#${o.id.slice(0, 8)}`,
-          date: new Date(o.created_at).toLocaleDateString(),
-          status: o.status || 'Paid',
-          amount,
-          item: itemLabel,
-        };
-      });
-      setOrders(merged);
 
-      // Flatten purchases list
-      const flattened: Array<{ slug: string; name: string; price: number; img: string }> = ((items as any) ?? []).map((it: any) => ({ slug: it.slug, name: it.name, price: Number(it.price), img: it.img }))
-        // de-duplicate by slug (keep latest)
-        .filter((v: { slug: string; name: string; price: number; img: string }, i: number, a: Array<{ slug: string; name: string; price: number; img: string }>) => a.findIndex((t: { slug: string }) => t.slug === v.slug) === i);
-      setPurchases(flattened);
-    };
-    load();
+  // Function to reload all dashboard data
+  const reloadDashboardData = useCallback(async () => {
+    if (!user) return;
+    const supabase = getSupabaseBrowserClient();
+    
+    // Load user metadata
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (currentUser?.user_metadata) {
+      setUserMetadata({
+        first_name: currentUser.user_metadata.first_name || null,
+        last_name: currentUser.user_metadata.last_name || null,
+      });
+    }
+    
+    // Load subscription
+    const { data: s } = await supabase
+      .from('subscriptions')
+      .select('is_active, plan, valid_until')
+      .eq('user_id', (user as any).id)
+      .maybeSingle();
+    if (s) setSub({ is_active: !!s.is_active, plan: s.plan ?? null, valid_until: s.valid_until ?? null });
+    
+    // Load orders
+    const { data: ords } = await supabase
+      .from('orders')
+      .select('id, created_at, total, status')
+      .eq('user_id', (user as any).id)
+      .order('created_at', { ascending: false }) as unknown as { data: OrderRow[] };
+    const orderIds = (ords ?? []).map(o => o.id);
+    if (orderIds.length === 0) { 
+      setOrders([]); 
+      setPurchases([]);
+      return; 
+    }
+    const { data: items } = await supabase
+      .from('order_items')
+      .select('order_id,name,quantity,price,slug,img')
+      .in('order_id', orderIds) as unknown as { data: OrderItemRow[] };
+    const firstItemByOrder: Record<string, OrderItemRow | undefined> = {};
+    (items ?? []).forEach((it) => { if (!firstItemByOrder[it.order_id]) firstItemByOrder[it.order_id] = it; });
+    const merged = (ords ?? []).map((o) => {
+      const f = firstItemByOrder[o.id];
+      const amount = formatPrice(Number(o.total));
+      const itemLabel = f ? f.name : 'Order';
+      return {
+        id: `#${o.id.slice(0, 8)}`,
+        date: new Date(o.created_at).toLocaleDateString(),
+        status: o.status || 'Paid',
+        amount,
+        item: itemLabel,
+      };
+    });
+    setOrders(merged);
+
+    // Flatten purchases list
+    const flattened: Array<{ slug: string; name: string; price: number; img: string }> = ((items as any) ?? []).map((it: any) => ({ slug: it.slug, name: it.name, price: Number(it.price), img: it.img }))
+      // de-duplicate by slug (keep latest)
+      .filter((v: { slug: string; name: string; price: number; img: string }, i: number, a: Array<{ slug: string; name: string; price: number; img: string }>) => a.findIndex((t: { slug: string }) => t.slug === v.slug) === i);
+    setPurchases(flattened);
   }, [user]);
+
+  useEffect(() => {
+    reloadDashboardData();
+  }, [reloadDashboardData]);
 
 
   const handleEditProfile = async (firstName: string, lastName: string) => {
@@ -128,14 +137,8 @@ function DashboardContent() {
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error || 'Update failed');
 
-      // Refresh user metadata
-      const { data: { user: updatedUser } } = await supabase.auth.getUser();
-      if (updatedUser?.user_metadata) {
-        setUserMetadata({
-          first_name: updatedUser.user_metadata.first_name || null,
-          last_name: updatedUser.user_metadata.last_name || null,
-        });
-      }
+      // Reload all dashboard data including user metadata
+      await reloadDashboardData();
 
       setMessage('Profile updated successfully!');
       setShowEditProfile(false);
@@ -216,13 +219,8 @@ function DashboardContent() {
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error || 'Cancel failed');
 
-      // Reload subscription
-      const { data: s } = await supabase
-        .from('subscriptions')
-        .select('is_active, plan, valid_until')
-        .eq('user_id', (user as any).id)
-        .maybeSingle();
-      if (s) setSub({ is_active: !!s.is_active, plan: s.plan ?? null, valid_until: s.valid_until ?? null });
+      // Reload all dashboard data
+      await reloadDashboardData();
 
       setMessage('Subscription cancelled successfully');
       setShowManageSubscription(false);
