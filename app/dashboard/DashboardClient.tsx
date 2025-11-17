@@ -233,6 +233,44 @@ function DashboardContent() {
     }
   };
 
+  const handleRenewSubscription = async () => {
+    if (!confirm('This will cancel your old subscription and start a new one. Continue?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setMessage('Session expired. Please log in again.');
+        return;
+      }
+
+      const res = await fetch('/api/subscription/renew', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error || 'Renewal failed');
+
+      // Reload all dashboard data
+      await reloadDashboardData();
+
+      setMessage('Subscription renewed successfully!');
+      setShowManageSubscription(false);
+      setTimeout(() => setMessage(null), 3000);
+    } catch (e: any) {
+      setMessage(e?.message || 'Failed to renew subscription');
+      setTimeout(() => setMessage(null), 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Check if subscription is actually active (is_active AND valid_until in future)
   const now = Date.now();
   const validUntil = sub?.valid_until ? new Date(sub.valid_until).getTime() : null;
@@ -332,16 +370,26 @@ function DashboardContent() {
                 <p className="text-xs text-zinc-500 mt-1">
                   Subscription will resume when payment is processed
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2 justify-end">
+                  <button
+                    onClick={handleRenewSubscription}
+                    disabled={loading}
+                    className="inline-flex items-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:from-pink-600 hover:to-purple-600 disabled:opacity-60"
+                  >
+                    {loading ? 'Renewing...' : 'Renew Now'}
+                  </button>
+                </div>
               </div>
             )}
             {hasExpiredPlan && (
               <div className="mt-3 flex flex-wrap gap-2 justify-end">
-                <Link 
-                  href="/pricing" 
-                  className="inline-flex items-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:from-pink-600 hover:to-purple-600"
+                <button
+                  onClick={handleRenewSubscription}
+                  disabled={loading}
+                  className="inline-flex items-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:from-pink-600 hover:to-purple-600 disabled:opacity-60"
                 >
-                  Renew Plan
-                </Link>
+                  {loading ? 'Renewing...' : 'Renew Plan'}
+                </button>
               </div>
             )}
             {!isActuallyActive && !isPaused && !hasExpiredPlan && (
@@ -554,6 +602,7 @@ function DashboardContent() {
                 plan={sub?.plan ?? null}
                 validUntil={sub?.valid_until ?? null}
                 onCancel={handleCancelSubscription}
+                onRenew={handleRenewSubscription}
                 onUpgrade={() => { setShowManageSubscription(false); window.location.href = '/pricing'; }}
                 onClose={() => setShowManageSubscription(false)}
                 loading={loading}
@@ -692,12 +741,13 @@ function ChangePasswordForm({ onSubmit, onCancel, loading }: { onSubmit: (newPas
   );
 }
 
-function ManageSubscriptionPanel({ isActive, isPaused, plan, validUntil, onCancel, onUpgrade, onClose, loading }: { 
+function ManageSubscriptionPanel({ isActive, isPaused, plan, validUntil, onCancel, onRenew, onUpgrade, onClose, loading }: { 
   isActive: boolean; 
   isPaused: boolean;
   plan: string | null; 
   validUntil: string | null; 
   onCancel: () => void; 
+  onRenew: () => void;
   onUpgrade: () => void;
   onClose: () => void;
   loading: boolean;
@@ -750,21 +800,23 @@ function ManageSubscriptionPanel({ isActive, isPaused, plan, validUntil, onCance
           <p className="text-xs text-zinc-400">
             Your subscription validity has ended, but your recurring payment is set up. The subscription will automatically resume when the next payment is processed.
           </p>
-          <Link
-            href="/pricing"
-            className="block w-full px-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold hover:from-pink-600 hover:to-purple-600 transition text-center"
+          <button
+            onClick={onRenew}
+            disabled={loading}
+            className="w-full px-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold hover:from-pink-600 hover:to-purple-600 transition disabled:opacity-60"
           >
-            Renew Now
-          </Link>
+            {loading ? 'Renewing...' : 'Renew Now'}
+          </button>
         </div>
       ) : hasExpiredPlan ? (
         <div className="space-y-3">
-          <Link
-            href="/pricing"
-            className="block w-full px-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold hover:from-pink-600 hover:to-purple-600 transition text-center"
+          <button
+            onClick={onRenew}
+            disabled={loading}
+            className="w-full px-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold hover:from-pink-600 hover:to-purple-600 transition disabled:opacity-60"
           >
-            Renew Plan
-          </Link>
+            {loading ? 'Renewing...' : 'Renew Plan'}
+          </button>
           <p className="text-xs text-zinc-400">
             Renew your subscription to regain access to all premium templates.
           </p>
