@@ -251,17 +251,20 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             <div className="flex flex-col gap-4 mb-6">
               <div className="space-y-4">
                 <div className="flex items-center gap-4 flex-wrap justify-start">
-                  <ShinyButton
+                  <Button
                     onClick={handleDownload}
                     className={downloading ? 'opacity-70 cursor-not-allowed' : ''}
                   >
                     {downloading ? 'Preparing…' : 'Download Now'}
-                  </ShinyButton>
+                  </Button>
                 </div>
                 {!isSubActive && user && (
-                  <p className="text-sm text-zinc-400">
-                    Subscribe to get unlimited access to all templates
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-red-400 font-semibold">Not Active</p>
+                    <p className="text-sm text-zinc-400">
+                      • Subscribe to get unlimited access to all templates
+                    </p>
+                  </div>
                 )}
                 {!user && (
                   <p className="text-sm text-zinc-400">
