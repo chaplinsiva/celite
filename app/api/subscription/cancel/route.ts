@@ -88,7 +88,7 @@ export async function POST(req: Request) {
       .maybeSingle();
     
     // Update subscription to inactive in database but preserve plan
-    const updateData: any = { is_active: false };
+    const updateData: any = { is_active: false, autopay_enabled: false };
     if (existingSub?.plan) {
       updateData.plan = existingSub.plan; // Preserve the plan so user can renew with same plan
     }

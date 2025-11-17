@@ -163,6 +163,7 @@ export async function POST(req: Request) {
                     plan: finalPlan, // This should be the existing plan (preserved above)
                     valid_until: validUntil.toISOString(),
                     razorpay_subscription_id: razorpaySubscriptionId,
+                    autopay_enabled: true,
                   })
                   .eq('user_id', userId)
                   .eq('is_active', true); // Extra safety: only update if already active
@@ -180,6 +181,7 @@ export async function POST(req: Request) {
                   plan: finalPlan,
                   valid_until: validUntil.toISOString(),
                   razorpay_subscription_id: razorpaySubscriptionId,
+                  autopay_enabled: true,
                 });
               console.log(`Created new subscription for user ${userId} with plan: ${finalPlan}`);
             }
@@ -192,8 +194,34 @@ export async function POST(req: Request) {
       }
     }
 
+    // ✅ SUBSCRIPTION LOGIC - Autopay mandate cancelled (do NOT cancel subscription)
+    if (event === 'subscription.cancelled') {
+      const userId =
+        payload.subscription?.entity?.notes?.user_id ||
+        payload.payment?.entity?.notes?.user_id ||
+        payload.invoice?.entity?.notes?.user_id;
+
+      if (userId) {
+        console.log(`Autopay/mandate cancelled for user: ${userId}. Keeping subscription active until payment fails.`);
+
+        await admin
+          .from('subscriptions')
+          .update({ autopay_enabled: false })
+          .eq('user_id', userId);
+
+        await admin
+          .from('users')
+          .update({
+            last_payment_status: 'mandate_cancelled',
+          })
+          .eq('id', userId);
+      }
+
+      return NextResponse.json({ status: 'ok', message: 'Autopay disabled; subscription remains active' });
+    }
+
     // ✅ SUBSCRIPTION LOGIC - Cancellation/Payment Failure
-    if (event === 'payment.failed' || event === 'subscription.cancelled' || event === 'invoice.payment_failed') {
+    if (event === 'payment.failed' || event === 'invoice.payment_failed') {
       const userId =
         payload.subscription?.entity?.notes?.user_id ||
         payload.payment?.entity?.notes?.user_id ||
@@ -211,18 +239,25 @@ export async function POST(req: Request) {
           subscriptionEntity?.id ||
           invoiceEntity?.subscription_id ||
           paymentEntity?.invoice_id || // If payment is linked to an invoice, it's subscription
-          event === 'subscription.cancelled' ||
           event === 'invoice.payment_failed';
 
         if (isSubscriptionPayment) {
-          console.log(`Cancelling subscription due to payment failure/cancellation for user: ${userId}`);
-          
           // Get existing subscription to preserve plan - THIS IS THE MOST RELIABLE SOURCE
           const { data: existingSub } = await admin
             .from('subscriptions')
-            .select('plan')
+            .select('plan, autopay_enabled')
             .eq('user_id', userId)
             .maybeSingle();
+          
+          const autopayEnabled = existingSub?.autopay_enabled ?? true;
+          const isAutoCancellationEvent = event === 'subscription.cancelled';
+          
+          if (isAutoCancellationEvent && !autopayEnabled) {
+            console.log(`Skipping subscription.cancelled auto-cancel for user ${userId} because autopay/mandate is disabled`);
+            return NextResponse.json({ status: 'ok', message: 'Autopay disabled; subscription left active' });
+          }
+          
+          console.log(`Cancelling subscription due to payment failure/cancellation for user: ${userId}`);
           
           // CRITICAL: ALWAYS prioritize existing subscription's plan (it's what the user actually had)
           // This is the most reliable source - our database knows what plan the user had
@@ -263,7 +298,7 @@ export async function POST(req: Request) {
 
           // Update subscriptions table - CANCEL SUBSCRIPTION but preserve plan
           // Always update is_active to false, and ALWAYS preserve plan from existing subscription if it exists
-          const updateData: any = { is_active: false };
+          const updateData: any = { is_active: false, autopay_enabled: false };
           
           // CRITICAL: Always preserve the plan from existing subscription if it exists
           // This ensures yearly stays yearly, monthly stays monthly, etc.

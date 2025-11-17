@@ -161,6 +161,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   plan TEXT, -- 'monthly' or 'yearly'
   valid_until TIMESTAMP WITH TIME ZONE,
   razorpay_subscription_id TEXT,
+  autopay_enabled BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -173,6 +174,7 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_razorpay_subscription_id ON public.
 -- Comments for subscriptions table
 COMMENT ON TABLE public.subscriptions IS 'User subscriptions';
 COMMENT ON COLUMN public.subscriptions.razorpay_subscription_id IS 'Stores the Razorpay subscription ID for cancelling subscriptions via API';
+COMMENT ON COLUMN public.subscriptions.autopay_enabled IS 'Indicates if Razorpay mandate/autopay is enabled for the subscription';
 
 -- ============================================================================
 -- 7. ADMINS TABLE

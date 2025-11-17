@@ -13,13 +13,15 @@ export async function POST(req: Request) {
     if (error || !userRes.user) return NextResponse.json({ ok: false, error: 'Invalid session' }, { status: 401 });
     const userId = userRes.user.id;
 
-    // optional body: { plan: 'weekly' | 'monthly' | 'yearly', razorpay_subscription_id?: string }
+    // optional body: { plan: 'weekly' | 'monthly' | 'yearly', razorpay_subscription_id?: string, autopay_enabled?: boolean }
     let plan: 'weekly' | 'monthly' | 'yearly' = 'monthly';
     let razorpaySubscriptionId: string | null = null;
+    let autopayEnabled: boolean | null = null;
     try {
       const body = await req.json();
       if (body && (body.plan === 'weekly' || body.plan === 'monthly' || body.plan === 'yearly')) plan = body.plan;
       if (body?.razorpay_subscription_id) razorpaySubscriptionId = body.razorpay_subscription_id;
+      if (typeof body?.autopay_enabled === 'boolean') autopayEnabled = body.autopay_enabled;
     } catch {}
 
     // Cancel any existing Razorpay subscription before creating a new one
@@ -66,6 +68,11 @@ export async function POST(req: Request) {
     } else {
       // Clear old Razorpay subscription ID if not provided
       updateData.razorpay_subscription_id = null;
+    }
+    if (typeof autopayEnabled === 'boolean') {
+      updateData.autopay_enabled = autopayEnabled;
+    } else {
+      updateData.autopay_enabled = true;
     }
 
     const { error: upErr } = await admin
