@@ -34,14 +34,32 @@ export default function WebsiteShowcaseCarousel() {
         return;
       }
 
-      const filtered = (data ?? []).filter((tpl: any) => {
-        const category = tpl.categories ? (Array.isArray(tpl.categories) ? tpl.categories[0] : tpl.categories) : null;
-        const tags = Array.isArray(tpl.tags) ? tpl.tags : [];
-        const hasWebsiteTag = tags.some((tag: any) =>
-          typeof tag === 'string' && tag.toLowerCase().includes('website'),
-        );
-        return category?.slug === WEBSITE_CATEGORY_SLUG || hasWebsiteTag;
-      });
+      const filtered = (data ?? [])
+        .filter((tpl: any) => {
+          const category = tpl.categories ? (Array.isArray(tpl.categories) ? tpl.categories[0] : tpl.categories) : null;
+          const tags = Array.isArray(tpl.tags) ? tpl.tags : [];
+          const hasWebsiteTag = tags.some(
+            (tag: any) => typeof tag === 'string' && tag.toLowerCase().includes('website'),
+          );
+          return category?.slug === WEBSITE_CATEGORY_SLUG || hasWebsiteTag;
+        })
+        .map((tpl: any) => {
+          const category = tpl.categories ? (Array.isArray(tpl.categories) ? tpl.categories[0] : tpl.categories) : null;
+          return {
+            slug: tpl.slug,
+            name: tpl.name,
+            subtitle: tpl.subtitle,
+            desc: tpl.description ?? '',
+            price: 0,
+            img: tpl.img,
+            video: tpl.video,
+            features: tpl.features ?? [],
+            software: tpl.software ?? [],
+            plugins: tpl.plugins ?? [],
+            tags: tpl.tags ?? [],
+            category: category ? { id: category.id, name: category.name, slug: category.slug } : null,
+          } as WebsiteTemplate;
+        });
 
       setWebsites(filtered);
       setCurrentIndex(0);
