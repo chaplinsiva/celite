@@ -14,38 +14,145 @@ export async function GET(req: Request) {
     const { data: isAdmin } = await admin.from('admins').select('user_id').eq('user_id', meId).maybeSingle();
     if (!isAdmin) return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 });
 
-    // Orders and items
-    const ordersRes = await admin.from('orders')
-      .select('id,user_id,created_at,total,status')
-      .order('created_at', { ascending: false })
-      .limit(200);
-    if (ordersRes.error) return NextResponse.json({ ok: false, error: ordersRes.error.message }, { status: 500 });
-    const orderIds = (ordersRes.data ?? []).map((o: any) => o.id);
+    // Get query parameters for filtering
+    const { searchParams } = new URL(req.url);
+    const planFilter = searchParams.get('plan'); // 'weekly', 'monthly', 'yearly', or null for all
+    const statusFilter = searchParams.get('status'); // 'active', 'expired', 'cancelled', or null for all
+    const autopayFilter = searchParams.get('autopay'); // 'true', 'false', or null for all
+    const limit = parseInt(searchParams.get('limit') || '1000', 10);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
+
+    // Try to get orders (may not exist if table was removed)
+    let ordersRes: any = { data: [], error: null };
     let items: any[] = [];
-    if (orderIds.length) {
-      const itemsRes = await admin.from('order_items')
-        .select('order_id,name,quantity,price')
-        .in('order_id', orderIds);
-      if (itemsRes.error) return NextResponse.json({ ok: false, error: itemsRes.error.message }, { status: 500 });
-      items = itemsRes.data ?? [];
+    try {
+      ordersRes = await admin.from('orders')
+        .select('id,user_id,created_at,total,status')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (!ordersRes.error && ordersRes.data) {
+        const orderIds = (ordersRes.data ?? []).map((o: any) => o.id);
+        if (orderIds.length) {
+          const itemsRes = await admin.from('order_items')
+            .select('order_id,name,quantity,price')
+            .in('order_id', orderIds);
+          if (!itemsRes.error) items = itemsRes.data ?? [];
+        }
+      }
+    } catch (e: any) {
+      // Orders table doesn't exist - that's okay, continue without it
+      console.log('Orders table not found, skipping order data');
     }
 
-    // Subscriptions
-    const subsRes = await admin.from('subscriptions')
-      .select('user_id,is_active,plan,valid_until,created_at,updated_at')
-      .order('created_at', { ascending: false })
-      .limit(500);
+    // Subscriptions with detailed filtering
+    let subsQuery = admin.from('subscriptions')
+      .select('user_id,is_active,plan,valid_until,created_at,updated_at,razorpay_subscription_id,autopay_enabled')
+      .order('created_at', { ascending: false });
+
+    // Apply filters
+    if (planFilter && ['weekly', 'monthly', 'yearly'].includes(planFilter)) {
+      subsQuery = subsQuery.eq('plan', planFilter);
+    }
+    if (statusFilter === 'active') {
+      subsQuery = subsQuery.eq('is_active', true);
+    } else if (statusFilter === 'cancelled') {
+      subsQuery = subsQuery.eq('is_active', false);
+    }
+    if (autopayFilter === 'true') {
+      subsQuery = subsQuery.eq('autopay_enabled', true);
+    } else if (autopayFilter === 'false') {
+      subsQuery = subsQuery.eq('autopay_enabled', false);
+    }
+
+    subsQuery = subsQuery.range(offset, offset + limit - 1);
+
+    const subsRes = await subsQuery;
     if (subsRes.error) return NextResponse.json({ ok: false, error: subsRes.error.message }, { status: 500 });
 
-    // Aggregates
-    const totalOrderRevenue = (ordersRes.data ?? []).reduce((s: number, o: any) => s + Number(o.total || 0), 0);
-    const totalOrders = (ordersRes.data ?? []).length;
-    const activeList = (subsRes.data ?? []).filter((s: any) => s.is_active && (!s.valid_until || new Date(s.valid_until).getTime() > Date.now()));
+    // Get total count for pagination (without limit)
+    let countQuery = admin.from('subscriptions').select('*', { count: 'exact', head: true });
+    if (planFilter && ['weekly', 'monthly', 'yearly'].includes(planFilter)) {
+      countQuery = countQuery.eq('plan', planFilter);
+    }
+    if (statusFilter === 'active') {
+      countQuery = countQuery.eq('is_active', true);
+    } else if (statusFilter === 'cancelled') {
+      countQuery = countQuery.eq('is_active', false);
+    }
+    if (autopayFilter === 'true') {
+      countQuery = countQuery.eq('autopay_enabled', true);
+    } else if (autopayFilter === 'false') {
+      countQuery = countQuery.eq('autopay_enabled', false);
+    }
+    const countRes = await countQuery;
+    const totalCount = countRes.count || 0;
+
+    // Get all subscriptions for aggregate calculations (without filters)
+    const allSubsRes = await admin.from('subscriptions')
+      .select('user_id,is_active,plan,valid_until,autopay_enabled')
+      .order('created_at', { ascending: false });
+    const allSubs = allSubsRes.data ?? [];
+
+    // Calculate aggregates
+    const now = Date.now();
+    const activeList = allSubs.filter((s: any) => {
+      const isActive = s.is_active === true;
+      const isValid = !s.valid_until || new Date(s.valid_until).getTime() > now;
+      return isActive && isValid;
+    });
+    const expiredList = allSubs.filter((s: any) => {
+      const isActive = s.is_active === true;
+      const isValid = !s.valid_until || new Date(s.valid_until).getTime() > now;
+      return isActive && !isValid; // Active but expired
+    });
+    const cancelledList = allSubs.filter((s: any) => s.is_active === false);
+
     const activeSubscribers = activeList.length;
+    const activeWeekly = activeList.filter((s: any) => s.plan === 'weekly').length;
     const activeMonthly = activeList.filter((s: any) => s.plan === 'monthly').length;
     const activeYearly = activeList.filter((s: any) => s.plan === 'yearly').length;
-    // Estimate subscription revenue: Monthly Recurring Revenue (MRR)
-    const subscriptionMRR = activeMonthly * 10 + activeYearly * (100 / 12);
+    const expiredSubscribers = expiredList.length;
+    const cancelledSubscribers = cancelledList.length;
+    const autopayEnabled = activeList.filter((s: any) => s.autopay_enabled === true).length;
+    const autopayDisabled = activeList.filter((s: any) => s.autopay_enabled === false).length;
+
+    // Calculate MRR based on actual subscription prices (you may need to adjust these)
+    // Weekly: ₹199, Monthly: ₹799, Yearly: ₹5499
+    const weeklyMRR = activeWeekly * (199 / 7 * 30); // Convert weekly to monthly
+    const monthlyMRR = activeMonthly * 799;
+    const yearlyMRR = activeYearly * (5499 / 12); // Convert yearly to monthly
+    const subscriptionMRR = weeklyMRR + monthlyMRR + yearlyMRR;
+
+    // Calculate total order revenue (if orders exist)
+    const totalOrderRevenue = (ordersRes.data ?? []).reduce((s: number, o: any) => s + Number(o.total || 0), 0);
+    const totalOrders = (ordersRes.data ?? []).length;
+
+    // Get user emails for subscriptions (optional, for better display)
+    const userIds = [...new Set((subsRes.data ?? []).map((s: any) => s.user_id))];
+    const userEmails: Record<string, string> = {};
+    if (userIds.length > 0) {
+      try {
+        const { data: users } = await admin.auth.admin.listUsers();
+        if (users) {
+          users.users.forEach((u: any) => {
+            if (userIds.includes(u.id) && u.email) {
+              userEmails[u.id] = u.email;
+            }
+          });
+        }
+      } catch (e) {
+        // If we can't get user emails, continue without them
+        console.log('Could not fetch user emails');
+      }
+    }
+
+    // Enrich subscription data with user emails
+    const enrichedSubs = (subsRes.data ?? []).map((s: any) => ({
+      ...s,
+      user_email: userEmails[s.user_id] || null,
+      is_actually_active: s.is_active && (!s.valid_until || new Date(s.valid_until).getTime() > now),
+      days_remaining: s.valid_until ? Math.ceil((new Date(s.valid_until).getTime() - now) / (1000 * 60 * 60 * 24)) : null,
+    }));
 
     return NextResponse.json({
       ok: true,
@@ -54,14 +161,27 @@ export async function GET(req: Request) {
         subscriptionRevenue: Number(subscriptionMRR.toFixed(2)),
         orders: totalOrders,
         activeSubscribers,
+        activeWeekly,
         activeMonthly,
         activeYearly,
+        expiredSubscribers,
+        cancelledSubscribers,
+        autopayEnabled,
+        autopayDisabled,
+        totalSubscriptions: allSubs.length,
       },
       orders: ordersRes.data ?? [],
       order_items: items,
-      subscriptions: subsRes.data ?? [],
+      subscriptions: enrichedSubs,
+      pagination: {
+        total: totalCount,
+        limit,
+        offset,
+        hasMore: offset + limit < totalCount,
+      },
     });
   } catch (e: any) {
+    console.error('Analytics error:', e);
     return NextResponse.json({ ok: false, error: e?.message || 'Unknown error' }, { status: 500 });
   }
 }
