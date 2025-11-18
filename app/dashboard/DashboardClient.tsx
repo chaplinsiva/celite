@@ -66,7 +66,7 @@ function DashboardContent() {
       });
     }
     
-    // Load subscription
+    // Load subscription - use realtime subscription for auto-updates
     const { data: s } = await supabase
       .from('subscriptions')
       .select('is_active, plan, valid_until')
@@ -115,6 +115,22 @@ function DashboardContent() {
 
   useEffect(() => {
     reloadDashboardData();
+    
+    // Set up periodic refresh every 30 seconds to catch subscription renewals
+    const refreshInterval = setInterval(() => {
+      reloadDashboardData();
+    }, 30000); // 30 seconds
+    
+    // Also refresh when window regains focus (user comes back to tab)
+    const handleFocus = () => {
+      reloadDashboardData();
+    };
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      clearInterval(refreshInterval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [reloadDashboardData]);
 
 
