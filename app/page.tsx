@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Hero from '../components/Hero';
 import TemplateCarousel from '../components/TemplateCarousel';
+import WebsiteShowcaseCarousel from '../components/WebsiteShowcaseCarousel';
 import CategoriesSection from '../components/CategoriesSection';
 import TestimonialsSection from '../components/TestimonialsSection';
 import CTASection from '../components/CTASection';
@@ -19,6 +20,7 @@ export default function Home() {
     <main className="bg-black min-h-screen pt-16">
       <Hero />
       <TemplateCarousel />
+      <WebsiteShowcaseCarousel />
       <CategoriesSection />
       <TestimonialsSection />
       <CTASection />

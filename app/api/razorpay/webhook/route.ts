@@ -190,18 +190,30 @@ export async function POST(req: Request) {
             })
             .eq('id', targetUserId);
 
-          // Calculate valid_until based on plan
-          // For renewals: extend from current valid_until (or now if expired/invalid)
-          // For new subscriptions: start from now
+          // Determine valid_until based on Razorpay data when available
+          // Prefer Razorpay's cycle end timestamps to avoid double-extending
           const now = new Date();
-          let validUntil: Date;
-          
-          if (isRenewal && existingSub?.valid_until) {
-            // This is a renewal - extend from current valid_until
-            const currentValidUntil = new Date(existingSub.valid_until);
-            // Only extend from current date if it's in the future, otherwise start from now
-            const baseDate = currentValidUntil > now ? currentValidUntil : now;
-            validUntil = new Date(baseDate);
+          let validUntil: Date | null = null;
+          const cycleEndSeconds =
+            subscriptionEntity?.current_end ||
+            subscriptionEntity?.end_at ||
+            invoiceEntity?.period_end ||
+            invoiceEntity?.due_date ||
+            null;
+
+          if (cycleEndSeconds) {
+            validUntil = new Date(cycleEndSeconds * 1000);
+            console.log(`Using Razorpay cycle end for subscription: ${validUntil.toISOString()}`);
+          }
+
+          // Fallback to calculated duration if Razorpay data is unavailable
+          if (!validUntil) {
+            const baseDate = isRenewal && existingSub?.valid_until
+              ? new Date(existingSub.valid_until)
+              : now;
+            // If base date is in the past, start from now
+            const effectiveBase = baseDate > now ? baseDate : now;
+            validUntil = new Date(effectiveBase);
             
             if (finalPlan === 'yearly') {
               validUntil.setFullYear(validUntil.getFullYear() + 1);
@@ -211,18 +223,7 @@ export async function POST(req: Request) {
               validUntil.setMonth(validUntil.getMonth() + 1);
             }
             
-            console.log(`Renewal: Extending subscription from ${baseDate.toISOString()} to ${validUntil.toISOString()}`);
-          } else {
-            // New subscription - start from now
-            validUntil = new Date(now);
-            if (finalPlan === 'yearly') {
-              validUntil.setFullYear(validUntil.getFullYear() + 1);
-            } else if (finalPlan === 'weekly') {
-              validUntil.setDate(validUntil.getDate() + 7);
-            } else {
-              validUntil.setMonth(validUntil.getMonth() + 1);
-            }
-            console.log(`New subscription: Setting valid_until to ${validUntil.toISOString()}`);
+            console.log(`${isRenewal ? 'Renewal' : 'New subscription'} fallback: ${effectiveBase.toISOString()} → ${validUntil.toISOString()}`);
           }
 
           // Update subscription - but be very careful not to override cancelled subscriptions
