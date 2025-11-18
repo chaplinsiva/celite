@@ -238,6 +238,7 @@ export async function POST(req: Request) {
                   valid_until: validUntil.toISOString(),
                   razorpay_subscription_id: razorpaySubscriptionId || existingSub.razorpay_subscription_id,
                   autopay_enabled: true,
+                  updated_at: new Date().toISOString(), // Update timestamp when autopay renews
                 });
               
               if (targetUserId) {
@@ -262,6 +263,7 @@ export async function POST(req: Request) {
                 valid_until: validUntil.toISOString(),
                 razorpay_subscription_id: razorpaySubscriptionId,
                 autopay_enabled: true,
+                updated_at: new Date().toISOString(),
               });
             console.log(`Created new subscription for user ${targetUserId} with plan: ${finalPlan}`);
           }

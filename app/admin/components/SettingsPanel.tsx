@@ -9,6 +9,8 @@ export default function SettingsPanel() {
   const [message, setMessage] = useState<string | null>(null);
   const [fixingRenewals, setFixingRenewals] = useState(false);
   const [fixResults, setFixResults] = useState<any>(null);
+  const [fixingTimestamps, setFixingTimestamps] = useState(false);
+  const [fixTimestampResults, setFixTimestampResults] = useState<any>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -89,6 +91,45 @@ export default function SettingsPanel() {
     }
   };
 
+  const fixSubscriptionTimestamps = async () => {
+    if (!confirm('This will update the updated_at timestamp for all active subscriptions that have valid_until in the future. This fixes subscriptions where autopay payments were processed but the timestamp wasn\'t updated. Continue?')) {
+      return;
+    }
+    
+    try {
+      setFixingTimestamps(true);
+      setFixTimestampResults(null);
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setMessage('Session expired. Please refresh the page.');
+        return;
+      }
+      
+      const res = await fetch('/api/admin/fix-subscription-timestamps', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}` 
+        },
+      });
+      
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error || 'Fix failed');
+      }
+      
+      setFixTimestampResults(json);
+      setMessage(`Updated timestamps for ${json.updated} subscriptions. Skipped: ${json.skipped}`);
+      setTimeout(() => setMessage(null), 10000);
+    } catch (e: any) {
+      setMessage(e?.message || 'Error fixing timestamps');
+      setTimeout(() => setMessage(null), 5000);
+    } finally {
+      setFixingTimestamps(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Settings</h2>
@@ -164,6 +205,67 @@ export default function SettingsPanel() {
                         <span className="font-mono">{error.user_id.slice(0, 8)}...</span>: {error.error}
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <h3 className="text-sm font-semibold text-white">Fix Subscription Timestamps</h3>
+        <div className="mt-3 space-y-3">
+          <div>
+            <p className="text-xs text-zinc-400 mb-2">
+              Update the updated_at timestamp for active subscriptions that have valid_until in the future.
+              This fixes subscriptions where autopay payments were processed but the updated_at field wasn't updated.
+            </p>
+            <button 
+              onClick={fixSubscriptionTimestamps} 
+              disabled={fixingTimestamps}
+              className="rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-white hover:from-blue-600 hover:to-cyan-600 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {fixingTimestamps ? 'Processing...' : 'Fix Subscription Timestamps'}
+            </button>
+          </div>
+          
+          {fixTimestampResults && (
+            <div className="mt-4 p-3 rounded-lg bg-black/40 border border-white/10">
+              <p className="text-xs font-semibold text-white mb-2">Results:</p>
+              <div className="space-y-1 text-xs">
+                <p className="text-green-300">✓ Updated: {fixTimestampResults.updated}</p>
+                <p className="text-yellow-300">⊘ Skipped: {fixTimestampResults.skipped}</p>
+              </div>
+              
+              {fixTimestampResults.details?.updated && fixTimestampResults.details.updated.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-white/10">
+                  <p className="text-xs font-semibold text-white mb-2">Updated Subscriptions:</p>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {fixTimestampResults.details.updated.map((update: any, idx: number) => (
+                      <div key={idx} className="text-xs text-zinc-300">
+                        <span className="font-mono">{update.user_id.slice(0, 8)}...</span> - {update.plan} plan
+                        <span className="text-zinc-500 ml-2">
+                          ({new Date(update.old_updated_at).toLocaleDateString()} → {new Date(update.new_updated_at).toLocaleDateString()})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {fixTimestampResults.details?.skipped && fixTimestampResults.details.skipped.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-white/10">
+                  <p className="text-xs font-semibold text-yellow-300 mb-2">Skipped:</p>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {fixTimestampResults.details.skipped.slice(0, 10).map((skip: any, idx: number) => (
+                      <div key={idx} className="text-xs text-zinc-400">
+                        <span className="font-mono">{skip.user_id.slice(0, 8)}...</span>: {skip.reason}
+                      </div>
+                    ))}
+                    {fixTimestampResults.details.skipped.length > 10 && (
+                      <div className="text-xs text-zinc-500">... and {fixTimestampResults.details.skipped.length - 10} more</div>
+                    )}
                   </div>
                 </div>
               )}
