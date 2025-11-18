@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -39,7 +39,7 @@ export default function AnalyticsPanel() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -73,11 +73,11 @@ export default function AnalyticsPanel() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [planFilter, statusFilter, autopayFilter, currentPage, itemsPerPage]);
 
   useEffect(() => {
     loadData();
-  }, [planFilter, statusFilter, autopayFilter, currentPage]);
+  }, [loadData]);
 
   // Set up real-time subscription updates (separate effect)
   useEffect(() => {
@@ -106,7 +106,7 @@ export default function AnalyticsPanel() {
         supabase.removeChannel(subscriptionChannelRef.current);
       }
     };
-  }, []); // Only run once on mount
+  }, [loadData]); // Include loadData in dependencies
 
   const handleFilterChange = (filterType: string, value: string) => {
     if (filterType === 'plan') setPlanFilter(value);
