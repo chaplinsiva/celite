@@ -116,12 +116,44 @@ export async function GET(req: Request) {
     const autopayEnabled = activeList.filter((s: any) => s.autopay_enabled === true).length;
     const autopayDisabled = activeList.filter((s: any) => s.autopay_enabled === false).length;
 
-    // Calculate MRR based on actual subscription prices (you may need to adjust these)
-    // Weekly: ₹199, Monthly: ₹799, Yearly: ₹5499
-    const weeklyMRR = activeWeekly * (199 / 7 * 30); // Convert weekly to monthly
-    const monthlyMRR = activeMonthly * 799;
-    const yearlyMRR = activeYearly * (5499 / 12); // Convert yearly to monthly
+    // Get actual subscription prices from settings
+    let weeklyPrice = 199; // Default
+    let monthlyPrice = 799; // Default
+    let yearlyPrice = 5499; // Default
+    
+    try {
+      const { data: settings } = await admin.from('settings').select('key,value');
+      if (settings) {
+        const settingsMap: Record<string, string> = {};
+        settings.forEach((row: any) => { settingsMap[row.key] = row.value; });
+        
+        const weeklyPaise = Number(settingsMap.RAZORPAY_WEEKLY_AMOUNT || 19900);
+        const monthlyPaise = Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || 79900);
+        const yearlyPaise = Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || 549900);
+        
+        // Convert from paise to INR (if >= threshold, it's in paise)
+        weeklyPrice = weeklyPaise >= 1000 ? weeklyPaise / 100 : weeklyPaise;
+        monthlyPrice = monthlyPaise >= 10000 ? monthlyPaise / 100 : monthlyPaise;
+        yearlyPrice = yearlyPaise >= 100000 ? yearlyPaise / 100 : yearlyPaise;
+      }
+    } catch (e) {
+      console.log('Could not fetch prices from settings, using defaults');
+    }
+    
+    // Calculate MRR (Monthly Recurring Revenue)
+    // Weekly: convert to monthly equivalent (weekly price * 4.33 weeks per month)
+    const weeklyMRR = activeWeekly * weeklyPrice * 4.33;
+    // Monthly: direct monthly price
+    const monthlyMRR = activeMonthly * monthlyPrice;
+    // Yearly: convert to monthly (yearly price / 12)
+    const yearlyMRR = activeYearly * (yearlyPrice / 12);
     const subscriptionMRR = weeklyMRR + monthlyMRR + yearlyMRR;
+    
+    // Also calculate total revenue if all subscriptions were paid for their full period
+    const weeklyTotalRevenue = activeWeekly * weeklyPrice;
+    const monthlyTotalRevenue = activeMonthly * monthlyPrice;
+    const yearlyTotalRevenue = activeYearly * yearlyPrice;
+    const totalSubscriptionRevenue = weeklyTotalRevenue + monthlyTotalRevenue + yearlyTotalRevenue;
 
     // Calculate total order revenue (if orders exist)
     const totalOrderRevenue = (ordersRes.data ?? []).reduce((s: number, o: any) => s + Number(o.total || 0), 0);
@@ -159,6 +191,10 @@ export async function GET(req: Request) {
       totals: {
         orderRevenue: totalOrderRevenue,
         subscriptionRevenue: Number(subscriptionMRR.toFixed(2)),
+        totalSubscriptionRevenue: Number(totalSubscriptionRevenue.toFixed(2)),
+        weeklyPrice,
+        monthlyPrice,
+        yearlyPrice,
         orders: totalOrders,
         activeSubscribers,
         activeWeekly,

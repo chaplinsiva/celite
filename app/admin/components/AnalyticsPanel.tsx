@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 type Order = { id: string; user_id: string; created_at: string; total: number; status: string };
 type OrderItem = { order_id: string; name: string; quantity: number; price: number };
@@ -19,6 +20,8 @@ type SubRow = {
   days_remaining: number | null;
 };
 
+const COLORS = ['#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#ef4444'];
+
 export default function AnalyticsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +30,7 @@ export default function AnalyticsPanel() {
   const [subs, setSubs] = useState<SubRow[]>([]);
   const [totals, setTotals] = useState<any>(null);
   const [pagination, setPagination] = useState<any>(null);
+  const subscriptionChannelRef = useRef<any>(null);
   
   // Filters
   const [planFilter, setPlanFilter] = useState<string>('');
@@ -75,6 +79,35 @@ export default function AnalyticsPanel() {
     loadData();
   }, [planFilter, statusFilter, autopayFilter, currentPage]);
 
+  // Set up real-time subscription updates (separate effect)
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    const channel = supabase
+      .channel('subscriptions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'subscriptions',
+        },
+        (payload) => {
+          console.log('Subscription updated:', payload);
+          // Reload data when subscription changes
+          loadData();
+        }
+      )
+      .subscribe();
+    
+    subscriptionChannelRef.current = channel;
+    
+    return () => {
+      if (subscriptionChannelRef.current) {
+        supabase.removeChannel(subscriptionChannelRef.current);
+      }
+    };
+  }, []); // Only run once on mount
+
   const handleFilterChange = (filterType: string, value: string) => {
     if (filterType === 'plan') setPlanFilter(value);
     else if (filterType === 'status') setStatusFilter(value);
@@ -93,6 +126,38 @@ export default function AnalyticsPanel() {
   if (error && !totals) return <div className="text-sm text-red-300">{error}</div>;
 
   const hasActiveFilters = planFilter || statusFilter || autopayFilter;
+
+  // Prepare chart data
+  const planDistribution = [
+    { name: 'Weekly', value: totals?.activeWeekly || 0, revenue: (totals?.activeWeekly || 0) * (totals?.weeklyPrice || 199) },
+    { name: 'Monthly', value: totals?.activeMonthly || 0, revenue: (totals?.activeMonthly || 0) * (totals?.monthlyPrice || 799) },
+    { name: 'Yearly', value: totals?.activeYearly || 0, revenue: (totals?.activeYearly || 0) * (totals?.yearlyPrice || 5499) },
+  ].filter(item => item.value > 0);
+
+  const statusDistribution = [
+    { name: 'Active', value: totals?.activeSubscribers || 0, color: '#10b981' },
+    { name: 'Expired', value: totals?.expiredSubscribers || 0, color: '#f59e0b' },
+    { name: 'Cancelled', value: totals?.cancelledSubscribers || 0, color: '#ef4444' },
+  ].filter(item => item.value > 0);
+
+  const autopayDistribution = [
+    { name: 'Autopay Enabled', value: totals?.autopayEnabled || 0, color: '#10b981' },
+    { name: 'Manual Renewal', value: totals?.autopayDisabled || 0, color: '#6b7280' },
+  ].filter(item => item.value > 0);
+
+  // Group subscriptions by creation date for trend chart
+  const subscriptionTrends = subs.reduce((acc: any, sub: SubRow) => {
+    const date = new Date(sub.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    if (!acc[date]) {
+      acc[date] = { date, count: 0, active: 0 };
+    }
+    acc[date].count++;
+    if (sub.is_actually_active) acc[date].active++;
+    return acc;
+  }, {});
+  const trendData = Object.values(subscriptionTrends).sort((a: any, b: any) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
 
   return (
     <div className="space-y-6">
@@ -132,6 +197,113 @@ export default function AnalyticsPanel() {
           <div className="text-xs text-zinc-400 mt-1">One-time Orders</div>
           <div className="text-xs text-zinc-500 mt-2">{totals?.orders || 0} orders</div>
         </div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Plan Distribution Pie Chart */}
+        {planDistribution.length > 0 && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <h3 className="text-sm font-semibold text-white mb-4">Subscription Plans Distribution</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={planDistribution}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {planDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="mt-4 space-y-1 text-xs text-zinc-400">
+              {planDistribution.map((item, idx) => (
+                <div key={idx} className="flex justify-between">
+                  <span>{item.name}:</span>
+                  <span className="text-white">{item.value} subscribers (₹{item.revenue.toFixed(2)})</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Status Distribution Bar Chart */}
+        {statusDistribution.length > 0 && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <h3 className="text-sm font-semibold text-white mb-4">Subscription Status</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={statusDistribution}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                <XAxis dataKey="name" stroke="#9ca3af" />
+                <YAxis stroke="#9ca3af" />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                  labelStyle={{ color: '#fff' }}
+                />
+                <Bar dataKey="value" fill="#8b5cf6" radius={[8, 8, 0, 0]}>
+                  {statusDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Autopay Distribution */}
+        {autopayDistribution.length > 0 && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <h3 className="text-sm font-semibold text-white mb-4">Autopay vs Manual Renewal</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={autopayDistribution}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {autopayDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Subscription Trends */}
+        {trendData.length > 0 && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <h3 className="text-sm font-semibold text-white mb-4">Subscription Trends</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                <XAxis dataKey="date" stroke="#9ca3af" />
+                <YAxis stroke="#9ca3af" />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                  labelStyle={{ color: '#fff' }}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="count" stroke="#8b5cf6" strokeWidth={2} name="Total Created" />
+                <Line type="monotone" dataKey="active" stroke="#10b981" strokeWidth={2} name="Active" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       {/* Filters */}
@@ -188,6 +360,7 @@ export default function AnalyticsPanel() {
           
           <div className="ml-auto text-xs text-zinc-400">
             Showing {subs.length} of {pagination?.total || 0} subscriptions
+            {totals && <span className="ml-2 text-green-300">• Real-time updates enabled</span>}
           </div>
         </div>
       </div>
