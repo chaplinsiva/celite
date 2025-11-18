@@ -139,7 +139,7 @@ export default function WebsiteShowcaseCarousel() {
                 <h3 className="text-3xl sm:text-4xl font-semibold text-white leading-tight">{featuredWebsite.name}</h3>
                 <p className="text-base text-zinc-300 leading-relaxed">
                   {featuredWebsite.subtitle ||
-                    featuredWebsite.description ||
+                    featuredWebsite.desc ||
                     'Responsive website experience with premium interactions, scroll choreography, and immersive storytelling sections tailored for modern digital brands.'}
                 </p>
                 <div className="flex flex-wrap gap-2">
