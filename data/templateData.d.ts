@@ -13,6 +13,8 @@ export type Template = {
   isFeatured?: boolean;
   feature?: boolean;
   is_featured?: boolean;
+  meta_title?: string | null;
+  meta_description?: string | null;
 };
 
 export declare const templates: Template[];

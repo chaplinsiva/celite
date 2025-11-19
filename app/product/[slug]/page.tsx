@@ -20,15 +20,16 @@ const reviews = [
   },
 ];
 
-interface PageParams { params: { slug: string } }
+interface PageParams {
+  params: { slug: string };
+}
 
 // SEO
-export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const params = await props.params;
+export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags')
+    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,meta_title,meta_description')
     .eq('slug', params.slug)
     .maybeSingle();
   const prod = row ? ({
@@ -64,12 +65,20 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
     ? (metaImage.startsWith('http') ? metaImage : `${baseUrl}${metaImage}`)
     : `${baseUrl}/Logo.png`;
 
+  const dbTitle = row?.meta_title?.trim();
+  const dbDescription = row?.meta_description?.trim();
+
+  const defaultTitle = `${prod.name} • Celite AE Template`;
+  const finalTitle = dbTitle && dbTitle.length > 0 ? dbTitle : defaultTitle;
+  const fallbackDescription = prod.desc ? prod.desc.slice(0, 155) : 'Download high-quality After Effects templates from Celite.';
+  const finalDescription = dbDescription && dbDescription.length > 0 ? dbDescription : fallbackDescription;
+
   return {
-    title: `${prod.name} • Celite AE Template`,
-    description: prod.desc.slice(0, 155),
+    title: finalTitle,
+    description: finalDescription,
     openGraph: {
-      title: `${prod.name} • Celite AE Template`,
-      description: prod.desc.slice(0, 155),
+      title: finalTitle,
+      description: finalDescription,
       images: [
         {
           url: finalImage,
@@ -83,8 +92,8 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${prod.name} • Celite AE Template`,
-      description: prod.desc.slice(0, 155),
+      title: finalTitle,
+      description: finalDescription,
       images: [finalImage],
     },
   };
@@ -100,12 +109,11 @@ export async function generateStaticParams() {
   return [];
 }
 
-export default async function ProductPage(props: { params: Promise<{ slug: string }> }) {
-  const params = await props.params;
+export default async function ProductPage({ params }: PageParams) {
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,source_path')
+    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,source_path,meta_title,meta_description')
     .eq('slug', params.slug)
     .maybeSingle();
   if (!row) return notFound();
@@ -122,6 +130,8 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
     plugins: row.plugins ?? [],
     tags: row.tags ?? [],
     isFeatured: false,
+    meta_title: row.meta_title ?? null,
+    meta_description: row.meta_description ?? null,
     source_path: row.source_path ?? null,
   };
   const { data: relatedRows } = await supabase

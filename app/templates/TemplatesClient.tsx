@@ -30,6 +30,8 @@ type Template = {
   feature?: boolean | null;
   is_featured?: boolean | null;
   isFeatured?: boolean | null;
+  meta_title?: string | null;
+  meta_description?: string | null;
 };
 
 type Category = {
