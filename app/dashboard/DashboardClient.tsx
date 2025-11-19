@@ -391,9 +391,6 @@ function DashboardContent() {
             )}
             {!isActuallyActive && !isPaused && !hasExpiredPlan && (
               <div className="mt-3 flex flex-wrap gap-2 justify-end">
-                <Link href="/checkout?subscription=weekly" className="inline-flex items-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:from-pink-600 hover:to-purple-600">
-                  Special (₹199)
-                </Link>
                 <Link href="/pricing" className="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-zinc-200">
                   Monthly (₹799)
                 </Link>
