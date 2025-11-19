@@ -188,13 +188,11 @@ export default function Hero() {
                   <div className="relative rounded-2xl border border-white/10 bg-black/60 p-4 hover:border-white/30 transition-colors h-full flex flex-col gap-3">
                     <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-white/10">
                       {tpl.video ? (
-                        <YouTubeVideoPlayer
-                          videoUrl={tpl.video}
-                          title={tpl.name}
-                          className="absolute inset-0 w-full h-full"
-                          autoplay
-                          muted
-                        />
+              <YouTubeVideoPlayer
+                videoUrl={tpl.video}
+                title={tpl.name}
+                className="absolute inset-0 w-full h-full"
+              />
                       ) : tpl.img ? (
                         <Image src={tpl.img} alt={tpl.name} fill className="object-cover" />
                       ) : (
