@@ -20,12 +20,13 @@ const reviews = [
   },
 ];
 
-interface PageParams {
-  params: { slug: string };
+interface PageProps {
+  params: Promise<{ slug: string }>;
 }
 
 // SEO
-export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const params = await props.params;
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
@@ -109,7 +110,8 @@ export async function generateStaticParams() {
   return [];
 }
 
-export default async function ProductPage({ params }: PageParams) {
+export default async function ProductPage(props: PageProps) {
+  const params = await props.params;
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
