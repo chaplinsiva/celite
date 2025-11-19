@@ -228,7 +228,7 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
 
     // Category and subcategory filter
     if (selectedCategory === 'featured') {
-      filtered = filtered.filter((t) => t.feature === true);
+      filtered = filtered.filter((t) => t.feature === true || t.is_featured === true || (t as any).isFeatured === true);
     } else if (selectedCategory !== 'all') {
       if (selectedSubcategory !== 'all') {
         filtered = filtered.filter((t) => t.subcategory_id === selectedSubcategory);

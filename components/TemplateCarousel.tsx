@@ -82,6 +82,7 @@ export default function TemplateCarousel() {
       const mapped: FeaturedTemplate[] = (data ?? []).map((r: any) => {
         const category = r.categories ? (Array.isArray(r.categories) ? r.categories[0] : r.categories) : null;
         const subcategory = r.subcategories ? (Array.isArray(r.subcategories) ? r.subcategories[0] : r.subcategories) : null;
+        const isFeaturedFlag = Boolean(r.feature ?? r.is_featured ?? r.isFeatured);
         
         const template: FeaturedTemplate = {
           slug: r.slug,
@@ -95,7 +96,9 @@ export default function TemplateCarousel() {
           software: r.software ?? [],
           plugins: r.plugins ?? [],
           tags: r.tags ?? [],
-          feature: true,
+          feature: isFeaturedFlag,
+          isFeatured: isFeaturedFlag,
+          is_featured: isFeaturedFlag,
           category: category ? { id: category.id, name: category.name, slug: category.slug } : null,
           subcategory: subcategory ? { id: subcategory.id, name: subcategory.name, slug: subcategory.slug } : null,
         };

@@ -11,6 +11,8 @@ export type Template = {
   plugins: string[];
   tags?: string[];
   isFeatured?: boolean;
+  feature?: boolean;
+  is_featured?: boolean;
 };
 
 export declare const templates: Template[];
