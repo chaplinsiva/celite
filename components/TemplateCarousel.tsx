@@ -213,13 +213,24 @@ export default function TemplateCarousel() {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         {/* Section Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 space-y-4">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-3">
             Premium <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">After Effects Templates</span>
           </h2>
           <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
             Discover our handpicked collection of professional templates designed to elevate your creative projects
           </p>
+          <div className="flex justify-center">
+            <Link
+              href="/templates?filter=featured"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/20 text-white text-sm font-semibold hover:bg-white/10 transition-colors"
+            >
+              View featured templates
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" className="text-white/70">
+                <path d="M7.5 5l4.5 5-4.5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
+          </div>
         </div>
 
         <div className="relative">
