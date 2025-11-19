@@ -28,6 +28,8 @@ type Template = {
   category_id?: string | null;
   subcategory_id?: string | null;
   feature?: boolean | null;
+  is_featured?: boolean | null;
+  isFeatured?: boolean | null;
 };
 
 type Category = {
