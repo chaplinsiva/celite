@@ -19,7 +19,7 @@ export default async function TemplatesPage() {
   // Fetch all templates for initial load with category_id and subcategory_id
   const { data: templates, error } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,created_at,category_id,subcategory_id')
+    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,created_at,category_id,subcategory_id,feature')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -30,7 +30,8 @@ export default async function TemplatesPage() {
   const mappedTemplates = (templates || []).map(t => ({
     ...t,
     price: 0,
-    is_featured: false,
+    is_featured: Boolean(t.feature),
+    feature: Boolean(t.feature),
   }));
 
   return (

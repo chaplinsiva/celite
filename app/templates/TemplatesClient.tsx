@@ -27,6 +27,7 @@ type Template = {
   created_at?: string | null;
   category_id?: string | null;
   subcategory_id?: string | null;
+  feature?: boolean | null;
 };
 
 type Category = {
@@ -48,7 +49,8 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
   const { user } = useAppContext();
   const { openLoginModal } = useLoginModal();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const initialFilter = searchParams.get('filter') === 'featured' ? 'featured' : 'all';
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialFilter);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('newest');
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -80,7 +82,7 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
       if (categoriesError) {
         console.error('Error fetching categories:', categoriesError);
       } else {
-        setCategories(categoriesData || []);
+        setCategories([{ id: 'featured', name: 'Featured Templates', slug: 'featured' }, ...(categoriesData || [])]);
       }
       
       // Fetch subcategories
@@ -130,6 +132,12 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
       }
     }
   }, [selectedCategory, subcategories]);
+
+  useEffect(() => {
+    if (selectedCategory === 'featured' && selectedSubcategory !== 'all') {
+      setSelectedSubcategory('all');
+    }
+  }, [selectedCategory, selectedSubcategory]);
 
   // Get unique software
   const softwareList = useMemo(() => {
@@ -219,17 +227,13 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
     }
 
     // Category and subcategory filter
-    if (selectedCategory !== 'all') {
+    if (selectedCategory === 'featured') {
+      filtered = filtered.filter((t) => t.feature === true);
+    } else if (selectedCategory !== 'all') {
       if (selectedSubcategory !== 'all') {
-        // Filter by subcategory
-        filtered = filtered.filter(t => 
-          t.subcategory_id === selectedSubcategory
-        );
+        filtered = filtered.filter((t) => t.subcategory_id === selectedSubcategory);
       } else {
-        // Filter by category (all subcategories in that category)
-        filtered = filtered.filter(t => 
-          t.category_id === selectedCategory
-        );
+        filtered = filtered.filter((t) => t.category_id === selectedCategory);
       }
     }
 

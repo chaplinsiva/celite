@@ -44,17 +44,33 @@ export default function TemplateCarousel() {
         setIsSubscribed(false);
       }
 
-      // Load latest templates with category/subcategory
-      const { data, error: templateError } = await supabase
+      // Load featured templates with category/subcategory
+      let { data, error: templateError } = await supabase
         .from('templates')
         .select(`
-          slug,name,subtitle,description,img,video,features,software,plugins,tags,created_at,
+          slug,name,subtitle,description,img,video,features,software,plugins,tags,created_at,feature,
           category_id,subcategory_id,
           categories(id,name,slug),
           subcategories(id,name,slug)
         `)
-        .order('created_at', { ascending: false })
-        .limit(12); // show latest 12
+        .eq('feature', true)
+        .order('updated_at', { ascending: false });
+      
+      if ((!data || data.length === 0) && !templateError) {
+        const fallback = await supabase
+          .from('templates')
+          .select(`
+            slug,name,subtitle,description,img,video,features,software,plugins,tags,created_at,feature,
+            category_id,subcategory_id,
+            categories(id,name,slug),
+            subcategories(id,name,slug)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(12);
+        if (!fallback.error && fallback.data) {
+          data = fallback.data;
+        }
+      }
       
       // Log for debugging: show how many templates were found
       if (templateError) {
@@ -63,7 +79,6 @@ export default function TemplateCarousel() {
         console.log(`[TemplateCarousel] Loaded ${data?.length || 0} templates`);
       }
       
-      const now = new Date();
       const mapped: FeaturedTemplate[] = (data ?? []).map((r: any) => {
         const category = r.categories ? (Array.isArray(r.categories) ? r.categories[0] : r.categories) : null;
         const subcategory = r.subcategories ? (Array.isArray(r.subcategories) ? r.subcategories[0] : r.subcategories) : null;
@@ -80,7 +95,7 @@ export default function TemplateCarousel() {
           software: r.software ?? [],
           plugins: r.plugins ?? [],
           tags: r.tags ?? [],
-          isFeatured: false,
+          feature: true,
           category: category ? { id: category.id, name: category.name, slug: category.slug } : null,
           subcategory: subcategory ? { id: subcategory.id, name: subcategory.name, slug: subcategory.slug } : null,
         };
