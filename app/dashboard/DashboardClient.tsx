@@ -32,6 +32,8 @@ function DashboardContent() {
   const router = useRouter();
   const [orders, setOrders] = useState<Array<{ id: string; date: string; status: string; amount: string; item: string }>>([]);
   const [sub, setSub] = useState<{ is_active: boolean; plan: string | null; valid_until: string | null } | null>(null);
+  const [monthlyPrice, setMonthlyPrice] = useState<number | null>(null);
+  const [yearlyPrice, setYearlyPrice] = useState<number | null>(null);
   const [purchases, setPurchases] = useState<Array<{ slug: string; name: string; price: number; img: string }>>([]);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -73,6 +75,24 @@ function DashboardContent() {
       .eq('user_id', (user as any).id)
       .maybeSingle();
     if (s) setSub({ is_active: !!s.is_active, plan: s.plan ?? null, valid_until: s.valid_until ?? null });
+
+    // Load pricing from settings
+    const { data: settings } = await supabase.from('settings').select('key,value');
+    if (settings) {
+      const map: Record<string, string> = {};
+      settings.forEach((row: any) => {
+        map[row.key] = row.value;
+      });
+      const parsePrice = (value?: string, threshold = 10000) => {
+        if (!value) return null;
+        let amount = Number(value);
+        if (Number.isNaN(amount) || amount <= 0) return null;
+        if (amount >= threshold) amount = amount / 100;
+        return Math.round(amount);
+      };
+      setMonthlyPrice(parsePrice(map.RAZORPAY_MONTHLY_AMOUNT, 10000));
+      setYearlyPrice(parsePrice(map.RAZORPAY_YEARLY_AMOUNT, 100000));
+    }
     
     // Load orders
     const { data: ords } = await supabase
@@ -281,6 +301,8 @@ function DashboardContent() {
     : hasExpiredPlan 
     ? `${sub?.plan === 'weekly' ? 'Weekly' : sub?.plan === 'yearly' ? 'Yearly' : 'Monthly'} Plan Expired`
     : 'Free';
+  const displayMonthlyPrice = formatPrice(monthlyPrice ?? 799);
+  const displayYearlyPrice = formatPrice(yearlyPrice ?? 5499);
 
   if (!user) {
     return (
@@ -392,10 +414,10 @@ function DashboardContent() {
             {!isActuallyActive && !isPaused && !hasExpiredPlan && (
               <div className="mt-3 flex flex-wrap gap-2 justify-end">
                 <Link href="/pricing" className="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-zinc-200">
-                  Monthly (₹799)
+                  Monthly ({displayMonthlyPrice})
                 </Link>
                 <Link href="/pricing" className="inline-flex items-center rounded-full border border-white/30 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/10">
-                  Yearly (₹5,499)
+                  Yearly ({displayYearlyPrice})
                 </Link>
               </div>
             )}
