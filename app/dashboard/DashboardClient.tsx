@@ -136,28 +136,28 @@ function DashboardContent() {
     // Load recent subscription downloads (limit 5)
     const { data: downloadRows } = await supabase
       .from('downloads')
-      .select('id, template_id, downloaded_at')
+      .select('id, template_slug, downloaded_at')
       .eq('user_id', (user as any).id)
       .order('downloaded_at', { ascending: false })
       .limit(5);
     if (downloadRows && downloadRows.length > 0) {
-      const templateIdsForDownloads = Array.from(new Set(downloadRows.map((dl: any) => dl.template_id).filter(Boolean)));
+      const templateSlugsForDownloads = Array.from(new Set(downloadRows.map((dl: any) => dl.template_slug).filter(Boolean)));
       let downloadTemplateMap: Record<string, any> = {};
-      if (templateIdsForDownloads.length > 0) {
+      if (templateSlugsForDownloads.length > 0) {
         const { data: downloadTemplates } = await supabase
           .from('templates')
-          .select('id, name, slug, img')
-          .in('id', templateIdsForDownloads);
+          .select('slug, name, img')
+          .in('slug', templateSlugsForDownloads);
         (downloadTemplates ?? []).forEach((tpl: any) => {
-          downloadTemplateMap[tpl.id] = tpl;
+          downloadTemplateMap[tpl.slug] = tpl;
         });
       }
       setRecentDownloads(downloadRows.map((dl: any) => ({
         id: dl.id,
         downloaded_at: dl.downloaded_at,
-        name: downloadTemplateMap[dl.template_id]?.name || 'Template removed',
-        slug: downloadTemplateMap[dl.template_id]?.slug || null,
-        img: downloadTemplateMap[dl.template_id]?.img || null,
+        name: downloadTemplateMap[dl.template_slug]?.name || 'Template removed',
+        slug: downloadTemplateMap[dl.template_slug]?.slug || dl.template_slug || null,
+        img: downloadTemplateMap[dl.template_slug]?.img || null,
       })));
     } else {
       setRecentDownloads([]);

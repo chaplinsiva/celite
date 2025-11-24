@@ -23,18 +23,16 @@ type SubRow = {
 type DownloadRow = {
   id: string;
   user_id: string;
-  template_id: string;
+  template_slug: string | null;
   downloaded_at: string;
   user_email?: string | null;
   template_name?: string | null;
-  template_slug?: string | null;
 };
 
 type TopDownload = {
-  template_id: string;
+  template_slug: string | null;
   count: number;
   template_name?: string | null;
-  template_slug?: string | null;
 };
 
 const COLORS = ['#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#ef4444'];
@@ -383,7 +381,7 @@ export default function AnalyticsPanel() {
             ) : (
               <ul className="space-y-3">
                 {topDownloads.map((tpl, idx) => (
-                  <li key={tpl.template_id} className="flex items-center justify-between">
+                  <li key={tpl.template_slug || idx} className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold text-white">
                         #{idx + 1} {tpl.template_name || 'Unknown Template'}

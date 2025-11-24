@@ -21,7 +21,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     // 1) Look up template info (price and source_path)
     const { data: tpl } = await admin
       .from('templates')
-      .select('id, price, source_path')
+      .select('slug, price, source_path')
       .eq('slug', slug)
       .maybeSingle();
     if (!tpl) {
@@ -79,11 +79,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       }
     }
 
-    if (subscriptionId && tpl?.id) {
+    if (subscriptionId && tpl?.slug) {
       try {
         await admin.from('downloads').insert({
           user_id: userId,
-          template_id: tpl.id,
+          template_slug: tpl.slug,
           subscription_id: subscriptionId,
           downloaded_at: new Date().toISOString(),
         });

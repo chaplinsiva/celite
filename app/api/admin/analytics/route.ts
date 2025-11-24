@@ -74,7 +74,7 @@ export async function GET(req: Request) {
 
       const recentDownloadsRes = await admin
         .from('downloads')
-        .select('id,user_id,template_id,subscription_id,downloaded_at')
+        .select('id,user_id,template_slug,subscription_id,downloaded_at')
         .order('downloaded_at', { ascending: false })
         .limit(20);
       if (!recentDownloadsRes.error && recentDownloadsRes.data) {
@@ -83,18 +83,18 @@ export async function GET(req: Request) {
 
       const topTemplateRows = await admin
         .from('downloads')
-        .select('template_id')
-        .not('template_id', 'is', null)
+        .select('template_slug')
+        .not('template_slug', 'is', null)
         .limit(1000);
       if (!topTemplateRows.error && topTemplateRows.data) {
         const frequencyMap: Record<string, number> = {};
         topTemplateRows.data.forEach((row: any) => {
-          const tplId = row.template_id;
-          if (!tplId) return;
-          frequencyMap[tplId] = (frequencyMap[tplId] || 0) + 1;
+          const tplSlug = row.template_slug;
+          if (!tplSlug) return;
+          frequencyMap[tplSlug] = (frequencyMap[tplSlug] || 0) + 1;
         });
         topDownloadedTemplates = Object.entries(frequencyMap)
-          .map(([template_id, count]) => ({ template_id, count }))
+          .map(([template_slug, count]) => ({ template_slug, count }))
           .sort((a, b) => b.count - a.count)
           .slice(0, 5);
       }
@@ -102,21 +102,21 @@ export async function GET(req: Request) {
       console.error('Download analytics error:', downloadErr);
     }
 
-    const templateIds = Array.from(
+    const templateSlugs = Array.from(
       new Set([
-        ...recentDownloads.map((d: any) => d.template_id).filter(Boolean),
-        ...topDownloadedTemplates.map((t: any) => t.template_id).filter(Boolean),
+        ...recentDownloads.map((d: any) => d.template_slug).filter(Boolean),
+        ...topDownloadedTemplates.map((t: any) => t.template_slug).filter(Boolean),
       ])
     );
     const templateMap: Record<string, any> = {};
-    if (templateIds.length > 0) {
+    if (templateSlugs.length > 0) {
       try {
         const { data: templateRows } = await admin
           .from('templates')
-          .select('id,name,slug,img')
-          .in('id', templateIds);
+          .select('slug,name,img')
+          .in('slug', templateSlugs);
         (templateRows ?? []).forEach((tpl: any) => {
-          templateMap[tpl.id] = tpl;
+          templateMap[tpl.slug] = tpl;
         });
       } catch (tplErr) {
         console.error('Template lookup failed for downloads:', tplErr);
@@ -270,15 +270,14 @@ export async function GET(req: Request) {
     const enrichedRecentDownloads = recentDownloads.map((dl: any) => ({
       ...dl,
       user_email: userEmails[dl.user_id] || null,
-      template_name: templateMap[dl.template_id]?.name || null,
-      template_slug: templateMap[dl.template_id]?.slug || null,
+      template_name: templateMap[dl.template_slug]?.name || null,
+      template_slug: dl.template_slug,
     }));
 
     const enrichedTopDownloads = topDownloadedTemplates.map((row: any) => ({
-      template_id: row.template_id,
+      template_slug: row.template_slug,
       count: Number((row as any).count) || 0,
-      template_name: templateMap[row.template_id]?.name || null,
-      template_slug: templateMap[row.template_id]?.slug || null,
+      template_name: templateMap[row.template_slug]?.name || null,
     }));
 
     return NextResponse.json({
