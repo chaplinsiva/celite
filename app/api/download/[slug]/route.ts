@@ -13,6 +13,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     const bearer = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length) : null;
     const { searchParams } = new URL(req.url);
     const token = bearer || searchParams.get('token') || null;
+    const sourceOverride = searchParams.get('source')
+      ? decodeURIComponent(searchParams.get('source') as string)
+      : null;
     if (!token) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
     const { data: userRes, error: userErr } = await admin.auth.getUser(token);
@@ -25,12 +28,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       .select('slug, price, source_path')
       .eq('slug', slug)
       .maybeSingle();
-    if (!tpl) {
+    if (!tpl && !sourceOverride) {
       return NextResponse.json({ ok: false, error: 'Template not found' }, { status: 404 });
     }
     
-    const templatePrice = tpl.price as number | undefined;
-    const sourcePath = tpl.source_path as string | undefined;
+    const templatePrice = tpl?.price as number | undefined;
+    const sourcePath = (tpl?.source_path as string | undefined) ?? sourceOverride ?? undefined;
     if (!sourcePath) {
       return NextResponse.json({ ok: false, error: 'No source file registered for this template' }, { status: 404 });
     }

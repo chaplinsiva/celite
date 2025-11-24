@@ -142,7 +142,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         return;
       }
 
-      const downloadUrl = `/api/download/${product.slug}?token=${encodeURIComponent(session.access_token)}`;
+      const sourceParam = product.source_path
+        ? `&source=${encodeURIComponent(product.source_path)}`
+        : '';
+      const downloadUrl = `/api/download/${product.slug}?token=${encodeURIComponent(session.access_token)}${sourceParam}`;
       const popup = window.open(downloadUrl, '_blank');
       if (!popup) {
         window.location.href = downloadUrl;
