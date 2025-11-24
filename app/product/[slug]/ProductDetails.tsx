@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Share2 } from 'lucide-react';
 import { useAppContext, TemplateCartItem } from '../../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { formatPrice } from '../../../lib/currency';
@@ -38,6 +39,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   const [purchased, setPurchased] = useState<boolean>(false);
   const [purchaseStatus, setPurchaseStatus] = useState<string | null>(null);
   const [paying, setPaying] = useState<boolean>(false);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   // Track view_item event when product page loads
   useEffect(() => {
     trackViewItem({
@@ -218,6 +220,32 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
     router.push(`/checkout?product=${product.slug}`);
   };
 
+  const handleShare = async () => {
+    try {
+      const shareUrl =
+        typeof window !== 'undefined'
+          ? window.location.href
+          : `${process.env.NEXT_PUBLIC_BASE_URL || 'https://celite.in'}/product/${product.slug}`;
+      if (navigator.share) {
+        await navigator.share({
+          title: product.name,
+          text: product.subtitle ?? 'Check out this After Effects template on Celite',
+          url: shareUrl,
+        });
+        setShareFeedback('Thanks for sharing!');
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareFeedback('Link copied to clipboard');
+      } else {
+        setShareFeedback('Sharing not supported in this browser');
+      }
+    } catch (error) {
+      setShareFeedback('Unable to share this template right now');
+    } finally {
+      setTimeout(() => setShareFeedback(null), 2500);
+    }
+  };
+
   // Show payment failed UI if purchase status is failed (only if we have a purchase but status is failed)
   // Note: We only show this if there's actually a purchase attempt that failed
   // If purchaseStatus is null, we don't show the failed UI
@@ -257,8 +285,21 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         </div>
         {/* Product Info */}
         <div className="flex-[1.5] flex flex-col">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{product.name}</h1>
-          <h2 className="text-lg text-zinc-300 mb-4 font-medium">{product.subtitle}</h2>
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">{product.name}</h1>
+              <h2 className="text-lg text-zinc-300 font-medium">{product.subtitle}</h2>
+            </div>
+            <button
+              type="button"
+              onClick={handleShare}
+              className="inline-flex items-center justify-center rounded-full border border-white/15 text-white/70 hover:text-white hover:border-white/40 p-2 transition-colors"
+              aria-label="Share this template"
+            >
+              <Share2 className="h-5 w-5" />
+            </button>
+          </div>
+
           <div className="text-zinc-200 leading-relaxed mb-5">{product.desc}</div>
           <ul className="list-disc pl-6 text-zinc-400 mb-4 text-sm">
             {product.features.map((f, idx) => <li key={idx}>{f}</li>)}
@@ -323,7 +364,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               </div>
             </div>
           )}
-          {feedback && <p className="text-sm text-blue-300">{feedback}</p>}
+          <div className="space-y-1">
+            {feedback && <p className="text-sm text-blue-300">{feedback}</p>}
+            {shareFeedback && <p className="text-xs text-emerald-300">{shareFeedback}</p>}
+          </div>
           </div>
         </div>
         </div>
