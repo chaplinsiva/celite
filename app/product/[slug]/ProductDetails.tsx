@@ -141,21 +141,40 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         setDownloading(false);
         return;
       }
-
-      const sourceParam = product.source_path
-        ? `&source=${encodeURIComponent(product.source_path)}`
-        : '';
-      const downloadUrl = `/api/download/${product.slug}?token=${encodeURIComponent(session.access_token)}${sourceParam}`;
-      const popup = window.open(downloadUrl, '_blank');
-      if (!popup) {
-        window.location.href = downloadUrl;
+      
+      // Check subscription status directly
+      const userId = session.user.id;
+      const { data: subData } = await supabase
+        .from('subscriptions')
+        .select('is_active, valid_until')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      const isSubscribed = !!subData?.is_active && (!subData.valid_until || new Date(subData.valid_until).getTime() > Date.now());
+      
+      // If user is subscribed and source_path is available, redirect directly
+      if (isSubscribed && product.source_path) {
+        window.open(product.source_path, '_blank');
+        setDownloading(false);
+        return;
       }
-      setFeedback('Download opened in a new tab.');
-    } catch (e) {
-      setFeedback('Something went wrong while downloading.');
-    } finally {
+      
+      // If not subscribed, redirect to pricing
+      if (!isSubscribed) {
+        router.push('/pricing');
+        setFeedback('Please subscribe to download this template.');
+        setDownloading(false);
+        return;
+      }
+      
+      // If no source_path available
+      setFeedback('Download link not available for this template.');
       setDownloading(false);
-      setTimeout(() => setFeedback(null), 4000);
+    } catch (e) {
+      setFeedback('Something went wrong while opening download link.');
+      setDownloading(false);
+    } finally {
+      setTimeout(() => setFeedback(null), 3000);
     }
   };
 
