@@ -81,14 +81,22 @@ export async function GET(req: Request) {
         recentDownloads = recentDownloadsRes.data;
       }
 
-      const topTemplatesRes = await admin
+      const topTemplateRows = await admin
         .from('downloads')
-        .select('template_id, count:template_id', { head: false })
-        .group('template_id')
-        .order('count', { ascending: false })
-        .limit(5);
-      if (!topTemplatesRes.error && topTemplatesRes.data) {
-        topDownloadedTemplates = topTemplatesRes.data;
+        .select('template_id')
+        .not('template_id', 'is', null)
+        .limit(1000);
+      if (!topTemplateRows.error && topTemplateRows.data) {
+        const frequencyMap: Record<string, number> = {};
+        topTemplateRows.data.forEach((row: any) => {
+          const tplId = row.template_id;
+          if (!tplId) return;
+          frequencyMap[tplId] = (frequencyMap[tplId] || 0) + 1;
+        });
+        topDownloadedTemplates = Object.entries(frequencyMap)
+          .map(([template_id, count]) => ({ template_id, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5);
       }
     } catch (downloadErr) {
       console.error('Download analytics error:', downloadErr);
