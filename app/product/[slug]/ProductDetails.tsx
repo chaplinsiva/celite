@@ -142,43 +142,12 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         return;
       }
 
-      const res = await fetch(`/api/download/${product.slug}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (!res.ok) {
-        if (res.status === 403) {
-          setFeedback('Please subscribe to download this template.');
-          router.push('/pricing');
-        } else if (res.status === 404) {
-          setFeedback('Template not found or unavailable.');
-        } else {
-          setFeedback('Unable to download this template right now.');
-        }
-        return;
+      const downloadUrl = `/api/download/${product.slug}?token=${encodeURIComponent(session.access_token)}`;
+      const popup = window.open(downloadUrl, '_blank');
+      if (!popup) {
+        window.location.href = downloadUrl;
       }
-
-      const contentType = res.headers.get('content-type');
-      if (contentType?.includes('application/json')) {
-        const json = await res.json();
-        if (json.redirect && json.url) {
-          window.open(json.url, '_blank');
-          setFeedback('Download opened in a new tab.');
-        } else if (json.error) {
-          setFeedback(json.error);
-        }
-        return;
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${product.slug}.rar`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      setFeedback('Download opened in a new tab.');
     } catch (e) {
       setFeedback('Something went wrong while downloading.');
     } finally {

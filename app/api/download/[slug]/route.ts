@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
-import path from 'path';
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -11,7 +10,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
 
     // Get bearer token from client session
     const auth = req.headers.get('authorization') || '';
-    const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length) : null;
+    const bearer = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length) : null;
+    const { searchParams } = new URL(req.url);
+    const token = bearer || searchParams.get('token') || null;
     if (!token) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
     const { data: userRes, error: userErr } = await admin.auth.getUser(token);
@@ -96,29 +97,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     const isDirectUrl = sourcePath.startsWith('http://') || sourcePath.startsWith('https://');
     
     if (isDirectUrl) {
-      // For direct URLs, return JSON with redirect URL for client to handle
-      return NextResponse.json({ ok: true, redirect: true, url: sourcePath });
+      return NextResponse.redirect(sourcePath, { status: 302 });
     }
 
-    // For file paths in storage, download from Supabase storage
-    const { data: fileData, error: dlErr } = await admin
+    // For file paths in storage, create signed URL and redirect
+    const { data: signed, error: signErr } = await admin
       .storage
       .from('templatesource')
-      .download(sourcePath);
-    if (dlErr || !fileData) {
-      return NextResponse.json({ ok: false, error: dlErr?.message || 'Download failed' }, { status: 500 });
+      .createSignedUrl(sourcePath, 60 * 60);
+    if (signErr || !signed?.signedUrl) {
+      return NextResponse.json({ ok: false, error: signErr?.message || 'Download failed' }, { status: 500 });
     }
-    const arrayBuffer = await fileData.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const filename = path.basename(sourcePath);
-    return new Response(buffer, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Cache-Control': 'no-store',
-      },
-    });
+    return NextResponse.redirect(signed.signedUrl, { status: 302 });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || 'Unknown error' }, { status: 500 });
   }
