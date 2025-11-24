@@ -141,40 +141,49 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         setDownloading(false);
         return;
       }
-      
-      // Check subscription status directly
-      const userId = session.user.id;
-      const { data: subData } = await supabase
-        .from('subscriptions')
-        .select('is_active, valid_until')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      const isSubscribed = !!subData?.is_active && (!subData.valid_until || new Date(subData.valid_until).getTime() > Date.now());
-      
-      // If user is subscribed and source_path is available, redirect directly
-      if (isSubscribed && product.source_path) {
-        window.open(product.source_path, '_blank');
-        setDownloading(false);
+
+      const res = await fetch(`/api/download/${product.slug}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          setFeedback('Please subscribe to download this template.');
+          router.push('/pricing');
+        } else if (res.status === 404) {
+          setFeedback('Template not found or unavailable.');
+        } else {
+          setFeedback('Unable to download this template right now.');
+        }
         return;
       }
-      
-      // If not subscribed, redirect to pricing
-      if (!isSubscribed) {
-        router.push('/pricing');
-        setFeedback('Please subscribe to download this template.');
-        setDownloading(false);
+
+      const contentType = res.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        const json = await res.json();
+        if (json.redirect && json.url) {
+          window.open(json.url, '_blank');
+          setFeedback('Download opened in a new tab.');
+        } else if (json.error) {
+          setFeedback(json.error);
+        }
         return;
       }
-      
-      // If no source_path available
-      setFeedback('Download link not available for this template.');
-      setDownloading(false);
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${product.slug}.rar`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
     } catch (e) {
-      setFeedback('Something went wrong while opening download link.');
-      setDownloading(false);
+      setFeedback('Something went wrong while downloading.');
     } finally {
-      setTimeout(() => setFeedback(null), 3000);
+      setDownloading(false);
+      setTimeout(() => setFeedback(null), 4000);
     }
   };
 

@@ -21,7 +21,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     // 1) Look up template info (price and source_path)
     const { data: tpl } = await admin
       .from('templates')
-      .select('price, source_path')
+      .select('id, price, source_path')
       .eq('slug', slug)
       .maybeSingle();
     if (!tpl) {
@@ -37,18 +37,22 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     // 2) If template is free (price === 0), allow download without subscription/purchase check
     const isFree = templatePrice === 0 || templatePrice === null || templatePrice === undefined;
     
+    let subscriptionId: string | null = null;
     if (!isFree) {
       // For paid templates, check subscription or purchase
       // Check subscription from subscriptions table
       let subscribed = false;
       const { data: sub } = await admin
         .from('subscriptions')
-        .select('is_active, valid_until')
+        .select('id, is_active, valid_until')
         .eq('user_id', userId)
         .maybeSingle();
       if (sub?.is_active) {
         const validUntil = sub.valid_until ? new Date(sub.valid_until as any) : null;
         subscribed = !validUntil || validUntil.getTime() > Date.now();
+        if (subscribed && sub.id) {
+          subscriptionId = sub.id;
+        }
       }
 
       // Check purchase (any order with this slug)
@@ -72,6 +76,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
 
       if (!subscribed && !hasPurchased) {
         return NextResponse.json({ ok: false, error: 'Access denied' }, { status: 403 });
+      }
+    }
+
+    if (subscriptionId && tpl?.id) {
+      try {
+        await admin.from('downloads').insert({
+          user_id: userId,
+          template_id: tpl.id,
+          subscription_id: subscriptionId,
+          downloaded_at: new Date().toISOString(),
+        });
+      } catch (logErr) {
+        console.error('Failed to log download:', logErr);
       }
     }
 

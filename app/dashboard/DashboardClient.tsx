@@ -35,6 +35,7 @@ function DashboardContent() {
   const [monthlyPrice, setMonthlyPrice] = useState<number | null>(null);
   const [yearlyPrice, setYearlyPrice] = useState<number | null>(null);
   const [purchases, setPurchases] = useState<Array<{ slug: string; name: string; price: number; img: string }>>([]);
+  const [recentDownloads, setRecentDownloads] = useState<Array<{ id: string; slug: string | null; name: string | null; img: string | null; downloaded_at: string }>>([]);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showManageSubscription, setShowManageSubscription] = useState(false);
@@ -131,6 +132,36 @@ function DashboardContent() {
       // de-duplicate by slug (keep latest)
       .filter((v: { slug: string; name: string; price: number; img: string }, i: number, a: Array<{ slug: string; name: string; price: number; img: string }>) => a.findIndex((t: { slug: string }) => t.slug === v.slug) === i);
     setPurchases(flattened);
+
+    // Load recent subscription downloads (limit 5)
+    const { data: downloadRows } = await supabase
+      .from('downloads')
+      .select('id, template_id, downloaded_at')
+      .eq('user_id', (user as any).id)
+      .order('downloaded_at', { ascending: false })
+      .limit(5);
+    if (downloadRows && downloadRows.length > 0) {
+      const templateIdsForDownloads = Array.from(new Set(downloadRows.map((dl: any) => dl.template_id).filter(Boolean)));
+      let downloadTemplateMap: Record<string, any> = {};
+      if (templateIdsForDownloads.length > 0) {
+        const { data: downloadTemplates } = await supabase
+          .from('templates')
+          .select('id, name, slug, img')
+          .in('id', templateIdsForDownloads);
+        (downloadTemplates ?? []).forEach((tpl: any) => {
+          downloadTemplateMap[tpl.id] = tpl;
+        });
+      }
+      setRecentDownloads(downloadRows.map((dl: any) => ({
+        id: dl.id,
+        downloaded_at: dl.downloaded_at,
+        name: downloadTemplateMap[dl.template_id]?.name || 'Template removed',
+        slug: downloadTemplateMap[dl.template_id]?.slug || null,
+        img: downloadTemplateMap[dl.template_id]?.img || null,
+      })));
+    } else {
+      setRecentDownloads([]);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -481,6 +512,42 @@ function DashboardContent() {
                 Payment methods are managed securely through Razorpay during checkout. Your subscription and orders are processed through our secure payment gateway.
               </p>
             </div>
+          </div>
+        </section>
+
+        <section className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
+          <GlowingEffect
+            spread={40}
+            glow={true}
+            disabled={false}
+            proximity={64}
+            inactiveZone={0.01}
+            borderWidth={3}
+          />
+          <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-7 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-white">Recent Downloads</h2>
+              <p className="text-xs text-zinc-400">Latest 5 subscription downloads</p>
+            </div>
+            {recentDownloads.length === 0 ? (
+              <p className="mt-6 text-sm text-zinc-400">You haven't downloaded any templates with your subscription yet.</p>
+            ) : (
+              <ul className="mt-6 space-y-3">
+                {recentDownloads.map((dl) => (
+                  <li key={dl.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/10 bg-black/60 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-white">{dl.name}</p>
+                      <p className="text-xs text-zinc-400">{new Date(dl.downloaded_at).toLocaleString()}</p>
+                    </div>
+                    {dl.slug && (
+                      <Link href={`/product/${dl.slug}`} className="mt-2 sm:mt-0 inline-flex items-center rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white hover:bg-white/10 transition">
+                        View Template
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </section>
 

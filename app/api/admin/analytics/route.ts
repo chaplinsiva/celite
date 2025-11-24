@@ -27,21 +27,92 @@ export async function GET(req: Request) {
     let items: any[] = [];
     try {
       ordersRes = await admin.from('orders')
-        .select('id,user_id,created_at,total,status')
-        .order('created_at', { ascending: false })
-        .limit(200);
+      .select('id,user_id,created_at,total,status')
+      .order('created_at', { ascending: false })
+      .limit(200);
       if (!ordersRes.error && ordersRes.data) {
-        const orderIds = (ordersRes.data ?? []).map((o: any) => o.id);
-        if (orderIds.length) {
-          const itemsRes = await admin.from('order_items')
-            .select('order_id,name,quantity,price')
-            .in('order_id', orderIds);
+    const orderIds = (ordersRes.data ?? []).map((o: any) => o.id);
+    if (orderIds.length) {
+      const itemsRes = await admin.from('order_items')
+        .select('order_id,name,quantity,price')
+        .in('order_id', orderIds);
           if (!itemsRes.error) items = itemsRes.data ?? [];
         }
       }
     } catch (e: any) {
       // Orders table doesn't exist - that's okay, continue without it
       console.log('Orders table not found, skipping order data');
+    }
+
+    // Download analytics
+    let downloadStats: { total: number; last7Days: number; last24Hours: number } = {
+      total: 0,
+      last7Days: 0,
+      last24Hours: 0,
+    };
+    let recentDownloads: any[] = [];
+    let topDownloadedTemplates: any[] = [];
+    try {
+      const totalDownloadsRes = await admin
+        .from('downloads')
+        .select('id', { count: 'exact', head: true });
+      downloadStats.total = totalDownloadsRes.count || 0;
+
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const downloads7dRes = await admin
+        .from('downloads')
+        .select('id', { count: 'exact', head: true })
+        .gte('downloaded_at', sevenDaysAgo);
+      downloadStats.last7Days = downloads7dRes.count || 0;
+
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const downloads24hRes = await admin
+        .from('downloads')
+        .select('id', { count: 'exact', head: true })
+        .gte('downloaded_at', oneDayAgo);
+      downloadStats.last24Hours = downloads24hRes.count || 0;
+
+      const recentDownloadsRes = await admin
+        .from('downloads')
+        .select('id,user_id,template_id,subscription_id,downloaded_at')
+        .order('downloaded_at', { ascending: false })
+        .limit(20);
+      if (!recentDownloadsRes.error && recentDownloadsRes.data) {
+        recentDownloads = recentDownloadsRes.data;
+      }
+
+      const topTemplatesRes = await admin
+        .from('downloads')
+        .select('template_id, count:template_id', { head: false })
+        .group('template_id')
+        .order('count', { ascending: false })
+        .limit(5);
+      if (!topTemplatesRes.error && topTemplatesRes.data) {
+        topDownloadedTemplates = topTemplatesRes.data;
+      }
+    } catch (downloadErr) {
+      console.error('Download analytics error:', downloadErr);
+    }
+
+    const templateIds = Array.from(
+      new Set([
+        ...recentDownloads.map((d: any) => d.template_id).filter(Boolean),
+        ...topDownloadedTemplates.map((t: any) => t.template_id).filter(Boolean),
+      ])
+    );
+    const templateMap: Record<string, any> = {};
+    if (templateIds.length > 0) {
+      try {
+        const { data: templateRows } = await admin
+          .from('templates')
+          .select('id,name,slug,img')
+          .in('id', templateIds);
+        (templateRows ?? []).forEach((tpl: any) => {
+          templateMap[tpl.id] = tpl;
+        });
+      } catch (tplErr) {
+        console.error('Template lookup failed for downloads:', tplErr);
+      }
     }
 
     // Subscriptions with detailed filtering
@@ -160,7 +231,9 @@ export async function GET(req: Request) {
     const totalOrders = (ordersRes.data ?? []).length;
 
     // Get user emails for subscriptions (optional, for better display)
-    const userIds = [...new Set((subsRes.data ?? []).map((s: any) => s.user_id))];
+    const subscriptionUserIds = (subsRes.data ?? []).map((s: any) => s.user_id);
+    const downloadUserIds = recentDownloads.map((d: any) => d.user_id);
+    const userIds = [...new Set([...subscriptionUserIds, ...downloadUserIds])];
     const userEmails: Record<string, string> = {};
     if (userIds.length > 0) {
       try {
@@ -186,12 +259,27 @@ export async function GET(req: Request) {
       days_remaining: s.valid_until ? Math.ceil((new Date(s.valid_until).getTime() - now) / (1000 * 60 * 60 * 24)) : null,
     }));
 
+    const enrichedRecentDownloads = recentDownloads.map((dl: any) => ({
+      ...dl,
+      user_email: userEmails[dl.user_id] || null,
+      template_name: templateMap[dl.template_id]?.name || null,
+      template_slug: templateMap[dl.template_id]?.slug || null,
+    }));
+
+    const enrichedTopDownloads = topDownloadedTemplates.map((row: any) => ({
+      template_id: row.template_id,
+      count: Number((row as any).count) || 0,
+      template_name: templateMap[row.template_id]?.name || null,
+      template_slug: templateMap[row.template_id]?.slug || null,
+    }));
+
     return NextResponse.json({
       ok: true,
       totals: {
         orderRevenue: totalOrderRevenue,
         subscriptionRevenue: Number(subscriptionMRR.toFixed(2)),
         totalSubscriptionRevenue: Number(totalSubscriptionRevenue.toFixed(2)),
+        subscriptionDownloads: downloadStats.total,
         weeklyPrice,
         monthlyPrice,
         yearlyPrice,
@@ -209,6 +297,9 @@ export async function GET(req: Request) {
       orders: ordersRes.data ?? [],
       order_items: items,
       subscriptions: enrichedSubs,
+      downloadStats,
+      recentDownloads: enrichedRecentDownloads,
+      topDownloads: enrichedTopDownloads,
       pagination: {
         total: totalCount,
         limit,
