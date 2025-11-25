@@ -11,20 +11,6 @@ import { GlowingEffect } from "../../components/ui/glowing-effect";
 import { cn } from "../../lib/utils";
 import LoadingSpinner from "../../components/ui/loading-spinner";
 
-type OrderRow = {
-  id: string;
-  created_at: string;
-  total: number;
-  status: string;
-};
-
-type OrderItemRow = {
-  order_id: string;
-  name: string;
-  quantity: number;
-  price: number;
-};
-
 type DownloadItemRow = {
   slug: string;
   name: string;
@@ -37,11 +23,9 @@ function DashboardContent() {
   const { user, logout } = useAppContext();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [orders, setOrders] = useState<Array<{ id: string; date: string; status: string; amount: string; item: string }>>([]);
-  const [sub, setSub] = useState<{ is_active: boolean; plan: string | null; valid_until: string | null } | null>(null);
+  const [sub, setSub] = useState<{ is_active: boolean; plan: string | null; valid_until: string | null; created_at: string | null; updated_at: string | null; autopay_enabled: boolean | null } | null>(null);
   const [monthlyPrice, setMonthlyPrice] = useState<number | null>(null);
   const [yearlyPrice, setYearlyPrice] = useState<number | null>(null);
-  const [purchases, setPurchases] = useState<Array<{ slug: string; name: string; price: number; img: string }>>([]);
   const [recentDownloads, setRecentDownloads] = useState<DownloadItemRow[]>([]);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -79,10 +63,21 @@ function DashboardContent() {
     // Load subscription - use realtime subscription for auto-updates
     const { data: s } = await supabase
       .from('subscriptions')
-      .select('is_active, plan, valid_until')
+      .select('is_active, plan, valid_until, created_at, updated_at, autopay_enabled')
       .eq('user_id', (user as any).id)
       .maybeSingle();
-    if (s) setSub({ is_active: !!s.is_active, plan: s.plan ?? null, valid_until: s.valid_until ?? null });
+    if (s) {
+      setSub({
+        is_active: !!s.is_active,
+        plan: s.plan ?? null,
+        valid_until: s.valid_until ?? null,
+        created_at: s.created_at ?? null,
+        updated_at: s.updated_at ?? null,
+        autopay_enabled: typeof s.autopay_enabled === 'boolean' ? s.autopay_enabled : null,
+      });
+    } else {
+      setSub(null);
+    }
 
     // Load pricing from settings
     const { data: settings } = await supabase.from('settings').select('key,value');
@@ -102,45 +97,7 @@ function DashboardContent() {
       setYearlyPrice(parsePrice(map.RAZORPAY_YEARLY_AMOUNT, 100000));
     }
     
-    // Load orders
-    const { data: ords } = await supabase
-      .from('orders')
-      .select('id, created_at, total, status')
-      .eq('user_id', (user as any).id)
-      .order('created_at', { ascending: false }) as unknown as { data: OrderRow[] };
-    const orderIds = (ords ?? []).map(o => o.id);
-    if (orderIds.length === 0) { 
-      setOrders([]); 
-      setPurchases([]);
-    } else {
-      const { data: items } = await supabase
-        .from('order_items')
-        .select('order_id,name,quantity,price,slug,img')
-        .in('order_id', orderIds) as unknown as { data: OrderItemRow[] };
-      const firstItemByOrder: Record<string, OrderItemRow | undefined> = {};
-      (items ?? []).forEach((it) => { if (!firstItemByOrder[it.order_id]) firstItemByOrder[it.order_id] = it; });
-      const merged = (ords ?? []).map((o) => {
-        const f = firstItemByOrder[o.id];
-        const amount = formatPrice(Number(o.total));
-        const itemLabel = f ? f.name : 'Order';
-        return {
-          id: `#${o.id.slice(0, 8)}`,
-          date: new Date(o.created_at).toLocaleDateString(),
-          status: o.status || 'Paid',
-          amount,
-          item: itemLabel,
-        };
-      });
-      setOrders(merged);
-
-      // Flatten purchases list
-      const flattened: Array<{ slug: string; name: string; price: number; img: string }> = ((items as any) ?? []).map((it: any) => ({ slug: it.slug, name: it.name, price: Number(it.price), img: it.img }))
-        // de-duplicate by slug (keep latest)
-        .filter((v: { slug: string; name: string; price: number; img: string }, i: number, a: Array<{ slug: string; name: string; price: number; img: string }>) => a.findIndex((t: { slug: string }) => t.slug === v.slug) === i);
-      setPurchases(flattened);
-    }
-
-    // Load recent downloads (subscription + purchases) for this user
+    // Load recent downloads (subscription-based) for this user
     try {
       const { data: dl } = await supabase
         .from('downloads')
@@ -468,41 +425,7 @@ function DashboardContent() {
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2">
-          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
-            />
-            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-7 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-white">Order History</h2>
-                <Link href="/" className="text-sm text-blue-300 hover:underline">Browse Templates</Link>
-              </div>
-              <ul className="mt-6 space-y-4 text-sm text-zinc-200">
-                {orders.map((order) => (
-                  <li key={order.id} className="relative rounded-xl border-[0.75px] border-white/10 bg-black/60 backdrop-blur-sm px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-white">{order.item}</p>
-                      <p className="text-xs text-zinc-400">{order.date}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-white">{order.amount}</p>
-                      <p className="text-xs text-green-300">{order.status}</p>
-                    </div>
-                  </div>
-                  <p className="mt-2 text-xs text-zinc-500">Order ID {order.id}</p>
-                </li>
-              ))}
-              </ul>
-            </div>
-          </div>
-
+        <section className="grid gap-4 md:grid-cols-1">
           <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
             <GlowingEffect
               spread={40}
@@ -527,6 +450,7 @@ function DashboardContent() {
           </div>
         </section>
 
+        {/* Subscription history instead of individual purchases */}
         <section className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
           <GlowingEffect
             spread={40}
@@ -538,26 +462,60 @@ function DashboardContent() {
           />
           <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-7 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Your Purchases</h2>
-              <Link href="/" className="text-sm text-blue-300 hover:underline">Get more templates</Link>
+              <h2 className="text-xl font-semibold text-white">Subscription History</h2>
+              <Link href="/pricing" className="text-sm text-blue-300 hover:underline">View plans</Link>
             </div>
-            {purchases.length === 0 ? (
-              <p className="mt-6 text-sm text-zinc-400">You haven't purchased any individual templates yet.</p>
+            {!sub ? (
+              <p className="mt-6 text-sm text-zinc-400">
+                You don't have an active subscription yet. Subscribe to start downloading templates.
+              </p>
             ) : (
-              <ul className="mt-6 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-                {purchases.map((p) => (
-                  <li key={p.slug} className="relative rounded-xl border-[0.75px] border-white/10 bg-black/60 backdrop-blur-sm p-3 flex flex-col">
-                  <div className="h-28 w-full overflow-hidden rounded-xl mb-3">
-                    <img src={p.img} alt={p.name} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-white">{p.name}</p>
-                    <p className="text-xs text-zinc-400">{formatPrice(p.price)}</p>
-                  </div>
-                  <PurchaseDownloadButton slug={p.slug} />
-                </li>
-              ))}
-              </ul>
+              <div className="mt-6 space-y-3 text-sm text-zinc-200">
+                <p>
+                  <span className="text-zinc-400">Current plan: </span>
+                  <span className="font-semibold text-white">
+                    {sub.plan === 'yearly'
+                      ? 'Yearly'
+                      : sub.plan === 'weekly'
+                      ? 'Weekly'
+                      : sub.plan === 'monthly'
+                      ? 'Monthly'
+                      : 'Unknown'}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-zinc-400">Status: </span>
+                  <span className="font-semibold text-white">
+                    {isActuallyActive
+                      ? 'Active'
+                      : isPaused
+                      ? 'Paused'
+                      : hasExpiredPlan
+                      ? 'Expired'
+                      : 'Inactive'}
+                  </span>
+                </p>
+                {sub.autopay_enabled !== null && (
+                  <p>
+                    <span className="text-zinc-400">Autopay: </span>
+                    <span className="font-semibold text-white">
+                      {sub.autopay_enabled ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </p>
+                )}
+                {sub.created_at && (
+                  <p className="text-xs text-zinc-400">
+                    Started on {new Date(sub.created_at).toLocaleDateString()} at{' '}
+                    {new Date(sub.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+                {sub.valid_until && (
+                  <p className="text-xs text-zinc-400">
+                    Current validity until {new Date(sub.valid_until).toLocaleDateString()} at{' '}
+                    {new Date(sub.valid_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </section>

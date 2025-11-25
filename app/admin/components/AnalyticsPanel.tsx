@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -43,6 +43,9 @@ export default function AnalyticsPanel() {
   const [totals, setTotals] = useState<any>(null);
   const [pagination, setPagination] = useState<any>(null);
   const subscriptionChannelRef = useRef<any>(null);
+  const [detailTab, setDetailTab] = useState<'subscriptions' | 'products'>('subscriptions');
+  const [productRange, setProductRange] = useState<'7d' | '30d' | '90d' | '365d' | 'all'>('30d');
+  const [subscriptionRange, setSubscriptionRange] = useState<'30d' | '90d' | '365d' | 'all'>('30d');
   
   // Filters
   const [planFilter, setPlanFilter] = useState<string>('');
@@ -172,6 +175,104 @@ export default function AnalyticsPanel() {
     new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
+  const nowTs = Date.now();
+
+  // Subscription analytics (time-filtered new subscribers and estimated revenue)
+  const subscriptionRangeMs: Record<string, number> = {
+    '30d': 30 * 24 * 60 * 60 * 1000,
+    '90d': 90 * 24 * 60 * 60 * 1000,
+    '365d': 365 * 24 * 60 * 60 * 1000,
+    all: Number.POSITIVE_INFINITY,
+  };
+
+  const subscriptionStats = useMemo(() => {
+    const maxMs = subscriptionRangeMs[subscriptionRange];
+    const filtered = subs.filter((s) => {
+      if (!s.created_at) return false;
+      const created = new Date(s.created_at).getTime();
+      return nowTs - created <= maxMs;
+    });
+
+    const weeklyPrice = totals?.weeklyPrice ?? 0;
+    const monthlyPrice = totals?.monthlyPrice ?? 0;
+    const yearlyPrice = totals?.yearlyPrice ?? 0;
+
+    let estRevenue = 0;
+    let weekly = 0;
+    let monthly = 0;
+    let yearly = 0;
+
+    filtered.forEach((s) => {
+      if (s.plan === 'weekly') {
+        weekly += 1;
+        estRevenue += weeklyPrice;
+      } else if (s.plan === 'monthly') {
+        monthly += 1;
+        estRevenue += monthlyPrice;
+      } else if (s.plan === 'yearly') {
+        yearly += 1;
+        estRevenue += yearlyPrice;
+      }
+    });
+
+    return {
+      count: filtered.length,
+      weekly,
+      monthly,
+      yearly,
+      estRevenue,
+    };
+  }, [subs, totals, subscriptionRange, subscriptionRangeMs, nowTs]);
+
+  // Product download analytics by time range
+  const productRangeMs: Record<string, number> = {
+    '7d': 7 * 24 * 60 * 60 * 1000,
+    '30d': 30 * 24 * 60 * 60 * 1000,
+    '90d': 90 * 24 * 60 * 60 * 1000,
+    '365d': 365 * 24 * 60 * 60 * 1000,
+    all: Number.POSITIVE_INFINITY,
+  };
+
+  const topProducts = useMemo(() => {
+    const maxMs = productRangeMs[productRange];
+    const filtered = downloads.filter((d) => {
+      if (!d.downloaded_at) return false;
+      const ts = new Date(d.downloaded_at).getTime();
+      return nowTs - ts <= maxMs;
+    });
+
+    const map: Record<
+      string,
+      { slug: string; name: string | null; downloads: number; userIds: Set<string> }
+    > = {};
+
+    filtered.forEach((d) => {
+      if (!map[d.template_slug]) {
+        map[d.template_slug] = {
+          slug: d.template_slug,
+          name: d.template_name,
+          downloads: 0,
+          userIds: new Set<string>(),
+        };
+      }
+      const entry = map[d.template_slug];
+      entry.downloads += 1;
+      if (d.user_id) {
+        entry.userIds.add(d.user_id);
+      }
+    });
+
+    const arr = Object.values(map).map((p) => ({
+      slug: p.slug,
+      name: p.name || p.slug,
+      downloads: p.downloads,
+      uniqueUsers: p.userIds.size,
+    }));
+
+    arr.sort((a, b) => b.downloads - a.downloads);
+    return arr.slice(0, 10);
+  }, [downloads, productRange, productRangeMs, nowTs]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -218,6 +319,130 @@ export default function AnalyticsPanel() {
             Users: {totals?.uniqueDownloadUsers ?? 0} • Templates: {totals?.uniqueDownloadedTemplates ?? 0}
           </div>
         </div>
+      </div>
+
+      {/* Detailed Analytics Tabs */}
+      <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="inline-flex rounded-full border border-white/10 bg-black/40 p-1">
+            <button
+              onClick={() => setDetailTab('subscriptions')}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-full transition ${
+                detailTab === 'subscriptions'
+                  ? 'bg-white text-black'
+                  : 'text-zinc-300 hover:bg-white/10'
+              }`}
+            >
+              Subscription Analytics
+            </button>
+            <button
+              onClick={() => setDetailTab('products')}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-full transition ${
+                detailTab === 'products'
+                  ? 'bg-white text-black'
+                  : 'text-zinc-300 hover:bg-white/10'
+              }`}
+            >
+              Product Downloads
+            </button>
+          </div>
+
+          {detailTab === 'subscriptions' ? (
+            <div className="flex items-center gap-2 text-xs text-zinc-400">
+              <span>Range:</span>
+              <select
+                value={subscriptionRange}
+                onChange={(e) => setSubscriptionRange(e.target.value as any)}
+                className="px-2 py-1 rounded-lg bg-black/60 border border-white/10 text-xs text-white"
+              >
+                <option value="30d">Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+                <option value="365d">Last 365 days</option>
+                <option value="all">All time</option>
+              </select>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs text-zinc-400">
+              <span>Range:</span>
+              <select
+                value={productRange}
+                onChange={(e) => setProductRange(e.target.value as any)}
+                className="px-2 py-1 rounded-lg bg-black/60 border border-white/10 text-xs text-white"
+              >
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+                <option value="365d">Last 365 days</option>
+                <option value="all">All time</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        {detailTab === 'subscriptions' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="rounded-xl border border-white/10 bg-black/60 p-3">
+              <div className="text-lg font-bold text-white">{subscriptionStats.count}</div>
+              <div className="text-[11px] text-zinc-400 mt-1">New Subscribers in Range</div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-black/60 p-3">
+              <div className="text-lg font-bold text-white">
+                {subscriptionStats.weekly} / {subscriptionStats.monthly} / {subscriptionStats.yearly}
+              </div>
+              <div className="text-[11px] text-zinc-400 mt-1">Weekly / Monthly / Yearly (new)</div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-black/60 p-3">
+              <div className="text-lg font-bold text-white">
+                ₹{subscriptionStats.estRevenue.toFixed(2)}
+              </div>
+              <div className="text-[11px] text-zinc-400 mt-1">Estimated New Revenue in Range</div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-black/60 p-3">
+              <div className="text-lg font-bold text-green-300">
+                {totals?.activeSubscribers ?? 0}
+              </div>
+              <div className="text-[11px] text-zinc-400 mt-1">Current Active Subscribers</div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {topProducts.length === 0 ? (
+              <p className="text-xs text-zinc-400">No downloads in this range.</p>
+            ) : (
+              <>
+                <p className="text-xs text-zinc-400">
+                  Top downloaded templates in the selected range.
+                </p>
+                <div className="overflow-x-auto rounded-xl border border-white/10">
+                  <table className="min-w-full text-xs">
+                    <thead className="bg-white/5 text-left text-[11px] uppercase text-zinc-400">
+                      <tr>
+                        <th className="px-3 py-2">Template</th>
+                        <th className="px-3 py-2">Downloads</th>
+                        <th className="px-3 py-2">Unique Users</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topProducts.map((p) => (
+                        <tr key={p.slug} className="border-t border-white/10">
+                          <td className="px-3 py-2 text-zinc-200">
+                            {p.name}
+                          </td>
+                          <td className="px-3 py-2 text-white font-semibold">
+                            {p.downloads}
+                          </td>
+                          <td className="px-3 py-2 text-zinc-200">
+                            {p.uniqueUsers}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Charts Section */}
