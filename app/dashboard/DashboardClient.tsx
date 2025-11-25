@@ -25,6 +25,13 @@ type OrderItemRow = {
   price: number;
 };
 
+type DownloadItemRow = {
+  slug: string;
+  name: string;
+  img: string | null;
+  downloaded_at: string;
+};
+
 // Component that uses search params (needs to be in Suspense)
 function DashboardContent() {
   const { user, logout } = useAppContext();
@@ -35,7 +42,7 @@ function DashboardContent() {
   const [monthlyPrice, setMonthlyPrice] = useState<number | null>(null);
   const [yearlyPrice, setYearlyPrice] = useState<number | null>(null);
   const [purchases, setPurchases] = useState<Array<{ slug: string; name: string; price: number; img: string }>>([]);
-  const [recentDownloads, setRecentDownloads] = useState<Array<{ id: string; slug: string | null; name: string | null; img: string | null; downloaded_at: string }>>([]);
+  const [recentDownloads, setRecentDownloads] = useState<DownloadItemRow[]>([]);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showManageSubscription, setShowManageSubscription] = useState(false);
@@ -105,61 +112,66 @@ function DashboardContent() {
     if (orderIds.length === 0) { 
       setOrders([]); 
       setPurchases([]);
-      return; 
-    }
-    const { data: items } = await supabase
-      .from('order_items')
-      .select('order_id,name,quantity,price,slug,img')
-      .in('order_id', orderIds) as unknown as { data: OrderItemRow[] };
-    const firstItemByOrder: Record<string, OrderItemRow | undefined> = {};
-    (items ?? []).forEach((it) => { if (!firstItemByOrder[it.order_id]) firstItemByOrder[it.order_id] = it; });
-    const merged = (ords ?? []).map((o) => {
-      const f = firstItemByOrder[o.id];
-      const amount = formatPrice(Number(o.total));
-      const itemLabel = f ? f.name : 'Order';
-      return {
-        id: `#${o.id.slice(0, 8)}`,
-        date: new Date(o.created_at).toLocaleDateString(),
-        status: o.status || 'Paid',
-        amount,
-        item: itemLabel,
-      };
-    });
-    setOrders(merged);
-
-    // Flatten purchases list
-    const flattened: Array<{ slug: string; name: string; price: number; img: string }> = ((items as any) ?? []).map((it: any) => ({ slug: it.slug, name: it.name, price: Number(it.price), img: it.img }))
-      // de-duplicate by slug (keep latest)
-      .filter((v: { slug: string; name: string; price: number; img: string }, i: number, a: Array<{ slug: string; name: string; price: number; img: string }>) => a.findIndex((t: { slug: string }) => t.slug === v.slug) === i);
-    setPurchases(flattened);
-
-    // Load recent subscription downloads (limit 5)
-    const { data: downloadRows } = await supabase
-      .from('downloads')
-      .select('id, template_slug, downloaded_at')
-      .eq('user_id', (user as any).id)
-      .order('downloaded_at', { ascending: false })
-      .limit(5);
-    if (downloadRows && downloadRows.length > 0) {
-      const templateSlugsForDownloads = Array.from(new Set(downloadRows.map((dl: any) => dl.template_slug).filter(Boolean)));
-      let downloadTemplateMap: Record<string, any> = {};
-      if (templateSlugsForDownloads.length > 0) {
-        const { data: downloadTemplates } = await supabase
-          .from('templates')
-          .select('slug, name, img')
-          .in('slug', templateSlugsForDownloads);
-        (downloadTemplates ?? []).forEach((tpl: any) => {
-          downloadTemplateMap[tpl.slug] = tpl;
-        });
-      }
-      setRecentDownloads(downloadRows.map((dl: any) => ({
-        id: dl.id,
-        downloaded_at: dl.downloaded_at,
-        name: downloadTemplateMap[dl.template_slug]?.name || 'Template removed',
-        slug: downloadTemplateMap[dl.template_slug]?.slug || dl.template_slug || null,
-        img: downloadTemplateMap[dl.template_slug]?.img || null,
-      })));
     } else {
+      const { data: items } = await supabase
+        .from('order_items')
+        .select('order_id,name,quantity,price,slug,img')
+        .in('order_id', orderIds) as unknown as { data: OrderItemRow[] };
+      const firstItemByOrder: Record<string, OrderItemRow | undefined> = {};
+      (items ?? []).forEach((it) => { if (!firstItemByOrder[it.order_id]) firstItemByOrder[it.order_id] = it; });
+      const merged = (ords ?? []).map((o) => {
+        const f = firstItemByOrder[o.id];
+        const amount = formatPrice(Number(o.total));
+        const itemLabel = f ? f.name : 'Order';
+        return {
+          id: `#${o.id.slice(0, 8)}`,
+          date: new Date(o.created_at).toLocaleDateString(),
+          status: o.status || 'Paid',
+          amount,
+          item: itemLabel,
+        };
+      });
+      setOrders(merged);
+
+      // Flatten purchases list
+      const flattened: Array<{ slug: string; name: string; price: number; img: string }> = ((items as any) ?? []).map((it: any) => ({ slug: it.slug, name: it.name, price: Number(it.price), img: it.img }))
+        // de-duplicate by slug (keep latest)
+        .filter((v: { slug: string; name: string; price: number; img: string }, i: number, a: Array<{ slug: string; name: string; price: number; img: string }>) => a.findIndex((t: { slug: string }) => t.slug === v.slug) === i);
+      setPurchases(flattened);
+    }
+
+    // Load recent downloads (subscription + purchases) for this user
+    try {
+      const { data: dl } = await supabase
+        .from('downloads')
+        .select('template_slug, downloaded_at')
+        .eq('user_id', (user as any).id)
+        .order('downloaded_at', { ascending: false })
+        .limit(10);
+
+      if (dl && dl.length > 0) {
+        const slugs = Array.from(new Set(dl.map((d: any) => d.template_slug)));
+        const { data: tpls } = await supabase
+          .from('templates')
+          .select('slug,name,img')
+          .in('slug', slugs);
+        const tplMap: Record<string, { name: string; img: string | null }> = {};
+        (tpls ?? []).forEach((t: any) => {
+          tplMap[t.slug] = { name: t.name, img: t.img ?? null };
+        });
+
+        const enriched: DownloadItemRow[] = dl.map((d: any) => ({
+          slug: d.template_slug,
+          name: tplMap[d.template_slug]?.name || d.template_slug,
+          img: tplMap[d.template_slug]?.img ?? null,
+          downloaded_at: d.downloaded_at,
+        }));
+        setRecentDownloads(enriched);
+      } else {
+        setRecentDownloads([]);
+      }
+    } catch (e) {
+      console.error('Failed to load recent downloads', e);
       setRecentDownloads([]);
     }
   }, [user]);
@@ -526,42 +538,6 @@ function DashboardContent() {
           />
           <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-7 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Recent Downloads</h2>
-              <p className="text-xs text-zinc-400">Latest 5 subscription downloads</p>
-            </div>
-            {recentDownloads.length === 0 ? (
-              <p className="mt-6 text-sm text-zinc-400">You haven't downloaded any templates with your subscription yet.</p>
-            ) : (
-              <ul className="mt-6 space-y-3">
-                {recentDownloads.map((dl) => (
-                  <li key={dl.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/10 bg-black/60 px-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-white">{dl.name}</p>
-                      <p className="text-xs text-zinc-400">{new Date(dl.downloaded_at).toLocaleString()}</p>
-                    </div>
-                    {dl.slug && (
-                      <Link href={`/product/${dl.slug}`} className="mt-2 sm:mt-0 inline-flex items-center rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white hover:bg-white/10 transition">
-                        View Template
-                      </Link>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
-
-        <section className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
-          <GlowingEffect
-            spread={40}
-            glow={true}
-            disabled={false}
-            proximity={64}
-            inactiveZone={0.01}
-            borderWidth={3}
-          />
-          <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-7 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-            <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white">Your Purchases</h2>
               <Link href="/" className="text-sm text-blue-300 hover:underline">Get more templates</Link>
             </div>
@@ -581,6 +557,61 @@ function DashboardContent() {
                   <PurchaseDownloadButton slug={p.slug} />
                 </li>
               ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        {/* Recent Downloads for this user */}
+        <section className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
+          <GlowingEffect
+            spread={40}
+            glow={true}
+            disabled={false}
+            proximity={64}
+            inactiveZone={0.01}
+            borderWidth={3}
+          />
+          <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-7 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-white">Recent Downloads</h2>
+              <Link href="/templates" className="text-sm text-blue-300 hover:underline">Browse templates</Link>
+            </div>
+            {recentDownloads.length === 0 ? (
+              <p className="mt-6 text-sm text-zinc-400">
+                You haven't downloaded any templates yet with your account.
+              </p>
+            ) : (
+              <ul className="mt-6 space-y-4 text-sm text-zinc-200">
+                {recentDownloads.map((d) => (
+                  <li key={`${d.slug}-${d.downloaded_at}`} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {d.img && (
+                        <div className="h-12 w-16 overflow-hidden rounded-lg bg-zinc-900 border border-white/10">
+                          <img src={d.img} alt={d.name} className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <div>
+                        <Link
+                          href={`/product/${d.slug}`}
+                          className="text-sm font-medium text-white hover:underline"
+                        >
+                          {d.name}
+                        </Link>
+                        <p className="text-xs text-zinc-400">
+                          Downloaded on {new Date(d.downloaded_at).toLocaleDateString()} at{' '}
+                          {new Date(d.downloaded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      href={`/product/${d.slug}`}
+                      className="text-xs text-blue-300 hover:underline"
+                    >
+                      View template
+                    </Link>
+                  </li>
+                ))}
               </ul>
             )}
           </div>

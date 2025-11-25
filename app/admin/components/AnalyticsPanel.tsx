@@ -23,16 +23,12 @@ type SubRow = {
 type DownloadRow = {
   id: string;
   user_id: string;
-  template_slug: string | null;
+  user_email: string | null;
+  template_slug: string;
+  template_name: string | null;
+  subscription_id: string | null;
+  subscription_plan: string | null;
   downloaded_at: string;
-  user_email?: string | null;
-  template_name?: string | null;
-};
-
-type TopDownload = {
-  template_slug: string | null;
-  count: number;
-  template_name?: string | null;
 };
 
 const COLORS = ['#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#ef4444'];
@@ -43,10 +39,8 @@ export default function AnalyticsPanel() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [items, setItems] = useState<OrderItem[]>([]);
   const [subs, setSubs] = useState<SubRow[]>([]);
+  const [downloads, setDownloads] = useState<DownloadRow[]>([]);
   const [totals, setTotals] = useState<any>(null);
-  const [downloadStats, setDownloadStats] = useState<any>(null);
-  const [recentDownloads, setRecentDownloads] = useState<DownloadRow[]>([]);
-  const [topDownloads, setTopDownloads] = useState<TopDownload[]>([]);
   const [pagination, setPagination] = useState<any>(null);
   const subscriptionChannelRef = useRef<any>(null);
   
@@ -84,11 +78,9 @@ export default function AnalyticsPanel() {
       setOrders(json.orders || []);
       setItems(json.order_items || []);
       setSubs(json.subscriptions || []);
-        setTotals(json.totals);
+      setDownloads(json.downloads || []);
+      setTotals(json.totals);
       setPagination(json.pagination);
-      setDownloadStats(json.downloadStats || null);
-      setRecentDownloads(json.recentDownloads || []);
-      setTopDownloads(json.topDownloads || []);
       } catch (e: any) {
         setError(e?.message || 'Failed to load analytics');
       } finally {
@@ -218,27 +210,15 @@ export default function AnalyticsPanel() {
           <div className="text-xs text-zinc-400 mt-1">One-time Orders</div>
           <div className="text-xs text-zinc-500 mt-2">{totals?.orders || 0} orders</div>
         </div>
-      </div>
-
-      {downloadStats && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-            <div className="text-2xl font-bold">{downloadStats.total ?? 0}</div>
-            <div className="text-xs text-zinc-400 mt-1">Total Subscription Downloads</div>
-            <div className="text-xs text-zinc-500 mt-2">Tracked against active subscriptions</div>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-            <div className="text-2xl font-bold text-emerald-300">{downloadStats.last7Days ?? 0}</div>
-            <div className="text-xs text-zinc-400 mt-1">Downloads (Last 7 Days)</div>
-            <div className="text-xs text-zinc-500 mt-2">Rolling window</div>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-            <div className="text-2xl font-bold text-blue-300">{downloadStats.last24Hours ?? 0}</div>
-            <div className="text-xs text-zinc-400 mt-1">Downloads (Last 24h)</div>
-            <div className="text-xs text-zinc-500 mt-2">Helps spot spikes quickly</div>
+        
+        <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+          <div className="text-2xl font-bold">{totals?.totalDownloads ?? 0}</div>
+          <div className="text-xs text-zinc-400 mt-1">Tracked Downloads</div>
+          <div className="text-xs text-zinc-500 mt-2">
+            Users: {totals?.uniqueDownloadUsers ?? 0} • Templates: {totals?.uniqueDownloadedTemplates ?? 0}
           </div>
         </div>
-      )}
+      </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -346,58 +326,6 @@ export default function AnalyticsPanel() {
           </div>
         )}
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-white">Recent Subscription Downloads</h3>
-              <span className="text-xs text-zinc-400">Last {recentDownloads.length} events</span>
-            </div>
-            {recentDownloads.length === 0 ? (
-              <p className="text-xs text-zinc-400">No downloads logged yet.</p>
-            ) : (
-              <ul className="divide-y divide-white/10">
-                {recentDownloads.map((dl) => (
-                  <li key={dl.id} className="py-3 flex flex-col gap-1">
-                    <div className="text-sm font-semibold text-white">{dl.template_name || 'Template removed'}</div>
-                    <div className="text-xs text-zinc-400">
-                      {dl.user_email || dl.user_id}
-                    </div>
-                    <div className="text-xs text-zinc-500">
-                      {new Date(dl.downloaded_at).toLocaleString()}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-white">Top Downloaded Templates</h3>
-              <span className="text-xs text-zinc-400">Based on subscription activity</span>
-            </div>
-            {topDownloads.length === 0 ? (
-              <p className="text-xs text-zinc-400">No download data yet.</p>
-            ) : (
-              <ul className="space-y-3">
-                {topDownloads.map((tpl, idx) => (
-                  <li key={tpl.template_slug || idx} className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-white">
-                        #{idx + 1} {tpl.template_name || 'Unknown Template'}
-                      </p>
-                      <p className="text-xs text-zinc-500">
-                        {tpl.template_slug ? `/product/${tpl.template_slug}` : 'Slug unavailable'}
-                      </p>
-                    </div>
-                    <span className="text-base font-bold text-emerald-300">{tpl.count}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      
 
       {/* Filters */}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -588,6 +516,45 @@ export default function AnalyticsPanel() {
           </div>
         )}
       </div>
+
+      {/* Recent Downloads (if tracked) */}
+      {downloads.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold mb-3">Recent Downloads</h3>
+          <div className="overflow-x-auto rounded-2xl border border-white/10">
+            <table className="min-w-full text-sm">
+              <thead className="bg-white/5 text-left text-xs uppercase text-zinc-400">
+                <tr>
+                  <th className="px-4 py-3">Template</th>
+                  <th className="px-4 py-3">User</th>
+                  <th className="px-4 py-3">Plan</th>
+                  <th className="px-4 py-3">Downloaded At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {downloads.map((d) => (
+                  <tr key={d.id} className="border-t border-white/10">
+                    <td className="px-4 py-3 text-zinc-200 text-xs">
+                      {d.template_name || d.template_slug}
+                    </td>
+                    <td className="px-4 py-3 text-zinc-300 text-xs">
+                      {d.user_email || d.user_id.slice(0, 8) + '...'}
+                    </td>
+                    <td className="px-4 py-3 text-zinc-300 text-xs">
+                      {d.subscription_plan
+                        ? d.subscription_plan.charAt(0).toUpperCase() + d.subscription_plan.slice(1)
+                        : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-zinc-400 text-xs">
+                      {new Date(d.downloaded_at).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Order History (if orders exist) */}
       {orders.length > 0 && (

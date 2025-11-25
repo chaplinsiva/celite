@@ -142,33 +142,49 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         return;
       }
       
-      // Check subscription status directly
-      const userId = session.user.id;
-      const { data: subData } = await supabase
-        .from('subscriptions')
-        .select('is_active, valid_until')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      const isSubscribed = !!subData?.is_active && (!subData.valid_until || new Date(subData.valid_until).getTime() > Date.now());
-      
-      // If user is subscribed and source_path is available, redirect directly
-      if (isSubscribed && product.source_path) {
-        window.open(product.source_path, '_blank');
-        setDownloading(false);
-        return;
-      }
-      
-      // If not subscribed, redirect to pricing
-      if (!isSubscribed) {
+      // Delegate access checks and download tracking to the API route
+      const res = await fetch(`/api/download/${product.slug}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (res.status === 403) {
+        // Access denied – likely missing subscription
         router.push('/pricing');
         setFeedback('Please subscribe to download this template.');
         setDownloading(false);
         return;
       }
+
+      if (!res.ok) {
+        setFeedback('Download link not available for this template.');
+        setDownloading(false);
+        return;
+      }
       
-      // If no source_path available
-      setFeedback('Download link not available for this template.');
+      // Check if response is JSON (redirect to external URL)
+      const contentType = res.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        const json = await res.json();
+        if (json.redirect && json.url) {
+          window.open(json.url, '_blank');
+          setDownloading(false);
+          return;
+        }
+        setFeedback('Download not available for this template.');
+        setDownloading(false);
+        return;
+      }
+      
+      // Otherwise, download as blob (Supabase storage file)
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${product.slug}.rar`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
       setDownloading(false);
     } catch (e) {
       setFeedback('Something went wrong while opening download link.');

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
+import path from 'path';
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -10,12 +11,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
 
     // Get bearer token from client session
     const auth = req.headers.get('authorization') || '';
-    const bearer = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length) : null;
-    const { searchParams } = new URL(req.url);
-    const token = bearer || searchParams.get('token') || null;
-    const sourceOverride = searchParams.get('source')
-      ? decodeURIComponent(searchParams.get('source') as string)
-      : null;
+    const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length) : null;
     if (!token) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
     const { data: userRes, error: userErr } = await admin.auth.getUser(token);
@@ -25,15 +21,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     // 1) Look up template info (price and source_path)
     const { data: tpl } = await admin
       .from('templates')
-      .select('slug, price, source_path')
+      .select('price, source_path')
       .eq('slug', slug)
       .maybeSingle();
-    if (!tpl && !sourceOverride) {
+    if (!tpl) {
       return NextResponse.json({ ok: false, error: 'Template not found' }, { status: 404 });
     }
     
-    const templatePrice = tpl?.price as number | undefined;
-    const sourcePath = (tpl?.source_path as string | undefined) ?? sourceOverride ?? undefined;
+    const templatePrice = tpl.price as number | undefined;
+    const sourcePath = tpl.source_path as string | undefined;
     if (!sourcePath) {
       return NextResponse.json({ ok: false, error: 'No source file registered for this template' }, { status: 404 });
     }
@@ -41,21 +37,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     // 2) If template is free (price === 0), allow download without subscription/purchase check
     const isFree = templatePrice === 0 || templatePrice === null || templatePrice === undefined;
     
-    let subscriptionId: string | null = null;
+    let activeSubscriptionId: string | null = null;
+
     if (!isFree) {
       // For paid templates, check subscription or purchase
       // Check subscription from subscriptions table
       let subscribed = false;
       const { data: sub } = await admin
         .from('subscriptions')
-        .select('id, is_active, valid_until')
+        .select('id,is_active, valid_until')
         .eq('user_id', userId)
         .maybeSingle();
       if (sub?.is_active) {
         const validUntil = sub.valid_until ? new Date(sub.valid_until as any) : null;
-        subscribed = !validUntil || validUntil.getTime() > Date.now();
-        if (subscribed && sub.id) {
-          subscriptionId = sub.id;
+        const isValid = !validUntil || validUntil.getTime() > Date.now();
+        subscribed = isValid;
+        if (isValid && sub.id) {
+          activeSubscriptionId = sub.id as string;
         }
       }
 
@@ -83,16 +81,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       }
     }
 
-    if (subscriptionId && tpl?.slug) {
+    // 3) Record download for analytics if tied to an active subscription
+    if (!isFree && activeSubscriptionId) {
       try {
         await admin.from('downloads').insert({
           user_id: userId,
-          template_slug: tpl.slug,
-          subscription_id: subscriptionId,
-          downloaded_at: new Date().toISOString(),
+          template_slug: slug,
+          subscription_id: activeSubscriptionId,
         });
-      } catch (logErr) {
-        console.error('Failed to log download:', logErr);
+      } catch (e) {
+        console.error('Failed to record download:', e);
+        // Do not block the actual download on analytics failure
       }
     }
 
@@ -100,18 +99,29 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     const isDirectUrl = sourcePath.startsWith('http://') || sourcePath.startsWith('https://');
     
     if (isDirectUrl) {
-      return NextResponse.redirect(sourcePath, { status: 302 });
+      // For direct URLs, return JSON with redirect URL for client to handle
+      return NextResponse.json({ ok: true, redirect: true, url: sourcePath });
     }
 
-    // For file paths in storage, create signed URL and redirect
-    const { data: signed, error: signErr } = await admin
+    // For file paths in storage, download from Supabase storage
+    const { data: fileData, error: dlErr } = await admin
       .storage
       .from('templatesource')
-      .createSignedUrl(sourcePath, 60 * 60);
-    if (signErr || !signed?.signedUrl) {
-      return NextResponse.json({ ok: false, error: signErr?.message || 'Download failed' }, { status: 500 });
+      .download(sourcePath);
+    if (dlErr || !fileData) {
+      return NextResponse.json({ ok: false, error: dlErr?.message || 'Download failed' }, { status: 500 });
     }
-    return NextResponse.redirect(signed.signedUrl, { status: 302 });
+    const arrayBuffer = await fileData.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const filename = path.basename(sourcePath);
+    return new Response(buffer, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Cache-Control': 'no-store',
+      },
+    });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || 'Unknown error' }, { status: 500 });
   }

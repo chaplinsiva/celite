@@ -44,85 +44,6 @@ export async function GET(req: Request) {
       console.log('Orders table not found, skipping order data');
     }
 
-    // Download analytics
-    let downloadStats: { total: number; last7Days: number; last24Hours: number } = {
-      total: 0,
-      last7Days: 0,
-      last24Hours: 0,
-    };
-    let recentDownloads: any[] = [];
-    let topDownloadedTemplates: any[] = [];
-    try {
-      const totalDownloadsRes = await admin
-        .from('downloads')
-        .select('id', { count: 'exact', head: true });
-      downloadStats.total = totalDownloadsRes.count || 0;
-
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const downloads7dRes = await admin
-        .from('downloads')
-        .select('id', { count: 'exact', head: true })
-        .gte('downloaded_at', sevenDaysAgo);
-      downloadStats.last7Days = downloads7dRes.count || 0;
-
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const downloads24hRes = await admin
-        .from('downloads')
-        .select('id', { count: 'exact', head: true })
-        .gte('downloaded_at', oneDayAgo);
-      downloadStats.last24Hours = downloads24hRes.count || 0;
-
-      const recentDownloadsRes = await admin
-        .from('downloads')
-        .select('id,user_id,template_slug,subscription_id,downloaded_at')
-        .order('downloaded_at', { ascending: false })
-        .limit(20);
-      if (!recentDownloadsRes.error && recentDownloadsRes.data) {
-        recentDownloads = recentDownloadsRes.data;
-      }
-
-      const topTemplateRows = await admin
-        .from('downloads')
-        .select('template_slug')
-        .not('template_slug', 'is', null)
-        .limit(1000);
-      if (!topTemplateRows.error && topTemplateRows.data) {
-        const frequencyMap: Record<string, number> = {};
-        topTemplateRows.data.forEach((row: any) => {
-          const tplSlug = row.template_slug;
-          if (!tplSlug) return;
-          frequencyMap[tplSlug] = (frequencyMap[tplSlug] || 0) + 1;
-        });
-        topDownloadedTemplates = Object.entries(frequencyMap)
-          .map(([template_slug, count]) => ({ template_slug, count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 5);
-      }
-    } catch (downloadErr) {
-      console.error('Download analytics error:', downloadErr);
-    }
-
-    const templateSlugs = Array.from(
-      new Set([
-        ...recentDownloads.map((d: any) => d.template_slug).filter(Boolean),
-        ...topDownloadedTemplates.map((t: any) => t.template_slug).filter(Boolean),
-      ])
-    );
-    const templateMap: Record<string, any> = {};
-    if (templateSlugs.length > 0) {
-      try {
-        const { data: templateRows } = await admin
-          .from('templates')
-          .select('slug,name,img')
-          .in('slug', templateSlugs);
-        (templateRows ?? []).forEach((tpl: any) => {
-          templateMap[tpl.slug] = tpl;
-        });
-      } catch (tplErr) {
-        console.error('Template lookup failed for downloads:', tplErr);
-      }
-    }
-
     // Subscriptions with detailed filtering
     let subsQuery = admin.from('subscriptions')
       .select('user_id,is_active,plan,valid_until,created_at,updated_at,razorpay_subscription_id,autopay_enabled')
@@ -168,7 +89,7 @@ export async function GET(req: Request) {
 
     // Get all subscriptions for aggregate calculations (without filters)
     const allSubsRes = await admin.from('subscriptions')
-      .select('user_id,is_active,plan,valid_until,autopay_enabled')
+      .select('id,user_id,is_active,plan,valid_until,autopay_enabled')
       .order('created_at', { ascending: false });
     const allSubs = allSubsRes.data ?? [];
 
@@ -194,6 +115,12 @@ export async function GET(req: Request) {
     const cancelledSubscribers = cancelledList.length;
     const autopayEnabled = activeList.filter((s: any) => s.autopay_enabled === true).length;
     const autopayDisabled = activeList.filter((s: any) => s.autopay_enabled === false).length;
+
+    // Map subscriptions by id for download enrichment
+    const subsById: Record<string, any> = {};
+    (allSubs || []).forEach((s: any) => {
+      if (s.id) subsById[s.id] = s;
+    });
 
     // Get actual subscription prices from settings
     let weeklyPrice = 199; // Default
@@ -238,17 +165,38 @@ export async function GET(req: Request) {
     const totalOrderRevenue = (ordersRes.data ?? []).reduce((s: number, o: any) => s + Number(o.total || 0), 0);
     const totalOrders = (ordersRes.data ?? []).length;
 
-    // Get user emails for subscriptions (optional, for better display)
-    const subscriptionUserIds = (subsRes.data ?? []).map((s: any) => s.user_id);
-    const downloadUserIds = recentDownloads.map((d: any) => d.user_id);
-    const userIds = [...new Set([...subscriptionUserIds, ...downloadUserIds])];
+    // Get recent downloads for analytics
+    let downloads: any[] = [];
+    let totalDownloads = 0;
+    let uniqueDownloadUsers = 0;
+    let uniqueDownloadedTemplates = 0;
+    try {
+      const downloadsRes = await admin
+        .from('downloads')
+        .select('id,user_id,template_slug,subscription_id,downloaded_at')
+        .order('downloaded_at', { ascending: false })
+        .limit(500);
+      if (!downloadsRes.error && downloadsRes.data) {
+        downloads = downloadsRes.data;
+        totalDownloads = downloads.length;
+        uniqueDownloadUsers = new Set(downloads.map((d: any) => d.user_id)).size;
+        uniqueDownloadedTemplates = new Set(downloads.map((d: any) => d.template_slug)).size;
+      }
+    } catch (e) {
+      console.log('Downloads table not available, skipping downloads analytics');
+    }
+
+    // Get user emails for subscriptions and downloads (optional, for better display)
+    const userIds = new Set<string>();
+    (subsRes.data ?? []).forEach((s: any) => userIds.add(s.user_id));
+    downloads.forEach((d: any) => userIds.add(d.user_id));
     const userEmails: Record<string, string> = {};
-    if (userIds.length > 0) {
+    if (userIds.size > 0) {
       try {
         const { data: users } = await admin.auth.admin.listUsers();
         if (users) {
           users.users.forEach((u: any) => {
-            if (userIds.includes(u.id) && u.email) {
+            if (userIds.has(u.id) && u.email) {
               userEmails[u.id] = u.email;
             }
           });
@@ -267,18 +215,37 @@ export async function GET(req: Request) {
       days_remaining: s.valid_until ? Math.ceil((new Date(s.valid_until).getTime() - now) / (1000 * 60 * 60 * 24)) : null,
     }));
 
-    const enrichedRecentDownloads = recentDownloads.map((dl: any) => ({
-      ...dl,
-      user_email: userEmails[dl.user_id] || null,
-      template_name: templateMap[dl.template_slug]?.name || null,
-      template_slug: dl.template_slug,
-    }));
+    // Get template names for downloads
+    const downloadSlugs = Array.from(new Set(downloads.map((d: any) => d.template_slug)));
+    const templateNames: Record<string, string | null> = {};
+    if (downloadSlugs.length > 0) {
+      try {
+        const { data: tpls } = await admin
+          .from('templates')
+          .select('slug,name')
+          .in('slug', downloadSlugs);
+        (tpls ?? []).forEach((t: any) => {
+          templateNames[t.slug] = t.name ?? null;
+        });
+      } catch (e) {
+        console.log('Could not fetch template names for downloads');
+      }
+    }
 
-    const enrichedTopDownloads = topDownloadedTemplates.map((row: any) => ({
-      template_slug: row.template_slug,
-      count: Number((row as any).count) || 0,
-      template_name: templateMap[row.template_slug]?.name || null,
-    }));
+    // Enrich downloads with user email, template name, and subscription plan
+    const enrichedDownloads = downloads.map((d: any) => {
+      const sub = d.subscription_id ? subsById[d.subscription_id] : null;
+      return {
+        id: d.id,
+        user_id: d.user_id,
+        user_email: userEmails[d.user_id] || null,
+        template_slug: d.template_slug,
+        template_name: templateNames[d.template_slug] || null,
+        subscription_id: d.subscription_id,
+        subscription_plan: sub?.plan ?? null,
+        downloaded_at: d.downloaded_at,
+      };
+    });
 
     return NextResponse.json({
       ok: true,
@@ -286,7 +253,6 @@ export async function GET(req: Request) {
         orderRevenue: totalOrderRevenue,
         subscriptionRevenue: Number(subscriptionMRR.toFixed(2)),
         totalSubscriptionRevenue: Number(totalSubscriptionRevenue.toFixed(2)),
-        subscriptionDownloads: downloadStats.total,
         weeklyPrice,
         monthlyPrice,
         yearlyPrice,
@@ -300,13 +266,14 @@ export async function GET(req: Request) {
         autopayEnabled,
         autopayDisabled,
         totalSubscriptions: allSubs.length,
+        totalDownloads,
+        uniqueDownloadUsers,
+        uniqueDownloadedTemplates,
       },
       orders: ordersRes.data ?? [],
       order_items: items,
       subscriptions: enrichedSubs,
-      downloadStats,
-      recentDownloads: enrichedRecentDownloads,
-      topDownloads: enrichedTopDownloads,
+      downloads: enrichedDownloads,
       pagination: {
         total: totalCount,
         limit,
