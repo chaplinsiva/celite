@@ -405,13 +405,43 @@ export default function AnalyticsPanel() {
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {topProducts.length === 0 ? (
               <p className="text-xs text-zinc-400">No downloads in this range.</p>
             ) : (
               <>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <h4 className="text-xs font-semibold text-white mb-2">
+                    Top Downloaded Templates (Bar Chart)
+                  </h4>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={topProducts}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                      <XAxis
+                        dataKey="name"
+                        stroke="#9ca3af"
+                        tick={{ fontSize: 10 }}
+                        interval={0}
+                        angle={-35}
+                        textAnchor="end"
+                        height={70}
+                      />
+                      <YAxis stroke="#9ca3af" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#1f2937',
+                          border: '1px solid #374151',
+                          borderRadius: 8,
+                        }}
+                        labelStyle={{ color: '#fff', fontSize: 11 }}
+                      />
+                      <Bar dataKey="downloads" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
                 <p className="text-xs text-zinc-400">
-                  Top downloaded templates in the selected range.
+                  Detailed list of top downloaded templates in the selected range.
                 </p>
                 <div className="overflow-x-auto rounded-xl border border-white/10">
                   <table className="min-w-full text-xs">
