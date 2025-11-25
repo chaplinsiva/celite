@@ -138,9 +138,6 @@ export default function AnalyticsPanel() {
     setCurrentPage(1);
   };
 
-  if (loading && !totals) return <div className="text-center py-8">Loading analytics…</div>;
-  if (error && !totals) return <div className="text-sm text-red-300">{error}</div>;
-
   const hasActiveFilters = planFilter || statusFilter || autopayFilter;
 
   // Prepare chart data
@@ -272,6 +269,9 @@ export default function AnalyticsPanel() {
     arr.sort((a, b) => b.downloads - a.downloads);
     return arr.slice(0, 10);
   }, [downloads, productRange, productRangeMs, nowTs]);
+
+  if (loading && !totals) return <div className="text-center py-8">Loading analytics…</div>;
+  if (error && !totals) return <div className="text-sm text-red-300">{error}</div>;
 
   return (
     <div className="space-y-6">
