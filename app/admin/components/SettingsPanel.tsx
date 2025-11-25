@@ -11,6 +11,8 @@ export default function SettingsPanel() {
   const [fixResults, setFixResults] = useState<any>(null);
   const [fixingTimestamps, setFixingTimestamps] = useState(false);
   const [fixTimestampResults, setFixTimestampResults] = useState<any>(null);
+  const [maintenanceOn, setMaintenanceOn] = useState(false);
+  const [updatingMaintenance, setUpdatingMaintenance] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -21,6 +23,7 @@ export default function SettingsPanel() {
       const json = await res.json();
       if (res.ok && json.ok && json.settings) {
         setGeminiKey(json.settings.GEMINI_FLASH_API_KEY || '');
+        setMaintenanceOn(json.settings.MAINTENANCE_MODE === 'on');
       }
     };
     load();
@@ -38,6 +41,7 @@ export default function SettingsPanel() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ settings: {
           GEMINI_FLASH_API_KEY: geminiKey,
+          MAINTENANCE_MODE: maintenanceOn ? 'on' : 'off',
         } }),
       });
       const json = await res.json();
@@ -49,6 +53,36 @@ export default function SettingsPanel() {
       setTimeout(() => setMessage(null), 3000);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const toggleMaintenance = async (next: boolean) => {
+    try {
+      setUpdatingMaintenance(true);
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          settings: {
+            GEMINI_FLASH_API_KEY: geminiKey,
+            MAINTENANCE_MODE: next ? 'on' : 'off',
+          },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error || 'Update failed');
+      setMaintenanceOn(next);
+      setMessage(next ? 'Maintenance mode enabled' : 'Maintenance mode disabled');
+      setTimeout(() => setMessage(null), 3000);
+    } catch (e: any) {
+      setMessage(e?.message || 'Error updating maintenance mode');
+      setTimeout(() => setMessage(null), 4000);
+    } finally {
+      setUpdatingMaintenance(false);
     }
   };
 
@@ -152,6 +186,41 @@ export default function SettingsPanel() {
           </button>
         </div>
         {message && <p className="mt-2 text-xs text-green-300">{message}</p>}
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <h3 className="text-sm font-semibold text-white">Site Maintenance Mode</h3>
+        <p className="mt-2 text-xs text-zinc-400">
+          When maintenance mode is enabled, the public site is hidden for normal users and shows a maintenance message
+          with only a login option. Admins can still access the full website and admin panel.
+        </p>
+        <div className="mt-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-white">
+              {maintenanceOn ? 'Maintenance mode is currently ON' : 'Maintenance mode is currently OFF'}
+            </p>
+            <p className="text-xs text-zinc-400 mt-1">
+              {maintenanceOn
+                ? 'Only admins can browse the site. Visitors see the maintenance screen.'
+                : 'Site is fully visible to all visitors.'}
+            </p>
+          </div>
+          <button
+            onClick={() => toggleMaintenance(!maintenanceOn)}
+            disabled={updatingMaintenance}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              maintenanceOn
+                ? 'bg-red-500 hover:bg-red-600 text-white'
+                : 'bg-green-500 hover:bg-green-600 text-white'
+            } disabled:opacity-60 disabled:cursor-not-allowed`}
+          >
+            {updatingMaintenance
+              ? 'Updating...'
+              : maintenanceOn
+              ? 'Disable Maintenance'
+              : 'Enable Maintenance'}
+          </button>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
