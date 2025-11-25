@@ -18,71 +18,43 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     if (userErr || !userRes.user) return NextResponse.json({ ok: false, error: 'Invalid session' }, { status: 401 });
     const userId = userRes.user.id;
 
-    // 1) Look up template info (price and source_path)
-    const { data: tpl } = await admin
+    // 1) Look up template source path (Drive link or storage path)
+    const { data: tpl, error: tplErr } = await admin
       .from('templates')
-      .select('price, source_path')
+      .select('source_path')
       .eq('slug', slug)
       .maybeSingle();
-    if (!tpl) {
+    if (tplErr || !tpl) {
       return NextResponse.json({ ok: false, error: 'Template not found' }, { status: 404 });
     }
     
-    const templatePrice = tpl.price as number | undefined;
     const sourcePath = tpl.source_path as string | undefined;
     if (!sourcePath) {
       return NextResponse.json({ ok: false, error: 'No source file registered for this template' }, { status: 404 });
     }
 
-    // 2) If template is free (price === 0), allow download without subscription/purchase check
-    const isFree = templatePrice === 0 || templatePrice === null || templatePrice === undefined;
-    
     let activeSubscriptionId: string | null = null;
 
-    if (!isFree) {
-      // For paid templates, check subscription or purchase
-      // Check subscription from subscriptions table
-      let subscribed = false;
-      const { data: sub } = await admin
-        .from('subscriptions')
-        .select('id,is_active, valid_until')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (sub?.is_active) {
-        const validUntil = sub.valid_until ? new Date(sub.valid_until as any) : null;
-        const isValid = !validUntil || validUntil.getTime() > Date.now();
-        subscribed = isValid;
-        if (isValid && sub.id) {
-          activeSubscriptionId = sub.id as string;
-        }
-      }
-
-      // Check purchase (any order with this slug)
-      let hasPurchased = false;
-      if (!subscribed) {
-        const { data: orders } = await admin
-          .from('orders')
-          .select('id')
-          .eq('user_id', userId);
-        const orderIds = (orders ?? []).map((o: any) => o.id);
-        if (orderIds.length > 0) {
-          const { data: items } = await admin
-            .from('order_items')
-            .select('order_id')
-            .in('order_id', orderIds)
-            .eq('slug', slug)
-            .limit(1);
-          hasPurchased = (items ?? []).length > 0;
-        }
-      }
-
-      if (!subscribed && !hasPurchased) {
-        return NextResponse.json({ ok: false, error: 'Access denied' }, { status: 403 });
+    // 2) Require an active subscription for access (subscription-only model)
+    const { data: sub } = await admin
+      .from('subscriptions')
+      .select('id,is_active,valid_until')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (sub?.is_active) {
+      const validUntil = sub.valid_until ? new Date(sub.valid_until as any) : null;
+      const isValid = !validUntil || validUntil.getTime() > Date.now();
+      if (isValid && sub.id) {
+        activeSubscriptionId = sub.id as string;
       }
     }
 
+    if (!activeSubscriptionId) {
+      return NextResponse.json({ ok: false, error: 'Access denied' }, { status: 403 });
+    }
+
     // 3) Record download for analytics (only once per user/template, and only for subscribed users)
-    if (!isFree && activeSubscriptionId) {
+    if (activeSubscriptionId) {
       try {
         const { data: existing } = await admin
           .from('downloads')
