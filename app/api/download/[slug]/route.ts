@@ -81,14 +81,24 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       }
     }
 
-    // 3) Record download for analytics if tied to an active subscription
+    // 3) Record download for analytics (only once per user/template, and only for subscribed users)
     if (!isFree && activeSubscriptionId) {
       try {
-        await admin.from('downloads').insert({
-          user_id: userId,
-          template_slug: slug,
-          subscription_id: activeSubscriptionId,
-        });
+        const { data: existing } = await admin
+          .from('downloads')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('template_slug', slug)
+          .limit(1)
+          .maybeSingle();
+
+        if (!existing) {
+          await admin.from('downloads').insert({
+            user_id: userId,
+            template_slug: slug,
+            subscription_id: activeSubscriptionId,
+          });
+        }
       } catch (e) {
         console.error('Failed to record download:', e);
         // Do not block the actual download on analytics failure
