@@ -64,7 +64,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://celite.com';
   const finalImage = metaImage 
     ? (metaImage.startsWith('http') ? metaImage : `${baseUrl}${metaImage}`)
-    : `${baseUrl}/Logo.png`;
+    : `${baseUrl}/PNG1.png`;
 
   const dbTitle = row?.meta_title?.trim();
   const dbDescription = row?.meta_description?.trim();

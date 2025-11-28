@@ -33,7 +33,7 @@ export default function CTASection() {
               <div className="inline-flex items-center justify-center mb-6">
                 <div className="relative w-fit">
                   <Image 
-                    src="/Logo.png" 
+                    src="/PNG1.png" 
                     alt="Celite Logo" 
                     width={120} 
                     height={32} 

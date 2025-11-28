@@ -272,7 +272,7 @@ function CheckoutContent() {
         const rzp = new window.Razorpay({
           key: sub?.razorpay_key || '',
           subscription_id: sub.id,
-          image: '/Logo.png',
+          image: '/PNG1.png',
           prefill: {
             name: billing.name,
             email: billing.email,
@@ -368,7 +368,7 @@ function CheckoutContent() {
           currency: json.order.currency,
           name: 'Celite',
           description: cartItems.length === 1 ? cartItems[0].name : `${cartItems.length} Templates`,
-          image: '/Logo.png',
+          image: '/PNG1.png',
           order_id: json.order.id,
           prefill: {
             name: billing.name,

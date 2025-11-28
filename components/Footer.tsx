@@ -11,7 +11,7 @@ export default function Footer() {
           {/* Logo & Description */}
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="inline-block mb-4">
-              <Image src="/Logo.png" alt="Celite Logo" width={120} height={32} className="h-8 w-auto" />
+              <Image src="/PNG1.png" alt="Celite Logo" width={120} height={32} className="h-8 w-auto" />
             </Link>
             <p className="text-sm text-zinc-400 max-w-md">
               Professional After Effects templates for logo reveals, slideshows, and more. 
