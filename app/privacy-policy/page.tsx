@@ -10,26 +10,29 @@ export default function PrivacyPolicyPage() {
     <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold mb-4">Privacy Policy</h1>
-        <p className="text-zinc-400 mb-8">Last updated on Nov 10th 2023</p>
+        <p className="text-zinc-400 mb-8">Last updated on Nov 28 2025</p>
 
         <div className="prose prose-invert max-w-none space-y-6 text-zinc-300">
           <p>
-            This privacy policy sets out how <strong>CELITE</strong> uses and protects any information that you give CELITE when you use this website.
+            This privacy policy sets out how <strong>Celite</strong> uses and protects any information that you give Celite when you visit their website
+            and/or agree to purchase from them.
           </p>
 
           <p>
-            CELITE is committed to ensuring that your privacy is protected. Should we ask you to provide certain information by which you can be identified when using this website, and then you can be assured that it will only be used in accordance with this privacy statement.
+            Celite is committed to ensuring that your privacy is protected. Should we ask you to provide certain information by which you can be identified
+            when using this website, then you can be assured that it will only be used in accordance with this privacy statement.
           </p>
 
           <p>
-            CELITE may change this policy from time to time by updating this page. You should check this page from time to time to ensure that you are happy with any changes.
+            Celite may change this policy from time to time by updating this page. You should check this page from time to time to ensure that you adhere
+            to these changes.
           </p>
 
           <h2 className="text-2xl font-semibold text-white mt-8 mb-4">We may collect the following information:</h2>
           <ul className="list-disc pl-6 space-y-2">
-            <li>Name and job title</li>
+            <li>Name</li>
             <li>Contact information including email address</li>
-            <li>Demographic information such as postcode, preferences and interests</li>
+            <li>Demographic information such as postcode, preferences and interests, if required</li>
             <li>Other information relevant to customer surveys and/or offers</li>
           </ul>
 
@@ -49,10 +52,13 @@ export default function PrivacyPolicyPage() {
 
           <h2 className="text-2xl font-semibold text-white mt-8 mb-4">How we use cookies</h2>
           <p>
-            A cookie is a small file which asks permission to be placed on your computer's hard drive. Once you agree, the file is added and the cookie helps analyses web traffic or lets you know when you visit a particular site. Cookies allow web applications to respond to you as an individual. The web application can tailor its operations to your needs, likes and dislikes by gathering and remembering information about your preferences.
+            A cookie is a small file which asks permission to be placed on your computer&apos;s hard drive. Once you agree, the file is added and the cookie helps analyze web traffic or lets you know when you visit a particular site.
+            Cookies allow web applications to respond to you as an individual. The web application can tailor its operations to your needs, likes and dislikes
+            by gathering and remembering information about your preferences.
           </p>
           <p>
-            We use traffic log cookies to identify which pages are being used. This helps us analyses data about webpage traffic and improve our website in order to tailor it to customer needs. We only use this information for statistical analysis purposes and then the data is removed from the system.
+            We use traffic log cookies to identify which pages are being used. This helps us analyze data about webpage traffic and improve our website in order
+            to tailor it to customer needs. We only use this information for statistical analysis purposes and then the data is removed from the system.
           </p>
           <p>
             Overall, cookies help us provide you with a better website, by enabling us to monitor which pages you find useful and which you do not. A cookie in no way gives us access to your computer or any information about you, other than the data you choose to share with us.
@@ -73,13 +79,32 @@ export default function PrivacyPolicyPage() {
             We will not sell, distribute or lease your personal information to third parties unless we have your permission or are required by law to do so. We may use your personal information to send you promotional information about third parties which we think you may find interesting if you tell us that you wish this to happen.
           </p>
           <p>
-            If you believe that any information we are holding on you is incorrect or incomplete, please write to or email us as soon as possible. We will promptly correct any information found to be incorrect.
+            If you believe that any information we are holding on you is incorrect or incomplete, please write to{' '}
+            <span className="font-semibold">PKP, Othakadai 625023 Madras High Court Madurai Bench SO TAMIL NADU 625023</span> or contact us at{' '}
+            <a href="tel:8939079627" className="text-blue-400 hover:text-blue-300">
+              8939079627
+            </a>{' '}
+            or{' '}
+            <a href="mailto:elitechaplin@gmail.com" className="text-blue-400 hover:text-blue-300">
+              elitechaplin@gmail.com
+            </a>{' '}
+            as soon as possible. We will promptly correct any information found to be incorrect.
           </p>
 
           <div className="mt-8 p-6 bg-zinc-900/50 rounded-lg border border-white/10">
             <h3 className="text-lg font-semibold text-white mb-3">Contact Information</h3>
-            <p className="mb-2">Phone: <a href="tel:+916374401608" className="text-blue-400 hover:text-blue-300">+91 6374401608</a></p>
-            <p>Email: <a href="mailto:elitechaplin@gmail.com" className="text-blue-400 hover:text-blue-300">elitechaplin@gmail.com</a></p>
+            <p className="mb-2">
+              Phone:{' '}
+              <a href="tel:8939079627" className="text-blue-400 hover:text-blue-300">
+                8939079627
+              </a>
+            </p>
+            <p>
+              Email:{' '}
+              <a href="mailto:elitechaplin@gmail.com" className="text-blue-400 hover:text-blue-300">
+                elitechaplin@gmail.com
+              </a>
+            </p>
           </div>
         </div>
       </div>

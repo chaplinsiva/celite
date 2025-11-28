@@ -10,72 +10,68 @@ export default function TermsPage() {
     <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold mb-4">Terms & Conditions</h1>
-        <p className="text-zinc-400 mb-8">Last updated on Nov 10th 2023</p>
+        <p className="text-zinc-400 mb-8">Last updated on Nov 28 2025</p>
 
         <div className="prose prose-invert max-w-none space-y-6 text-zinc-300">
           <p>
-            The Website Owner, including subsidiaries and affiliates ("Website" or "Website Owner" or "we" or "us" or "our") provides the information contained on the website or any of the pages comprising the website ("website") to visitors ("visitors") (cumulatively referred to as "you" or "your" hereinafter) subject to the terms and conditions set out in these website terms and conditions, the privacy policy and any other relevant terms and conditions, policies and notices which may be applicable to a specific section or module of the website.
+            For the purpose of these Terms and Conditions, the terms &quot;we&quot;, &quot;us&quot;, &quot;our&quot; used anywhere on this page shall mean{' '}
+            <strong>Celite</strong>, whose registered/operational office is{' '}
+            <strong>PKP, Othakadai 625023 Madras High Court Madurai Bench SO TAMIL NADU 625023</strong>. &quot;you&quot;, &quot;your&quot;, &quot;user&quot;,
+            &quot;visitor&quot; shall mean any natural or legal person who is visiting our website and/or agreed to purchase from us.
           </p>
 
           <p>
-            Welcome to our website. If you continue to browse and use this website you are agreeing to comply with and be bound by the following terms and conditions of use, which together with our privacy policy govern CELITE's relationship with you in relation to this website.
+            Your use of the website and/or purchase from us are governed by the following Terms and Conditions:
           </p>
 
           <p>
-            The term 'CELITE' or 'us' or 'we' refers to the owner of the website whose registered/operational office is <strong>Plot 95, PTR Nagar, Jawaharpuram West, Madurai, TAMIL NADU 625007</strong>. The term 'you' refers to the user or viewer of our website.
+            The content of the pages of this website is subject to change without notice.
           </p>
 
-          <h2 className="text-2xl font-semibold text-white mt-8 mb-4">The use of this website is subject to the following terms of use:</h2>
-          <ul className="list-disc pl-6 space-y-2">
-            <li>
-              The content of the pages of this website is for your general information and use only. It is subject to change without notice.
-            </li>
-            <li>
-              Neither we nor any third parties provide any warranty or guarantee as to the accuracy, timeliness, performance, completeness or suitability of the information and materials found or offered on this website for any particular purpose. You acknowledge that such information and materials may contain inaccuracies or errors and we expressly exclude liability for any such inaccuracies or errors to the fullest extent permitted by law.
-            </li>
-            <li>
-              Your use of any information or materials on this website is entirely at your own risk, for which we shall not be liable. It shall be your own responsibility to ensure that any products, services or information available through this website meet your specific requirements.
-            </li>
-            <li>
-              This website contains material which is owned by or licensed to us. This material includes, but is not limited to, the design, layout, look, appearance and graphics. Reproduction is prohibited other than in accordance with the copyright notice, which forms part of these terms and conditions.
-            </li>
-            <li>
-              All trademarks reproduced in this website which are not the property of, or licensed to, the operator are acknowledged on the website.
-            </li>
-            <li>
-              Unauthorized use of this website may give rise to a claim for damages and/or be a criminal offense.
-            </li>
-            <li>
-              From time to time this website may also include links to other websites. These links are provided for your convenience to provide further information.
-            </li>
-            <li>
-              You may not create a link to this website from another website or document without CELITE's prior written consent.
-            </li>
-            <li>
-              Your use of this website and any dispute arising out of such use of the website is subject to the laws of India or other regulatory authority.
-            </li>
-            <li>
-              We as a merchant shall be under no liability whatsoever in respect of any loss or damage arising directly or indirectly out of the decline of authorization for any Transaction, on Account of the Cardholder having exceeded the preset limit mutually agreed by us with our acquiring bank from time to time.
-            </li>
-          </ul>
-
-          <h2 className="text-2xl font-semibold text-white mt-8 mb-4">Digital Product License</h2>
           <p>
-            All templates purchased from CELITE are licensed for use in your projects. The license terms include:
+            Neither we nor any third parties provide any warranty or guarantee as to the accuracy, timeliness, performance, completeness or suitability of
+            the information and materials found or offered on this website for any particular purpose. You acknowledge that such information and materials
+            may contain inaccuracies or errors and we expressly exclude liability for any such inaccuracies or errors to the fullest extent permitted by law.
           </p>
-          <ul className="list-disc pl-6 space-y-2">
-            <li>Commercial usage rights for your projects</li>
-            <li>Personal and commercial use is permitted</li>
-            <li>Redistribution or resale of templates is prohibited</li>
-            <li>Templates may not be shared or distributed to third parties</li>
-          </ul>
 
-          <div className="mt-8 p-6 bg-zinc-900/50 rounded-lg border border-white/10">
-            <h3 className="text-lg font-semibold text-white mb-3">Contact Information</h3>
-            <p className="mb-2"><strong>Address:</strong> Plot 95, PTR Nagar, Jawaharpuram West, Madurai, TAMIL NADU 625007</p>
-            <p className="mb-2">Phone: <a href="tel:+916374401608" className="text-blue-400 hover:text-blue-300">+91 6374401608</a></p>
-            <p>Email: <a href="mailto:elitechaplin@gmail.com" className="text-blue-400 hover:text-blue-300">elitechaplin@gmail.com</a></p>
-          </div>
+          <p>
+            Your use of any information or materials on our website and/or product pages is entirely at your own risk, for which we shall not be liable. It
+            shall be your own responsibility to ensure that any products, services or information available through our website and/or product pages meet your
+            specific requirements.
+          </p>
+
+          <p>
+            Our website contains material which is owned by or licensed to us. This material includes, but is not limited to, the design, layout, look,
+            appearance and graphics. Reproduction is prohibited other than in accordance with the copyright notice, which forms part of these terms and
+            conditions.
+          </p>
+
+          <p>
+            All trademarks reproduced in our website which are not the property of, or licensed to, the operator are acknowledged on the website.
+          </p>
+
+          <p>
+            Unauthorized use of information provided by us shall give rise to a claim for damages and/or be a criminal offense.
+          </p>
+
+          <p>
+            From time to time our website may also include links to other websites. These links are provided for your convenience to provide further
+            information.
+          </p>
+
+          <p>
+            You may not create a link to our website from another website or document without Celite&apos;s prior written consent.
+          </p>
+
+          <p>
+            Any dispute arising out of use of our website and/or purchase with us and/or any engagement with us is subject to the laws of India.
+          </p>
+
+          <p>
+            We, as a merchant, shall be under no liability whatsoever in respect of any loss or damage arising directly or indirectly out of the decline of
+            authorization for any transaction, on account of the cardholder having exceeded the preset limit mutually agreed by us with our acquiring bank
+            from time to time.
+          </p>
         </div>
       </div>
     </main>

@@ -88,8 +88,18 @@ export default function Footer() {
         <div className="mt-8 pt-8 border-t border-white/10">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm text-zinc-400">
             <div>
-              <p>Phone: <a href="tel:+916374401608" className="hover:text-white transition-colors">+91 6374401608</a></p>
-              <p>Email: <a href="mailto:elitechaplin@gmail.com" className="hover:text-white transition-colors">elitechaplin@gmail.com</a></p>
+              <p>
+                Phone:{' '}
+                <a href="tel:8939079627" className="hover:text-white transition-colors">
+                  8939079627
+                </a>
+              </p>
+              <p>
+                Email:{' '}
+                <a href="mailto:elitechaplin@gmail.com" className="hover:text-white transition-colors">
+                  elitechaplin@gmail.com
+                </a>
+              </p>
             </div>
             <p>© {new Date().getFullYear()} Celite. All rights reserved.</p>
           </div>

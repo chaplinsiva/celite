@@ -34,15 +34,23 @@ export default function ContactContent() {
               <div className="space-y-3">
                 <div>
                   <p className="text-sm text-zinc-400 mb-1">Legal Entity Name</p>
-                  <p className="text-white">Thavamaniraja V</p>
+                  <p className="text-white">Celite</p>
                 </div>
                 <div>
                   <p className="text-sm text-zinc-400 mb-1">Registered Address</p>
-                  <p className="text-white">AK Office Jawagar Puram<br />Madurai<br />TAMIL NADU 625107</p>
+                  <p className="text-white">
+                    PKP, Othakadai 625023<br />
+                    Madras High Court Madurai Bench SO<br />
+                    TAMIL NADU 625023
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-zinc-400 mb-1">Operational Address</p>
-                  <p className="text-white">AK Office Jawagar Puram<br />Madurai<br />TAMIL NADU 625107</p>
+                  <p className="text-white">
+                    PKP, Othakadai 625023<br />
+                    Madras High Court Madurai Bench SO<br />
+                    TAMIL NADU 625023
+                  </p>
                 </div>
               </div>
             </div>
@@ -63,7 +71,7 @@ export default function ContactContent() {
                 <div>
                   <p className="text-sm text-zinc-400 mb-1">Telephone</p>
                   <p className="text-white">
-                    <a href="tel:6374401608" className="text-blue-400 hover:text-blue-300">6374401608</a>
+                    <a href="tel:8939079627" className="text-blue-400 hover:text-blue-300">8939079627</a>
                   </p>
                 </div>
                 <div>
