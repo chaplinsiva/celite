@@ -297,9 +297,9 @@ function DashboardContent() {
   const subscriptionTier = isActuallyActive 
     ? (sub?.plan || 'Pro') 
     : isPaused
-    ? `${sub?.plan === 'weekly' ? 'Weekly' : sub?.plan === 'yearly' ? 'Yearly' : 'Monthly'} Plan - Paused`
+    ? `${sub?.plan === 'yearly' ? 'Yearly' : 'Monthly'} Plan - Paused`
     : hasExpiredPlan 
-    ? `${sub?.plan === 'weekly' ? 'Weekly' : sub?.plan === 'yearly' ? 'Yearly' : 'Monthly'} Plan Expired`
+    ? `${sub?.plan === 'yearly' ? 'Yearly' : 'Monthly'} Plan Expired`
     : 'Free';
   const displayMonthlyPrice = formatPrice(monthlyPrice ?? 799);
   const displayYearlyPrice = formatPrice(yearlyPrice ?? 5499);
@@ -373,7 +373,7 @@ function DashboardContent() {
             {/* Show subscription details */}
             {isActuallyActive && sub?.valid_until && (
               <p className={`mt-1 text-xs text-green-300`}>
-                Active{sub?.plan ? ` • ${sub.plan === 'yearly' ? 'Yearly' : sub.plan === 'weekly' ? 'Weekly' : 'Monthly'}` : ''}
+                Active{sub?.plan ? ` • ${sub.plan === 'yearly' ? 'Yearly' : 'Monthly'}` : ''}
                 <br />
                 <span className="text-zinc-400">Valid until: {new Date(sub.valid_until).toLocaleDateString()} {new Date(sub.valid_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </p>
@@ -476,9 +476,7 @@ function DashboardContent() {
                   <span className="font-semibold text-white">
                     {sub.plan === 'yearly'
                       ? 'Yearly'
-                      : sub.plan === 'weekly'
-                      ? 'Weekly'
-                      : sub.plan === 'monthly'
+                      : sub.plan === 'monthly' || sub.plan === 'weekly'
                       ? 'Monthly'
                       : 'Unknown'}
                   </span>
@@ -899,7 +897,7 @@ function ManageSubscriptionPanel({ isActive, isPaused, plan, validUntil, onCance
   loading: boolean;
 }) {
   const hasExpiredPlan = !isActive && !isPaused && plan; // Subscription expired and inactive
-  const planDisplayName = plan === 'yearly' ? 'Yearly' : plan === 'weekly' ? 'Weekly' : 'Monthly';
+  const planDisplayName = plan === 'yearly' ? 'Yearly' : 'Monthly';
   
   return (
     <div className="space-y-4">

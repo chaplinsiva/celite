@@ -285,22 +285,20 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             inactiveZone={0.01}
             borderWidth={3}
           />
-          <div className="relative flex flex-col md:flex-row gap-10 overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 md:p-12 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-        {/* Product Gallery */}
-        <div className="flex-1 flex flex-col items-center md:items-start w-full">
-          {product.video ? (
-            <div className="w-full max-w-xs sm:max-w-sm md:max-w-sm lg:max-w-xs rounded-2xl shadow-xl mb-7 overflow-hidden aspect-video">
-              <YouTubeVideoPlayer 
-                videoUrl={product.video}
-                title={product.name}
-                className="w-full h-full"
-                showFullscreen={true}
-              />
-            </div>
-          ) : null}
-        </div>
-        {/* Product Info */}
-        <div className="flex-[1.5] flex flex-col">
+          <div className="relative flex flex-col gap-10 overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 md:p-12 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+        {/* Product Gallery - Video on Top */}
+        {product.video ? (
+          <div className="w-full rounded-2xl shadow-xl overflow-hidden aspect-video">
+            <YouTubeVideoPlayer 
+              videoUrl={product.video}
+              title={product.name}
+              className="w-full h-full"
+              showFullscreen={true}
+            />
+          </div>
+        ) : null}
+        {/* Product Info - Details Below Video */}
+        <div className="flex flex-col">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-white">{product.name}</h1>

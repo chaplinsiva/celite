@@ -142,7 +142,6 @@ export default function AnalyticsPanel() {
 
   // Prepare chart data
   const planDistribution = [
-    { name: 'Weekly', value: totals?.activeWeekly || 0, revenue: (totals?.activeWeekly || 0) * (totals?.weeklyPrice || 199) },
     { name: 'Monthly', value: totals?.activeMonthly || 0, revenue: (totals?.activeMonthly || 0) * (totals?.monthlyPrice || 799) },
     { name: 'Yearly', value: totals?.activeYearly || 0, revenue: (totals?.activeYearly || 0) * (totals?.yearlyPrice || 5499) },
   ].filter(item => item.value > 0);
@@ -190,20 +189,16 @@ export default function AnalyticsPanel() {
       return nowTs - created <= maxMs;
     });
 
-    const weeklyPrice = totals?.weeklyPrice ?? 0;
     const monthlyPrice = totals?.monthlyPrice ?? 0;
     const yearlyPrice = totals?.yearlyPrice ?? 0;
 
     let estRevenue = 0;
-    let weekly = 0;
     let monthly = 0;
     let yearly = 0;
 
     filtered.forEach((s) => {
-      if (s.plan === 'weekly') {
-        weekly += 1;
-        estRevenue += weeklyPrice;
-      } else if (s.plan === 'monthly') {
+      // Weekly subscriptions are treated as monthly (legacy support)
+      if (s.plan === 'weekly' || s.plan === 'monthly') {
         monthly += 1;
         estRevenue += monthlyPrice;
       } else if (s.plan === 'yearly') {
@@ -214,7 +209,7 @@ export default function AnalyticsPanel() {
 
     return {
       count: filtered.length,
-      weekly,
+      weekly: 0, // No new weekly subscriptions
       monthly,
       yearly,
       estRevenue,
@@ -286,7 +281,7 @@ export default function AnalyticsPanel() {
           <div className="text-2xl font-bold">₹{totals?.subscriptionRevenue?.toFixed(2) ?? '0.00'}</div>
           <div className="text-xs text-zinc-400 mt-1">Monthly Recurring Revenue (MRR)</div>
           <div className="text-xs text-zinc-500 mt-2">
-            Weekly: {totals?.activeWeekly || 0} • Monthly: {totals?.activeMonthly || 0} • Yearly: {totals?.activeYearly || 0}
+            Monthly: {totals?.activeMonthly || 0} • Yearly: {totals?.activeYearly || 0}
           </div>
         </div>
         
@@ -387,9 +382,9 @@ export default function AnalyticsPanel() {
             </div>
             <div className="rounded-xl border border-white/10 bg-black/60 p-3">
               <div className="text-lg font-bold text-white">
-                {subscriptionStats.weekly} / {subscriptionStats.monthly} / {subscriptionStats.yearly}
+                {subscriptionStats.monthly} / {subscriptionStats.yearly}
               </div>
-              <div className="text-[11px] text-zinc-400 mt-1">Weekly / Monthly / Yearly (new)</div>
+              <div className="text-[11px] text-zinc-400 mt-1">Monthly / Yearly (new)</div>
             </div>
             <div className="rounded-xl border border-white/10 bg-black/60 p-3">
               <div className="text-lg font-bold text-white">
@@ -593,7 +588,6 @@ export default function AnalyticsPanel() {
               className="px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-sm text-white"
             >
               <option value="">All Plans</option>
-              <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
               <option value="yearly">Yearly</option>
             </select>
@@ -685,7 +679,7 @@ export default function AnalyticsPanel() {
                         <span className={`px-2 py-1 rounded text-xs font-semibold ${
                           s.plan === 'yearly' ? 'bg-purple-500/20 text-purple-300' :
                           s.plan === 'monthly' ? 'bg-blue-500/20 text-blue-300' :
-                          s.plan === 'weekly' ? 'bg-green-500/20 text-green-300' :
+                          (s.plan === 'weekly' || s.plan === 'monthly') ? 'bg-green-500/20 text-green-300' :
                           'bg-zinc-500/20 text-zinc-300'
                         }`}>
                           {s.plan ? s.plan.charAt(0).toUpperCase() + s.plan.slice(1) : '-'}

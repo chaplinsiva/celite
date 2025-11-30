@@ -5,9 +5,9 @@ import { getRazorpayCreds, razorpayRequest } from '../../../../../lib/razorpay';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { plan, currency: reqCurrency, billing } = body; // { plan: 'weekly' | 'monthly' | 'yearly', currency?: 'USD' | 'INR', billing?: {...} }
-    if (!plan || (plan !== 'weekly' && plan !== 'monthly' && plan !== 'yearly')) {
-      return NextResponse.json({ ok: false, error: 'Invalid plan. Must be "weekly", "monthly" or "yearly"' }, { status: 400 });
+    const { plan, currency: reqCurrency, billing } = body; // { plan: 'monthly' | 'yearly', currency?: 'USD' | 'INR', billing?: {...} }
+    if (!plan || (plan !== 'monthly' && plan !== 'yearly')) {
+      return NextResponse.json({ ok: false, error: 'Invalid plan. Must be "monthly" or "yearly"' }, { status: 400 });
     }
     
     // Get user details for customer creation
@@ -59,12 +59,11 @@ export async function POST(req: Request) {
       }
     }
     
-    let { key_id, currency, weekly_amount, monthly_amount, yearly_amount } = await getRazorpayCreds();
+    let { key_id, currency, monthly_amount, yearly_amount } = await getRazorpayCreds();
     
     const isYearly = plan === 'yearly';
-    const isWeekly = plan === 'weekly';
-    const amount = isYearly ? yearly_amount : isWeekly ? weekly_amount : monthly_amount;
-    const period = isYearly ? 'yearly' : isWeekly ? 'weekly' : 'monthly';
+    const amount = isYearly ? yearly_amount : monthly_amount;
+    const period = isYearly ? 'yearly' : 'monthly';
 
     // Create or get customer in Razorpay
     let customerId: string | null = null;
@@ -104,10 +103,9 @@ export async function POST(req: Request) {
     });
 
     // Create subscription
-    // For weekly: 520 cycles = 520 weeks = 10 years
     // For monthly: 120 cycles = 120 months = 10 years
     // For yearly: 10 cycles = 10 years
-    const totalCount = isYearly ? 10 : isWeekly ? 520 : 120;
+    const totalCount = isYearly ? 10 : 120;
     
     const subscriptionBody: any = {
       plan_id: createdPlan.id, 

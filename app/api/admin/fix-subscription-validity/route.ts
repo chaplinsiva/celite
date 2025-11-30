@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
 
-type PlanType = 'weekly' | 'monthly' | 'yearly';
+type PlanType = 'monthly' | 'yearly' | 'weekly'; // 'weekly' for legacy support only
 
 const PLAN_DURATION_MS: Record<PlanType, number> = {
-  weekly: 7 * 24 * 60 * 60 * 1000,
+  weekly: 30 * 24 * 60 * 60 * 1000, // Treat weekly as monthly (legacy)
   monthly: 30 * 24 * 60 * 60 * 1000,
   yearly: 365 * 24 * 60 * 60 * 1000,
 };

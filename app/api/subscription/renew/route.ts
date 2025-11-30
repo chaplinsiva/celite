@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: 'No existing subscription found to renew' }, { status: 400 });
     }
 
-    const plan = existingSub.plan as 'weekly' | 'monthly' | 'yearly';
+    const plan = existingSub.plan as 'monthly' | 'yearly' | 'weekly'; // Allow 'weekly' for legacy subscriptions
     const razorpaySubscriptionId = existingSub.razorpay_subscription_id as string | null;
 
     // Cancel old Razorpay subscription if it exists
@@ -46,18 +46,22 @@ export async function POST(req: Request) {
     }
 
     // Calculate new valid_until based on plan
+    // Legacy weekly subscriptions are converted to monthly
     const now = Date.now();
     const expiresAt = plan === 'yearly'
       ? new Date(now + 365 * 24 * 60 * 60 * 1000)
       : plan === 'weekly'
-      ? new Date(now + 7 * 24 * 60 * 60 * 1000)
+      ? new Date(now + 30 * 24 * 60 * 60 * 1000) // Convert weekly to monthly
       : new Date(now + 30 * 24 * 60 * 60 * 1000);
+    
+    // Convert weekly to monthly for legacy subscriptions
+    const finalPlan = plan === 'weekly' ? 'monthly' : plan;
 
     // Create new subscription (cancel old and start new)
     const updateData: any = {
       user_id: userId,
       is_active: true,
-      plan,
+      plan: finalPlan,
       valid_until: expiresAt.toISOString(),
       razorpay_subscription_id: null, // Clear old Razorpay subscription ID
     };
@@ -71,7 +75,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      plan,
+      plan: finalPlan,
       valid_until: expiresAt.toISOString(),
       message: 'Subscription renewed successfully',
     });

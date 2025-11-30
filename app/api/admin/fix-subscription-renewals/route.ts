@@ -116,9 +116,8 @@ export async function POST(req: Request) {
             
             if (plan === 'yearly') {
               newValidUntil.setFullYear(newValidUntil.getFullYear() + 1);
-            } else if (plan === 'weekly') {
-              newValidUntil.setDate(newValidUntil.getDate() + 7);
             } else {
+              // Monthly (weekly subscriptions treated as monthly for legacy support)
               newValidUntil.setMonth(newValidUntil.getMonth() + 1);
             }
 

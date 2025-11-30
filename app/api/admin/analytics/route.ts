@@ -50,7 +50,7 @@ export async function GET(req: Request) {
       .order('created_at', { ascending: false });
 
     // Apply filters
-    if (planFilter && ['weekly', 'monthly', 'yearly'].includes(planFilter)) {
+    if (planFilter && ['monthly', 'yearly'].includes(planFilter)) {
       subsQuery = subsQuery.eq('plan', planFilter);
     }
     if (statusFilter === 'active') {
@@ -71,7 +71,7 @@ export async function GET(req: Request) {
 
     // Get total count for pagination (without limit)
     let countQuery = admin.from('subscriptions').select('*', { count: 'exact', head: true });
-    if (planFilter && ['weekly', 'monthly', 'yearly'].includes(planFilter)) {
+    if (planFilter && ['monthly', 'yearly'].includes(planFilter)) {
       countQuery = countQuery.eq('plan', planFilter);
     }
     if (statusFilter === 'active') {
@@ -108,8 +108,9 @@ export async function GET(req: Request) {
     const cancelledList = allSubs.filter((s: any) => s.is_active === false);
 
     const activeSubscribers = activeList.length;
-    const activeWeekly = activeList.filter((s: any) => s.plan === 'weekly').length;
-    const activeMonthly = activeList.filter((s: any) => s.plan === 'monthly').length;
+    // Weekly subscriptions are treated as monthly (legacy support)
+    const activeWeekly = 0; // No new weekly subscriptions
+    const activeMonthly = activeList.filter((s: any) => s.plan === 'monthly' || s.plan === 'weekly').length;
     const activeYearly = activeList.filter((s: any) => s.plan === 'yearly').length;
     const expiredSubscribers = expiredList.length;
     const cancelledSubscribers = cancelledList.length;
@@ -123,7 +124,6 @@ export async function GET(req: Request) {
     });
 
     // Get actual subscription prices from settings
-    let weeklyPrice = 199; // Default
     let monthlyPrice = 799; // Default
     let yearlyPrice = 5499; // Default
     
@@ -133,12 +133,10 @@ export async function GET(req: Request) {
         const settingsMap: Record<string, string> = {};
         settings.forEach((row: any) => { settingsMap[row.key] = row.value; });
         
-        const weeklyPaise = Number(settingsMap.RAZORPAY_WEEKLY_AMOUNT || 19900);
         const monthlyPaise = Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || 79900);
         const yearlyPaise = Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || 549900);
         
         // Convert from paise to INR (if >= threshold, it's in paise)
-        weeklyPrice = weeklyPaise >= 1000 ? weeklyPaise / 100 : weeklyPaise;
         monthlyPrice = monthlyPaise >= 10000 ? monthlyPaise / 100 : monthlyPaise;
         yearlyPrice = yearlyPaise >= 100000 ? yearlyPaise / 100 : yearlyPaise;
       }
@@ -147,19 +145,16 @@ export async function GET(req: Request) {
     }
     
     // Calculate MRR (Monthly Recurring Revenue)
-    // Weekly: convert to monthly equivalent (weekly price * 4.33 weeks per month)
-    const weeklyMRR = activeWeekly * weeklyPrice * 4.33;
-    // Monthly: direct monthly price
+    // Monthly: direct monthly price (includes legacy weekly subscriptions)
     const monthlyMRR = activeMonthly * monthlyPrice;
     // Yearly: convert to monthly (yearly price / 12)
     const yearlyMRR = activeYearly * (yearlyPrice / 12);
-    const subscriptionMRR = weeklyMRR + monthlyMRR + yearlyMRR;
+    const subscriptionMRR = monthlyMRR + yearlyMRR;
     
     // Also calculate total revenue if all subscriptions were paid for their full period
-    const weeklyTotalRevenue = activeWeekly * weeklyPrice;
     const monthlyTotalRevenue = activeMonthly * monthlyPrice;
     const yearlyTotalRevenue = activeYearly * yearlyPrice;
-    const totalSubscriptionRevenue = weeklyTotalRevenue + monthlyTotalRevenue + yearlyTotalRevenue;
+    const totalSubscriptionRevenue = monthlyTotalRevenue + yearlyTotalRevenue;
 
     // Calculate total order revenue (if orders exist)
     const totalOrderRevenue = (ordersRes.data ?? []).reduce((s: number, o: any) => s + Number(o.total || 0), 0);
@@ -253,12 +248,11 @@ export async function GET(req: Request) {
         orderRevenue: totalOrderRevenue,
         subscriptionRevenue: Number(subscriptionMRR.toFixed(2)),
         totalSubscriptionRevenue: Number(totalSubscriptionRevenue.toFixed(2)),
-        weeklyPrice,
         monthlyPrice,
         yearlyPrice,
         orders: totalOrders,
         activeSubscribers,
-        activeWeekly,
+        activeWeekly: 0, // No new weekly subscriptions
         activeMonthly,
         activeYearly,
         expiredSubscribers,

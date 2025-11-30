@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Check } from 'lucide-react';
+import { Check, Lock } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { formatPrice } from '@/lib/currency';
 import { GlowingEffect } from '@/components/ui/glowing-effect';
@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 
 export default function PricingContent() {
-  const [weeklyPrice, setWeeklyPrice] = useState<number | null>(null);
   const [monthlyPrice, setMonthlyPrice] = useState<number | null>(null);
   const [yearlyPrice, setYearlyPrice] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,24 +24,19 @@ export default function PricingContent() {
         (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
         
         // Get amounts in paise from backend only
-        const weeklyPaiseStr = settingsMap.RAZORPAY_WEEKLY_AMOUNT;
         const monthlyPaiseStr = settingsMap.RAZORPAY_MONTHLY_AMOUNT;
         const yearlyPaiseStr = settingsMap.RAZORPAY_YEARLY_AMOUNT;
         
-        if (!weeklyPaiseStr || !monthlyPaiseStr || !yearlyPaiseStr) {
+        if (!monthlyPaiseStr || !yearlyPaiseStr) {
           throw new Error('Subscription prices not found in database');
         }
         
-        let weeklyPaise = Number(weeklyPaiseStr);
         let monthlyPaise = Number(monthlyPaiseStr);
         let yearlyPaise = Number(yearlyPaiseStr);
         
         // Convert from paise to INR
-        // If >= 1000 for weekly, >= 10000 for monthly or >= 100000 for yearly, it's in paise, divide by 100
+        // If >= 10000 for monthly or >= 100000 for yearly, it's in paise, divide by 100
         // Otherwise, it's already in rupees
-        if (weeklyPaise >= 1000) {
-          weeklyPaise = weeklyPaise / 100;
-        }
         if (monthlyPaise >= 10000) {
           monthlyPaise = monthlyPaise / 100;
         }
@@ -50,7 +44,6 @@ export default function PricingContent() {
           yearlyPaise = yearlyPaise / 100;
         }
         
-        setWeeklyPrice(Math.round(weeklyPaise));
         setMonthlyPrice(Math.round(monthlyPaise));
         setYearlyPrice(Math.round(yearlyPaise));
       } catch (error) {
@@ -68,7 +61,7 @@ export default function PricingContent() {
     return <LoadingSpinner message="Loading pricing..." />;
   }
 
-  if (weeklyPrice === null || monthlyPrice === null || yearlyPrice === null) {
+  if (monthlyPrice === null || yearlyPrice === null) {
     return (
       <div className="text-center py-12">
         <p className="text-red-400">Unable to load pricing information. Please try again later.</p>
@@ -82,44 +75,43 @@ export default function PricingContent() {
         <span className="uppercase tracking-[0.4em] text-xs text-zinc-400">Pricing</span>
         <h1 className="mt-4 text-4xl md:text-5xl font-bold text-white">Choose Your Plan</h1>
         <p className="mt-6 text-lg text-zinc-300 leading-relaxed">
-          Unlock unlimited access to premium templates and elevate your creative projects. Upgrade anytime as your needs grow.
+          Unlock unlimited access to premium templates and elevate your creative projects.
         </p>
       </section>
 
-      <section className="relative max-w-5xl mx-auto">
-        <div className="flex flex-col gap-4 md:flex-row md:items-stretch md:justify-center md:flex-wrap">
-          {/* Monthly Plan (Default / Highlighted) */}
-          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 w-full md:w-[calc(50%-0.75rem)] md:order-1">
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
-            />
-            <div className="relative flex flex-col justify-between h-full overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-gradient-to-br from-blue-600/20 via-purple-500/10 to-transparent backdrop-blur-sm p-6 md:p-8 shadow-lg shadow-blue-500/20">
-              <div className="absolute top-4 right-4 z-20 bg-white text-black text-xs font-bold px-3 py-1 rounded-full shadow-md">
-                Most Popular
+      <section className="relative max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+          {/* Student Plan - Coming Soon */}
+          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
+            <div className="relative flex flex-col justify-between h-full overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 md:p-8 shadow-sm">
+              <div className="absolute top-4 right-4 z-20 bg-zinc-700 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md flex items-center gap-1">
+                <Lock className="size-3" />
+                Coming Soon
               </div>
               <div className="space-y-4 mb-6">
                 <div>
-                  <h2 className="font-medium text-white text-lg mb-2">Monthly</h2>
-                  <span className="block text-3xl font-semibold text-white mb-2">{formatPrice(monthlyPrice)} / mo</span>
-                  <p className="text-zinc-100 text-sm">Best balance for creators who want full premium access</p>
+                  <h2 className="font-medium text-white text-lg mb-2">Student</h2>
+                  <span className="block text-3xl font-semibold text-white mb-2">₹199 / month</span>
+                  <p className="text-zinc-400 text-sm">Special pricing for students</p>
                 </div>
                 <Button
-                  asChild
-                  className="w-full mt-4 bg-white text-black hover:bg-zinc-200 font-semibold border-0 shadow-md shadow-blue-500/20"
+                  disabled
+                  className="w-full bg-zinc-700 text-zinc-400 cursor-not-allowed font-semibold border-0 py-6 text-lg"
                   variant="default"
                 >
-                  <Link href="/checkout?subscription=monthly">Subscribe Monthly</Link>
+                  Coming Soon
                 </Button>
               </div>
-              <ul className="border-t border-white/10 pt-4 space-y-3 text-sm flex-1">
-                {["Unlimited Premium Templates", "Full Source Files Access", "Priority Support", "Commercial License", "Regular Updates", "Early Access to New Templates", "Download Any Template"].map((item, index) => (
-                  <li key={index} className="flex items-start gap-2 text-zinc-300">
-                    <Check className="size-4 text-white flex-shrink-0 mt-0.5" />
+              <ul className="border-t border-white/10 pt-4 space-y-3 text-sm">
+                {[
+                  "Unlimited Premium Templates",
+                  "Full Source File Access",
+                  "Educational License",
+                  "Student Support",
+                  "Regular Updates"
+                ].map((item, index) => (
+                  <li key={index} className="flex items-start gap-2 text-zinc-500">
+                    <Check className="size-4 text-zinc-600 flex-shrink-0 mt-0.5" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -127,8 +119,8 @@ export default function PricingContent() {
             </div>
           </div>
 
-          {/* Yearly Plan */}
-          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 w-full md:w-[calc(50%-0.75rem)] md:order-2">
+          {/* Monthly Plan - Center, Highlighted */}
+          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
             <GlowingEffect
               spread={40}
               glow={true}
@@ -137,19 +129,76 @@ export default function PricingContent() {
               inactiveZone={0.01}
               borderWidth={3}
             />
-            <div className="relative flex flex-col justify-between h-full overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-              <div className="space-y-4 mb-6">
+            <div className="relative flex flex-col justify-between h-full overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-gradient-to-br from-purple-600/20 via-blue-500/10 to-transparent backdrop-blur-sm p-8 md:p-10 shadow-lg shadow-purple-500/20">
+              <div className="absolute top-4 right-4 z-20 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
+                Save 33%
+              </div>
+              <div className="space-y-6 mb-8">
                 <div>
-                  <h2 className="font-medium text-white text-lg mb-2">Yearly</h2>
-                  <span className="block text-2xl font-semibold text-white mb-2">{formatPrice(yearlyPrice)} / year</span>
-                  <p className="text-zinc-400 text-sm">Best value for professionals - Save 42%</p>
+                  <h2 className="font-medium text-white text-lg mb-2">Monthly</h2>
+                  <span className="block text-5xl md:text-6xl font-bold text-white mb-2">
+                    ₹399 <span className="text-2xl md:text-3xl">/ month</span>
+                  </span>
+                  <p className="text-zinc-300 text-sm">
+                    Billed yearly at ₹4,788. Save 33%.
+                  </p>
                 </div>
-                <Button asChild className="w-full mt-4" variant="default">
-                  <Link href="/checkout?subscription=yearly">Subscribe Yearly</Link>
+                <Button
+                  asChild
+                  className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 font-semibold border-0 shadow-lg shadow-purple-500/30 py-6 text-lg transition-all hover:scale-[1.02]"
+                  variant="default"
+                >
+                  <Link href="/checkout?subscription=yearly">
+                    Subscribe Now
+                  </Link>
                 </Button>
               </div>
-              <ul className="border-t border-white/10 pt-4 space-y-3 text-sm flex-1">
-                {["Everything in Monthly", "Save 42% vs Monthly", "Priority Template Requests", "Early Access to New Templates", "Dedicated Support Channel", "Annual Billing Discount", "Premium Resources Access"].map((item, index) => (
+              <ul className="border-t border-white/10 pt-6 space-y-4 text-sm">
+                {[
+                  "Unlimited Premium Templates",
+                  "Full Source File Access",
+                  "Commercial License",
+                  "Priority Support",
+                  "Regular Updates"
+                ].map((item, index) => (
+                  <li key={index} className="flex items-start gap-3 text-zinc-300">
+                    <Check className="size-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                    <span className="text-base">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Enterprise Plan */}
+          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
+            <div className="relative flex flex-col justify-between h-full overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 md:p-8 shadow-sm">
+              <div className="space-y-4 mb-6">
+                <div>
+                  <h2 className="font-medium text-white text-lg mb-2">Enterprise</h2>
+                  <span className="block text-3xl font-semibold text-white mb-2">Custom</span>
+                  <p className="text-zinc-400 text-sm">Tailored solutions for teams</p>
+                </div>
+                <Button
+                  asChild
+                  className="w-full bg-white text-black hover:bg-zinc-200 font-semibold border-0 shadow-md py-6 text-lg transition-all hover:scale-[1.02]"
+                  variant="default"
+                >
+                  <Link href="/contact">
+                    Contact Us
+                  </Link>
+                </Button>
+              </div>
+              <ul className="border-t border-white/10 pt-4 space-y-3 text-sm">
+                {[
+                  "Everything in Monthly",
+                  "Custom Licensing",
+                  "Dedicated Account Manager",
+                  "Priority Support",
+                  "Custom Templates",
+                  "Team Collaboration Tools",
+                  "SLA Guarantee"
+                ].map((item, index) => (
                   <li key={index} className="flex items-start gap-2 text-zinc-300">
                     <Check className="size-4 text-white flex-shrink-0 mt-0.5" />
                     <span>{item}</span>

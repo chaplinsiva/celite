@@ -33,14 +33,16 @@ function CheckoutContent() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const addedProductRef = useRef<string | null>(null); // Track if we've already added a product
   
-  const [subscriptionPlan, setSubscriptionPlan] = useState<'weekly' | 'monthly' | 'yearly' | null>(null);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'yearly' | null>(null);
   const [subscriptionPrice, setSubscriptionPrice] = useState<number | null>(null);
+  const [isAnnual, setIsAnnual] = useState<boolean>(true); // Default to Annual (ON)
 
   // Handle subscription checkout (from Pricing page)
   useEffect(() => {
-    const subscriptionType = searchParams?.get('subscription') as 'weekly' | 'monthly' | 'yearly' | null;
-    if (subscriptionType && (subscriptionType === 'weekly' || subscriptionType === 'monthly' || subscriptionType === 'yearly')) {
+    const subscriptionType = searchParams?.get('subscription') as 'monthly' | 'yearly' | null;
+    if (subscriptionType && (subscriptionType === 'monthly' || subscriptionType === 'yearly')) {
       setSubscriptionPlan(subscriptionType);
+      setIsAnnual(subscriptionType === 'yearly');
       // Load subscription price from database
       const loadSubscriptionPrice = async () => {
         const supabase = getSupabaseBrowserClient();
@@ -49,11 +51,7 @@ function CheckoutContent() {
         (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
         
         let amountPaise = 0;
-        if (subscriptionType === 'weekly') {
-          const weeklyAmount = settingsMap.RAZORPAY_WEEKLY_AMOUNT;
-          if (!weeklyAmount) throw new Error('Weekly subscription price not found');
-          amountPaise = Number(weeklyAmount);
-        } else if (subscriptionType === 'monthly') {
+        if (subscriptionType === 'monthly') {
           const monthlyAmount = settingsMap.RAZORPAY_MONTHLY_AMOUNT;
           if (!monthlyAmount) throw new Error('Monthly subscription price not found');
           amountPaise = Number(monthlyAmount);
@@ -70,6 +68,38 @@ function CheckoutContent() {
       loadSubscriptionPrice();
     }
   }, [searchParams]);
+
+  // Update subscription plan when toggle changes
+  useEffect(() => {
+    if (subscriptionPlan) {
+      const newPlan = isAnnual ? 'yearly' : 'monthly';
+      if (newPlan !== subscriptionPlan) {
+        setSubscriptionPlan(newPlan);
+        // Reload price for new plan
+        const loadSubscriptionPrice = async () => {
+          const supabase = getSupabaseBrowserClient();
+          const { data: settings } = await supabase.from('settings').select('key,value');
+          const settingsMap: Record<string, string> = {};
+          (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
+          
+          let amountPaise = 0;
+          if (newPlan === 'monthly') {
+            const monthlyAmount = settingsMap.RAZORPAY_MONTHLY_AMOUNT;
+            if (!monthlyAmount) throw new Error('Monthly subscription price not found');
+            amountPaise = Number(monthlyAmount);
+          } else {
+            const yearlyAmount = settingsMap.RAZORPAY_YEARLY_AMOUNT;
+            if (!yearlyAmount) throw new Error('Yearly subscription price not found');
+            amountPaise = Number(yearlyAmount);
+          }
+          
+          const amountINR = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
+          setSubscriptionPrice(Math.round(amountINR));
+        };
+        loadSubscriptionPrice();
+      }
+    }
+  }, [isAnnual, subscriptionPlan]);
 
   // Handle direct product checkout (from Buy Now)
   useEffect(() => {
@@ -301,7 +331,7 @@ function CheckoutContent() {
                 trackSubscribe({
                   method: 'razorpay',
                   plan_id: subscriptionPlan,
-                  plan_name: subscriptionPlan === 'weekly' ? 'Weekly Pro Plan' : subscriptionPlan === 'yearly' ? 'Yearly Pro Plan' : 'Monthly Pro Plan',
+                  plan_name: subscriptionPlan === 'yearly' ? 'Yearly Pro Plan' : 'Monthly Pro Plan',
                   value: subscriptionPrice || 0,
                   currency: 'INR',
                 });
@@ -468,7 +498,7 @@ function CheckoutContent() {
             <h1 className="text-3xl font-semibold">{subscriptionPlan ? 'Subscribe' : 'Checkout'}</h1>
             <p className="mt-2 text-sm text-zinc-400">
               {subscriptionPlan 
-                ? `Secure payment for ${subscriptionPlan === 'weekly' ? 'weekly' : subscriptionPlan === 'monthly' ? 'monthly' : 'yearly'} Pro subscription.`
+                ? `Secure payment for ${subscriptionPlan === 'monthly' ? 'monthly' : 'yearly'} Pro subscription.`
                 : 'Secure payment for cinematic After Effects templates.'
               }
             </p>
@@ -577,7 +607,7 @@ function CheckoutContent() {
             <h2 className="text-xl font-semibold">{subscriptionPlan ? 'Subscription Summary' : 'Order summary'}</h2>
             {subscriptionPlan ? (
               <p className="mt-1 text-sm text-zinc-400">
-                {subscriptionPlan === 'weekly' ? 'Weekly' : subscriptionPlan === 'monthly' ? 'Monthly' : 'Yearly'} Pro Subscription
+                {subscriptionPlan === 'monthly' ? 'Monthly' : 'Yearly'} Pro Subscription
               </p>
             ) : (
               <p className="mt-1 text-sm text-zinc-400">{cartCount} template{cartCount === 1 ? '' : 's'} in your cart.</p>
@@ -585,9 +615,50 @@ function CheckoutContent() {
           </div>
           {subscriptionPlan ? (
             <div className="space-y-4 text-sm text-zinc-300">
-              <div className="flex items-center justify-between p-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm">
-                <span>Pro {subscriptionPlan === 'weekly' ? 'Weekly' : subscriptionPlan === 'monthly' ? 'Monthly' : 'Yearly'} Plan</span>
-                <span>{subscriptionPrice ? formatPriceWithDecimal(subscriptionPrice) : 'Loading...'}</span>
+              {/* Toggle Switch */}
+              <div className="flex items-center justify-center gap-3 pb-4 border-b border-white/10">
+                <span className={cn("text-xs font-medium transition-colors", isAnnual ? "text-zinc-400" : "text-white")}>
+                  Monthly
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsAnnual(!isAnnual)}
+                  className={cn(
+                    "relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-black",
+                    isAnnual ? "bg-gradient-to-r from-purple-500 to-blue-500" : "bg-zinc-700"
+                  )}
+                  role="switch"
+                  aria-checked={isAnnual}
+                  aria-label="Toggle billing period"
+                >
+                  <span
+                    className={cn(
+                      "inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-lg",
+                      isAnnual ? "translate-x-6" : "translate-x-1"
+                    )}
+                  />
+                </button>
+                <span className={cn("text-xs font-medium transition-colors", isAnnual ? "text-white" : "text-zinc-400")}>
+                  Annual
+                </span>
+              </div>
+              <div className="flex flex-col gap-2 p-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm">
+                <div className="flex items-center justify-between">
+                  <span>Pro {subscriptionPlan === 'monthly' ? 'Monthly' : 'Yearly'} Plan</span>
+                  <span className="text-lg font-semibold">
+                    {isAnnual ? '₹399' : '₹599'} <span className="text-sm font-normal">/ month</span>
+                  </span>
+                </div>
+                {isAnnual && (
+                  <p className="text-xs text-zinc-400">
+                    Billed yearly at ₹4,788. Save 33%.
+                  </p>
+                )}
+                {!isAnnual && (
+                  <p className="text-xs text-zinc-400">
+                    Billed monthly.
+                  </p>
+                )}
               </div>
             </div>
           ) : (

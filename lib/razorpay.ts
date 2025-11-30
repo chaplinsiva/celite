@@ -1,6 +1,6 @@
 import { getSupabaseAdminClient } from './supabaseAdmin';
 
-type RazorpayCreds = { key_id: string; key_secret: string; currency: string; weekly_amount: number; monthly_amount: number; yearly_amount: number };
+type RazorpayCreds = { key_id: string; key_secret: string; currency: string; monthly_amount: number; yearly_amount: number };
 
 export async function getRazorpayCreds(): Promise<RazorpayCreds> {
   const supabase = getSupabaseAdminClient();
@@ -13,18 +13,13 @@ export async function getRazorpayCreds(): Promise<RazorpayCreds> {
   const key_secret = settings.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || '';
   const currency = settings.RAZORPAY_CURRENCY || process.env.RAZORPAY_CURRENCY || 'INR';
   // Amounts should be in paise (INR * 100) for Razorpay API
-  // Weekly: ₹199 = 19900 paise, Monthly: ₹799 = 79900 paise, Yearly: ₹5,499 = 549900 paise
-  let weekly_amount = Number(settings.RAZORPAY_WEEKLY_AMOUNT || process.env.RAZORPAY_WEEKLY_AMOUNT || 19900);
+  // Monthly: ₹799 = 79900 paise, Yearly: ₹5,499 = 549900 paise
   let monthly_amount = Number(settings.RAZORPAY_MONTHLY_AMOUNT || process.env.RAZORPAY_MONTHLY_AMOUNT || 79900);
   let yearly_amount = Number(settings.RAZORPAY_YEARLY_AMOUNT || process.env.RAZORPAY_YEARLY_AMOUNT || 549900);
   
-  // Weekly: if < 1000, it's in rupees, convert to paise (multiply by 100)
   // Monthly: if < 10000, it's in rupees, convert to paise (multiply by 100)
   // Yearly: if < 100000, it's in rupees, convert to paise (multiply by 100)
   // Otherwise, it's already in paise, use as is
-  if (weekly_amount < 1000) {
-    weekly_amount = weekly_amount * 100;
-  }
   if (monthly_amount < 10000) {
     monthly_amount = monthly_amount * 100;
   }
@@ -33,7 +28,7 @@ export async function getRazorpayCreds(): Promise<RazorpayCreds> {
   }
   
   if (!key_id || !key_secret) throw new Error('Missing Razorpay credentials');
-  return { key_id, key_secret, currency, weekly_amount, monthly_amount, yearly_amount };
+  return { key_id, key_secret, currency, monthly_amount, yearly_amount };
 }
 
 export async function razorpayRequest(path: string, options: { method?: string; body?: any } = {}) {

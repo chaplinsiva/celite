@@ -5,7 +5,7 @@ import LoadingSpinnerServer from '../../components/ui/loading-spinner-server';
 
 export const metadata: Metadata = {
   title: "Pricing • Celite - Choose Your Plan",
-  description: "Unlock unlimited access to premium After Effects templates. Choose from weekly, monthly, or yearly subscription plans.",
+  description: "Unlock unlimited access to premium After Effects templates. Choose from monthly or yearly subscription plans.",
 };
 
 export default function PricingPage() {
