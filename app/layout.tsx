@@ -22,10 +22,10 @@ export const metadata: Metadata = {
   description: "Discover premium After Effects templates for logo reveals, slideshows, and more",
   icons: {
     icon: [
-      { url: '/celiteprologo23.png', type: 'image/png' },
+      { url: '/PNG1.png', type: 'image/png' },
     ],
-    shortcut: '/celiteprologo23.png',
-    apple: '/celiteprologo23.png',
+    shortcut: '/PNG1.png',
+    apple: '/PNG1.png',
   },
 };
 
