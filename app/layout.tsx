@@ -22,13 +22,10 @@ export const metadata: Metadata = {
   description: "Discover premium After Effects templates for logo reveals, slideshows, and more",
   icons: {
     icon: [
-      { url: '/PNG1.png', type: 'image/png', sizes: '32x32' },
-      { url: '/PNG1.png', type: 'image/png', sizes: '16x16' },
+      { url: '/celite.png', type: 'image/png' },
     ],
-    shortcut: '/PNG1.png',
-    apple: [
-      { url: '/PNG1.png', type: 'image/png', sizes: '180x180' },
-    ],
+    shortcut: '/celite.png',
+    apple: '/celite.png',
   },
 };
 
@@ -42,9 +39,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/PNG1.png" type="image/png" />
-        <link rel="shortcut icon" href="/PNG1.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/PNG1.png" />
+        <link rel="icon" href="/celite.png" type="image/png" />
+        <link rel="shortcut icon" href="/celite.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/celite.png" />
       </head>
       <body className={`${inter.variable} antialiased bg-black`} style={{ fontStyle: 'normal', fontSynthesis: 'none' }}>
         <Script
