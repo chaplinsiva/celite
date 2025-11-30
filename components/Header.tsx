@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useAppContext } from '../context/AppContext';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import { ShinyButton } from './ui/shiny-button';
@@ -56,7 +55,7 @@ export default function Header() {
       <nav className="max-w-7xl mx-auto h-16 px-4 sm:px-8 flex items-center justify-between">
         {/* Left: Logo */}
         <Link href="/" className="flex items-center py-1 px-1 focus:outline-none hover:opacity-80 transition-opacity">
-          <Image src="/PNG1.png" alt="Celite Logo" width={120} height={32} priority className="h-8 w-auto" />
+          <img src="/PNG1.png" alt="Celite Logo" className="h-8 w-auto" />
         </Link>
         {/* Right: Subscribe + Auth + Mobile Menu */}
         <div className="flex items-center space-x-2 sm:space-x-3">
