@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 
@@ -32,11 +31,9 @@ export default function CTASection() {
             <div className="text-center">
               <div className="inline-flex items-center justify-center mb-6">
                 <div className="relative w-fit">
-                  <Image 
+                  <img 
                     src="/PNG1.png" 
                     alt="Celite Logo" 
-                    width={120} 
-                    height={32} 
                     className="h-8 w-auto"
                     style={{ filter: 'brightness(0.7) contrast(1.2)' }}
                   />
