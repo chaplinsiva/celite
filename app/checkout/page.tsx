@@ -32,6 +32,7 @@ function CheckoutContent() {
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const addedProductRef = useRef<string | null>(null); // Track if we've already added a product
+  const checkoutDetailIdRef = useRef<string | null>(null); // Track checkout details ID
   
   const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'yearly' | null>(null);
   const [subscriptionPrice, setSubscriptionPrice] = useState<number | null>(null);
@@ -267,6 +268,41 @@ function CheckoutContent() {
         return;
       }
 
+      // Store checkout details in database
+      checkoutDetailIdRef.current = null;
+      try {
+        const checkoutDetailsRes = await fetch('/api/checkout/details', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            checkout_type: subscriptionPlan ? 'subscription' : 'product',
+            billing_name: billing.name,
+            billing_email: billing.email,
+            billing_mobile: cleanMobile,
+            billing_company: billing.company || null,
+            subscription_plan: subscriptionPlan || null,
+            cart_items: subscriptionPlan ? [] : cartItems.map(item => ({
+              slug: item.slug,
+              name: item.name,
+              price: item.price,
+              img: item.img,
+            })),
+            total_amount: subtotal,
+          }),
+        });
+
+        const checkoutDetailsJson = await checkoutDetailsRes.json();
+        if (checkoutDetailsRes.ok && checkoutDetailsJson.ok) {
+          checkoutDetailIdRef.current = checkoutDetailsJson.checkout_detail_id;
+        }
+        // Don't fail the checkout if storing details fails, just log it
+      } catch (e) {
+        console.error('Failed to store checkout details:', e);
+      }
+
       // Load Razorpay
       await loadRazorpay();
 
@@ -327,6 +363,26 @@ function CheckoutContent() {
               });
               
               if (activateRes.ok) {
+                // Update checkout details status to completed
+                if (checkoutDetailIdRef.current) {
+                  try {
+                    await fetch('/api/checkout/details', {
+                      method: 'PATCH',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session.access_token}`,
+                      },
+                      body: JSON.stringify({
+                        checkout_detail_id: checkoutDetailIdRef.current,
+                        status: 'completed',
+                        razorpay_subscription_id: razorpaySubscriptionId,
+                      }),
+                    });
+                  } catch (e) {
+                    console.error('Failed to update checkout details:', e);
+                  }
+                }
+
                 // Track subscription event
                 trackSubscribe({
                   method: 'razorpay',
@@ -339,10 +395,46 @@ function CheckoutContent() {
                 // Redirect to dashboard
                 router.push("/dashboard?payment=success");
               } else {
+                // Update checkout details status to failed
+                if (checkoutDetailIdRef.current) {
+                  try {
+                    await fetch('/api/checkout/details', {
+                      method: 'PATCH',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session.access_token}`,
+                      },
+                      body: JSON.stringify({
+                        checkout_detail_id: checkoutDetailIdRef.current,
+                        status: 'failed',
+                      }),
+                    });
+                  } catch (e) {
+                    console.error('Failed to update checkout details:', e);
+                  }
+                }
                 setPaymentError('Subscription activation failed');
                 setProcessing(false);
               }
             } catch (e: any) {
+              // Update checkout details status to failed
+              if (checkoutDetailIdRef.current) {
+                try {
+                  await fetch('/api/checkout/details', {
+                    method: 'PATCH',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      Authorization: `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({
+                      checkout_detail_id: checkoutDetailIdRef.current,
+                      status: 'failed',
+                    }),
+                  });
+                } catch (err) {
+                  console.error('Failed to update checkout details:', err);
+                }
+              }
               setPaymentError(e?.message || 'Subscription activation failed');
               setProcessing(false);
             }
@@ -387,7 +479,45 @@ function CheckoutContent() {
 
         const json = await res.json();
         if (!res.ok || !json.ok) {
+          // Update checkout details status to failed
+          if (checkoutDetailIdRef.current) {
+            try {
+              await fetch('/api/checkout/details', {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({
+                  checkout_detail_id: checkoutDetailIdRef.current,
+                  status: 'failed',
+                }),
+              });
+            } catch (e) {
+              console.error('Failed to update checkout details:', e);
+            }
+          }
           throw new Error(json.error || 'Payment initialization failed');
+        }
+
+        // Update checkout details with Razorpay order ID
+        if (checkoutDetailIdRef.current && json.order?.id) {
+          try {
+            await fetch('/api/checkout/details', {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                checkout_detail_id: checkoutDetailIdRef.current,
+                status: 'payment_pending',
+                razorpay_order_id: json.order.id,
+              }),
+            });
+          } catch (e) {
+            console.error('Failed to update checkout details:', e);
+          }
         }
 
         // Open Razorpay checkout
@@ -430,6 +560,27 @@ function CheckoutContent() {
 
               const verifyJson = await verifyRes.json();
               if (verifyRes.ok && verifyJson.ok) {
+                // Update checkout details status to completed
+                if (checkoutDetailIdRef.current) {
+                  try {
+                    await fetch('/api/checkout/details', {
+                      method: 'PATCH',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session.access_token}`,
+                      },
+                      body: JSON.stringify({
+                        checkout_detail_id: checkoutDetailIdRef.current,
+                        status: 'completed',
+                        razorpay_payment_id: resp.razorpay_payment_id,
+                        order_id: verifyJson.order_id,
+                      }),
+                    });
+                  } catch (e) {
+                    console.error('Failed to update checkout details:', e);
+                  }
+                }
+
                 // Track purchase event
                 trackPurchase({
                   transaction_id: verifyJson.order_id || resp.razorpay_order_id,
@@ -448,10 +599,46 @@ function CheckoutContent() {
                 // Redirect to dashboard
                 router.push("/dashboard?payment=success");
               } else {
+                // Update checkout details status to failed
+                if (checkoutDetailIdRef.current) {
+                  try {
+                    await fetch('/api/checkout/details', {
+                      method: 'PATCH',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session.access_token}`,
+                      },
+                      body: JSON.stringify({
+                        checkout_detail_id: checkoutDetailIdRef.current,
+                        status: 'failed',
+                      }),
+                    });
+                  } catch (e) {
+                    console.error('Failed to update checkout details:', e);
+                  }
+                }
                 setPaymentError(verifyJson.error || 'Payment verification failed');
                 setProcessing(false);
               }
             } catch (e: any) {
+              // Update checkout details status to failed
+              if (checkoutDetailIdRef.current) {
+                try {
+                  await fetch('/api/checkout/details', {
+                    method: 'PATCH',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      Authorization: `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({
+                      checkout_detail_id: checkoutDetailIdRef.current,
+                      status: 'failed',
+                    }),
+                  });
+                } catch (err) {
+                  console.error('Failed to update checkout details:', err);
+                }
+              }
               setPaymentError(e?.message || 'Payment verification failed');
               setProcessing(false);
             }
@@ -459,6 +646,25 @@ function CheckoutContent() {
           theme: { color: '#ffffff' },
           modal: {
             ondismiss: () => {
+              // Update checkout details status to cancelled
+              if (checkoutDetailIdRef.current) {
+                const supabase = getSupabaseBrowserClient();
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                  if (session) {
+                    fetch('/api/checkout/details', {
+                      method: 'PATCH',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session.access_token}`,
+                      },
+                      body: JSON.stringify({
+                        checkout_detail_id: checkoutDetailIdRef.current,
+                        status: 'cancelled',
+                      }),
+                    }).catch(e => console.error('Failed to update checkout details:', e));
+                  }
+                });
+              }
               setProcessing(false);
             },
           },
@@ -468,6 +674,23 @@ function CheckoutContent() {
       }
     } catch (e: any) {
       console.error(e);
+      // Update checkout details status to failed
+      const supabase = getSupabaseBrowserClient();
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session && checkoutDetailIdRef.current) {
+          fetch('/api/checkout/details', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              checkout_detail_id: checkoutDetailIdRef.current,
+              status: 'failed',
+            }),
+          }).catch(err => console.error('Failed to update checkout details:', err));
+        }
+      });
       setPaymentError(e?.message || 'Something went wrong processing your payment.');
       setProcessing(false);
     }

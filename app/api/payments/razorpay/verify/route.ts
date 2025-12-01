@@ -83,7 +83,7 @@ export async function POST(req: Request) {
     const billingMobile = billing?.mobile || notes.billing_mobile || notes.customer_mobile || '';
     const billingCompany = billing?.company || notes.billing_company || null;
 
-    // Record order in DB with billing details (note: billing_mobile is stored in Razorpay notes but not in orders table)
+    // Record order in DB with billing details including mobile
     const { data: dbOrder, error: oErr } = await admin
       .from('orders')
       .insert({ 
@@ -92,11 +92,31 @@ export async function POST(req: Request) {
         status: 'paid',
         billing_name: billingName || null,
         billing_email: billingEmail || null,
+        billing_mobile: billingMobile || null,
         billing_company: billingCompany || null,
       })
       .select('id')
       .single();
     if (oErr) return NextResponse.json({ ok: false, error: oErr.message }, { status: 500 });
+
+    // Update checkout_details if razorpay_order_id exists
+    if (razorpay_order_id && dbOrder?.id) {
+      try {
+        await admin
+          .from('checkout_details')
+          .update({
+            status: 'completed',
+            razorpay_payment_id: razorpay_payment_id || null,
+            order_id: dbOrder.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('razorpay_order_id', razorpay_order_id)
+          .eq('user_id', userId);
+      } catch (e) {
+        // Don't fail the payment verification if checkout_details update fails
+        console.error('Failed to update checkout_details:', e);
+      }
+    }
 
     // Insert order items - handle multiple cart items
     if (cartItems && Array.isArray(cartItems) && cartItems.length > 0) {
