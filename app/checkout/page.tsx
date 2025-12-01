@@ -36,14 +36,12 @@ function CheckoutContent() {
   
   const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'yearly' | null>(null);
   const [subscriptionPrice, setSubscriptionPrice] = useState<number | null>(null);
-  const [isAnnual, setIsAnnual] = useState<boolean>(true); // Default to Annual (ON)
 
   // Handle subscription checkout (from Pricing page)
   useEffect(() => {
     const subscriptionType = searchParams?.get('subscription') as 'monthly' | 'yearly' | null;
     if (subscriptionType && (subscriptionType === 'monthly' || subscriptionType === 'yearly')) {
       setSubscriptionPlan(subscriptionType);
-      setIsAnnual(subscriptionType === 'yearly');
       // Load subscription price from database
       const loadSubscriptionPrice = async () => {
         const supabase = getSupabaseBrowserClient();
@@ -69,38 +67,6 @@ function CheckoutContent() {
       loadSubscriptionPrice();
     }
   }, [searchParams]);
-
-  // Update subscription plan when toggle changes
-  useEffect(() => {
-    if (subscriptionPlan) {
-      const newPlan = isAnnual ? 'yearly' : 'monthly';
-      if (newPlan !== subscriptionPlan) {
-        setSubscriptionPlan(newPlan);
-        // Reload price for new plan
-        const loadSubscriptionPrice = async () => {
-          const supabase = getSupabaseBrowserClient();
-          const { data: settings } = await supabase.from('settings').select('key,value');
-          const settingsMap: Record<string, string> = {};
-          (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
-          
-          let amountPaise = 0;
-          if (newPlan === 'monthly') {
-            const monthlyAmount = settingsMap.RAZORPAY_MONTHLY_AMOUNT;
-            if (!monthlyAmount) throw new Error('Monthly subscription price not found');
-            amountPaise = Number(monthlyAmount);
-          } else {
-            const yearlyAmount = settingsMap.RAZORPAY_YEARLY_AMOUNT;
-            if (!yearlyAmount) throw new Error('Yearly subscription price not found');
-            amountPaise = Number(yearlyAmount);
-          }
-          
-          const amountINR = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
-          setSubscriptionPrice(Math.round(amountINR));
-        };
-        loadSubscriptionPrice();
-      }
-    }
-  }, [isAnnual, subscriptionPlan]);
 
   // Handle direct product checkout (from Buy Now)
   useEffect(() => {
@@ -838,48 +804,21 @@ function CheckoutContent() {
           </div>
           {subscriptionPlan ? (
             <div className="space-y-4 text-sm text-zinc-300">
-              {/* Toggle Switch */}
-              <div className="flex items-center justify-center gap-3 pb-4 border-b border-white/10">
-                <span className={cn("text-xs font-medium transition-colors", isAnnual ? "text-zinc-400" : "text-white")}>
-                  Monthly
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsAnnual(!isAnnual)}
-                  className={cn(
-                    "relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-black",
-                    isAnnual ? "bg-gradient-to-r from-purple-500 to-blue-500" : "bg-zinc-700"
-                  )}
-                  role="switch"
-                  aria-checked={isAnnual}
-                  aria-label="Toggle billing period"
-                >
-                  <span
-                    className={cn(
-                      "inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-lg",
-                      isAnnual ? "translate-x-6" : "translate-x-1"
-                    )}
-                  />
-                </button>
-                <span className={cn("text-xs font-medium transition-colors", isAnnual ? "text-white" : "text-zinc-400")}>
-                  Annual
-                </span>
-              </div>
               <div className="flex flex-col gap-2 p-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <span>Pro {subscriptionPlan === 'monthly' ? 'Monthly' : 'Yearly'} Plan</span>
                   <span className="text-lg font-semibold">
-                    {isAnnual ? '₹399' : '₹599'} <span className="text-sm font-normal">/ month</span>
+                    {subscriptionPlan === 'monthly' ? '₹599' : '₹5,499'} <span className="text-sm font-normal">{subscriptionPlan === 'monthly' ? '/ month' : '/ year'}</span>
                   </span>
                 </div>
-                {isAnnual && (
-                  <p className="text-xs text-zinc-400">
-                    Billed yearly at ₹4,788. Save 33%.
-                  </p>
-                )}
-                {!isAnnual && (
+                {subscriptionPlan === 'monthly' && (
                   <p className="text-xs text-zinc-400">
                     Billed monthly.
+                  </p>
+                )}
+                {subscriptionPlan === 'yearly' && (
+                  <p className="text-xs text-zinc-400">
+                    Billed yearly.
                   </p>
                 )}
               </div>

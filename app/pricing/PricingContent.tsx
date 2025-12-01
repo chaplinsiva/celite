@@ -80,46 +80,8 @@ export default function PricingContent() {
       </section>
 
       <section className="relative max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-          {/* Student Plan - Coming Soon */}
-          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
-            <div className="relative flex flex-col justify-between h-full overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 md:p-8 shadow-sm">
-              <div className="absolute top-4 right-4 z-20 bg-zinc-700 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md flex items-center gap-1">
-                <Lock className="size-3" />
-                Coming Soon
-              </div>
-              <div className="space-y-4 mb-6">
-                <div>
-                  <h2 className="font-medium text-white text-lg mb-2">Student</h2>
-                  <span className="block text-3xl font-semibold text-white mb-2">₹199 / month</span>
-                  <p className="text-zinc-400 text-sm">Special pricing for students</p>
-                </div>
-                <Button
-                  disabled
-                  className="w-full bg-zinc-700 text-zinc-400 cursor-not-allowed font-semibold border-0 py-6 text-lg"
-                  variant="default"
-                >
-                  Coming Soon
-                </Button>
-              </div>
-              <ul className="border-t border-white/10 pt-4 space-y-3 text-sm">
-                {[
-                  "Unlimited Premium Templates",
-                  "Full Source File Access",
-                  "Educational License",
-                  "Student Support",
-                  "Regular Updates"
-                ].map((item, index) => (
-                  <li key={index} className="flex items-start gap-2 text-zinc-500">
-                    <Check className="size-4 text-zinc-600 flex-shrink-0 mt-0.5" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Monthly Plan - Center, Highlighted */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch max-w-4xl mx-auto">
+          {/* Monthly Plan */}
           <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
             <GlowingEffect
               spread={40}
@@ -129,31 +91,27 @@ export default function PricingContent() {
               inactiveZone={0.01}
               borderWidth={3}
             />
-            <div className="relative flex flex-col justify-between h-full overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-gradient-to-br from-purple-600/20 via-blue-500/10 to-transparent backdrop-blur-sm p-8 md:p-10 shadow-lg shadow-purple-500/20">
+            <div className="relative flex flex-col justify-between h-full overflow-hidden rounded-xl border-[0.75px] border-purple-500/20 bg-gradient-to-br from-purple-600/20 via-blue-500/15 to-purple-600/10 backdrop-blur-sm p-6 md:p-8 shadow-lg shadow-purple-500/20">
               <div className="absolute top-4 right-4 z-20 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
-                Save 33%
+                Popular
               </div>
-              <div className="space-y-6 mb-8">
+              <div className="space-y-4 mb-6">
                 <div>
                   <h2 className="font-medium text-white text-lg mb-2">Monthly</h2>
-                  <span className="block text-5xl md:text-6xl font-bold text-white mb-2">
-                    ₹399 <span className="text-2xl md:text-3xl">/ month</span>
-                  </span>
-                  <p className="text-zinc-300 text-sm">
-                    Billed yearly at ₹4,788. Save 33%.
-                  </p>
+                  <span className="block text-3xl font-semibold text-white mb-2">₹599 / month</span>
+                  <p className="text-zinc-400 text-sm">Billed monthly</p>
                 </div>
                 <Button
                   asChild
                   className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 font-semibold border-0 shadow-lg shadow-purple-500/30 py-6 text-lg transition-all hover:scale-[1.02]"
                   variant="default"
                 >
-                  <Link href="/checkout?subscription=yearly">
+                  <Link href="/checkout?subscription=monthly">
                     Subscribe Now
                   </Link>
                 </Button>
               </div>
-              <ul className="border-t border-white/10 pt-6 space-y-4 text-sm">
+              <ul className="border-t border-white/10 pt-4 space-y-3 text-sm">
                 {[
                   "Unlimited Premium Templates",
                   "Full Source File Access",
@@ -161,43 +119,41 @@ export default function PricingContent() {
                   "Priority Support",
                   "Regular Updates"
                 ].map((item, index) => (
-                  <li key={index} className="flex items-start gap-3 text-zinc-300">
-                    <Check className="size-5 text-purple-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-base">{item}</span>
+                  <li key={index} className="flex items-start gap-2 text-zinc-300">
+                    <Check className="size-4 text-purple-400 flex-shrink-0 mt-0.5" />
+                    <span>{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
           </div>
 
-          {/* Enterprise Plan */}
+          {/* Yearly Plan */}
           <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
             <div className="relative flex flex-col justify-between h-full overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 md:p-8 shadow-sm">
               <div className="space-y-4 mb-6">
                 <div>
-                  <h2 className="font-medium text-white text-lg mb-2">Enterprise</h2>
-                  <span className="block text-3xl font-semibold text-white mb-2">Custom</span>
-                  <p className="text-zinc-400 text-sm">Tailored solutions for teams</p>
+                  <h2 className="font-medium text-white text-lg mb-2">Yearly</h2>
+                  <span className="block text-3xl font-semibold text-white mb-2">₹5,499 / year</span>
+                  <p className="text-zinc-400 text-sm">Billed yearly. Save more with annual plan.</p>
                 </div>
                 <Button
                   asChild
                   className="w-full bg-white text-black hover:bg-zinc-200 font-semibold border-0 shadow-md py-6 text-lg transition-all hover:scale-[1.02]"
                   variant="default"
                 >
-                  <Link href="/contact">
-                    Contact Us
+                  <Link href="/checkout?subscription=yearly">
+                    Subscribe Now
                   </Link>
                 </Button>
               </div>
               <ul className="border-t border-white/10 pt-4 space-y-3 text-sm">
                 {[
-                  "Everything in Monthly",
-                  "Custom Licensing",
-                  "Dedicated Account Manager",
+                  "Unlimited Premium Templates",
+                  "Full Source File Access",
+                  "Commercial License",
                   "Priority Support",
-                  "Custom Templates",
-                  "Team Collaboration Tools",
-                  "SLA Guarantee"
+                  "Regular Updates"
                 ].map((item, index) => (
                   <li key={index} className="flex items-start gap-2 text-zinc-300">
                     <Check className="size-4 text-white flex-shrink-0 mt-0.5" />
