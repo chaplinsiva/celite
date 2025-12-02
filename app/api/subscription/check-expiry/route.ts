@@ -55,6 +55,12 @@ export async function POST(req: Request) {
     for (const subscription of expiringSubscriptions) {
       try {
         const { data: userData } = await admin.auth.admin.getUserById(subscription.user_id);
+        if (!userData || !userData.user) {
+          console.error(`User data not found for user ${subscription.user_id}`);
+          failCount++;
+          continue;
+        }
+        
         const userEmail = userData.user.email;
         const userName = userData.user.email?.split('@')[0] || 'User';
 

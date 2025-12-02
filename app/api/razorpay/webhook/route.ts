@@ -274,22 +274,26 @@ export async function POST(req: Request) {
           if (isRenewal && targetUserId) {
             try {
               const { data: userData } = await admin.auth.admin.getUserById(targetUserId);
-              const userEmail = userData.user.email;
-              const userName = userData.user.email?.split('@')[0] || 'User';
-              
-              // Get subscription amount from settings
-              const { data: settings } = await admin.from('settings').select('key,value');
-              const settingsMap: Record<string, string> = {};
-              (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
-              
-              const amountPaise = finalPlan === 'monthly' 
-                ? Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '59900')
-                : Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
-              const amount = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
+              if (!userData || !userData.user) {
+                console.error(`User data not found for user ${targetUserId}`);
+              } else {
+                const userEmail = userData.user.email;
+                const userName = userData.user.email?.split('@')[0] || 'User';
+                
+                // Get subscription amount from settings
+                const { data: settings } = await admin.from('settings').select('key,value');
+                const settingsMap: Record<string, string> = {};
+                (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
+                
+                const amountPaise = finalPlan === 'monthly' 
+                  ? Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '59900')
+                  : Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
+                const amount = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
 
-              if (userEmail) {
-                const { sendSubscriptionPaymentEmail } = await import('../../../../lib/emailService');
-                await sendSubscriptionPaymentEmail(userEmail, userName, finalPlan, Math.round(amount), validUntil.toISOString());
+                if (userEmail) {
+                  const { sendSubscriptionPaymentEmail } = await import('../../../../lib/emailService');
+                  await sendSubscriptionPaymentEmail(userEmail, userName, finalPlan as 'monthly' | 'yearly', Math.round(amount), validUntil.toISOString());
+                }
               }
             } catch (emailError) {
               console.error('Failed to send payment email:', emailError);

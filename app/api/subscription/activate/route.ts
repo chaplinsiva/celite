@@ -82,21 +82,25 @@ export async function POST(req: Request) {
     // Send subscription success email
     try {
       const { data: userData } = await admin.auth.admin.getUserById(userId);
-      const userEmail = userData.user.email;
-      const userName = userData.user.email?.split('@')[0] || 'User';
-      
-      // Get subscription amount from settings
-      const { data: settings } = await admin.from('settings').select('key,value');
-      const settingsMap: Record<string, string> = {};
-      (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
-      
-      const amountPaise = plan === 'monthly' 
-        ? Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '59900')
-        : Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
-      const amount = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
+      if (!userData || !userData.user) {
+        console.error(`User data not found for user ${userId}`);
+      } else {
+        const userEmail = userData.user.email;
+        const userName = userData.user.email?.split('@')[0] || 'User';
+        
+        // Get subscription amount from settings
+        const { data: settings } = await admin.from('settings').select('key,value');
+        const settingsMap: Record<string, string> = {};
+        (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
+        
+        const amountPaise = plan === 'monthly' 
+          ? Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '59900')
+          : Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
+        const amount = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
 
-      if (userEmail) {
-        await sendSubscriptionSuccessEmail(userEmail, userName, plan, Math.round(amount));
+        if (userEmail) {
+          await sendSubscriptionSuccessEmail(userEmail, userName, plan, Math.round(amount));
+        }
       }
     } catch (emailError) {
       console.error('Failed to send subscription success email:', emailError);
