@@ -128,6 +128,126 @@ export const emailTemplates = {
     `,
   }),
 
+  adminNotificationPayment: (customerEmail: string, customerName: string, plan: string, amount: number, nextBillingDate: string) => ({
+    subject: `[Admin] Payment Received - ${customerEmail} - ${plan === 'monthly' ? 'Monthly' : 'Yearly'} Plan`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .details { background: #fff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
+          .details-row { margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #eee; }
+          .details-row:last-child { border-bottom: none; }
+          .label { font-weight: bold; color: #555; }
+          .value { color: #333; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Payment Received - Admin Notification</h1>
+          </div>
+          <div class="content">
+            <p>A payment has been successfully processed for a Celite subscription.</p>
+            <div class="details">
+              <div class="details-row">
+                <span class="label">Customer Email:</span>
+                <span class="value">${customerEmail}</span>
+              </div>
+              <div class="details-row">
+                <span class="label">Customer Name:</span>
+                <span class="value">${customerName}</span>
+              </div>
+              <div class="details-row">
+                <span class="label">Plan:</span>
+                <span class="value">${plan === 'monthly' ? 'Monthly' : 'Yearly'} Pro</span>
+              </div>
+              <div class="details-row">
+                <span class="label">Amount:</span>
+                <span class="value">₹${amount.toLocaleString('en-IN')}</span>
+              </div>
+              <div class="details-row">
+                <span class="label">Payment Date:</span>
+                <span class="value">${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div class="details-row">
+                <span class="label">Next Billing Date:</span>
+                <span class="value">${new Date(nextBillingDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+              </div>
+            </div>
+            <p style="margin-top: 30px; color: #666; font-size: 14px;">This is an automated notification from Celite.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  }),
+
+  adminNotificationSubscription: (customerEmail: string, customerName: string, plan: string, amount: number) => ({
+    subject: `[Admin] New Subscription - ${customerEmail} - ${plan === 'monthly' ? 'Monthly' : 'Yearly'} Plan`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .details { background: #fff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
+          .details-row { margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #eee; }
+          .details-row:last-child { border-bottom: none; }
+          .label { font-weight: bold; color: #555; }
+          .value { color: #333; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>New Subscription - Admin Notification</h1>
+          </div>
+          <div class="content">
+            <p>A new subscription has been successfully activated.</p>
+            <div class="details">
+              <div class="details-row">
+                <span class="label">Customer Email:</span>
+                <span class="value">${customerEmail}</span>
+              </div>
+              <div class="details-row">
+                <span class="label">Customer Name:</span>
+                <span class="value">${customerName}</span>
+              </div>
+              <div class="details-row">
+                <span class="label">Plan:</span>
+                <span class="value">${plan === 'monthly' ? 'Monthly' : 'Yearly'} Pro</span>
+              </div>
+              <div class="details-row">
+                <span class="label">Amount:</span>
+                <span class="value">₹${amount.toLocaleString('en-IN')}</span>
+              </div>
+              <div class="details-row">
+                <span class="label">Subscription Date:</span>
+                <span class="value">${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div class="details-row">
+                <span class="label">Status:</span>
+                <span class="value">Active</span>
+              </div>
+            </div>
+            <p style="margin-top: 30px; color: #666; font-size: 14px;">This is an automated notification from Celite.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  }),
+
   subscriptionExpiring: (userName: string, plan: string, expiryDate: string) => ({
     subject: '⏰ Your Celite Subscription is Ending Soon',
     html: `
@@ -193,22 +313,32 @@ export const emailTemplates = {
   }),
 };
 
+// Admin email for notifications
+const ADMIN_EMAIL = 'celiteproofficial@gmail.com';
+
 // Send email function
 export async function sendEmail(
   to: string,
   subject: string,
-  html: string
+  html: string,
+  bcc?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const config = getEmailConfig();
     const transporter = getTransporter();
 
-    const info = await transporter.sendMail({
+    const mailOptions: any = {
       from: config.from,
       to,
       subject,
       html,
-    });
+    };
+
+    if (bcc) {
+      mailOptions.bcc = bcc;
+    }
+
+    const info = await transporter.sendMail(mailOptions);
 
     console.log('Email sent successfully:', info.messageId);
     return { success: true };
@@ -226,7 +356,19 @@ export async function sendSubscriptionSuccessEmail(
   amount: number
 ) {
   const template = emailTemplates.subscriptionSuccess(userName, plan, amount);
-  return sendEmail(userEmail, template.subject, template.html);
+  const result = await sendEmail(userEmail, template.subject, template.html);
+  
+  // Send admin notification copy
+  try {
+    const adminTemplate = emailTemplates.adminNotificationSubscription(userEmail, userName, plan, amount);
+    await sendEmail(ADMIN_EMAIL, adminTemplate.subject, adminTemplate.html);
+    console.log(`Admin notification sent for new subscription: ${userEmail}`);
+  } catch (adminError) {
+    console.error('Failed to send admin notification for subscription success:', adminError);
+    // Don't fail the main email if admin notification fails
+  }
+  
+  return result;
 }
 
 export async function sendSubscriptionPaymentEmail(
@@ -237,7 +379,19 @@ export async function sendSubscriptionPaymentEmail(
   nextBillingDate: string
 ) {
   const template = emailTemplates.subscriptionPaymentTaken(userName, plan, amount, nextBillingDate);
-  return sendEmail(userEmail, template.subject, template.html);
+  const result = await sendEmail(userEmail, template.subject, template.html);
+  
+  // Send admin notification copy
+  try {
+    const adminTemplate = emailTemplates.adminNotificationPayment(userEmail, userName, plan, amount, nextBillingDate);
+    await sendEmail(ADMIN_EMAIL, adminTemplate.subject, adminTemplate.html);
+    console.log(`Admin notification sent for payment: ${userEmail}`);
+  } catch (adminError) {
+    console.error('Failed to send admin notification for payment:', adminError);
+    // Don't fail the main email if admin notification fails
+  }
+  
+  return result;
 }
 
 export async function sendSubscriptionExpiringEmail(
