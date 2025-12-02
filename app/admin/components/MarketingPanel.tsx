@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 
+type TargetAudience = 'subscribers' | 'non-subscribers' | 'all';
+
 export default function MarketingPanel() {
   const [subject, setSubject] = useState('');
   const [content, setContent] = useState('');
+  const [targetAudience, setTargetAudience] = useState<TargetAudience>('subscribers');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [preview, setPreview] = useState(false);
@@ -35,15 +38,16 @@ export default function MarketingPanel() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ subject, content }),
+        body: JSON.stringify({ subject, content, targetAudience }),
       });
 
       const json = await res.json();
 
       if (res.ok && json.ok) {
+        const audienceText = targetAudience === 'subscribers' ? 'subscribers' : targetAudience === 'non-subscribers' ? 'non-subscribers' : 'users';
         setMessage({
           type: 'success',
-          text: `✅ Successfully sent to ${json.sent} subscribers${json.failed > 0 ? ` (${json.failed} failed)` : ''}`,
+          text: `✅ Successfully sent to ${json.sent} ${audienceText}${json.failed > 0 ? ` (${json.failed} failed)` : ''}`,
         });
         setSubject('');
         setContent('');
@@ -61,7 +65,7 @@ export default function MarketingPanel() {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Marketing</h1>
-        <p className="text-sm text-zinc-400">Send email to all active subscribers</p>
+        <p className="text-sm text-zinc-400">Send email to subscribers, non-subscribers, or all users</p>
       </header>
 
       {message && (
@@ -77,6 +81,47 @@ export default function MarketingPanel() {
       )}
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-black/40 p-6">
+        <div className="space-y-2">
+          <label htmlFor="targetAudience" className="block text-sm font-medium text-zinc-200">
+            Target Audience
+          </label>
+          <div className="flex gap-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="targetAudience"
+                value="subscribers"
+                checked={targetAudience === 'subscribers'}
+                onChange={(e) => setTargetAudience(e.target.value as TargetAudience)}
+                className="h-4 w-4 text-purple-500 focus:ring-purple-500"
+              />
+              <span className="text-sm text-zinc-300">Subscribers Only</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="targetAudience"
+                value="non-subscribers"
+                checked={targetAudience === 'non-subscribers'}
+                onChange={(e) => setTargetAudience(e.target.value as TargetAudience)}
+                className="h-4 w-4 text-purple-500 focus:ring-purple-500"
+              />
+              <span className="text-sm text-zinc-300">Non-Subscribers Only</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="targetAudience"
+                value="all"
+                checked={targetAudience === 'all'}
+                onChange={(e) => setTargetAudience(e.target.value as TargetAudience)}
+                className="h-4 w-4 text-purple-500 focus:ring-purple-500"
+              />
+              <span className="text-sm text-zinc-300">All Users</span>
+            </label>
+          </div>
+        </div>
+
         <div className="space-y-2">
           <label htmlFor="subject" className="block text-sm font-medium text-zinc-200">
             Email Subject
@@ -129,7 +174,7 @@ export default function MarketingPanel() {
             disabled={loading || !subject.trim() || !content.trim()}
             className="rounded-full bg-white px-6 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? 'Sending...' : 'Send to All Subscribers'}
+            {loading ? 'Sending...' : `Send to ${targetAudience === 'subscribers' ? 'Subscribers' : targetAudience === 'non-subscribers' ? 'Non-Subscribers' : 'All Users'}`}
           </button>
           <button
             onClick={() => {
@@ -145,7 +190,7 @@ export default function MarketingPanel() {
         </div>
 
         <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-300">
-          <strong>⚠️ Warning:</strong> This will send an email to all active subscribers. Make sure your content is correct before sending.
+          <strong>⚠️ Warning:</strong> This will send an email to {targetAudience === 'subscribers' ? 'all active subscribers' : targetAudience === 'non-subscribers' ? 'all non-subscribers' : 'all users'}. Make sure your content is correct before sending.
         </div>
       </div>
     </div>

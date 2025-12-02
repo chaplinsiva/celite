@@ -30,13 +30,21 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { subject, content } = body;
+    const { subject, content, targetAudience = 'subscribers' } = body;
 
     if (!subject || !content) {
       return NextResponse.json({ ok: false, error: 'Subject and content are required' }, { status: 400 });
     }
 
-    // Get all active subscription users
+    // Get all users
+    const { data: allUsersData, error: usersError } = await admin.auth.admin.listUsers();
+    if (usersError) {
+      return NextResponse.json({ ok: false, error: usersError.message }, { status: 500 });
+    }
+
+    const allUserIds = new Set((allUsersData?.users || []).map(u => u.id));
+
+    // Get active subscription user IDs
     const { data: subscriptions, error: subError } = await admin
       .from('subscriptions')
       .select('user_id')
@@ -46,23 +54,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: subError.message }, { status: 500 });
     }
 
-    if (!subscriptions || subscriptions.length === 0) {
+    const subscriberIds = new Set((subscriptions || []).map(s => s.user_id));
+
+    // Filter user IDs based on target audience
+    let targetUserIds: string[] = [];
+    
+    if (targetAudience === 'subscribers') {
+      targetUserIds = Array.from(subscriberIds);
+    } else if (targetAudience === 'non-subscribers') {
+      targetUserIds = Array.from(allUserIds).filter(id => !subscriberIds.has(id));
+    } else if (targetAudience === 'all') {
+      targetUserIds = Array.from(allUserIds);
+    } else {
+      return NextResponse.json({ ok: false, error: 'Invalid target audience' }, { status: 400 });
+    }
+
+    if (targetUserIds.length === 0) {
+      const audienceText = targetAudience === 'subscribers' ? 'subscribers' : targetAudience === 'non-subscribers' ? 'non-subscribers' : 'users';
       return NextResponse.json({ 
         ok: true, 
-        message: 'No active subscribers found',
+        message: `No ${audienceText} found`,
         sent: 0 
       });
     }
-
-    // Get unique user IDs
-    const userIds = [...new Set(subscriptions.map(s => s.user_id))];
     
     let successCount = 0;
     let failCount = 0;
     const errors: string[] = [];
 
-    // Send email to each subscriber
-    for (const userId of userIds) {
+    // Send email to each target user
+    for (const userId of targetUserIds) {
       try {
         const { data: userData } = await admin.auth.admin.getUserById(userId);
         if (!userData || !userData.user) {
@@ -85,12 +106,13 @@ export async function POST(req: Request) {
       }
     }
 
+    const audienceText = targetAudience === 'subscribers' ? 'subscribers' : targetAudience === 'non-subscribers' ? 'non-subscribers' : 'users';
     return NextResponse.json({
       ok: true,
-      message: `Marketing email sent to ${successCount} subscribers`,
+      message: `Marketing email sent to ${successCount} ${audienceText}`,
       sent: successCount,
       failed: failCount,
-      total: userIds.length,
+      total: targetUserIds.length,
       errors: errors.length > 0 ? errors : undefined,
     });
   } catch (e: any) {
