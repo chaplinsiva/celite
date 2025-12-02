@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
 import { razorpayRequest } from '../../../../lib/razorpay';
+import { sendSubscriptionSuccessEmail } from '../../../../lib/emailService';
 
 export async function POST(req: Request) {
   try {
@@ -77,6 +78,30 @@ export async function POST(req: Request) {
       .from('subscriptions')
       .upsert(updateData, { onConflict: 'user_id' });
     if (upErr) return NextResponse.json({ ok: false, error: upErr.message }, { status: 500 });
+
+    // Send subscription success email
+    try {
+      const { data: userData } = await admin.auth.admin.getUserById(userId);
+      const userEmail = userData.user.email;
+      const userName = userData.user.email?.split('@')[0] || 'User';
+      
+      // Get subscription amount from settings
+      const { data: settings } = await admin.from('settings').select('key,value');
+      const settingsMap: Record<string, string> = {};
+      (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
+      
+      const amountPaise = plan === 'monthly' 
+        ? Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '59900')
+        : Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
+      const amount = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
+
+      if (userEmail) {
+        await sendSubscriptionSuccessEmail(userEmail, userName, plan, Math.round(amount));
+      }
+    } catch (emailError) {
+      console.error('Failed to send subscription success email:', emailError);
+      // Don't fail the activation if email fails
+    }
 
     return NextResponse.json({ ok: true, plan, valid_until: expiresAt.toISOString() });
   } catch (e: any) {
