@@ -21,6 +21,7 @@ export default function MarketingPanel() {
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [users, setUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -233,18 +234,29 @@ export default function MarketingPanel() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by email or name..."
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowDropdown(true);
+                }}
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => {
+                  // Delay hiding dropdown to allow click events
+                  setTimeout(() => setShowDropdown(false), 200);
+                }}
+                placeholder="Search by email or name... (click to see all users)"
                 className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-violet-400/70 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
               />
-              {searchQuery && filteredUsers.length > 0 && (
+              {showDropdown && users.length > 0 && (
                 <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-white/10 bg-black/80 backdrop-blur-sm">
-                  {filteredUsers.map((user) => (
+                  {(searchQuery === '' ? users : filteredUsers).slice(0, 100).map((user) => (
                     <button
                       key={user.id}
-                      onClick={() => {
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault(); // Prevent input blur
                         setSelectedUser(user.id);
                         setSearchQuery(user.email || '');
+                        setShowDropdown(false);
                       }}
                       className={`w-full text-left px-4 py-2 text-sm hover:bg-white/10 ${
                         selectedUser === user.id ? 'bg-white/10' : ''
@@ -258,6 +270,16 @@ export default function MarketingPanel() {
                       )}
                     </button>
                   ))}
+                  {searchQuery === '' && users.length > 100 && (
+                    <div className="px-4 py-2 text-xs text-zinc-400 border-t border-white/10">
+                      Showing first 100 of {users.length} users. Type to search for specific users.
+                    </div>
+                  )}
+                  {searchQuery && filteredUsers.length === 0 && (
+                    <div className="px-4 py-2 text-sm text-zinc-400">
+                      No users found matching "{searchQuery}"
+                    </div>
+                  )}
                 </div>
               )}
             </div>

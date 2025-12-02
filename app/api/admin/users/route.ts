@@ -13,10 +13,30 @@ export async function GET(req: Request) {
     const { data: isAdmin } = await admin.from('admins').select('user_id').eq('user_id', userId).maybeSingle();
     if (!isAdmin) return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 });
 
-    // List users using admin service-role
-    const { data, error } = await admin.auth.admin.listUsers();
-    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-    const users = (data?.users ?? []).map((u) => ({
+    // List users using admin service-role with pagination to get all users
+    let allUsers: any[] = [];
+    let page = 1;
+    const perPage = 1000; // Max per page
+    
+    while (true) {
+      const { data, error } = await admin.auth.admin.listUsers({
+        page,
+        perPage,
+      });
+      
+      if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+      
+      if (!data?.users || data.users.length === 0) break;
+      
+      allUsers = allUsers.concat(data.users);
+      
+      // If we got fewer users than perPage, we've reached the end
+      if (data.users.length < perPage) break;
+      
+      page++;
+    }
+    
+    const users = allUsers.map((u) => ({
       id: u.id,
       email: u.email,
       first_name: (u.user_metadata as any)?.first_name ?? null,
