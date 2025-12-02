@@ -65,6 +65,12 @@ export async function POST(req: Request) {
     for (const userId of userIds) {
       try {
         const { data: userData } = await admin.auth.admin.getUserById(userId);
+        if (!userData || !userData.user) {
+          console.error(`User data not found for user ${userId}`);
+          failCount++;
+          continue;
+        }
+        
         const userEmail = userData.user.email;
         const userName = userData.user.email?.split('@')[0] || 'User';
 
