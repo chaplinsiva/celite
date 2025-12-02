@@ -207,12 +207,11 @@ export async function POST(req: Request) {
           }
 
           // Fallback to calculated duration if Razorpay data is unavailable
+          // IMPORTANT: For renewals, always start from NOW (current payment date), not the old subscription end date
+          // This ensures the billing period starts from when the payment was actually processed
           if (!validUntil) {
-            const baseDate = isRenewal && existingSub?.valid_until
-              ? new Date(existingSub.valid_until)
-              : now;
-            // If base date is in the past, start from now
-            const effectiveBase = baseDate > now ? baseDate : now;
+            // Always use current date as base for renewals to get correct next billing date
+            const effectiveBase = now;
             validUntil = new Date(effectiveBase);
             
             if (finalPlan === 'yearly') {
@@ -270,30 +269,44 @@ export async function POST(req: Request) {
             
           console.log(`Subscription ${isRenewal ? 'renewed' : 'activated'} for user: ${targetUserId}, plan: ${finalPlan}, valid_until: ${validUntil.toISOString()}`);
           
-          // Send payment taken email for renewals
+          // Send payment taken email for renewals only
+          // Use payment/invoice ID to prevent duplicate emails from multiple webhook events
           if (isRenewal && targetUserId) {
             try {
-              const { data: userData } = await admin.auth.admin.getUserById(targetUserId);
-              if (!userData || !userData.user) {
-                console.error(`User data not found for user ${targetUserId}`);
-              } else {
-                const userEmail = userData.user.email;
-                const userName = userData.user.email?.split('@')[0] || 'User';
-                
-                // Get subscription amount from settings
-                const { data: settings } = await admin.from('settings').select('key,value');
-                const settingsMap: Record<string, string> = {};
-                (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
-                
-                const amountPaise = finalPlan === 'monthly' 
-                  ? Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '59900')
-                  : Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
-                const amount = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
+              // Get payment ID or invoice ID for deduplication
+              const paymentId = paymentEntity?.id || invoiceEntity?.id || null;
+              
+              // Check if we've already sent an email for this payment
+              // We'll use a simple approach: only send email for invoice.paid event (not subscription.activated or invoice.payment_succeeded)
+              // This prevents duplicate emails when multiple events are sent for the same payment
+              const shouldSendEmail = event === 'invoice.paid';
+              
+              if (shouldSendEmail) {
+                const { data: userData } = await admin.auth.admin.getUserById(targetUserId);
+                if (!userData || !userData.user) {
+                  console.error(`User data not found for user ${targetUserId}`);
+                } else {
+                  const userEmail = userData.user.email;
+                  const userName = userData.user.email?.split('@')[0] || 'User';
+                  
+                  // Get subscription amount from settings
+                  const { data: settings } = await admin.from('settings').select('key,value');
+                  const settingsMap: Record<string, string> = {};
+                  (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
+                  
+                  const amountPaise = finalPlan === 'monthly' 
+                    ? Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '59900')
+                    : Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
+                  const amount = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
 
-                if (userEmail) {
-                  const { sendSubscriptionPaymentEmail } = await import('../../../../lib/emailService');
-                  await sendSubscriptionPaymentEmail(userEmail, userName, finalPlan as 'monthly' | 'yearly', Math.round(amount), validUntil.toISOString());
+                  if (userEmail) {
+                    const { sendSubscriptionPaymentEmail } = await import('../../../../lib/emailService');
+                    await sendSubscriptionPaymentEmail(userEmail, userName, finalPlan as 'monthly' | 'yearly', Math.round(amount), validUntil.toISOString());
+                    console.log(`Payment email sent to ${userEmail} for renewal. Next billing: ${validUntil.toISOString()}`);
+                  }
                 }
+              } else {
+                console.log(`Skipping payment email for event ${event} to prevent duplicates. Only sending for invoice.paid events.`);
               }
             } catch (emailError) {
               console.error('Failed to send payment email:', emailError);
