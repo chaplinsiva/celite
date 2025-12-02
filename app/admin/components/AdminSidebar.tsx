@@ -1,6 +1,6 @@
 "use client";
 
-type TabKey = 'overview' | 'products' | 'categories' | 'analytics' | 'users' | 'settings';
+type TabKey = 'overview' | 'products' | 'categories' | 'analytics' | 'users' | 'settings' | 'marketing';
 
 export default function AdminSidebar({ active, onChange }: { active: TabKey; onChange: (key: TabKey) => void }) {
   return (
@@ -12,6 +12,7 @@ export default function AdminSidebar({ active, onChange }: { active: TabKey; onC
         <button onClick={() => onChange('categories')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='categories'?'bg-white/10':''}`}>Categories</button>
         <button onClick={() => onChange('analytics')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='analytics'?'bg-white/10':''}`}>Analytics</button>
         <button onClick={() => onChange('users')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='users'?'bg-white/10':''}`}>User Management</button>
+        <button onClick={() => onChange('marketing')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='marketing'?'bg-white/10':''}`}>Marketing</button>
         <button onClick={() => onChange('settings')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='settings'?'bg-white/10':''}`}>Settings</button>
       </nav>
     </aside>

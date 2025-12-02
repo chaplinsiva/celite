@@ -10,6 +10,7 @@ import CategoriesPanel from './components/CategoriesPanel';
 import AnalyticsPanel from './components/AnalyticsPanel';
 import UsersPanel from './components/UsersPanel';
 import SettingsPanel from './components/SettingsPanel';
+import MarketingPanel from './components/MarketingPanel';
 
 type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null };
 
@@ -19,7 +20,7 @@ export default function AdminClient() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [templates, setTemplates] = useState<TemplateRow[]>([]);
   const [stats, setStats] = useState<{ templates: number; orders: number; revenue: number } | null>(null);
-  const [active, setActive] = useState<'overview' | 'products' | 'categories' | 'analytics' | 'users' | 'settings'>('overview');
+  const [active, setActive] = useState<'overview' | 'products' | 'categories' | 'analytics' | 'users' | 'settings' | 'marketing'>('overview');
 
   
 
@@ -78,6 +79,7 @@ export default function AdminClient() {
           {active === 'analytics' && (<AnalyticsPanel />)}
 
           {active === 'users' && (<UsersPanel />)}
+          {active === 'marketing' && (<MarketingPanel />)}
           {active === 'settings' && (<SettingsPanel />)}
         </section>
       </div>
