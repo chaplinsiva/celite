@@ -807,14 +807,24 @@ function CheckoutContent() {
               <div className="flex flex-col gap-2 p-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <span>Pro {subscriptionPlan === 'monthly' ? 'Monthly' : 'Yearly'} Plan</span>
-                  <span className="text-lg font-semibold">
-                    {subscriptionPlan === 'monthly' ? '₹599' : '₹5,499'} <span className="text-sm font-normal">{subscriptionPlan === 'monthly' ? '/ month' : '/ year'}</span>
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {subscriptionPlan === 'monthly' && (
+                      <span className="text-sm text-zinc-500 line-through">₹899</span>
+                    )}
+                    <span className="text-lg font-semibold">
+                      {subscriptionPlan === 'monthly' ? '₹599' : '₹5,499'} <span className="text-sm font-normal">{subscriptionPlan === 'monthly' ? '/ month' : '/ year'}</span>
+                    </span>
+                  </div>
                 </div>
                 {subscriptionPlan === 'monthly' && (
-                  <p className="text-xs text-zinc-400">
-                    Billed monthly.
-                  </p>
+                  <>
+                    <p className="text-xs text-zinc-400">
+                      Billed monthly.
+                    </p>
+                    <p className="text-xs text-purple-400">
+                      Limited offer
+                    </p>
+                  </>
                 )}
                 {subscriptionPlan === 'yearly' && (
                   <p className="text-xs text-zinc-400">

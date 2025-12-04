@@ -98,8 +98,12 @@ export default function PricingContent() {
               <div className="space-y-4 mb-6">
                 <div>
                   <h2 className="font-medium text-white text-lg mb-2">Monthly</h2>
-                  <span className="block text-3xl font-semibold text-white mb-2">₹599 / month</span>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-xl text-zinc-500 line-through">₹899</span>
+                    <span className="block text-3xl font-semibold text-white">₹599 / month</span>
+                  </div>
                   <p className="text-zinc-400 text-sm">Billed monthly</p>
+                  <p className="text-xs text-purple-400 mt-1">Limited offer</p>
                 </div>
                 <Button
                   asChild
