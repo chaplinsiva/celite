@@ -432,13 +432,16 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
 
         {/* Header Breadcrumbs / Title */}
         <div className="mb-8">
-          <div className="text-xs sm:text-sm text-zinc-500 mb-2 flex flex-wrap items-center gap-1 sm:gap-2">
-            <Link href="/templates" className="hover:text-blue-600 transition-colors whitespace-nowrap">Video Templates</Link>
-            <span className="hidden sm:inline">›</span>
-            <span className="text-zinc-900 font-medium break-words max-w-full">{product.name}</span>
+          {/* Mobile: Shorter breadcrumb */}
+          <div className="text-xs sm:text-sm text-zinc-500 mb-2">
+            <Link href="/templates" className="hover:text-blue-600 transition-colors hidden sm:inline">Video Templates</Link>
+            <span className="mx-2 hidden sm:inline">›</span>
+            <span className="text-zinc-900 font-medium truncate block sm:inline">{product.name}</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-zinc-900 tracking-tight break-words">{product.name}</h1>
-          <div className="flex items-center gap-3 mt-3">
+          {/* Mobile: Smaller title */}
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-zinc-900 tracking-tight line-clamp-2 sm:line-clamp-none">{product.name}</h1>
+          {/* Mobile: Hide brand info */}
+          <div className="hidden sm:flex items-center gap-3 mt-3">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">C</div>
               <span className="text-sm font-medium text-zinc-700">Celite Studios</span>
