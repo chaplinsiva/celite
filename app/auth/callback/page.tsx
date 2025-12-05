@@ -20,12 +20,35 @@ function AuthCallbackContent() {
   }, [searchParams]);
 
   useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
-    // Supabase will parse the URL hash and store the session
-    supabase.auth.getSession().then(() => {
-      // Redirect to return URL or dashboard
-      router.replace(returnUrl || '/dashboard');
-    });
+    const handleAuthCallback = async () => {
+      const supabase = getSupabaseBrowserClient();
+      
+      // Handle OAuth callback - Supabase will parse the URL hash/query params
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Auth callback error:', error);
+        router.replace('/login?error=auth_failed');
+        return;
+      }
+
+      if (session) {
+        // Session is set, redirect to return URL or dashboard
+        router.replace(returnUrl || '/dashboard');
+      } else {
+        // Wait a bit for the session to be set (OAuth redirect might be processing)
+        setTimeout(async () => {
+          const { data: { session: retrySession } } = await supabase.auth.getSession();
+          if (retrySession) {
+            router.replace(returnUrl || '/dashboard');
+          } else {
+            router.replace('/login?error=session_not_found');
+          }
+        }, 1000);
+      }
+    };
+
+    handleAuthCallback();
   }, [router, returnUrl]);
 
   return (
