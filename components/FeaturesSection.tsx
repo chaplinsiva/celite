@@ -11,7 +11,7 @@ const features = [
     icon: Shield,
     title: "Commercial License",
     description: "Use templates commercially without restrictions. Full rights included.",
-    gradient: "from-purple-500 to-pink-500",
+    gradient: "from-purple-500 to-violet-500",
   },
   {
     icon: Download,

@@ -7,12 +7,12 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
+    <main className="bg-white min-h-screen pt-24 pb-20 px-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold mb-4">Terms & Conditions</h1>
-        <p className="text-zinc-400 mb-8">Last updated on Nov 28 2025</p>
+        <h1 className="text-4xl font-bold mb-4 text-blue-600">Terms & Conditions</h1>
+        <p className="text-zinc-500 mb-8">Last updated on Nov 28 2025</p>
 
-        <div className="prose prose-invert max-w-none space-y-6 text-zinc-300">
+        <div className="prose max-w-none space-y-6 text-zinc-700">
           <p>
             For the purpose of these Terms and Conditions, the terms &quot;we&quot;, &quot;us&quot;, &quot;our&quot; used anywhere on this page shall mean{' '}
             <strong>Celite</strong>, whose registered/operational office is{' '}

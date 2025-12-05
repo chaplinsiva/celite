@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Header from './Header';
 import Footer from './Footer';
+import PromoBanner from './PromoBanner';
 import { useAppContext } from '../context/AppContext';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 
@@ -13,9 +14,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const [maintenance, setMaintenance] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
-  const hideLayout =
-    pathname === '/login' ||
-    pathname === '/signup';
+  // Removed hideLayout - header should show on all pages including login/signup
+
 
   // Load maintenance flag once on mount
   useEffect(() => {
@@ -65,17 +65,17 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
   if (maintenance && !isAdmin && !isAuthRoute) {
     return (
-      <main className="bg-black min-h-screen flex items-center justify-center px-4">
+      <main className="bg-white min-h-screen flex items-center justify-center px-4">
         <div className="max-w-md mx-auto text-center">
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 mb-4">
             Celite is on maintenance mode
           </h1>
-          <p className="text-zinc-400 mb-6">
+          <p className="text-zinc-500 mb-6">
             Please check back later. You can still sign in to your account once maintenance is over.
           </p>
           <a
             href="/login"
-            className="inline-flex items-center justify-center rounded-full bg-white px-6 py-2 text-sm font-semibold text-black hover:bg-zinc-200 transition"
+            className="inline-flex items-center justify-center rounded-full bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition"
           >
             Go to Login
           </a>
@@ -84,13 +84,12 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     );
   }
 
-  if (hideLayout) {
-    return <>{children}</>;
-  }
-
   return (
     <div className="isolate flex flex-col min-h-screen">
       <Header />
+      <div className="mt-20">
+        <PromoBanner />
+      </div>
       <main className="flex-1">
         {children}
       </main>

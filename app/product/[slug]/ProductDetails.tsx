@@ -1,21 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Share2 } from 'lucide-react';
-import { useAppContext, TemplateCartItem } from '../../../context/AppContext';
+import { Share2, Check, Download, AlertCircle, PlayCircle, Star, Shield, Clock, Layers, Zap, HardDrive } from 'lucide-react';
+import { useAppContext } from '../../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
-import { formatPrice } from '../../../lib/currency';
 import { useLoginModal } from '../../../context/LoginModalContext';
-import { trackViewItem, trackAddToCart } from '../../../lib/gtag';
-import { getYouTubeEmbedUrl } from '../../../lib/utils';
+import { trackViewItem } from '../../../lib/gtag';
 import YouTubeVideoPlayer from '../../../components/YouTubeVideoPlayer';
-import { Button } from '../../../components/ui/neon-button';
-import { ShinyButton } from '../../../components/ui/shiny-button';
-import { GlowingEffect } from '../../../components/ui/glowing-effect';
-import { cn } from '../../../lib/utils';
+import { cn, getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '../../../lib/utils';
 import type { Template } from '../../../data/templateData';
+
 interface Review {
   name: string;
   rating: number;
@@ -29,23 +25,36 @@ interface ProductDetailsProps {
   reviews: Review[];
 }
 
+const getThumbnail = (item: Template | (Template & { source_path?: string | null })) => {
+  // Show any image, even if low quality
+  if (item.img) return item.img;
+  if (item.video) {
+    const thumb = getYouTubeThumbnailUrl(item.video);
+    if (thumb) return thumb;
+  }
+  return '/PNG1.png';
+};
+
 export default function ProductDetails({ product, related, reviews }: ProductDetailsProps) {
-  const { addToCart, user } = useAppContext();
+  const { user } = useAppContext();
   const { openLoginModal } = useLoginModal();
   const router = useRouter();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isSubActive, setIsSubActive] = useState<boolean>(false);
   const [downloading, setDownloading] = useState<boolean>(false);
-  const [purchased, setPurchased] = useState<boolean>(false);
-  const [purchaseStatus, setPurchaseStatus] = useState<string | null>(null);
-  const [paying, setPaying] = useState<boolean>(false);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+  const [moreInStyleIndex, setMoreInStyleIndex] = useState(0);
+  const [moreInStyleTemplates, setMoreInStyleTemplates] = useState<Template[]>([]);
+  const [youMayAlsoLikeTemplates, setYouMayAlsoLikeTemplates] = useState<Template[]>([]);
+  const [loadingMoreInStyle, setLoadingMoreInStyle] = useState(true);
+  const [loadingYouMayAlsoLike, setLoadingYouMayAlsoLike] = useState(true);
+
   // Track view_item event when product page loads
   useEffect(() => {
     trackViewItem({
       item_id: product.slug,
       item_name: product.name,
-      price: 0,
+      price: 0, // Subscription model
       currency: 'INR',
     });
   }, [product.slug, product.name]);
@@ -55,44 +64,28 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
     try {
       if (!user) {
         setIsSubActive(false);
-        setPurchased(false);
-        setPurchaseStatus(null);
         return;
       }
       const supabase = getSupabaseBrowserClient();
-      // Force fresh fetch from backend
       const { data, error } = await supabase
         .from('subscriptions')
         .select('is_active, valid_until')
         .eq('user_id', (user as any).id)
         .maybeSingle();
-      
-      if (error) {
-        console.error('Subscription fetch error:', error);
+
+      if (error || !data) {
         setIsSubActive(false);
         return;
       }
-      
-      if (!data) { 
-        setIsSubActive(false); 
-        return; 
-      }
-      
-      // Check if subscription is active: is_active must be true AND valid_until must be in the future (if set)
+
       const now = Date.now();
       const validUntil = data.valid_until ? new Date(data.valid_until).getTime() : null;
       const active = !!data.is_active && (!validUntil || validUntil > now);
-      
+
       setIsSubActive(active);
-      
-      // No purchase check needed - subscription-only model
-      setPurchased(false);
-      setPurchaseStatus(null);
     } catch (error) {
       console.error('Error loading subscription:', error);
       setIsSubActive(false);
-      setPurchased(false);
-      setPurchaseStatus(null);
     }
   }, [user]);
 
@@ -100,35 +93,258 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
     loadSubscriptionStatus();
   }, [loadSubscriptionStatus, product.slug]);
 
-  // Refresh subscription status when page becomes visible (user returns to tab)
+  // Fetch "More in This Style" templates based on keyword matching
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && user) {
-        // Small delay to ensure backend has updated
-        setTimeout(() => {
-          loadSubscriptionStatus();
-        }, 500);
+    const fetchMoreInStyle = async () => {
+      try {
+        setLoadingMoreInStyle(true);
+        const supabase = getSupabaseBrowserClient();
+        
+        // Get keywords from current template
+        const keywords: string[] = [
+          ...(product.tags || []),
+          ...(product.features || []),
+          ...(product.software || []),
+          ...(product.plugins || []),
+        ].filter(k => k && typeof k === 'string' && k.trim() !== '');
+
+        if (keywords.length === 0) {
+          // If no keywords, fetch random templates
+          const { data } = await supabase
+            .from('templates')
+            .select('slug,name,subtitle,description,img,video,features,software,plugins,tags')
+            .neq('slug', product.slug)
+            .limit(8)
+            .order('created_at', { ascending: false });
+          
+          if (data) {
+            setMoreInStyleTemplates(data.map((r: any) => ({
+              slug: r.slug,
+              name: r.name,
+              subtitle: r.subtitle,
+              desc: r.description ?? '',
+              price: 0,
+              img: r.img,
+              video: r.video,
+              features: r.features ?? [],
+              software: r.software ?? [],
+              plugins: r.plugins ?? [],
+              tags: r.tags ?? [],
+              isFeatured: false,
+            })));
+          }
+          setLoadingMoreInStyle(false);
+          return;
+        }
+
+        // Search for templates matching keywords
+        const { data: allTemplates } = await supabase
+          .from('templates')
+          .select('slug,name,subtitle,description,img,video,features,software,plugins,tags')
+          .neq('slug', product.slug)
+          .limit(50);
+
+        if (!allTemplates) {
+          setLoadingMoreInStyle(false);
+          return;
+        }
+
+        // Score templates based on keyword matches
+        const scored = allTemplates.map((t: any) => {
+          let score = 0;
+          const allTemplateText = [
+            ...(t.tags || []),
+            ...(t.features || []),
+            ...(t.software || []),
+            ...(t.plugins || []),
+            t.name || '',
+            t.subtitle || '',
+            t.description || '',
+          ].map(s => String(s).toLowerCase()).join(' ');
+
+          keywords.forEach(keyword => {
+            const kwLower = keyword.toLowerCase();
+            if (allTemplateText.includes(kwLower)) {
+              score += 1;
+            }
+          });
+
+          return { template: t, score };
+        }).filter(item => item.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 8)
+          .map(item => ({
+            slug: item.template.slug,
+            name: item.template.name,
+            subtitle: item.template.subtitle,
+            desc: item.template.description ?? '',
+            price: 0,
+            img: item.template.img,
+            video: item.template.video,
+            features: item.template.features ?? [],
+            software: item.template.software ?? [],
+            plugins: item.template.plugins ?? [],
+            tags: item.template.tags ?? [],
+            isFeatured: false,
+          }));
+
+        // If we don't have enough matches, fill with random
+        if (scored.length < 4) {
+          const randomTemplates = allTemplates
+            .filter((t: any) => !scored.some(s => s.slug === t.slug))
+            .slice(0, 4 - scored.length)
+            .map((r: any) => ({
+              slug: r.slug,
+              name: r.name,
+              subtitle: r.subtitle,
+              desc: r.description ?? '',
+              price: 0,
+              img: r.img,
+              video: r.video,
+              features: r.features ?? [],
+              software: r.software ?? [],
+              plugins: r.plugins ?? [],
+              tags: r.tags ?? [],
+              isFeatured: false,
+            }));
+          setMoreInStyleTemplates([...scored, ...randomTemplates]);
+        } else {
+          setMoreInStyleTemplates(scored);
+        }
+      } catch (error) {
+        console.error('Error fetching more in style templates:', error);
+        setMoreInStyleTemplates([]);
+      } finally {
+        setLoadingMoreInStyle(false);
       }
     };
-    
-    const handleFocus = () => {
-      if (user) {
-        // Small delay to ensure backend has updated
-        setTimeout(() => {
-          loadSubscriptionStatus();
-        }, 500);
+
+    fetchMoreInStyle();
+  }, [product.slug, product.tags, product.features, product.software, product.plugins]);
+
+  // Fetch "You May Also Like" templates based on subscription status
+  useEffect(() => {
+    const fetchYouMayAlsoLike = async () => {
+      try {
+        setLoadingYouMayAlsoLike(true);
+        const supabase = getSupabaseBrowserClient();
+
+        if (isSubActive && user) {
+          // For subscribed users: fetch templates matching subscription keywords
+          const subscriptionKeywords = [
+            'premium', 'professional', 'high quality', '4k', 'after effects',
+            'motion graphics', 'animation', 'template', 'intro', 'outro',
+            'logo', 'title', 'trailer', 'promo', 'commercial'
+          ];
+
+          const { data: allTemplates } = await supabase
+            .from('templates')
+            .select('slug,name,subtitle,description,img,video,features,software,plugins,tags')
+            .neq('slug', product.slug)
+            .limit(50);
+
+          if (!allTemplates) {
+            setLoadingYouMayAlsoLike(false);
+            return;
+          }
+
+          // Score templates based on subscription keyword matches
+          const scored = allTemplates.map((t: any) => {
+            let score = 0;
+            const allTemplateText = [
+              ...(t.tags || []),
+              ...(t.features || []),
+              ...(t.software || []),
+              ...(t.plugins || []),
+              t.name || '',
+              t.subtitle || '',
+              t.description || '',
+            ].map(s => String(s).toLowerCase()).join(' ');
+
+            subscriptionKeywords.forEach(keyword => {
+              if (allTemplateText.includes(keyword.toLowerCase())) {
+                score += 1;
+              }
+            });
+
+            return { template: t, score };
+          }).filter(item => item.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 8)
+            .map(item => ({
+              slug: item.template.slug,
+              name: item.template.name,
+              subtitle: item.template.subtitle,
+              desc: item.template.description ?? '',
+              price: 0,
+              img: item.template.img,
+              video: item.template.video,
+              features: item.template.features ?? [],
+              software: item.template.software ?? [],
+              plugins: item.template.plugins ?? [],
+              tags: item.template.tags ?? [],
+              isFeatured: false,
+            }));
+
+          // If we don't have enough matches, fill with random
+          if (scored.length < 4) {
+            const randomTemplates = allTemplates
+              .filter((t: any) => !scored.some(s => s.slug === t.slug))
+              .slice(0, 4 - scored.length)
+              .map((r: any) => ({
+                slug: r.slug,
+                name: r.name,
+                subtitle: r.subtitle,
+                desc: r.description ?? '',
+                price: 0,
+                img: r.img,
+                video: r.video,
+                features: r.features ?? [],
+                software: r.software ?? [],
+                plugins: r.plugins ?? [],
+                tags: r.tags ?? [],
+                isFeatured: false,
+              }));
+            setYouMayAlsoLikeTemplates([...scored, ...randomTemplates]);
+          } else {
+            setYouMayAlsoLikeTemplates(scored);
+          }
+        } else {
+          // For non-subscribed users: fetch random templates
+          const { data } = await supabase
+            .from('templates')
+            .select('slug,name,subtitle,description,img,video,features,software,plugins,tags')
+            .neq('slug', product.slug)
+            .limit(8)
+            .order('created_at', { ascending: false });
+          
+          if (data) {
+            setYouMayAlsoLikeTemplates(data.map((r: any) => ({
+              slug: r.slug,
+              name: r.name,
+              subtitle: r.subtitle,
+              desc: r.description ?? '',
+              price: 0,
+              img: r.img,
+              video: r.video,
+              features: r.features ?? [],
+              software: r.software ?? [],
+              plugins: r.plugins ?? [],
+              tags: r.tags ?? [],
+              isFeatured: false,
+            })));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching you may also like templates:', error);
+        setYouMayAlsoLikeTemplates([]);
+      } finally {
+        setLoadingYouMayAlsoLike(false);
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [user, loadSubscriptionStatus]);
-
+    fetchYouMayAlsoLike();
+  }, [isSubActive, user, product.slug]);
 
 
   const handleDownload = async () => {
@@ -141,14 +357,12 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         setDownloading(false);
         return;
       }
-      
-      // Delegate access checks and download tracking to the API route
+
       const res = await fetch(`/api/download/${product.slug}`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
       if (res.status === 403) {
-        // Access denied – likely missing subscription
         router.push('/pricing');
         setFeedback('Please subscribe to download this template.');
         setDownloading(false);
@@ -156,12 +370,11 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
       }
 
       if (!res.ok) {
-        setFeedback('Download link not available for this template.');
+        setFeedback('Download link not available.');
         setDownloading(false);
         return;
       }
-      
-      // Check if response is JSON (redirect to external URL)
+
       const contentType = res.headers.get('content-type');
       if (contentType?.includes('application/json')) {
         const json = await res.json();
@@ -170,12 +383,11 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
           setDownloading(false);
           return;
         }
-        setFeedback('Download not available for this template.');
+        setFeedback('Download not available.');
         setDownloading(false);
         return;
       }
-      
-      // Otherwise, download as blob (Supabase storage file)
+
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -187,251 +399,481 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
       URL.revokeObjectURL(url);
       setDownloading(false);
     } catch (e) {
-      setFeedback('Something went wrong while opening download link.');
+      setFeedback('Error opening download.');
       setDownloading(false);
     } finally {
       setTimeout(() => setFeedback(null), 3000);
     }
   };
 
-  const handleBuyNow = async () => {
-    try {
-      setPaying(true);
-      const supabase = getSupabaseBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        openLoginModal();
-        setPaying(false);
-        return;
-      }
-      
-      // Redirect to checkout page instead of direct payment
-      router.push(`/checkout?product=${product.slug}`);
-      setPaying(false);
-    } catch (e) {
-      setFeedback('Payment failed to start');
-    } finally {
-      setTimeout(() => setFeedback(null), 3000);
-      setPaying(false);
-    }
-  };
-
-  const loadRazorpay = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
-      if (existing) return resolve();
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Razorpay'));
-      document.body.appendChild(script);
-    });
-  };
-
-
-
-
-  const retryPayment = () => {
-    // Navigate to checkout or retry payment
-    router.push(`/checkout?product=${product.slug}`);
-  };
-
   const handleShare = async () => {
+    const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
     try {
-      const shareUrl =
-        typeof window !== 'undefined'
-          ? window.location.href
-          : `${process.env.NEXT_PUBLIC_BASE_URL || 'https://celite.in'}/product/${product.slug}`;
       if (navigator.share) {
         await navigator.share({
           title: product.name,
-          text: product.subtitle ?? 'Check out this After Effects template on Celite',
+          text: product.subtitle ?? 'Check out this template on Celite',
           url: shareUrl,
         });
-        setShareFeedback('Thanks for sharing!');
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(shareUrl);
-        setShareFeedback('Link copied to clipboard');
       } else {
-        setShareFeedback('Sharing not supported in this browser');
+        await navigator.clipboard.writeText(shareUrl);
+        setShareFeedback('Link copied!');
       }
-    } catch (error) {
-      setShareFeedback('Unable to share this template right now');
+    } catch (err) {
+      // Ignore share errors
     } finally {
-      setTimeout(() => setShareFeedback(null), 2500);
+      setTimeout(() => setShareFeedback(null), 2000);
     }
   };
 
-  // Show payment failed UI if purchase status is failed (only if we have a purchase but status is failed)
-  // Note: We only show this if there's actually a purchase attempt that failed
-  // If purchaseStatus is null, we don't show the failed UI
-
   return (
-    <>
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes gradient-border {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-        }
-      `}} />
-      <main className="bg-black min-h-screen pt-0 sm:pt-16 px-1 sm:px-0">
-      <div className="max-w-5xl mx-auto mb-14 mt-10 px-4 sm:px-6 md:px-8">
-        <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
-          <GlowingEffect
-            spread={40}
-            glow={true}
-            disabled={false}
-            proximity={64}
-            inactiveZone={0.01}
-            borderWidth={3}
-          />
-          <div className="relative flex flex-col gap-10 overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 md:p-12 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-        {/* Product Gallery - Video on Top */}
-        {product.video ? (
-          <div className="w-full rounded-2xl shadow-xl overflow-hidden aspect-video">
-            <YouTubeVideoPlayer 
-              videoUrl={product.video}
-              title={product.name}
-              className="w-full h-full"
-              showFullscreen={true}
-            />
-          </div>
-        ) : null}
-        {/* Product Info - Details Below Video */}
-        <div className="flex flex-col">
-          <div className="flex items-start justify-between gap-3 mb-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">{product.name}</h1>
-              <h2 className="text-lg text-zinc-300 font-medium">{product.subtitle}</h2>
-            </div>
-            <button
-              type="button"
-              onClick={handleShare}
-              className="inline-flex items-center justify-center rounded-full border border-white/15 text-white/70 hover:text-white hover:border-white/40 p-2 transition-colors"
-              aria-label="Share this template"
-            >
-              <Share2 className="h-5 w-5" />
-            </button>
-          </div>
+    <main className="bg-white min-h-screen pb-20 pt-20 sm:pt-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-          <div className="text-zinc-200 leading-relaxed mb-5">{product.desc}</div>
-          <ul className="list-disc pl-6 text-zinc-400 mb-4 text-sm">
-            {product.features.map((f, idx) => <li key={idx}>{f}</li>)}
-          </ul>
-          <div className="flex flex-wrap gap-5 mb-6">
-            <div>
-              <h3 className="font-semibold text-zinc-200 mb-1 text-base">Software</h3>
-              <ul className="list-disc pl-5 text-zinc-400">
-                {product.software.map((soft, idx) => <li key={idx}>{soft}</li>)}
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold text-zinc-200 mb-1 text-base">Plugins</h3>
-              <ul className="list-disc pl-5 text-zinc-400">
-                {product.plugins.map((plugin, idx) => <li key={idx}>{plugin}</li>)}
-              </ul>
-            </div>
+        {/* Header Breadcrumbs / Title */}
+        <div className="mb-8">
+          <div className="text-sm text-zinc-500 mb-2">
+            <Link href="/templates" className="hover:text-blue-600 transition-colors">Video Templates</Link>
+            <span className="mx-2">›</span>
+            <span className="text-zinc-900 font-medium truncate">{product.name}</span>
           </div>
-          {isSubActive ? (
-            <div className="flex items-center gap-4 mb-6 justify-start">
-              <ShinyButton
-                onClick={handleDownload}
-                className={downloading ? 'opacity-70 cursor-not-allowed' : ''}
-              >
-                {downloading ? 'Preparing…' : 'Download Now'}
-              </ShinyButton>
-            </div>
-          ) : purchased ? (
-            <div className="flex items-center gap-4 mb-6 justify-start">
-              <ShinyButton
-                onClick={handleDownload}
-                className={downloading ? 'opacity-70 cursor-not-allowed' : ''}
-              >
-                {downloading ? 'Preparing…' : 'Download Now'}
-              </ShinyButton>
-              <span className="text-xs text-green-300">Purchased</span>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4 mb-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-4 flex-wrap justify-start">
-                  <ShinyButton
-                    onClick={handleDownload}
-                    className={downloading ? 'opacity-70 cursor-not-allowed' : ''}
-                  >
-                    {downloading ? 'Preparing…' : 'Download Now'}
-                  </ShinyButton>
-                </div>
-                {!isSubActive && user && (
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm text-red-400 font-semibold">Not Active</p>
-                    <p className="text-sm text-zinc-400">
-                      • Subscribe to get unlimited access to all templates
-                    </p>
-                  </div>
-                )}
-                {!user && (
-                  <p className="text-sm text-zinc-400">
-                    Sign in to download templates
-                  </p>
-                )}
+          <h1 className="text-3xl md:text-4xl font-bold text-zinc-900 tracking-tight">{product.name}</h1>
+          <div className="flex items-center gap-3 mt-3">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">C</div>
+              <span className="text-sm font-medium text-zinc-700">Celite Studios</span>
+              <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
               </div>
             </div>
-          )}
-          <div className="space-y-1">
-            {feedback && <p className="text-sm text-blue-300">{feedback}</p>}
-            {shareFeedback && <p className="text-xs text-emerald-300">{shareFeedback}</p>}
-          </div>
           </div>
         </div>
+
+        <div className="flex flex-col lg:flex-row gap-12">
+
+          {/* LEFT COLUMN - CONTENT (66%) */}
+          <div className="w-full lg:w-2/3">
+
+            {/* Video Player */}
+            <div className="w-full aspect-video rounded-xl overflow-hidden bg-black shadow-lg mb-8 relative group">
+              {product.video ? (
+                <YouTubeVideoPlayer
+                  videoUrl={product.video}
+                  title={product.name}
+                  className="w-full h-full"
+                  showFullscreen={true}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-zinc-100">
+                  <img src={getThumbnail(product)} alt={product.name} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+                    <PlayCircle className="w-16 h-16 text-white opacity-90 drop-shadow-lg" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile Subscription Card (Hidden on Desktop) */}
+            <SubscriptionCard
+              isSubActive={isSubActive}
+              downloading={downloading}
+              handleDownload={handleDownload}
+              router={router}
+              className="mb-8 lg:hidden"
+            />
+
+            {/* Description */}
+            <div className="mb-10">
+              <h2 className="text-2xl font-bold text-zinc-900 mb-4">Description</h2>
+              <div className="prose prose-zinc max-w-none text-zinc-600 leading-relaxed">
+                <p className="text-lg mb-4 font-medium text-zinc-800">{product.subtitle}</p>
+                <div className="whitespace-pre-line">{product.desc}</div>
+              </div>
+
+              {/* Features List */}
+              {product.features.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold text-zinc-900 mb-3">Key Features</h3>
+                  <ul className="grid sm:grid-cols-2 gap-2">
+                    {product.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-2 text-zinc-600 text-sm">
+                        <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Tags */}
+            <div className="mb-12">
+              <h2 className="text-xl font-bold text-zinc-900 mb-4">Product Tags</h2>
+              <div className="flex flex-wrap gap-2">
+                {(product.tags || []).map((tag, i) => (
+                  <Link key={i} href={`/templates?search=${tag}`} className="px-4 py-2 rounded-lg bg-zinc-100 text-zinc-600 text-sm font-medium hover:bg-zinc-200 transition-colors">
+                    {tag}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* More in this style */}
+            {loadingMoreInStyle ? (
+              <div className="mb-12">
+                <h2 className="text-2xl font-bold text-zinc-900 mb-6">More in This Style</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="aspect-video rounded-lg bg-zinc-200 mb-3"></div>
+                      <div className="h-4 bg-zinc-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-zinc-200 rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : moreInStyleTemplates.length > 0 ? (
+              <div className="mb-12">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-zinc-900">More in This Style</h2>
+                  {moreInStyleTemplates.length > 4 && (
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setMoreInStyleIndex(Math.max(0, moreInStyleIndex - 1))}
+                        disabled={moreInStyleIndex === 0}
+                        className="w-8 h-8 rounded-full border border-zinc-200 flex items-center justify-center hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        aria-label="Previous templates"
+                      >
+                        ←
+                      </button>
+                      <button 
+                        onClick={() => setMoreInStyleIndex(Math.min(Math.floor((moreInStyleTemplates.length - 1) / 4), moreInStyleIndex + 1))}
+                        disabled={moreInStyleIndex >= Math.floor((moreInStyleTemplates.length - 1) / 4)}
+                        className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        aria-label="Next templates"
+                      >
+                        →
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {moreInStyleTemplates.slice(moreInStyleIndex * 4, (moreInStyleIndex + 1) * 4).map((item) => (
+                    <Link key={item.slug} href={`/product/${item.slug}`} className="group">
+                      <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
+                        {item.video ? (
+                          <YouTubeVideoPlayer
+                            videoUrl={item.video}
+                            title={item.name}
+                            className="w-full h-full"
+                          />
+                        ) : (
+                          <>
+                            <img 
+                              src={getThumbnail(item)} 
+                              alt={item.name} 
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              onError={(e) => {
+                                e.currentTarget.src = '/PNG1.png';
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <div className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
+                                <PlayCircle className="w-6 h-6 fill-current" />
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <h3 className="font-bold text-zinc-900 text-lg group-hover:text-blue-600 transition-colors">{item.name}</h3>
+                      <p className="text-sm text-zinc-500">By Celite</p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* You May Also Like */}
+            {loadingYouMayAlsoLike ? (
+              <div>
+                <h2 className="text-2xl font-bold text-zinc-900 mb-6">You May Also Like</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="aspect-video rounded-lg bg-zinc-200 mb-3"></div>
+                      <div className="h-4 bg-zinc-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-zinc-200 rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : youMayAlsoLikeTemplates.length > 0 ? (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-zinc-900">You May Also Like</h2>
+                  <Link href="/templates" className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-all">→</Link>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {youMayAlsoLikeTemplates.slice(0, 4).map((item) => (
+                    <Link key={item.slug} href={`/product/${item.slug}`} className="group">
+                      <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
+                        {item.video ? (
+                          <YouTubeVideoPlayer
+                            videoUrl={item.video}
+                            title={item.name}
+                            className="w-full h-full"
+                          />
+                        ) : (
+                          <>
+                            <img 
+                              src={getThumbnail(item)} 
+                              alt={item.name} 
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              onError={(e) => {
+                                e.currentTarget.src = '/PNG1.png';
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
+                                <PlayCircle className="w-5 h-5 fill-current" />
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <h3 className="font-bold text-zinc-900 text-sm group-hover:text-blue-600 transition-colors truncate">{item.name}</h3>
+                      <p className="text-xs text-zinc-500">By Celite</p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+
+          {/* RIGHT COLUMN - STICKY SIDEBAR (33%) */}
+          <div className="w-full lg:w-1/3 relative">
+            <div className="sticky top-28 space-y-6">
+
+              {/* Desktop Subscription Card (Hidden on Mobile) */}
+              <SubscriptionCard
+                isSubActive={isSubActive}
+                downloading={downloading}
+                handleDownload={handleDownload}
+                router={router}
+                className="hidden lg:block"
+              />
+
+              {/* Features Table / Tech Specs */}
+              <div className="bg-white p-2">
+                <h3 className="text-xl font-bold text-zinc-900 mb-4">Features</h3>
+
+                {/* Helper function to extract values from tags, features, and description */}
+                {(() => {
+                  const allText = [
+                    ...(product.tags || []).map(t => String(t).toLowerCase()),
+                    ...(product.features || []).map(f => String(f).toLowerCase()),
+                    product.desc?.toLowerCase() || '',
+                    product.subtitle?.toLowerCase() || '',
+                    product.name?.toLowerCase() || ''
+                  ].join(' ');
+
+                  // Extract resolution (check more specific first)
+                  const getResolution = () => {
+                    // Check for 4K first (most specific)
+                    if (allText.includes('4k') || allText.includes('3840') || allText.includes('2160')) return '4K';
+                    // Check for 1080p (more specific than just "1080")
+                    if (allText.includes('1080p') || allText.includes('full hd') || allText.includes('fullhd')) return '1080p (Full HD)';
+                    // Check for 720p (more specific than just "720")
+                    if (allText.includes('720p')) return '720p';
+                    // Check for vertical/portrait
+                    if (allText.includes('vertical') || allText.includes('9:16') || allText.includes('portrait') || allText.includes('9x16')) return 'Vertical (9:16)';
+                    // Fallback to generic HD if found
+                    if (allText.includes('1080') && !allText.includes('1080p')) return '1080p (Full HD)';
+                    if (allText.includes('720') && !allText.includes('720p')) return '720p';
+                    return null;
+                  };
+
+                  // Extract length/duration
+                  const getLength = () => {
+                    const lengthMatch = allText.match(/(\d+(?:\.\d+)?)\s*(?:second|sec|minute|min|s|m)/i);
+                    if (lengthMatch) {
+                      const value = lengthMatch[1];
+                      const unit = lengthMatch[0].toLowerCase().includes('min') ? 'Minutes' : 'Seconds';
+                      return `${value} ${unit}`;
+                    }
+                    return null;
+                  };
+
+                  // Extract file size
+                  const getFileSize = () => {
+                    const sizeMatch = allText.match(/(\d+(?:\.\d+)?)\s*(mb|gb|kb)/i);
+                    if (sizeMatch) {
+                      return `${sizeMatch[1]} ${sizeMatch[2].toUpperCase()}`;
+                    }
+                    return null;
+                  };
+
+                  // Extract software version
+                  const getSoftwareVersion = () => {
+                    const versions: string[] = [];
+                    if (allText.includes('cc') || allText.includes('creative cloud')) versions.push('CC');
+                    if (allText.includes('cs6')) versions.push('CS6');
+                    if (allText.includes('cs5')) versions.push('CS5');
+                    if (allText.includes('cs4')) versions.push('CS4');
+                    if (allText.includes('2024')) versions.push('2024');
+                    if (allText.includes('2023')) versions.push('2023');
+                    if (allText.includes('2022')) versions.push('2022');
+                    if (allText.includes('2021')) versions.push('2021');
+                    if (allText.includes('2020')) versions.push('2020');
+                    if (allText.includes('2019')) versions.push('2019');
+                    if (allText.includes('2018')) versions.push('2018');
+                    return versions.length > 0 ? versions.join(', ') : null;
+                  };
+
+                  // Get software list
+                  const getSoftware = () => {
+                    if (product.software && product.software.length > 0) {
+                      return product.software.join(', ');
+                    }
+                    return null;
+                  };
+
+                  // Get plugins
+                  const getPlugins = () => {
+                    if (product.plugins && product.plugins.length > 0) {
+                      const pluginList = product.plugins.filter(p => {
+                        const pLower = String(p).toLowerCase();
+                        return !pLower.includes('no plugin') && !pLower.includes('none') && pLower.trim() !== '';
+                      });
+                      return pluginList.length > 0 ? pluginList.join(', ') : 'No Plugin Required';
+                    }
+                    return 'No Plugin Required';
+                  };
+
+                  const resolution = getResolution();
+                  const length = getLength();
+                  const fileSize = getFileSize();
+                  const softwareVersion = getSoftwareVersion();
+                  const software = getSoftware();
+                  const plugins = getPlugins();
+
+                  const features = [
+                    { label: 'Software', value: software },
+                    { label: 'Software Version', value: softwareVersion },
+                    { label: 'Resolution', value: resolution },
+                    { label: 'Required Plugin', value: plugins },
+                    { label: 'Length', value: length },
+                    { label: 'File Size', value: fileSize },
+                  ].filter(f => f.value !== null && f.value !== undefined && f.value !== '');
+
+                  if (features.length === 0) return null;
+
+                  return (
+                    <div className="grid grid-cols-[110px_1fr] gap-y-4 text-sm">
+                      {features.map((feature, idx) => (
+                        <div key={idx}>
+                          <div className="text-zinc-500 font-medium">{feature.label}</div>
+                          <div className="text-zinc-900 font-medium">{feature.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Share Button Block */}
+              <div className="flex justify-end pt-4 border-t border-zinc-100">
+                <button
+                  onClick={handleShare}
+                  className="flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-blue-600 transition-colors"
+                >
+                  <Share2 className="w-4 h-4" />
+                  {shareFeedback || 'Share this item'}
+                </button>
+              </div>
+
+              {/* Error/Feedback Toast */}
+              {feedback && (
+                <div className="absolute -top-16 left-0 right-0 bg-zinc-900 text-white text-xs p-3 rounded-lg shadow-xl text-center animate-in fade-in slide-in-from-bottom-2">
+                  {feedback}
+                </div>
+              )}
+
+            </div>
+          </div>
+
         </div>
       </div>
-      {/* Related Products */}
-      <section className="max-w-5xl mx-auto w-full mb-12 px-4 sm:px-6 md:px-8">
-        <h3 className="text-xl font-bold text-white mb-5">Related Products</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {related.map((r) => (
-            <div key={r.slug} className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
-              <GlowingEffect
-                spread={40}
-                glow={true}
-                disabled={false}
-                proximity={64}
-                inactiveZone={0.01}
-                borderWidth={3}
-              />
-              <div className="relative flex h-full flex-col overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-4 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-                <Link href={`/product/${r.slug}`} className="absolute inset-0 z-10" aria-label={r.name || 'Template'} />
-                <div className="relative w-full h-40 sm:h-48 md:h-40 rounded-lg mb-3 overflow-hidden pointer-events-none">
-                  {r.video ? (
-                    <YouTubeVideoPlayer 
-                      videoUrl={r.video}
-                      title={r.name || 'Template'}
-                      className="w-full h-full"
-                    />
-                  ) : null}
-                </div>
-                <div className="flex flex-col gap-2 flex-1 relative z-0">
-                  <h3 className="text-base sm:text-lg font-semibold text-white text-center leading-tight">{r.name}</h3>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-center mt-8">
-          <Button
-            variant="default"
-            size="lg"
-            className="px-7 py-3 font-semibold"
-            asChild
-          >
-            <Link href="/templates">
-              Explore More Templates
-            </Link>
-          </Button>
-        </div>
-      </section>
     </main>
-    </>
+  );
+}
+
+// Extracted Subscription Card to reuse for Mobile/Desktop layouts
+function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className }: {
+  isSubActive: boolean;
+  downloading: boolean;
+  handleDownload: () => void;
+  router: any;
+  className?: string;
+}) {
+  return (
+    <div className={cn("bg-blue-50/50 rounded-2xl p-6 border border-blue-100", className)}>
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h3 className="text-2xl font-bold text-blue-900">Monthly</h3>
+          <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold uppercase tracking-wider rounded">
+            Limited Offer
+          </span>
+        </div>
+        <span className="bg-blue-900 text-white text-[10px] uppercase font-bold px-2 py-1 rounded shadow-sm shadow-blue-900/20 flex items-center gap-1">
+          <Star className="w-3 h-3 fill-current" /> Popular
+        </span>
+      </div>
+
+      <div className="flex items-baseline gap-2 mb-2">
+        <span className="text-sm text-blue-400 line-through font-medium">₹899</span>
+        <span className="text-3xl font-bold text-blue-700">₹599</span>
+        <span className="text-sm text-blue-600/80 font-medium">/ month</span>
+      </div>
+      <p className="text-xs text-blue-600/70 mb-6 leading-relaxed">
+        Best balance for creators who want full premium access
+      </p>
+
+      <ul className="space-y-3 mb-8">
+        {[
+          'Unlimited Premium Templates',
+          'Full Source Files Access',
+          'Priority Support',
+          'Commercial License'
+        ].map((item, i) => (
+          <li key={i} className="flex items-center gap-2 text-sm text-blue-900 font-medium">
+            <Check className="w-4 h-4 text-blue-600" />
+            {item}
+          </li>
+        ))}
+      </ul>
+
+      {isSubActive ? (
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          className="w-full py-3 rounded-lg bg-blue-600 text-white font-bold text-sm shadow-lg shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+        >
+          {downloading ? 'Preparing...' : (
+            <>
+              <Download className="w-4 h-4" /> Download Now
+            </>
+          )}
+        </button>
+      ) : (
+        <button
+          onClick={() => router.push('/pricing')}
+          className="w-full py-3 rounded-lg bg-blue-900 text-white font-bold text-sm shadow-xl shadow-blue-900/10 hover:bg-blue-800 active:scale-[0.98] transition-all"
+        >
+          Subscribe Monthly
+        </button>
+      )}
+    </div>
   );
 }

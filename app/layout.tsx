@@ -22,10 +22,10 @@ export const metadata: Metadata = {
   description: "Discover premium After Effects templates for logo reveals, slideshows, and more",
   icons: {
     icon: [
-      { url: '/celite.png', type: 'image/png' },
+      { url: '/favicon/fav.png', type: 'image/png' },
     ],
-    shortcut: '/celite.png',
-    apple: '/celite.png',
+    shortcut: '/favicon/fav.png',
+    apple: '/favicon/fav.png',
   },
 };
 
@@ -35,15 +35,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-WQE6FX8VET';
-  
+
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/celite.png" type="image/png" />
-        <link rel="shortcut icon" href="/celite.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/celite.png" />
+        <link rel="icon" href="/favicon/fav.png" type="image/png" />
+        <link rel="shortcut icon" href="/favicon/fav.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/favicon/fav.png" />
       </head>
-      <body className={`${inter.variable} antialiased bg-black`} style={{ fontStyle: 'normal', fontSynthesis: 'none' }}>
+      <body className={`${inter.variable} antialiased bg-white text-zinc-900 group/body`} style={{ fontStyle: 'normal', fontSynthesis: 'none' }}>
         <Script
           strategy="afterInteractive"
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}

@@ -22,7 +22,7 @@ export default function AdminClient() {
   const [stats, setStats] = useState<{ templates: number; orders: number; revenue: number } | null>(null);
   const [active, setActive] = useState<'overview' | 'products' | 'categories' | 'analytics' | 'users' | 'settings' | 'marketing'>('overview');
 
-  
+
 
   useEffect(() => {
     const check = async () => {
@@ -61,11 +61,11 @@ export default function AdminClient() {
     if (res.ok) await refreshTemplates();
   };
 
-  if (loading) return <main className="bg-black min-h-screen pt-24 text-white px-6">Loading…</main>;
+  if (loading) return <main className="bg-black min-h-screen pt-20 text-white px-6">Loading…</main>;
   if (!isAdmin) return null;
 
   return (
-    <main className="bg-black min-h-screen pt-16 text-white">
+    <main className="bg-black min-h-screen pt-20 text-white">
       <div className="grid grid-cols-[220px_1fr] min-h-[calc(100vh-4rem)]">
         <AdminSidebar active={active} onChange={setActive} />
         {/* Content */}

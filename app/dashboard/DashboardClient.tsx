@@ -50,7 +50,7 @@ function DashboardContent() {
   const reloadDashboardData = useCallback(async () => {
     if (!user) return;
     const supabase = getSupabaseBrowserClient();
-    
+
     // Load user metadata
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (currentUser?.user_metadata) {
@@ -59,7 +59,7 @@ function DashboardContent() {
         last_name: currentUser.user_metadata.last_name || null,
       });
     }
-    
+
     // Load subscription - use realtime subscription for auto-updates
     const { data: s } = await supabase
       .from('subscriptions')
@@ -96,7 +96,7 @@ function DashboardContent() {
       setMonthlyPrice(parsePrice(map.RAZORPAY_MONTHLY_AMOUNT, 10000));
       setYearlyPrice(parsePrice(map.RAZORPAY_YEARLY_AMOUNT, 100000));
     }
-    
+
     // Load recent downloads (subscription-based) for this user
     try {
       const { data: dl } = await supabase
@@ -135,18 +135,18 @@ function DashboardContent() {
 
   useEffect(() => {
     reloadDashboardData();
-    
+
     // Set up periodic refresh every 30 seconds to catch subscription renewals
     const refreshInterval = setInterval(() => {
       reloadDashboardData();
     }, 30000); // 30 seconds
-    
+
     // Also refresh when window regains focus (user comes back to tab)
     const handleFocus = () => {
       reloadDashboardData();
     };
     window.addEventListener('focus', handleFocus);
-    
+
     return () => {
       clearInterval(refreshInterval);
       window.removeEventListener('focus', handleFocus);
@@ -294,427 +294,272 @@ function DashboardContent() {
   const isActuallyActive = !!sub?.is_active && (!validUntil || validUntil > now);
   const isPaused: boolean = !!(sub?.is_active && validUntil && validUntil <= now); // is_active true but validity expired
   const hasExpiredPlan = !sub?.is_active && sub?.plan; // Subscription expired and inactive
-  const subscriptionTier = isActuallyActive 
-    ? (sub?.plan || 'Pro') 
+  const subscriptionTier = isActuallyActive
+    ? (sub?.plan || 'Pro')
     : isPaused
-    ? `${sub?.plan === 'yearly' ? 'Yearly' : 'Monthly'} Plan - Paused`
-    : hasExpiredPlan 
-    ? `${sub?.plan === 'yearly' ? 'Yearly' : 'Monthly'} Plan Expired`
-    : 'Free';
+      ? `${sub?.plan === 'yearly' ? 'Yearly' : 'Monthly'} Plan - Paused`
+      : hasExpiredPlan
+        ? `${sub?.plan === 'yearly' ? 'Yearly' : 'Monthly'} Plan Expired`
+        : 'Free';
   const displayMonthlyPrice = formatPrice(monthlyPrice ?? 799);
   const displayYearlyPrice = formatPrice(yearlyPrice ?? 5499);
 
   if (!user) {
     return (
-      <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white relative">
-        {/* Colorful Background Gradients */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
-          <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-        </div>
-        <div className="relative max-w-3xl mx-auto text-center">
-          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
-            />
-            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-12 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-              <h1 className="text-3xl font-semibold text-white">Please sign in to view your dashboard</h1>
-              <Link
-                href="/login"
-                className="mt-8 inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
-              >
-                Go to Login
-              </Link>
-            </div>
+      <main className="bg-zinc-50 min-h-screen pt-20 pb-20 px-6 relative">
+        <div className="relative max-w-3xl mx-auto text-center mt-20">
+          <div className="bg-white rounded-3xl border border-zinc-200 p-12 shadow-xl shadow-blue-900/5">
+            <h1 className="text-3xl font-bold text-zinc-900">Please sign in to view your dashboard</h1>
+            <p className="mt-4 text-zinc-500 text-lg">Access your downloads, subscription, and account settings.</p>
+            <Link
+              href="/login"
+              className="mt-8 inline-flex items-center rounded-2xl bg-blue-600 px-8 py-3 text-base font-semibold text-white transition hover:bg-blue-700 shadow-lg shadow-blue-600/20"
+            >
+              Go to Login
+            </Link>
           </div>
         </div>
       </main>
     );
   }
-  
+
   // Get display name - prefer first/last name, fallback to email username
   const displayName = userMetadata.first_name || userMetadata.last_name
     ? `${userMetadata.first_name || ''} ${userMetadata.last_name || ''}`.trim()
     : user.email.split("@")[0];
 
   return (
-    <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white relative">
-      {/* Colorful Background Gradients */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-      </div>
-      <div className="relative max-w-6xl mx-auto space-y-4">
-        <section className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
-          <GlowingEffect
-            spread={40}
-            glow={true}
-            disabled={false}
-            proximity={64}
-            inactiveZone={0.01}
-            borderWidth={3}
-          />
-          <div className="relative flex flex-col gap-6 overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:flex-row md:items-center md:justify-between">
+    <main className="bg-zinc-50 min-h-screen pt-20 pb-20 px-6 relative">
+      <div className="relative max-w-6xl mx-auto space-y-6">
+        {/* Welcome Section */}
+        <section className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
-              <p className="uppercase tracking-[0.35em] text-xs text-zinc-400">Dashboard</p>
-              <h1 className="mt-3 text-3xl font-bold text-white">Welcome back, {displayName}</h1>
-              <p className="mt-2 text-zinc-300">Manage your Celite purchases, billing, and profile preferences.</p>
+              <p className="uppercase tracking-wider text-xs font-bold text-blue-600">Dashboard</p>
+              <h1 className="mt-2 text-3xl font-bold text-zinc-900">Welcome back, {displayName}</h1>
             </div>
-            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/60 backdrop-blur-sm px-6 py-4 text-right">
-            <p className="text-sm text-white/70">Subscription</p>
-            <p className="mt-1 text-2xl font-semibold text-white">{subscriptionTier}</p>
-            {/* Show subscription details */}
-            {isActuallyActive && sub?.valid_until && (
-              <p className={`mt-1 text-xs text-green-300`}>
-                Active{sub?.plan ? ` • ${sub.plan === 'yearly' ? 'Yearly' : 'Monthly'}` : ''}
-                <br />
-                <span className="text-zinc-400">Valid until: {new Date(sub.valid_until).toLocaleDateString()} {new Date(sub.valid_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              </p>
-            )}
-            {isPaused && sub?.valid_until && (
-              <div className="mt-2">
-                <p className="text-xs text-yellow-400 font-semibold">
-                  Paused - Waiting for next payment
+            <div className="bg-zinc-50 rounded-2xl border border-zinc-100 px-6 py-4 text-right">
+              <p className="text-sm text-zinc-500 font-medium">Current Plan</p>
+              <p className="mt-1 text-2xl font-bold text-zinc-900">{subscriptionTier}</p>
+
+              {isActuallyActive && sub?.valid_until && (
+                <p className="mt-1 text-xs text-green-600 font-medium flex items-center justify-end gap-1">
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  Active{sub?.plan ? ` • ${sub.plan === 'yearly' ? 'Yearly' : 'Monthly'}` : ''}
                 </p>
-                <p className="text-xs text-zinc-400 mt-1">
-                  Expired: {new Date(sub.valid_until).toLocaleDateString()} {new Date(sub.valid_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Subscription will resume when payment is processed
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2 justify-end">
-                  <button
-                    onClick={handleRenewSubscription}
-                    disabled={loading}
-                    className="inline-flex items-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:from-pink-600 hover:to-purple-600 disabled:opacity-60"
-                  >
-                    {loading ? 'Renewing...' : 'Renew Now'}
-                  </button>
-                </div>
-              </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="mt-6 flex flex-wrap gap-2 text-xs">
+            {!isActuallyActive && !isPaused && !hasExpiredPlan && (
+              <>
+                <Link href="/pricing" className="inline-flex items-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 shadow-md shadow-blue-600/10">
+                  Subscribe Monthly ({displayMonthlyPrice})
+                </Link>
+                <Link href="/pricing" className="inline-flex items-center rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 hover:border-zinc-300">
+                  Subscribe Yearly ({displayYearlyPrice})
+                </Link>
+              </>
             )}
             {hasExpiredPlan && (
-              <div className="mt-3 flex flex-wrap gap-2 justify-end">
-                <button
-                  onClick={handleRenewSubscription}
-                  disabled={loading}
-                  className="inline-flex items-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:from-pink-600 hover:to-purple-600 disabled:opacity-60"
-                >
-                  {loading ? 'Renewing...' : 'Renew Plan'}
-                </button>
-              </div>
-            )}
-            {!isActuallyActive && !isPaused && !hasExpiredPlan && (
-              <div className="mt-3 flex flex-wrap gap-2 justify-end">
-                <Link href="/pricing" className="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-zinc-200">
-                  Monthly ({displayMonthlyPrice})
-                </Link>
-                <Link href="/pricing" className="inline-flex items-center rounded-full border border-white/30 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/10">
-                  Yearly ({displayYearlyPrice})
-                </Link>
-              </div>
-            )}
-            </div>
-          </div>
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-1">
-          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
-            />
-            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-7 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-              <h2 className="text-xl font-semibold text-white">Account Settings</h2>
-              <p className="mt-2 text-sm text-zinc-300">Control your profile and account preferences.</p>
-              <div className="mt-5 flex flex-wrap gap-3 text-xs">
-                <button onClick={() => setShowEditProfile(true)} className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:border-white hover:bg-white/10">Edit profile</button>
-                <button onClick={() => setShowChangePassword(true)} className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:border-white hover:bg-white/10">Change password</button>
-                <button onClick={() => setShowManageSubscription(true)} className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:border-white hover:bg-white/10">Manage subscription</button>
-              </div>
-              <p className="mt-5 text-xs text-zinc-400">
-                Payment methods are managed securely through Razorpay during checkout. Your subscription and orders are processed through our secure payment gateway.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Subscription history instead of individual purchases */}
-        <section className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
-          <GlowingEffect
-            spread={40}
-            glow={true}
-            disabled={false}
-            proximity={64}
-            inactiveZone={0.01}
-            borderWidth={3}
-          />
-          <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-7 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Subscription History</h2>
-              <Link href="/pricing" className="text-sm text-blue-300 hover:underline">View plans</Link>
-            </div>
-            {!sub ? (
-              <p className="mt-6 text-sm text-zinc-400">
-                You don't have an active subscription yet. Subscribe to start downloading templates.
-              </p>
-            ) : (
-              <div className="mt-6 space-y-3 text-sm text-zinc-200">
-                <p>
-                  <span className="text-zinc-400">Current plan: </span>
-                  <span className="font-semibold text-white">
-                    {sub.plan === 'yearly'
-                      ? 'Yearly'
-                      : sub.plan === 'monthly' || sub.plan === 'weekly'
-                      ? 'Monthly'
-                      : 'Unknown'}
-                  </span>
-                </p>
-                <p>
-                  <span className="text-zinc-400">Status: </span>
-                  <span className="font-semibold text-white">
-                    {isActuallyActive
-                      ? 'Active'
-                      : isPaused
-                      ? 'Paused'
-                      : hasExpiredPlan
-                      ? 'Expired'
-                      : 'Inactive'}
-                  </span>
-                </p>
-                {sub.autopay_enabled !== null && (
-                  <p>
-                    <span className="text-zinc-400">Autopay: </span>
-                    <span className="font-semibold text-white">
-                      {sub.autopay_enabled ? 'Enabled' : 'Disabled'}
-                    </span>
-                  </p>
-                )}
-                {sub.created_at && (
-                  <p className="text-xs text-zinc-400">
-                    Started on {new Date(sub.created_at).toLocaleDateString()} at{' '}
-                    {new Date(sub.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                )}
-                {sub.valid_until && (
-                  <p className="text-xs text-zinc-400">
-                    Current validity until {new Date(sub.valid_until).toLocaleDateString()} at{' '}
-                    {new Date(sub.valid_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                )}
-              </div>
+              <button
+                onClick={handleRenewSubscription}
+                disabled={loading}
+                className="inline-flex items-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 shadow-md shadow-blue-600/10 disabled:opacity-60"
+              >
+                {loading ? 'Renewing...' : 'Renew Plan'}
+              </button>
             )}
           </div>
         </section>
 
-        {/* Recent Downloads for this user */}
-        <section className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
-          <GlowingEffect
-            spread={40}
-            glow={true}
-            disabled={false}
-            proximity={64}
-            inactiveZone={0.01}
-            borderWidth={3}
-          />
-          <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-7 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Recent Downloads</h2>
-              <Link href="/templates" className="text-sm text-blue-300 hover:underline">Browse templates</Link>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Recent Downloads (Main Column) */}
+          <section className="lg:col-span-2 bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm h-fit">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-zinc-900">Recent Downloads</h2>
+              <Link href="/templates" className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline">Browse templates</Link>
             </div>
+
             {recentDownloads.length === 0 ? (
-              <p className="mt-6 text-sm text-zinc-400">
-                You haven't downloaded any templates yet with your account.
-              </p>
+              <div className="text-center py-12 bg-zinc-50 rounded-2xl border border-zinc-100 border-dashed">
+                <p className="text-zinc-500 mb-4">You haven't downloaded any templates yet.</p>
+                <Link href="/templates" className="text-sm font-semibold text-blue-600 hover:underline">
+                  Explore Collection
+                </Link>
+              </div>
             ) : (
-              <ul className="mt-6 space-y-4 text-sm text-zinc-200">
+              <ul className="space-y-3">
                 {recentDownloads.map((d) => (
-                  <li key={`${d.slug}-${d.downloaded_at}`} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {d.img && (
-                        <div className="h-12 w-16 overflow-hidden rounded-lg bg-zinc-900 border border-white/10">
+                  <li key={`${d.slug}-${d.downloaded_at}`} className="group flex items-center justify-between p-3 rounded-2xl hover:bg-zinc-50 transition-colors border border-transparent hover:border-zinc-100">
+                    <div className="flex items-center gap-4">
+                      <div className="h-14 w-20 overflow-hidden rounded-xl bg-zinc-100 border border-zinc-200 shadow-sm relative">
+                        {d.img ? (
                           <img src={d.img} alt={d.name} className="w-full h-full object-cover" />
-                        </div>
-                      )}
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-zinc-300">
+                            <span className="text-xs">No img</span>
+                          </div>
+                        )}
+                      </div>
                       <div>
                         <Link
                           href={`/product/${d.slug}`}
-                          className="text-sm font-medium text-white hover:underline"
+                          className="text-base font-semibold text-zinc-900 hover:text-blue-600 transition-colors"
                         >
                           {d.name}
                         </Link>
-                        <p className="text-xs text-zinc-400">
-                          Downloaded on {new Date(d.downloaded_at).toLocaleDateString()} at{' '}
-                          {new Date(d.downloaded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <p className="text-xs text-zinc-500 mt-1">
+                          Downloaded on {new Date(d.downloaded_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
                     <Link
                       href={`/product/${d.slug}`}
-                      className="text-xs text-blue-300 hover:underline"
+                      className="px-4 py-2 rounded-xl bg-white border border-zinc-200 text-xs font-semibold text-zinc-700 shadow-sm hover:border-zinc-300 transition-all opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0"
                     >
-                      View template
+                      View
                     </Link>
                   </li>
                 ))}
               </ul>
             )}
-          </div>
-        </section>
+          </section>
 
-        <section className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
-          <GlowingEffect
-            spread={40}
-            glow={true}
-            disabled={false}
-            proximity={64}
-            inactiveZone={0.01}
-            borderWidth={3}
-          />
-          <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-7 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-            <h2 className="text-xl font-semibold text-white">Subscription</h2>
-            <p className="mt-3 text-sm text-zinc-300">
-              You are currently on the {subscriptionTier} plan. Upgrade for unlimited pro templates and priority support.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-4 text-sm">
-              <Link href="/pricing" className="rounded-full bg-white px-4 py-2 font-semibold text-black transition hover:bg-zinc-200">
-                Manage subscription
-              </Link>
-              <button
-                onClick={logout}
-                className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:bg-white/10"
-              >
-                Log out
-              </button>
-            </div>
+          {/* Sidebar: Account & Subscription Info */}
+          <div className="space-y-6">
+            {/* Account Settings */}
+            <section className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
+              <h2 className="text-xl font-bold text-zinc-900 mb-2">Account Settings</h2>
+              <p className="text-sm text-zinc-500 mb-6">Manage your profile and security.</p>
+
+              <div className="flex flex-col gap-3">
+                <button onClick={() => setShowEditProfile(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
+                  Edit Profile
+                  <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
+                </button>
+                <button onClick={() => setShowChangePassword(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
+                  Change Password
+                  <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
+                </button>
+                <button onClick={() => setShowManageSubscription(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
+                  Manage Subscription
+                  <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
+                </button>
+                <button
+                  onClick={logout}
+                  className="w-full text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 border border-transparent hover:border-red-100 text-sm font-medium transition-colors mt-2"
+                >
+                  Log Out
+                </button>
+              </div>
+            </section>
+
+            {/* Quick Sub Details */}
+            <section className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
+              <h2 className="text-lg font-bold text-zinc-900 mb-4">Subscription Details</h2>
+              {!sub ? (
+                <p className="text-sm text-zinc-500">No active subscription.</p>
+              ) : (
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between py-2 border-b border-zinc-100">
+                    <span className="text-zinc-500">Status</span>
+                    <span className={`font-semibold ${isActuallyActive ? 'text-green-600' : 'text-zinc-900'}`}>{subscriptionTier}</span>
+                  </div>
+                  {sub.valid_until && (
+                    <div className="flex justify-between py-2 border-b border-zinc-100">
+                      <span className="text-zinc-500">Renews</span>
+                      <span className="text-zinc-900 font-medium">{new Date(sub.valid_until).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {sub.autopay_enabled !== null && (
+                    <div className="flex justify-between py-2 border-b border-zinc-100">
+                      <span className="text-zinc-500">Autopay</span>
+                      <span className="text-zinc-900 font-medium">{sub.autopay_enabled ? 'On' : 'Off'}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
           </div>
-        </section>
+        </div>
       </div>
 
       {/* Edit Profile Modal */}
       {showEditProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowEditProfile(false)}>
-          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/50 backdrop-blur-sm" onClick={() => setShowEditProfile(false)}>
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-zinc-100" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4 text-zinc-900">Edit Profile</h2>
+            <EditProfileForm
+              firstName={userMetadata.first_name || ''}
+              lastName={userMetadata.last_name || ''}
+              onSubmit={handleEditProfile}
+              onCancel={() => setShowEditProfile(false)}
+              loading={loading}
             />
-            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-              <h2 className="text-xl font-semibold mb-4 text-white">Edit Profile</h2>
-              <EditProfileForm
-                firstName={userMetadata.first_name || ''}
-                lastName={userMetadata.last_name || ''}
-                onSubmit={handleEditProfile}
-                onCancel={() => setShowEditProfile(false)}
-                loading={loading}
-              />
-            </div>
           </div>
         </div>
       )}
 
       {/* Change Password Modal */}
       {showChangePassword && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowChangePassword(false)}>
-          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/50 backdrop-blur-sm" onClick={() => setShowChangePassword(false)}>
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-zinc-100" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4 text-zinc-900">Change Password</h2>
+            <ChangePasswordForm
+              onSubmit={handleChangePassword}
+              onCancel={() => setShowChangePassword(false)}
+              loading={loading}
             />
-            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-              <h2 className="text-xl font-semibold mb-4 text-white">Change Password</h2>
-              <ChangePasswordForm
-                onSubmit={handleChangePassword}
-                onCancel={() => setShowChangePassword(false)}
-                loading={loading}
-              />
-            </div>
           </div>
         </div>
       )}
 
       {/* Manage Subscription Modal */}
       {showManageSubscription && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowManageSubscription(false)}>
-          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/50 backdrop-blur-sm" onClick={() => setShowManageSubscription(false)}>
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-zinc-100" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4 text-zinc-900">Manage Subscription</h2>
+            <ManageSubscriptionPanel
+              isActive={isActuallyActive}
+              isPaused={isPaused}
+              plan={sub?.plan ?? null}
+              validUntil={sub?.valid_until ?? null}
+              onCancel={handleCancelSubscription}
+              onRenew={handleRenewSubscription}
+              onUpgrade={() => { setShowManageSubscription(false); window.location.href = '/pricing'; }}
+              onClose={() => setShowManageSubscription(false)}
+              loading={loading}
             />
-            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-              <h2 className="text-xl font-semibold mb-4 text-white">Manage Subscription</h2>
-              <ManageSubscriptionPanel
-                isActive={isActuallyActive}
-                isPaused={isPaused}
-                plan={sub?.plan ?? null}
-                validUntil={sub?.valid_until ?? null}
-                onCancel={handleCancelSubscription}
-                onRenew={handleRenewSubscription}
-                onUpgrade={() => { setShowManageSubscription(false); window.location.href = '/pricing'; }}
-                onClose={() => setShowManageSubscription(false)}
-                loading={loading}
-              />
-            </div>
           </div>
         </div>
       )}
 
       {/* Cancel Confirmation Modal */}
       {showCancelConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowCancelConfirm(false)}>
-          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
-            />
-            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-              <h2 className="text-xl font-semibold mb-4 text-white">Cancel Subscription</h2>
-              <p className="text-sm text-zinc-300 mb-6">
-                Are you sure you want to cancel your subscription? You will lose access to premium features.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={confirmCancelSubscription}
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition disabled:opacity-60"
-                >
-                  {loading ? 'Cancelling...' : 'Yes, Cancel'}
-                </button>
-                <button
-                  onClick={() => setShowCancelConfirm(false)}
-                  disabled={loading}
-                  className="px-4 py-2 rounded-lg border border-white/20 text-white hover:bg-white/10 transition"
-                >
-                  No, Keep It
-                </button>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/50 backdrop-blur-sm" onClick={() => setShowCancelConfirm(false)}>
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-zinc-100" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4 text-zinc-900">Cancel Subscription</h2>
+            <p className="text-sm text-zinc-500 mb-6">
+              Are you sure you want to cancel your subscription? You will lose access to premium features.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={confirmCancelSubscription}
+                disabled={loading}
+                className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-60 shadow-md shadow-red-600/10"
+              >
+                {loading ? 'Cancelling...' : 'Yes, Cancel'}
+              </button>
+              <button
+                onClick={() => setShowCancelConfirm(false)}
+                disabled={loading}
+                className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition"
+              >
+                No, Keep It
+              </button>
             </div>
           </div>
         </div>
@@ -722,35 +567,25 @@ function DashboardContent() {
 
       {/* Renew Confirmation Modal */}
       {showRenewConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowRenewConfirm(false)}>
-          <div className="relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
-            />
-            <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 sm:p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-              <h2 className="text-xl font-semibold mb-4 text-white">Renew Subscription</h2>
-              <p className="text-sm text-zinc-300 mb-6">
-                You will be redirected to checkout to complete payment and renew your subscription. Continue?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={confirmRenewSubscription}
-                  className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold hover:from-pink-600 hover:to-purple-600 transition"
-                >
-                  Continue to Checkout
-                </button>
-                <button
-                  onClick={() => setShowRenewConfirm(false)}
-                  className="px-4 py-2 rounded-lg border border-white/20 text-white hover:bg-white/10 transition"
-                >
-                  Cancel
-                </button>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/50 backdrop-blur-sm" onClick={() => setShowRenewConfirm(false)}>
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-zinc-100" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4 text-zinc-900">Renew Subscription</h2>
+            <p className="text-sm text-zinc-500 mb-6">
+              You will be redirected to checkout to complete payment and renew your subscription. Continue?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={confirmRenewSubscription}
+                className="flex-1 px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-md shadow-blue-600/10"
+              >
+                Continue to Checkout
+              </button>
+              <button
+                onClick={() => setShowRenewConfirm(false)}
+                className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
@@ -758,17 +593,10 @@ function DashboardContent() {
 
       {/* Message Toast */}
       {message && (
-        <div className="fixed bottom-6 right-6 z-50 relative rounded-[1.25rem] border-[0.75px] border-white/10 p-2">
-          <GlowingEffect
-            spread={40}
-            glow={true}
-            disabled={false}
-            proximity={64}
-            inactiveZone={0.01}
-            borderWidth={3}
-          />
-          <div className="relative rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm px-4 py-3 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-            <p className="text-sm text-white">{message}</p>
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="bg-zinc-900 rounded-xl px-6 py-4 shadow-2xl flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+            <p className="text-sm font-medium text-white">{message}</p>
           </div>
         </div>
       )}
@@ -793,37 +621,37 @@ function EditProfileForm({ firstName, lastName, onSubmit, onCancel, loading }: {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm text-zinc-400 mb-1">First Name</label>
+        <label className="block text-sm font-semibold text-zinc-700 mb-2">First Name</label>
         <input
           type="text"
           value={first}
           onChange={(e) => setFirst(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-sm"
+          className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
           required
         />
       </div>
       <div>
-        <label className="block text-sm text-zinc-400 mb-1">Last Name</label>
+        <label className="block text-sm font-semibold text-zinc-700 mb-2">Last Name</label>
         <input
           type="text"
           value={last}
           onChange={(e) => setLast(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-sm"
+          className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
           required
         />
       </div>
-      <div className="flex gap-3 mt-6">
+      <div className="flex gap-3 mt-8">
         <button
           type="submit"
           disabled={loading}
-          className="flex-1 px-4 py-2 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition disabled:opacity-60"
+          className="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-60 shadow-md shadow-blue-600/10"
         >
-          {loading ? 'Saving...' : 'Save'}
+          {loading ? 'Saving...' : 'Save Changes'}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 rounded-lg border border-white/20 text-white hover:bg-white/10 transition"
+          className="px-4 py-2.5 rounded-xl border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition"
         >
           Cancel
         </button>
@@ -844,39 +672,39 @@ function ChangePasswordForm({ onSubmit, onCancel, loading }: { onSubmit: (newPas
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm text-zinc-400 mb-1">New Password</label>
+        <label className="block text-sm font-semibold text-zinc-700 mb-2">New Password</label>
         <input
           type="password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-sm"
+          className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
           minLength={6}
           required
         />
       </div>
       <div>
-        <label className="block text-sm text-zinc-400 mb-1">Confirm Password</label>
+        <label className="block text-sm font-semibold text-zinc-700 mb-2">Confirm Password</label>
         <input
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-sm"
+          className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
           minLength={6}
           required
         />
       </div>
-      <div className="flex gap-3 mt-6">
+      <div className="flex gap-3 mt-8">
         <button
           type="submit"
           disabled={loading}
-          className="flex-1 px-4 py-2 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition disabled:opacity-60"
+          className="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-60 shadow-md shadow-blue-600/10"
         >
           {loading ? 'Changing...' : 'Change Password'}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 rounded-lg border border-white/20 text-white hover:bg-white/10 transition"
+          className="px-4 py-2.5 rounded-xl border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition"
         >
           Cancel
         </button>
@@ -885,12 +713,12 @@ function ChangePasswordForm({ onSubmit, onCancel, loading }: { onSubmit: (newPas
   );
 }
 
-function ManageSubscriptionPanel({ isActive, isPaused, plan, validUntil, onCancel, onRenew, onUpgrade, onClose, loading }: { 
-  isActive: boolean; 
+function ManageSubscriptionPanel({ isActive, isPaused, plan, validUntil, onCancel, onRenew, onUpgrade, onClose, loading }: {
+  isActive: boolean;
   isPaused: boolean;
-  plan: string | null; 
-  validUntil: string | null; 
-  onCancel: () => void; 
+  plan: string | null;
+  validUntil: string | null;
+  onCancel: () => void;
   onRenew: () => void;
   onUpgrade: () => void;
   onClose: () => void;
@@ -898,90 +726,87 @@ function ManageSubscriptionPanel({ isActive, isPaused, plan, validUntil, onCance
 }) {
   const hasExpiredPlan = !isActive && !isPaused && plan; // Subscription expired and inactive
   const planDisplayName = plan === 'yearly' ? 'Yearly' : 'Monthly';
-  
+
   return (
-    <div className="space-y-4">
-      <div className="p-4 rounded-lg bg-black/40 border border-white/10">
-        <p className="text-sm text-zinc-300 mb-2">Current Status</p>
-        <p className="text-lg font-semibold text-white">
-          {isActive 
-            ? `${planDisplayName} Plan - Active` 
+    <div className="space-y-6">
+      <div className="p-5 rounded-2xl bg-zinc-50 border border-zinc-100">
+        <p className="text-sm text-zinc-500 mb-2 font-medium">Current Status</p>
+        <p className="text-xl font-bold text-zinc-900">
+          {isActive
+            ? `${planDisplayName} Plan - Active`
             : isPaused
-            ? `${planDisplayName} Plan - Paused`
-            : hasExpiredPlan 
-            ? `${planDisplayName} Plan Expired` 
-            : 'No Active Subscription'}
+              ? `${planDisplayName} Plan - Paused`
+              : hasExpiredPlan
+                ? `${planDisplayName} Plan Expired`
+                : 'No Active Subscription'}
         </p>
         {validUntil && (
-          <p className={`text-xs mt-1 ${isActive ? 'text-zinc-400' : isPaused ? 'text-yellow-400' : 'text-red-400'}`}>
-            {isActive 
-              ? `Valid until: ${new Date(validUntil).toLocaleDateString()} ${new Date(validUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+          <p className={`text-xs mt-2 font-medium ${isActive ? 'text-green-600' : isPaused ? 'text-yellow-600' : 'text-red-500'}`}>
+            {isActive
+              ? `Valid until: ${new Date(validUntil).toLocaleDateString()}`
               : isPaused
-              ? `Expired: ${new Date(validUntil).toLocaleDateString()} ${new Date(validUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - Waiting for payment`
-              : `Expired on: ${new Date(validUntil).toLocaleDateString()} ${new Date(validUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                ? `Expired: ${new Date(validUntil).toLocaleDateString()} - Waiting for payment`
+                : `Expired on: ${new Date(validUntil).toLocaleDateString()}`}
           </p>
         )}
       </div>
 
       {isActive ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <button
             onClick={onCancel}
             disabled={loading}
-            className="w-full px-4 py-2 rounded-lg border border-red-500/50 text-red-300 hover:bg-red-500/10 transition disabled:opacity-60"
+            className="w-full px-4 py-3 rounded-xl border border-red-200 text-red-600 font-semibold hover:bg-red-50 transition disabled:opacity-60"
           >
             {loading ? 'Cancelling...' : 'Cancel Subscription'}
           </button>
-          <p className="text-xs text-zinc-400">
-            Cancelling will end your subscription after the current billing period. You'll lose access to premium features.
+          <p className="text-xs text-zinc-500 text-center">
+            Cancelling will end your subscription after the current billing period.
           </p>
         </div>
       ) : isPaused ? (
-        <div className="space-y-3">
-          <p className="text-sm text-yellow-400 font-semibold">
-            Subscription Paused
-          </p>
-          <p className="text-xs text-zinc-400">
-            Your subscription validity has ended, but your recurring payment is set up. The subscription will automatically resume when the next payment is processed.
+        <div className="space-y-4">
+          <p className="text-sm text-yellow-600 font-medium bg-yellow-50 p-4 rounded-xl border border-yellow-100">
+            Subscription paused. Payment will automatically retry.
           </p>
           <button
             onClick={onRenew}
             disabled={loading}
-            className="w-full px-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold hover:from-pink-600 hover:to-purple-600 transition disabled:opacity-60"
+            className="w-full px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-60 shadow-md shadow-blue-600/10"
           >
             {loading ? 'Renewing...' : 'Renew Now'}
           </button>
         </div>
       ) : hasExpiredPlan ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <button
             onClick={onRenew}
             disabled={loading}
-            className="w-full px-4 py-2 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold hover:from-pink-600 hover:to-purple-600 transition disabled:opacity-60"
+            className="w-full px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-60 shadow-md shadow-blue-600/10"
           >
             {loading ? 'Renewing...' : 'Renew Plan'}
           </button>
-          <p className="text-xs text-zinc-400">
-            Renew your subscription to regain access to all premium templates.
+          <p className="text-xs text-zinc-500 text-center">
+            Renew to regain premium access.
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <button
             onClick={onUpgrade}
-            className="w-full px-4 py-2 rounded-lg bg-white text-black font-semibold hover:bg-zinc-200 transition"
+            className="w-full px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-md shadow-blue-600/10"
           >
             Upgrade to Pro
           </button>
-          <p className="text-xs text-zinc-400">
-            Subscribe to get unlimited access to all premium templates.
+          <p className="text-xs text-zinc-500 text-center">
+            Unlocks unlimited templates.
           </p>
         </div>
       )}
 
       <button
         onClick={onClose}
-        className="w-full px-4 py-2 rounded-lg border border-white/20 text-white hover:bg-white/10 transition"
+        className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-700 font-semibold hover:bg-zinc-50 transition"
       >
         Close
       </button>

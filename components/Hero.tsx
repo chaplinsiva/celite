@@ -4,8 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TextReveal } from '@/components/ui/text-reveal';
-import { LiquidButton } from '@/components/ui/liquid-glass-button';
-import TubesCursor from '@/components/ui/tubes-cursor';
+import { Search, Sparkles } from 'lucide-react';
 
 export default function Hero() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,64 +17,70 @@ export default function Hero() {
     }
   };
 
+  const popularSearches = [
+    { label: "Diwali Poster", href: "/templates?category=diwali" },
+    { label: "Instagram Reels", href: "/templates?category=reels" },
+    { label: "Logo Reveal", href: "/templates?category=logo-reveal" },
+    { label: "Wedding Invitation", href: "/templates?category=wedding" },
+  ];
+
   return (
-    <section className="relative w-full min-h-[60vh] flex items-center justify-center px-6 py-24 sm:py-36 md:py-40 overflow-hidden">
-      {/* TubesCursor Background */}
-      <TubesCursor />
-      {/* Overlay for better text readability */}
-      <div className="absolute inset-0 bg-black/60 z-10"></div>
-      {/* Content */}
-      <div className="max-w-6xl mx-auto space-y-10 relative z-20">
-        <div className="text-center space-y-8">
-          <TextReveal 
-            variant="blur" 
-            className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight not-italic"
-            style={{ fontStyle: 'normal', fontSynthesis: 'none' }}
-          >
-            <span className="text-white">Built. Create. </span>
-            <span className="text-zinc-400">Inspire</span>
-          </TextReveal>
-          <p className="text-lg sm:text-xl text-zinc-300 max-w-2xl mx-auto">
-            Elevate your videos with premium templates for logo reveals, slideshows, and cinematic effects.
+    <section className="relative w-full pt-12 pb-20 md:pt-20 md:pb-32 px-6 overflow-hidden bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/50">
+
+      {/* Background Decor Elements (Subtle) */}
+      <div className="absolute top-20 left-[-100px] w-96 h-96 bg-purple-200/30 rounded-full blur-3xl mix-blend-multiply opacity-70 animate-blob"></div>
+      <div className="absolute top-20 right-[-100px] w-96 h-96 bg-indigo-200/30 rounded-full blur-3xl mix-blend-multiply opacity-70 animate-blob animation-delay-2000"></div>
+
+      <div className="max-w-5xl mx-auto text-center space-y-8 relative z-10">
+
+        {/* Headline */}
+        <div className="space-y-4">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold tracking-tight text-zinc-900 leading-[1.1]">
+            Place of <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-500 to-rose-500">Unlimited</span> <br className="hidden sm:block" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-500 to-rose-500">Creativity</span>
+          </h1>
+          <p className="text-lg sm:text-xl text-zinc-500 max-w-2xl mx-auto">
+            Explore high-quality templates for design, video, 3D modeling, and more.
+            <br className="hidden sm:block" />
+            Modern tools to help you create stunning ideas with life.
           </p>
-          {/* Search Bar */}
-          <form onSubmit={handleSearch} className="max-w-2xl mx-auto pt-6">
-            <div className="flex gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 sm:py-3 border border-white/20 focus-within:border-white/40 transition-colors">
+        </div>
+
+        {/* Search Bar */}
+        <div className="max-w-3xl mx-auto relative">
+          <form onSubmit={handleSearch} className="relative z-20">
+            <div className="relative flex items-center bg-white shadow-xl shadow-indigo-100/50 rounded-full border border-zinc-200 hover:border-violet-300 transition-colors p-1.5 sm:p-2">
+              <div className="pl-3 sm:pl-4 pr-2 text-zinc-400">
+                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search templates..."
-                className="flex-1 bg-transparent text-white placeholder:text-zinc-400 focus:outline-none text-sm sm:text-base"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearch(e as any);
-                  }
-                }}
+                placeholder="Search for 'wedding video templates'..."
+                className="flex-1 bg-transparent text-zinc-800 placeholder:text-zinc-400 text-base sm:text-lg focus:outline-none py-2 min-w-0"
               />
               <button
                 type="submit"
-                className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white text-black hover:bg-zinc-200 transition-colors"
-                aria-label="Search templates"
+                className="bg-zinc-900 text-white px-4 py-2 sm:px-8 sm:py-3 rounded-full text-sm sm:text-base font-medium hover:bg-zinc-800 transition-colors flex items-center gap-2 shrink-0"
               >
-                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+                Search
               </button>
             </div>
           </form>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-            <Link href="/templates">
-              <LiquidButton className="text-white border rounded-full" size={'xl'}>
-                Browse Templates
-              </LiquidButton>
-            </Link>
-            <Link
-              href="/pricing"
-              className="px-8 py-3 rounded-full border border-white/30 text-white font-semibold text-sm hover:bg-white/10 transition"
-            >
-              View Pricing
-            </Link>
+
+          {/* Popular Searches / Tags */}
+          <div className="mt-6 flex flex-wrap justify-center gap-2 sm:gap-3">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 py-1 w-full sm:w-auto">Popular:</span>
+            {popularSearches.map((tag) => (
+              <Link
+                key={tag.label}
+                href={tag.href}
+                className="text-xs sm:text-sm text-zinc-600 bg-white border border-zinc-200 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full hover:border-violet-300 hover:text-violet-600 transition-colors shadow-sm"
+              >
+                {tag.label}
+              </Link>
+            ))}
           </div>
         </div>
 

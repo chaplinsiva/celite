@@ -55,7 +55,7 @@ export default function MarketingPanel() {
     }
   };
 
-  const filteredUsers = users.filter(user => 
+  const filteredUsers = users.filter(user =>
     user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.last_name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -78,14 +78,14 @@ export default function MarketingPanel() {
     try {
       const supabase = getSupabaseBrowserClient();
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         setMessage({ type: 'error', text: 'Session expired. Please log in again.' });
         setLoading(false);
         return;
       }
 
-      const endpoint = mode === 'single' 
+      const endpoint = mode === 'single'
         ? '/api/admin/marketing/send-email-single'
         : '/api/admin/marketing/send-email';
 
@@ -148,11 +148,10 @@ export default function MarketingPanel() {
             setMode('bulk');
             setMessage(null);
           }}
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition ${
-            mode === 'bulk'
+          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition ${mode === 'bulk'
               ? 'bg-white text-black'
               : 'text-zinc-300 hover:bg-white/10'
-          }`}
+            }`}
         >
           Bulk Email
         </button>
@@ -161,11 +160,10 @@ export default function MarketingPanel() {
             setMode('single');
             setMessage(null);
           }}
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition ${
-            mode === 'single'
+          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition ${mode === 'single'
               ? 'bg-white text-black'
               : 'text-zinc-300 hover:bg-white/10'
-          }`}
+            }`}
         >
           Send to User
         </button>
@@ -173,11 +171,10 @@ export default function MarketingPanel() {
 
       {message && (
         <div
-          className={`rounded-2xl border p-4 ${
-            message.type === 'success'
+          className={`rounded-2xl border p-4 ${message.type === 'success'
               ? 'border-green-500/50 bg-green-500/10 text-green-300'
               : 'border-red-500/50 bg-red-500/10 text-red-300'
-          }`}
+            }`}
         >
           {message.text}
         </div>
@@ -258,9 +255,8 @@ export default function MarketingPanel() {
                         setSearchQuery(user.email || '');
                         setShowDropdown(false);
                       }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-white/10 ${
-                        selectedUser === user.id ? 'bg-white/10' : ''
-                      }`}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-white/10 ${selectedUser === user.id ? 'bg-white/10' : ''
+                        }`}
                     >
                       <div className="text-white">{user.email}</div>
                       {(user.first_name || user.last_name) && (
@@ -346,8 +342,8 @@ export default function MarketingPanel() {
             disabled={loading || !subject.trim() || !content.trim() || (mode === 'single' && !selectedUser)}
             className="rounded-full bg-white px-6 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? 'Sending...' : mode === 'single' 
-              ? 'Send Email' 
+            {loading ? 'Sending...' : mode === 'single'
+              ? 'Send Email'
               : `Send to ${targetAudience === 'subscribers' ? 'Subscribers' : targetAudience === 'non-subscribers' ? 'Non-Subscribers' : 'All Users'}`}
           </button>
           <button

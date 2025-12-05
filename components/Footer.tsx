@@ -4,47 +4,48 @@ import Link from 'next/link';
 
 export default function Footer() {
   return (
-    <footer className="w-full bg-black border-t border-white/10 mt-auto">
+    <footer className="w-full bg-zinc-50 border-t border-zinc-200 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Logo & Description */}
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="inline-block mb-4">
-              <img src="/PNG1.png" alt="Celite Logo" className="h-8 w-auto" />
+              <span className="text-2xl font-bold text-black">
+                Celite
+              </span>
             </Link>
-            <p className="text-sm text-zinc-400 max-w-md">
-              Professional After Effects templates for logo reveals, slideshows, and more. 
-              Elevate your creative projects with premium templates.
+            <p className="text-sm text-zinc-500 max-w-md leading-relaxed">
+              Professional marketplace for premium digital assets. Elevate your creative projects with our curated collection of After Effects templates, website themes, and more.
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-sm font-semibold text-white mb-4">Quick Links</h3>
-            <ul className="space-y-2 text-sm">
+            <h3 className="text-sm font-bold text-zinc-900 mb-4 uppercase tracking-wider">Quick Links</h3>
+            <ul className="space-y-2.5 text-sm">
               <li>
-                <Link href="/" className="text-zinc-400 hover:text-white transition-colors">
+                <Link href="/" className="text-zinc-500 hover:text-violet-600 transition-colors">
                   Home
                 </Link>
               </li>
               <li>
-                <Link href="/templates" className="text-zinc-400 hover:text-white transition-colors">
-                  Templates
+                <Link href="/templates" className="text-zinc-500 hover:text-violet-600 transition-colors">
+                  All Templates
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="text-zinc-400 hover:text-white transition-colors">
-                  Pricing
+                <Link href="/pricing" className="text-zinc-500 hover:text-violet-600 transition-colors">
+                  Pricing Plans
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="text-zinc-400 hover:text-white transition-colors">
-                  About
+                <Link href="/about" className="text-zinc-500 hover:text-violet-600 transition-colors">
+                  About Us
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-zinc-400 hover:text-white transition-colors">
-                  Contact
+                <Link href="/contact" className="text-zinc-500 hover:text-violet-600 transition-colors">
+                  Contact Support
                 </Link>
               </li>
             </ul>
@@ -52,53 +53,48 @@ export default function Footer() {
 
           {/* Policies */}
           <div>
-            <h3 className="text-sm font-semibold text-white mb-4">Policies</h3>
-            <ul className="space-y-2 text-sm">
+            <h3 className="text-sm font-bold text-zinc-900 mb-4 uppercase tracking-wider">Legal</h3>
+            <ul className="space-y-2.5 text-sm">
               <li>
-                <Link href="/privacy-policy" className="text-zinc-400 hover:text-white transition-colors">
+                <Link href="/privacy-policy" className="text-zinc-500 hover:text-violet-600 transition-colors">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/shipping-policy" className="text-zinc-400 hover:text-white transition-colors">
-                  Shipping Policy
+                <Link href="/shipping-policy" className="text-zinc-500 hover:text-violet-600 transition-colors">
+                  Licensing Terms
                 </Link>
               </li>
               <li>
-                <Link href="/refund-policy" className="text-zinc-400 hover:text-white transition-colors">
-                  Refund and Returns Policy
+                <Link href="/refund-policy" className="text-zinc-500 hover:text-violet-600 transition-colors">
+                  Refund Policy
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="text-zinc-400 hover:text-white transition-colors">
-                  Terms and Conditions
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="text-zinc-400 hover:text-white transition-colors">
-                  Contact Us
+                <Link href="/terms" className="text-zinc-500 hover:text-violet-600 transition-colors">
+                  Terms & Conditions
                 </Link>
               </li>
             </ul>
           </div>
         </div>
 
-        {/* Contact Info */}
-        <div className="mt-8 pt-8 border-t border-white/10">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm text-zinc-400">
-            <div>
-              <p>
-                Phone:{' '}
-                <a href="tel:8939079627" className="hover:text-white transition-colors">
-                  8939079627
-                </a>
-              </p>
-              <p>
-                Email:{' '}
-                <a href="mailto:elitechaplin@gmail.com" className="hover:text-white transition-colors">
+        {/* Contact Info & Copyright */}
+        <div className="mt-12 pt-8 border-t border-zinc-200">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-zinc-500">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-zinc-900">Email:</span>
+                <a href="mailto:elitechaplin@gmail.com" className="hover:text-violet-600 transition-colors">
                   elitechaplin@gmail.com
                 </a>
-              </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-zinc-900">Phone:</span>
+                <a href="tel:8939079627" className="hover:text-violet-600 transition-colors">
+                  +91 89390 79627
+                </a>
+              </div>
             </div>
             <p>© {new Date().getFullYear()} Celite. All rights reserved.</p>
           </div>

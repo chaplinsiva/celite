@@ -7,12 +7,12 @@ export const metadata: Metadata = {
 
 export default function ShippingPolicyPage() {
   return (
-    <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
+    <main className="bg-white min-h-screen pt-24 pb-20 px-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold mb-4">Shipping &amp; Delivery Policy</h1>
-        <p className="text-zinc-400 mb-8">Last updated on Nov 28 2025</p>
+        <h1 className="text-4xl font-bold mb-4 text-blue-600">Licensing Terms</h1>
+        <p className="text-zinc-500 mb-8">Last updated on Nov 28 2025</p>
 
-        <div className="prose prose-invert max-w-none space-y-6 text-zinc-300">
+        <div className="prose max-w-none space-y-6 text-zinc-700">
           <p>
             For International buyers, orders are shipped and delivered through registered international courier companies and/or International speed post only.
             For domestic buyers, orders are shipped through registered domestic courier companies and /or speed post only.
@@ -24,7 +24,7 @@ export default function ShippingPolicyPage() {
           </p>
 
           <p>
-            <strong className="text-white">Celite</strong> is not liable for any delay in delivery by the courier company / postal authorities and only
+            <strong className="text-zinc-900">Celite</strong> is not liable for any delay in delivery by the courier company / postal authorities and only
             guarantees to hand over the consignment to the courier company or postal authorities within Not Applicable from the date of the order and
             payment or as per the delivery date agreed at the time of order confirmation.
           </p>
@@ -35,27 +35,27 @@ export default function ShippingPolicyPage() {
 
           <p>
             For any issues in utilizing our services you may contact our helpdesk on{' '}
-            <a href="tel:8939079627" className="text-blue-400 hover:text-blue-300">
+            <a href="tel:8939079627" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">
               8939079627
             </a>{' '}
             or{' '}
-            <a href="mailto:elitechaplin@gmail.com" className="text-blue-400 hover:text-blue-300">
+            <a href="mailto:elitechaplin@gmail.com" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">
               elitechaplin@gmail.com
             </a>
             .
           </p>
 
-          <div className="mt-8 p-6 bg-zinc-900/50 rounded-lg border border-white/10">
-            <h3 className="text-lg font-semibold text-white mb-3">Contact Information</h3>
-            <p className="mb-2">
+          <div className="mt-8 p-6 bg-blue-50 rounded-lg border-2 border-blue-100">
+            <h3 className="text-lg font-semibold text-zinc-900 mb-3">Contact Information</h3>
+            <p className="mb-2 text-zinc-700">
               Phone:{' '}
-              <a href="tel:8939079627" className="text-blue-400 hover:text-blue-300">
+              <a href="tel:8939079627" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">
                 8939079627
               </a>
             </p>
-            <p>
+            <p className="text-zinc-700">
               Email:{' '}
-              <a href="mailto:elitechaplin@gmail.com" className="text-blue-400 hover:text-blue-300">
+              <a href="mailto:elitechaplin@gmail.com" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">
                 elitechaplin@gmail.com
               </a>
             </p>

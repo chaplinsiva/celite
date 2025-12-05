@@ -1,13 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Check, Lock } from 'lucide-react';
+import { Check, Sparkles } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { formatPrice } from '@/lib/currency';
-import { GlowingEffect } from '@/components/ui/glowing-effect';
-import { cn } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 
 export default function PricingContent() {
@@ -22,38 +19,35 @@ export default function PricingContent() {
         const { data: settings } = await supabase.from('settings').select('key,value');
         const settingsMap: Record<string, string> = {};
         (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
-        
+
         // Get amounts in paise from backend only
         const monthlyPaiseStr = settingsMap.RAZORPAY_MONTHLY_AMOUNT;
         const yearlyPaiseStr = settingsMap.RAZORPAY_YEARLY_AMOUNT;
-        
+
         if (!monthlyPaiseStr || !yearlyPaiseStr) {
           throw new Error('Subscription prices not found in database');
         }
-        
+
         let monthlyPaise = Number(monthlyPaiseStr);
         let yearlyPaise = Number(yearlyPaiseStr);
-        
+
         // Convert from paise to INR
-        // If >= 10000 for monthly or >= 100000 for yearly, it's in paise, divide by 100
-        // Otherwise, it's already in rupees
         if (monthlyPaise >= 10000) {
           monthlyPaise = monthlyPaise / 100;
         }
         if (yearlyPaise >= 100000) {
           yearlyPaise = yearlyPaise / 100;
         }
-        
+
         setMonthlyPrice(Math.round(monthlyPaise));
         setYearlyPrice(Math.round(yearlyPaise));
       } catch (error) {
         console.error('Error loading prices:', error);
-        // Don't set default values - show error state
       } finally {
         setLoading(false);
       }
     };
-    
+
     loadPrices();
   }, []);
 
@@ -64,112 +58,137 @@ export default function PricingContent() {
   if (monthlyPrice === null || yearlyPrice === null) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-400">Unable to load pricing information. Please try again later.</p>
+        <p className="text-red-600">Unable to load pricing information. Please try again later.</p>
       </div>
     );
   }
 
+  const features = [
+    "Unlimited Premium Templates",
+    "Full Source File Access",
+    "Commercial License",
+    "Priority Support",
+    "Regular Updates",
+    "New Templates Every Week"
+  ];
+
   return (
-    <>
-      <section className="relative max-w-5xl mx-auto text-center mb-16">
-        <span className="uppercase tracking-[0.4em] text-xs text-zinc-400">Pricing</span>
-        <h1 className="mt-4 text-4xl md:text-5xl font-bold text-white">Choose Your Plan</h1>
-        <p className="mt-6 text-lg text-zinc-300 leading-relaxed">
-          Unlock unlimited access to premium templates and elevate your creative projects.
-        </p>
-      </section>
+    <div className="flex items-center justify-center min-h-[calc(100vh-160px)] py-8">
+      <div className="w-full">
+        {/* Header Section */}
+        <section className="relative max-w-4xl mx-auto text-center mb-12 md:mb-16 px-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 md:mb-4">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+              Choose Your Plan
+            </span>
+          </h1>
+          <p className="text-zinc-600 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+            Unlock unlimited access to premium templates and elevate your creative projects.
+          </p>
+        </section>
 
-      <section className="relative max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch max-w-4xl mx-auto">
-          {/* Monthly Plan */}
-          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
-            <GlowingEffect
-              spread={40}
-              glow={true}
-              disabled={false}
-              proximity={64}
-              inactiveZone={0.01}
-              borderWidth={3}
-            />
-            <div className="relative flex flex-col justify-between h-full overflow-hidden rounded-xl border-[0.75px] border-purple-500/20 bg-gradient-to-br from-purple-600/20 via-blue-500/15 to-purple-600/10 backdrop-blur-sm p-6 md:p-8 shadow-lg shadow-purple-500/20">
-              <div className="absolute top-4 right-4 z-20 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
-                Popular
-              </div>
-              <div className="space-y-4 mb-6">
-                <div>
-                  <h2 className="font-medium text-white text-lg mb-2">Monthly</h2>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-xl text-zinc-500 line-through">₹899</span>
-                    <span className="block text-3xl font-semibold text-white">₹599 / month</span>
+        {/* Pricing Cards */}
+        <section className="relative max-w-5xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
+
+            {/* Monthly Plan */}
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl md:rounded-3xl opacity-75 group-hover:opacity-100 blur transition duration-500"></div>
+              <div className="relative bg-white rounded-2xl md:rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-blue-100">
+                {/* Popular Badge */}
+                <div className="absolute -top-3 md:-top-4 left-1/2 -translate-x-1/2">
+                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-lg flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    Most Popular
                   </div>
-                  <p className="text-zinc-400 text-sm">Billed monthly</p>
-                  <p className="text-xs text-purple-400 mt-1">Limited offer</p>
                 </div>
-                <Button
-                  asChild
-                  className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 font-semibold border-0 shadow-lg shadow-purple-500/30 py-6 text-lg transition-all hover:scale-[1.02]"
-                  variant="default"
+
+                <div className="text-center mb-4 sm:mb-6 mt-2 sm:mt-4">
+                  <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 mb-3 sm:mb-4">Monthly</h2>
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <span className="text-lg sm:text-xl text-zinc-400 line-through">₹899</span>
+                    <span className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                      ₹{monthlyPrice}
+                    </span>
+                  </div>
+                  <p className="text-zinc-600 text-sm">per month</p>
+                  <p className="text-blue-600 text-xs font-semibold mt-1">Limited offer - Save 33%</p>
+                </div>
+
+                <Link
+                  href="/checkout?subscription=monthly"
+                  className="block w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 sm:py-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl text-center mb-4 sm:mb-6 text-sm sm:text-base"
                 >
-                  <Link href="/checkout?subscription=monthly">
-                    Subscribe Now
-                  </Link>
-                </Button>
+                  Subscribe Now
+                </Link>
+
+                <ul className="space-y-2 sm:space-y-3">
+                  {features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2 sm:gap-3 text-zinc-700">
+                      <Check className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <span className="text-xs sm:text-sm">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="border-t border-white/10 pt-4 space-y-3 text-sm">
-                {[
-                  "Unlimited Premium Templates",
-                  "Full Source File Access",
-                  "Commercial License",
-                  "Priority Support",
-                  "Regular Updates"
-                ].map((item, index) => (
-                  <li key={index} className="flex items-start gap-2 text-zinc-300">
-                    <Check className="size-4 text-purple-400 flex-shrink-0 mt-0.5" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
+            </div>
+
+            {/* Yearly Plan */}
+            <div className="relative group">
+              <div className="relative bg-white rounded-2xl md:rounded-3xl p-6 sm:p-8 shadow-lg border-2 border-zinc-200 hover:border-blue-300 transition-all hover:shadow-xl">
+                <div className="text-center mb-4 sm:mb-6">
+                  <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 mb-3 sm:mb-4">Yearly</h2>
+                  <div className="mb-2">
+                    <span className="text-4xl sm:text-5xl font-bold text-zinc-900">
+                      ₹{yearlyPrice.toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-zinc-600 text-sm">per year</p>
+                  <p className="text-green-600 text-xs font-semibold mt-1">
+                    Save ₹{((monthlyPrice * 12) - yearlyPrice).toLocaleString()} with annual plan
+                  </p>
+                </div>
+
+                <Link
+                  href="/checkout?subscription=yearly"
+                  className="block w-full bg-zinc-900 text-white py-3 sm:py-4 rounded-xl font-semibold hover:bg-zinc-800 transition-all shadow-md hover:shadow-lg text-center mb-4 sm:mb-6 text-sm sm:text-base"
+                >
+                  Subscribe Now
+                </Link>
+
+                <ul className="space-y-2 sm:space-y-3">
+                  {features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2 sm:gap-3 text-zinc-700">
+                      <Check className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-900 flex-shrink-0 mt-0.5" />
+                      <span className="text-xs sm:text-sm">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
 
-          {/* Yearly Plan */}
-          <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-white/10 p-2 md:rounded-[1.5rem] md:p-3">
-            <div className="relative flex flex-col justify-between h-full overflow-hidden rounded-xl border-[0.75px] border-white/10 bg-black/40 backdrop-blur-sm p-6 md:p-8 shadow-sm">
-              <div className="space-y-4 mb-6">
-                <div>
-                  <h2 className="font-medium text-white text-lg mb-2">Yearly</h2>
-                  <span className="block text-3xl font-semibold text-white mb-2">₹5,499 / year</span>
-                  <p className="text-zinc-400 text-sm">Billed yearly. Save more with annual plan.</p>
-                </div>
-                <Button
-                  asChild
-                  className="w-full bg-white text-black hover:bg-zinc-200 font-semibold border-0 shadow-md py-6 text-lg transition-all hover:scale-[1.02]"
-                  variant="default"
-                >
-                  <Link href="/checkout?subscription=yearly">
-                    Subscribe Now
-                  </Link>
-                </Button>
+          {/* Trust Indicators */}
+          <div className="mt-12 md:mt-16 text-center px-4">
+            <p className="text-zinc-500 text-xs sm:text-sm mb-3 sm:mb-4">Trusted by 10,000+ creators worldwide</p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-xs sm:text-sm text-zinc-600">
+              <div className="flex items-center gap-2">
+                <Check className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+                Cancel anytime
               </div>
-              <ul className="border-t border-white/10 pt-4 space-y-3 text-sm">
-                {[
-                  "Unlimited Premium Templates",
-                  "Full Source File Access",
-                  "Commercial License",
-                  "Priority Support",
-                  "Regular Updates"
-                ].map((item, index) => (
-                  <li key={index} className="flex items-start gap-2 text-zinc-300">
-                    <Check className="size-4 text-white flex-shrink-0 mt-0.5" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="flex items-center gap-2">
+                <Check className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+                Secure payment
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+                Instant access
+              </div>
             </div>
           </div>
-        </div>
-      </section>
-    </>
+        </section>
+      </div>
+    </div>
   );
 }
 

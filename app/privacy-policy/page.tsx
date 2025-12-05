@@ -7,14 +7,14 @@ export const metadata: Metadata = {
 
 export default function PrivacyPolicyPage() {
   return (
-    <main className="bg-black min-h-screen pt-24 pb-20 px-6 text-white">
+    <main className="bg-white min-h-screen pt-24 pb-20 px-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold mb-4">Privacy Policy</h1>
-        <p className="text-zinc-400 mb-8">Last updated on Nov 28 2025</p>
+        <h1 className="text-4xl font-bold mb-4 text-blue-600">Privacy Policy</h1>
+        <p className="text-zinc-500 mb-8">Last updated on Nov 28 2025</p>
 
-        <div className="prose prose-invert max-w-none space-y-6 text-zinc-300">
+        <div className="prose max-w-none space-y-6 text-zinc-700">
           <p>
-            This privacy policy sets out how <strong>Celite</strong> uses and protects any information that you give Celite when you visit their website
+            This privacy policy sets out how <strong className="text-zinc-900">Celite</strong> uses and protects any information that you give Celite when you visit their website
             and/or agree to purchase from them.
           </p>
 
@@ -28,7 +28,7 @@ export default function PrivacyPolicyPage() {
             to these changes.
           </p>
 
-          <h2 className="text-2xl font-semibold text-white mt-8 mb-4">We may collect the following information:</h2>
+          <h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">We may collect the following information:</h2>
           <ul className="list-disc pl-6 space-y-2">
             <li>Name</li>
             <li>Contact information including email address</li>
@@ -36,7 +36,7 @@ export default function PrivacyPolicyPage() {
             <li>Other information relevant to customer surveys and/or offers</li>
           </ul>
 
-          <h2 className="text-2xl font-semibold text-white mt-8 mb-4">What we do with the information we gather</h2>
+          <h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">What we do with the information we gather</h2>
           <p>
             We require this information to understand your needs and provide you with a better service, and in particular for the following reasons:
           </p>
@@ -50,7 +50,7 @@ export default function PrivacyPolicyPage() {
             We are committed to ensuring that your information is secure. In order to prevent unauthorised access or disclosure we have put in suitable measures.
           </p>
 
-          <h2 className="text-2xl font-semibold text-white mt-8 mb-4">How we use cookies</h2>
+          <h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">How we use cookies</h2>
           <p>
             A cookie is a small file which asks permission to be placed on your computer&apos;s hard drive. Once you agree, the file is added and the cookie helps analyze web traffic or lets you know when you visit a particular site.
             Cookies allow web applications to respond to you as an individual. The web application can tailor its operations to your needs, likes and dislikes
@@ -67,7 +67,7 @@ export default function PrivacyPolicyPage() {
             You can choose to accept or decline cookies. Most web browsers automatically accept cookies, but you can usually modify your browser setting to decline cookies if you prefer. This may prevent you from taking full advantage of the website.
           </p>
 
-          <h2 className="text-2xl font-semibold text-white mt-8 mb-4">Controlling your personal information</h2>
+          <h2 className="text-2xl font-semibold text-zinc-900 mt-8 mb-4">Controlling your personal information</h2>
           <p>
             You may choose to restrict the collection or use of your personal information in the following ways:
           </p>
@@ -80,28 +80,28 @@ export default function PrivacyPolicyPage() {
           </p>
           <p>
             If you believe that any information we are holding on you is incorrect or incomplete, please write to{' '}
-            <span className="font-semibold">PKP, Othakadai 625023 Madras High Court Madurai Bench SO TAMIL NADU 625023</span> or contact us at{' '}
-            <a href="tel:8939079627" className="text-blue-400 hover:text-blue-300">
+            <span className="font-semibold text-zinc-900">PKP, Othakadai 625023 Madras High Court Madurai Bench SO TAMIL NADU 625023</span> or contact us at{' '}
+            <a href="tel:8939079627" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">
               8939079627
             </a>{' '}
             or{' '}
-            <a href="mailto:elitechaplin@gmail.com" className="text-blue-400 hover:text-blue-300">
+            <a href="mailto:elitechaplin@gmail.com" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">
               elitechaplin@gmail.com
             </a>{' '}
             as soon as possible. We will promptly correct any information found to be incorrect.
           </p>
 
-          <div className="mt-8 p-6 bg-zinc-900/50 rounded-lg border border-white/10">
-            <h3 className="text-lg font-semibold text-white mb-3">Contact Information</h3>
-            <p className="mb-2">
+          <div className="mt-8 p-6 bg-blue-50 rounded-lg border-2 border-blue-100">
+            <h3 className="text-lg font-semibold text-zinc-900 mb-3">Contact Information</h3>
+            <p className="mb-2 text-zinc-700">
               Phone:{' '}
-              <a href="tel:8939079627" className="text-blue-400 hover:text-blue-300">
+              <a href="tel:8939079627" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">
                 8939079627
               </a>
             </p>
-            <p>
+            <p className="text-zinc-700">
               Email:{' '}
-              <a href="mailto:elitechaplin@gmail.com" className="text-blue-400 hover:text-blue-300">
+              <a href="mailto:elitechaplin@gmail.com" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">
                 elitechaplin@gmail.com
               </a>
             </p>

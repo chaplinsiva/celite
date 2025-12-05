@@ -6,6 +6,7 @@ import WebsiteShowcaseCarousel from '../components/WebsiteShowcaseCarousel';
 import CategoriesSection from '../components/CategoriesSection';
 import TestimonialsSection from '../components/TestimonialsSection';
 import CTASection from '../components/CTASection';
+import TrustSection from '../components/TrustSection';
 
 export const metadata: Metadata = {
   title: "Celite - Professional After Effects Templates",
@@ -18,12 +19,13 @@ export const revalidate = 0;
 
 export default function Home() {
   return (
-    <main className="bg-black min-h-screen pt-16">
+    <main className="bg-white min-h-screen">
       <Hero />
       <LatestTemplatesCarousel />
+      <CategoriesSection />
+      <TrustSection />
       <TemplateCarousel />
       <WebsiteShowcaseCarousel />
-      <CategoriesSection />
       <TestimonialsSection />
       <CTASection />
     </main>

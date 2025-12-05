@@ -1,15 +1,40 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAppContext } from '../context/AppContext';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import { ShinyButton } from './ui/shiny-button';
+import { Search, Menu, ShoppingCart, User, X } from 'lucide-react';
+import PromoBanner from './PromoBanner';
 
 export default function Header() {
+  const router = useRouter();
   const { user, logout } = useAppContext();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Close search dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    };
+
+    if (isSearchOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSearchOpen]);
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -24,127 +49,213 @@ export default function Header() {
         .select('is_active, valid_until')
         .eq('user_id', user.id)
         .maybeSingle();
-      
+
       if (!sub) {
         setIsSubscribed(false);
         setIsExpired(false);
         return;
       }
-      
+
       const now = Date.now();
       const validUntil = sub.valid_until ? new Date(sub.valid_until).getTime() : null;
       const actuallyActive = !!sub.is_active && (!validUntil || validUntil > now);
       const expired: boolean = !!(sub.is_active && validUntil && validUntil <= now);
-      
+
       setIsSubscribed(actuallyActive);
       setIsExpired(expired);
     };
     checkSubscription();
   }, [user]);
 
+  const navLinks = [
+    { name: 'Video Templates', href: '/templates?category=video-templates' },
+    { name: 'Stock Footage', href: '/templates?category=stock-footage' },
+    { name: 'Web Templates', href: '/templates?category=web-templates' },
+    { name: 'Audio', href: '/templates?category=audio' },
+    { name: 'Graphics', href: '/templates?category=graphics' },
+  ];
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes gradient-border {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-        }
-      `}} />
-      <header className="w-full fixed top-0 left-0 z-30 backdrop-blur bg-black/70 shadow-lg">
-      <nav className="max-w-7xl mx-auto h-16 px-4 sm:px-8 flex items-center justify-between">
-        {/* Left: Logo */}
-        <Link href="/" className="flex items-center py-1 px-1 focus:outline-none hover:opacity-80 transition-opacity">
-          <img src="/PNG1.png" alt="Celite Logo" className="h-8 w-auto" />
-        </Link>
-        {/* Right: Subscribe + Auth + Mobile Menu */}
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          {/* Desktop: Subscribe + Auth */}
-          <div className="hidden md:flex items-center space-x-3">
-            {!isSubscribed && (
-              <Link href={user ? "/pricing" : "/signup"} className="no-underline">
-                <ShinyButton className="!px-5 !py-2 !text-sm">
-                  {user ? "Subscribe Now" : "Start Free"}
-                </ShinyButton>
-              </Link>
-            )}
-            {user ? (
-              <Link href="/dashboard" className="relative group">
-                {isSubscribed ? (
-                  <div 
-                    className="h-8 w-8 rounded-full flex items-center justify-center font-semibold uppercase cursor-pointer relative"
-                    style={{
-                      padding: '2px',
-                      background: 'linear-gradient(90deg, #ec4899, #3b82f6, #ec4899, #3b82f6)',
-                      backgroundSize: '200% 200%',
-                      animation: 'gradient-border 3s ease infinite',
-                    }}
-                  >
-                    <span className="relative z-10 bg-black rounded-full w-full h-full flex items-center justify-center text-white">
-                      {(user.email || '?').charAt(0)}
-                    </span>
-                  </div>
-                ) : isExpired ? (
-                  <div className="h-8 w-8 rounded-full bg-red-500 text-white flex items-center justify-center font-semibold uppercase cursor-pointer hover:bg-red-600 transition-colors">
-                    {(user.email || '?').charAt(0)}
-                  </div>
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-white text-black flex items-center justify-center font-semibold uppercase cursor-pointer hover:bg-zinc-200 transition-colors">
-                    {(user.email || '?').charAt(0)}
+      <header className="w-full fixed top-0 left-0 z-50 backdrop-blur-md bg-white/90 border-b border-zinc-100 transition-all duration-300">
+        <nav className="max-w-[1440px] mx-auto h-20 px-6 sm:px-8 flex items-center justify-between">
+          {/* Left: Logo & Nav */}
+          <div className="flex items-center gap-10">
+            <Link href="/" className="flex items-center gap-2 focus:outline-none hover:opacity-80 transition-opacity">
+              <img src="/logo/logo.png" alt="Celite Logo" className="h-9 w-auto object-contain" />
+              <span className="text-xl font-bold text-zinc-900">Celite</span>
+            </Link>
+
+            {/* Desktop Nav */}
+            <div className="hidden lg:flex items-center gap-6">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className="text-[14px] font-medium text-zinc-600 hover:text-black transition-colors"
+                >
+                  {link.name}
+                </Link>
+              ))}
+              <div className="h-4 w-px bg-zinc-200 mx-2"></div>
+              <div className="relative" ref={searchRef}>
+                <button
+                  onClick={() => setIsSearchOpen(!isSearchOpen)}
+                  className="text-[14px] font-medium text-zinc-600 hover:text-black transition-colors flex items-center gap-2"
+                >
+                  <Search className="w-4 h-4" />
+                  <span>Search</span>
+                </button>
+                
+                {/* Search Dropdown */}
+                {isSearchOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-zinc-200 z-50 overflow-hidden">
+                    <div className="p-4">
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Search className="h-4 w-4 text-zinc-400" />
+                        </div>
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && searchQuery.trim()) {
+                              setIsSearchOpen(false);
+                              router.push(`/templates?search=${encodeURIComponent(searchQuery.trim())}`);
+                            }
+                          }}
+                          placeholder="Search templates..."
+                          className="block w-full pl-10 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                          autoFocus
+                        />
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (searchQuery.trim()) {
+                            setIsSearchOpen(false);
+                            router.push(`/templates?search=${encodeURIComponent(searchQuery.trim())}`);
+                          }
+                        }}
+                        className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                      >
+                        Search
+                      </button>
+                    </div>
                   </div>
                 )}
-                <div className="pointer-events-none absolute right-0 mt-2 hidden flex-col rounded-xl border border-white/15 bg-black/90 p-2 text-sm text-white shadow-lg group-hover:flex group-hover:pointer-events-auto">
-                  <span className="px-3 py-1.5 rounded-lg">Dashboard</span>
-                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-4">
+            {/* Start Selling Link (Desktop) */}
+            <Link href="/start-selling" className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors mr-2">
+              Start Selling
+            </Link>
+
+            {/* Auth Buttons */}
+            <div className="flex items-center gap-3">
+              {!user ? (
+                <>
+                  <Link href="/login" className="hidden sm:block text-[14px] font-medium text-zinc-900 px-4 py-2 hover:bg-zinc-100 rounded-full transition-colors">
+                    Log in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg border-2 border-blue-700 hover:bg-blue-700 hover:border-blue-800 transition-all shadow-sm hover:shadow-md"
+                  >
+                    Subscribe Now
+                  </Link>
+                </>
+              ) : (
+                <>
+                  {/* Show Subscribe Now button if user is not subscribed */}
+                  {!isSubscribed && (
+                    <Link
+                      href="/pricing"
+                      className="hidden sm:block bg-blue-600 text-white px-4 py-2 text-xs font-semibold rounded-lg border-2 border-blue-700 hover:bg-blue-700 hover:border-blue-800 transition-all shadow-sm hover:shadow-md"
+                    >
+                      Subscribe Now
+                    </Link>
+                  )}
+
+                  {/* User Profile */}
+                  <Link href="/dashboard" className="relative group">
+                    <div className="flex items-center gap-3 pl-2 pr-1 py-1 rounded-full border border-zinc-200 hover:shadow-md transition-all bg-white">
+                      <span className="text-xs font-semibold text-zinc-700 pl-2 hidden sm:block">
+                        My Account
+                      </span>
+                      {isSubscribed ? (
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 p-[2px]">
+                          <div className="h-full w-full rounded-full bg-white flex items-center justify-center">
+                            <span className="font-bold text-xs text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+                              {(user.email || 'U').charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-600 text-xs font-bold">
+                          {(user.email || 'U').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                </>
+              )}
+            </div>
+
+            {/* Mobile Menu Toggle */}
+            <button
+              className="lg:hidden p-2 text-zinc-600 hover:bg-zinc-100 rounded-full"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+        </nav>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden absolute top-20 left-0 w-full bg-white border-b border-zinc-100 shadow-xl py-6 px-6 flex flex-col gap-4 animate-in slide-in-from-top-4">
+            {navLinks.map((link) => (
+              <Link
+                key={link.name}
+                href={link.href}
+                className="text-lg font-medium text-zinc-800 py-2 border-b border-zinc-50"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {link.name}
               </Link>
-            ) : (
-              <Link href="/login" className="text-zinc-300 text-[15px] px-4 py-1.5 rounded-md hover:text-white transition-colors">Login</Link>
+            ))}
+            <Link
+              href="/start-selling"
+              className="text-lg font-medium text-zinc-500 py-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Start Selling
+            </Link>
+            <Link
+              href="/templates"
+              className="text-lg font-medium text-zinc-800 py-2 border-b border-zinc-50"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Search Templates
+            </Link>
+            {!user && (
+              <Link
+                href="/login"
+                className="text-lg font-medium text-zinc-800 py-2"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Log in
+              </Link>
             )}
           </div>
-          
-          {/* Mobile: Subscribe Button */}
-          {!isSubscribed && (
-            <Link href={user ? "/pricing" : "/signup"} className="md:hidden no-underline">
-              <ShinyButton className="!px-4 !py-2 !text-xs">
-                {user ? "Subscribe" : "Start Free"}
-              </ShinyButton>
-            </Link>
-          )}
-          
-          {/* Mobile: Profile Icon */}
-          {user && (
-            <Link
-              href="/dashboard"
-              className="md:hidden relative inline-flex items-center justify-center"
-            >
-              {isSubscribed ? (
-                <div 
-                  className="h-8 w-8 rounded-full flex items-center justify-center font-semibold uppercase cursor-pointer relative"
-                  style={{
-                    padding: '2px',
-                    background: 'linear-gradient(90deg, #ec4899, #3b82f6, #ec4899, #3b82f6)',
-                    backgroundSize: '200% 200%',
-                    animation: 'gradient-border 3s ease infinite',
-                  }}
-                >
-                  <span className="relative z-10 bg-black rounded-full w-full h-full flex items-center justify-center text-white text-sm">
-                    {(user.email || '?').charAt(0)}
-                  </span>
-                </div>
-              ) : isExpired ? (
-                <div className="h-8 w-8 rounded-full bg-red-500 text-white flex items-center justify-center font-semibold uppercase cursor-pointer hover:bg-red-600 transition-colors text-sm">
-                  {(user.email || '?').charAt(0)}
-                </div>
-              ) : (
-                <div className="h-8 w-8 rounded-full bg-white text-black flex items-center justify-center font-semibold uppercase cursor-pointer hover:bg-zinc-200 transition-colors text-sm">
-                  {(user.email || '?').charAt(0)}
-                </div>
-              )}
-            </Link>
-          )}
-        </div>
-      </nav>
-    </header>
+        )}
+      </header>
     </>
   );
 }
+
