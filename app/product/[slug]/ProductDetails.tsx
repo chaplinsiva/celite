@@ -817,6 +817,26 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
   router: any;
   className?: string;
 }) {
+  // For subscribed users, show only the download button
+  if (isSubActive) {
+    return (
+      <div className={cn("bg-blue-50/50 rounded-2xl p-6 border border-blue-100", className)}>
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          className="w-full py-3 rounded-lg bg-blue-600 text-white font-bold text-sm shadow-lg shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+        >
+          {downloading ? 'Preparing...' : (
+            <>
+              <Download className="w-4 h-4" /> Download Now
+            </>
+          )}
+        </button>
+      </div>
+    );
+  }
+
+  // For non-subscribed users, show the full subscription card
   return (
     <div className={cn("bg-blue-50/50 rounded-2xl p-6 border border-blue-100", className)}>
       <div className="flex justify-between items-start mb-4">
@@ -854,26 +874,12 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
         ))}
       </ul>
 
-      {isSubActive ? (
-        <button
-          onClick={handleDownload}
-          disabled={downloading}
-          className="w-full py-3 rounded-lg bg-blue-600 text-white font-bold text-sm shadow-lg shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-        >
-          {downloading ? 'Preparing...' : (
-            <>
-              <Download className="w-4 h-4" /> Download Now
-            </>
-          )}
-        </button>
-      ) : (
-        <button
-          onClick={() => router.push('/pricing')}
-          className="w-full py-3 rounded-lg bg-blue-900 text-white font-bold text-sm shadow-xl shadow-blue-900/10 hover:bg-blue-800 active:scale-[0.98] transition-all"
-        >
-          Subscribe Monthly
-        </button>
-      )}
+      <button
+        onClick={() => router.push('/pricing')}
+        className="w-full py-3 rounded-lg bg-blue-900 text-white font-bold text-sm shadow-xl shadow-blue-900/10 hover:bg-blue-800 active:scale-[0.98] transition-all"
+      >
+        Subscribe Monthly
+      </button>
     </div>
   );
 }
