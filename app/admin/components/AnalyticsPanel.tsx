@@ -6,13 +6,13 @@ import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Cart
 
 type Order = { id: string; user_id: string; created_at: string; total: number; status: string };
 type OrderItem = { order_id: string; name: string; quantity: number; price: number };
-type SubRow = { 
-  user_id: string; 
+type SubRow = {
+  user_id: string;
   user_email: string | null;
-  is_active: boolean; 
-  plan: string | null; 
-  valid_until: string | null; 
-  created_at: string; 
+  is_active: boolean;
+  plan: string | null;
+  valid_until: string | null;
+  created_at: string;
   updated_at: string;
   razorpay_subscription_id: string | null;
   autopay_enabled: boolean;
@@ -46,7 +46,7 @@ export default function AnalyticsPanel() {
   const [detailTab, setDetailTab] = useState<'subscriptions' | 'products'>('subscriptions');
   const [productRange, setProductRange] = useState<'7d' | '30d' | '90d' | '365d' | 'all'>('30d');
   const [subscriptionRange, setSubscriptionRange] = useState<'30d' | '90d' | '365d' | 'all'>('30d');
-  
+
   // Filters
   const [planFilter, setPlanFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -55,28 +55,28 @@ export default function AnalyticsPanel() {
   const itemsPerPage = 50;
 
   const loadData = useCallback(async () => {
-      try {
+    try {
       setLoading(true);
       setError(null);
-        const supabase = getSupabaseBrowserClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { setError('Not signed in'); setLoading(false); return; }
-      
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setError('Not signed in'); setLoading(false); return; }
+
       const params = new URLSearchParams();
       if (planFilter) params.set('plan', planFilter);
       if (statusFilter) params.set('status', statusFilter);
       if (autopayFilter) params.set('autopay', autopayFilter);
       params.set('limit', itemsPerPage.toString());
       params.set('offset', ((currentPage - 1) * itemsPerPage).toString());
-      
-      const res = await fetch(`/api/admin/analytics?${params.toString()}`, { 
-        headers: { Authorization: `Bearer ${session.access_token}` } 
+
+      const res = await fetch(`/api/admin/analytics?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
       });
-        const json = await res.json();
-      if (!res.ok || !json.ok) { 
-        setError(json.error || 'Failed to load analytics'); 
-        setLoading(false); 
-        return; 
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        setError(json.error || 'Failed to load analytics');
+        setLoading(false);
+        return;
       }
       setOrders(json.orders || []);
       setItems(json.order_items || []);
@@ -84,11 +84,11 @@ export default function AnalyticsPanel() {
       setDownloads(json.downloads || []);
       setTotals(json.totals);
       setPagination(json.pagination);
-      } catch (e: any) {
-        setError(e?.message || 'Failed to load analytics');
-      } finally {
-        setLoading(false);
-      }
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load analytics');
+    } finally {
+      setLoading(false);
+    }
   }, [planFilter, statusFilter, autopayFilter, currentPage, itemsPerPage]);
 
   useEffect(() => {
@@ -114,9 +114,9 @@ export default function AnalyticsPanel() {
         }
       )
       .subscribe();
-    
+
     subscriptionChannelRef.current = channel;
-    
+
     return () => {
       if (subscriptionChannelRef.current) {
         supabase.removeChannel(subscriptionChannelRef.current);
@@ -167,7 +167,7 @@ export default function AnalyticsPanel() {
     if (sub.is_actually_active) acc[date].active++;
     return acc;
   }, {});
-  const trendData = Object.values(subscriptionTrends).sort((a: any, b: any) => 
+  const trendData = Object.values(subscriptionTrends).sort((a: any, b: any) =>
     new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
@@ -271,84 +271,82 @@ export default function AnalyticsPanel() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold">Analytics Dashboard</h2>
-        <p className="text-sm text-zinc-400 mt-1">Comprehensive subscription and revenue analytics</p>
+        <h2 className="text-xl font-bold text-zinc-900">Analytics Dashboard</h2>
+        <p className="text-sm text-zinc-500 mt-1">Comprehensive subscription and revenue analytics</p>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-          <div className="text-2xl font-bold">₹{totals?.subscriptionRevenue?.toFixed(2) ?? '0.00'}</div>
-          <div className="text-xs text-zinc-400 mt-1">Monthly Recurring Revenue (MRR)</div>
-          <div className="text-xs text-zinc-500 mt-2">
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="text-2xl font-bold text-zinc-900">₹{totals?.subscriptionRevenue?.toFixed(2) ?? '0.00'}</div>
+          <div className="text-xs font-medium text-zinc-500 mt-1">Monthly Recurring Revenue (MRR)</div>
+          <div className="text-xs text-zinc-400 mt-3">
             Monthly: {totals?.activeMonthly || 0} • Yearly: {totals?.activeYearly || 0}
           </div>
         </div>
-        
-        <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-          <div className="text-2xl font-bold text-green-300">{totals?.activeSubscribers ?? 0}</div>
-          <div className="text-xs text-zinc-400 mt-1">Active Subscribers</div>
-          <div className="text-xs text-zinc-500 mt-2">
+
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="text-2xl font-bold text-green-600">{totals?.activeSubscribers ?? 0}</div>
+          <div className="text-xs font-medium text-zinc-500 mt-1">Active Subscribers</div>
+          <div className="text-xs text-zinc-400 mt-3">
             Expired: {totals?.expiredSubscribers || 0} • Cancelled: {totals?.cancelledSubscribers || 0}
           </div>
         </div>
-        
-        <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-          <div className="text-2xl font-bold">{totals?.totalSubscriptions ?? 0}</div>
-          <div className="text-xs text-zinc-400 mt-1">Total Subscriptions</div>
-          <div className="text-xs text-zinc-500 mt-2">
+
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="text-2xl font-bold text-zinc-900">{totals?.totalSubscriptions ?? 0}</div>
+          <div className="text-xs font-medium text-zinc-500 mt-1">Total Subscriptions</div>
+          <div className="text-xs text-zinc-400 mt-3">
             Autopay: {totals?.autopayEnabled || 0} • Manual: {totals?.autopayDisabled || 0}
           </div>
         </div>
-        
-        <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-          <div className="text-2xl font-bold">₹{totals?.orderRevenue?.toFixed(2) ?? '0.00'}</div>
-          <div className="text-xs text-zinc-400 mt-1">One-time Orders</div>
-          <div className="text-xs text-zinc-500 mt-2">{totals?.orders || 0} orders</div>
+
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="text-2xl font-bold text-zinc-900">₹{totals?.orderRevenue?.toFixed(2) ?? '0.00'}</div>
+          <div className="text-xs font-medium text-zinc-500 mt-1">One-time Orders</div>
+          <div className="text-xs text-zinc-400 mt-3">{totals?.orders || 0} orders</div>
         </div>
-        
-        <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-          <div className="text-2xl font-bold">{totals?.totalDownloads ?? 0}</div>
-          <div className="text-xs text-zinc-400 mt-1">Tracked Downloads</div>
-          <div className="text-xs text-zinc-500 mt-2">
+
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="text-2xl font-bold text-zinc-900">{totals?.totalDownloads ?? 0}</div>
+          <div className="text-xs font-medium text-zinc-500 mt-1">Tracked Downloads</div>
+          <div className="text-xs text-zinc-400 mt-3">
             Users: {totals?.uniqueDownloadUsers ?? 0} • Templates: {totals?.uniqueDownloadedTemplates ?? 0}
           </div>
         </div>
       </div>
 
       {/* Detailed Analytics Tabs */}
-      <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div className="inline-flex rounded-full border border-white/10 bg-black/40 p-1">
+      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-1">
             <button
               onClick={() => setDetailTab('subscriptions')}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-full transition ${
-                detailTab === 'subscriptions'
-                  ? 'bg-white text-black'
-                  : 'text-zinc-300 hover:bg-white/10'
-              }`}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all shadow-sm ${detailTab === 'subscriptions'
+                ? 'bg-white text-zinc-900'
+                : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50 shadow-none'
+                }`}
             >
               Subscription Analytics
             </button>
             <button
               onClick={() => setDetailTab('products')}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-full transition ${
-                detailTab === 'products'
-                  ? 'bg-white text-black'
-                  : 'text-zinc-300 hover:bg-white/10'
-              }`}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all shadow-sm ${detailTab === 'products'
+                ? 'bg-white text-zinc-900'
+                : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50 shadow-none'
+                }`}
             >
               Product Downloads
             </button>
           </div>
 
           {detailTab === 'subscriptions' ? (
-            <div className="flex items-center gap-2 text-xs text-zinc-400">
-              <span>Range:</span>
+            <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <span className="font-medium">Range:</span>
               <select
                 value={subscriptionRange}
                 onChange={(e) => setSubscriptionRange(e.target.value as any)}
-                className="px-2 py-1 rounded-lg bg-black/60 border border-white/10 text-xs text-white"
+                className="px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               >
                 <option value="30d">Last 30 days</option>
                 <option value="90d">Last 90 days</option>
@@ -357,12 +355,12 @@ export default function AnalyticsPanel() {
               </select>
             </div>
           ) : (
-            <div className="flex items-center gap-2 text-xs text-zinc-400">
-              <span>Range:</span>
+            <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <span className="font-medium">Range:</span>
               <select
                 value={productRange}
                 onChange={(e) => setProductRange(e.target.value as any)}
-                className="px-2 py-1 rounded-lg bg-black/60 border border-white/10 text-xs text-white"
+                className="px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               >
                 <option value="7d">Last 7 days</option>
                 <option value="30d">Last 30 days</option>
@@ -376,93 +374,98 @@ export default function AnalyticsPanel() {
 
         {detailTab === 'subscriptions' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="rounded-xl border border-white/10 bg-black/60 p-3">
-              <div className="text-lg font-bold text-white">{subscriptionStats.count}</div>
-              <div className="text-[11px] text-zinc-400 mt-1">New Subscribers in Range</div>
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-xl font-bold text-zinc-900">{subscriptionStats.count}</div>
+              <div className="text-[11px] font-medium text-zinc-500 mt-1">New Subscribers in Range</div>
             </div>
-            <div className="rounded-xl border border-white/10 bg-black/60 p-3">
-              <div className="text-lg font-bold text-white">
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-xl font-bold text-zinc-900">
                 {subscriptionStats.monthly} / {subscriptionStats.yearly}
               </div>
-              <div className="text-[11px] text-zinc-400 mt-1">Monthly / Yearly (new)</div>
+              <div className="text-[11px] font-medium text-zinc-500 mt-1">Monthly / Yearly (new)</div>
             </div>
-            <div className="rounded-xl border border-white/10 bg-black/60 p-3">
-              <div className="text-lg font-bold text-white">
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-xl font-bold text-zinc-900">
                 ₹{subscriptionStats.estRevenue.toFixed(2)}
               </div>
-              <div className="text-[11px] text-zinc-400 mt-1">Estimated New Revenue in Range</div>
+              <div className="text-[11px] font-medium text-zinc-500 mt-1">Estimated New Revenue in Range</div>
             </div>
-            <div className="rounded-xl border border-white/10 bg-black/60 p-3">
-              <div className="text-lg font-bold text-green-300">
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-xl font-bold text-green-600">
                 {totals?.activeSubscribers ?? 0}
               </div>
-              <div className="text-[11px] text-zinc-400 mt-1">Current Active Subscribers</div>
+              <div className="text-[11px] font-medium text-zinc-500 mt-1">Current Active Subscribers</div>
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {topProducts.length === 0 ? (
-              <p className="text-xs text-zinc-400">No downloads in this range.</p>
+              <p className="text-xs text-zinc-400 italic">No downloads in this range.</p>
             ) : (
               <>
-                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <h4 className="text-xs font-semibold text-white mb-2">
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                  <h4 className="text-xs font-semibold text-zinc-700 mb-4 uppercase tracking-wider">
                     Top Downloaded Templates (Bar Chart)
                   </h4>
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={topProducts}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
                       <XAxis
                         dataKey="name"
-                        stroke="#9ca3af"
-                        tick={{ fontSize: 10 }}
+                        stroke="#71717a"
+                        tick={{ fontSize: 10, fill: '#71717a' }}
                         interval={0}
                         angle={-35}
                         textAnchor="end"
                         height={70}
+                        tickLine={false}
+                        axisLine={false}
                       />
-                      <YAxis stroke="#9ca3af" />
+                      <YAxis stroke="#71717a" tick={{ fontSize: 10, fill: '#71717a' }} tickLine={false} axisLine={false} />
                       <Tooltip
+                        cursor={{ fill: '#f4f4f5' }}
                         contentStyle={{
-                          backgroundColor: '#1f2937',
-                          border: '1px solid #374151',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e4e4e7',
                           borderRadius: 8,
+                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                          color: '#18181b'
                         }}
-                        labelStyle={{ color: '#fff', fontSize: 11 }}
+                        labelStyle={{ color: '#18181b', fontWeight: 600, fontSize: 11, marginBottom: 4 }}
                       />
-                      <Bar dataKey="downloads" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="downloads" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
 
-                <p className="text-xs text-zinc-400">
-                  Detailed list of top downloaded templates in the selected range.
-                </p>
-                <div className="overflow-x-auto rounded-xl border border-white/10">
-                  <table className="min-w-full text-xs">
-                    <thead className="bg-white/5 text-left text-[11px] uppercase text-zinc-400">
-                      <tr>
-                        <th className="px-3 py-2">Template</th>
-                        <th className="px-3 py-2">Downloads</th>
-                        <th className="px-3 py-2">Unique Users</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {topProducts.map((p) => (
-                        <tr key={p.slug} className="border-t border-white/10">
-                          <td className="px-3 py-2 text-zinc-200">
-                            {p.name}
-                          </td>
-                          <td className="px-3 py-2 text-white font-semibold">
-                            {p.downloads}
-                          </td>
-                          <td className="px-3 py-2 text-zinc-200">
-                            {p.uniqueUsers}
-                          </td>
+                <div>
+                  <h4 className="text-xs font-semibold text-zinc-700 mb-3 uppercase tracking-wider">Detailed List</h4>
+                  <div className="overflow-x-auto rounded-xl border border-zinc-200 shadow-sm">
+                    <table className="min-w-full text-xs">
+                      <thead className="bg-zinc-50 text-left text-[11px] uppercase text-zinc-500 font-medium">
+                        <tr>
+                          <th className="px-4 py-3 font-semibold">Template</th>
+                          <th className="px-4 py-3 font-semibold">Downloads</th>
+                          <th className="px-4 py-3 font-semibold">Unique Users</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100 bg-white">
+                        {topProducts.map((p) => (
+                          <tr key={p.slug} className="hover:bg-zinc-50/50 transition-colors">
+                            <td className="px-4 py-3 text-zinc-900 font-medium">
+                              {p.name}
+                            </td>
+                            <td className="px-4 py-3 text-blue-600 font-semibold">
+                              {p.downloads}
+                            </td>
+                            <td className="px-4 py-3 text-zinc-600">
+                              {p.uniqueUsers}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </>
             )}
@@ -474,8 +477,8 @@ export default function AnalyticsPanel() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Plan Distribution Pie Chart */}
         {planDistribution.length > 0 && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <h3 className="text-sm font-semibold text-white mb-4">Subscription Plans Distribution</h3>
+          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <h3 className="text-sm font-semibold text-zinc-900 mb-6">Subscription Plans Distribution</h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -487,19 +490,26 @@ export default function AnalyticsPanel() {
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
+                  stroke="#fff"
+                  strokeWidth={2}
                 >
                   {planDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e4e4e7', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', color: '#18181b' }}
+                />
               </PieChart>
             </ResponsiveContainer>
-            <div className="mt-4 space-y-1 text-xs text-zinc-400">
+            <div className="mt-6 space-y-2 text-xs text-zinc-500 border-t border-zinc-100 pt-4">
               {planDistribution.map((item, idx) => (
-                <div key={idx} className="flex justify-between">
-                  <span>{item.name}:</span>
-                  <span className="text-white">{item.value} subscribers (₹{item.revenue.toFixed(2)})</span>
+                <div key={idx} className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
+                    <span>{item.name}</span>
+                  </div>
+                  <span className="font-medium text-zinc-900">{item.value} subscribers (₹{item.revenue.toFixed(2)})</span>
                 </div>
               ))}
             </div>
@@ -508,18 +518,19 @@ export default function AnalyticsPanel() {
 
         {/* Status Distribution Bar Chart */}
         {statusDistribution.length > 0 && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <h3 className="text-sm font-semibold text-white mb-4">Subscription Status</h3>
+          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <h3 className="text-sm font-semibold text-zinc-900 mb-6">Subscription Status</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={statusDistribution}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="name" stroke="#9ca3af" />
-                <YAxis stroke="#9ca3af" />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
-                  labelStyle={{ color: '#fff' }}
+                <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
+                <XAxis dataKey="name" stroke="#71717a" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
+                <YAxis stroke="#71717a" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
+                <Tooltip
+                  cursor={{ fill: '#f4f4f5' }}
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e4e4e7', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', color: '#18181b' }}
+                  labelStyle={{ color: '#18181b', fontWeight: 600, fontSize: 11 }}
                 />
-                <Bar dataKey="value" fill="#8b5cf6" radius={[8, 8, 0, 0]}>
+                <Bar dataKey="value" fill="#8b5cf6" radius={[6, 6, 0, 0]} barSize={48}>
                   {statusDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
@@ -531,8 +542,8 @@ export default function AnalyticsPanel() {
 
         {/* Autopay Distribution */}
         {autopayDistribution.length > 0 && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <h3 className="text-sm font-semibold text-white mb-4">Autopay vs Manual Renewal</h3>
+          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <h3 className="text-sm font-semibold text-zinc-900 mb-6">Autopay vs Manual Renewal</h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -544,12 +555,16 @@ export default function AnalyticsPanel() {
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
+                  stroke="#fff"
+                  strokeWidth={2}
                 >
                   {autopayDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e4e4e7', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', color: '#18181b' }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -557,20 +572,20 @@ export default function AnalyticsPanel() {
 
         {/* Subscription Trends */}
         {trendData.length > 0 && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <h3 className="text-sm font-semibold text-white mb-4">Subscription Trends</h3>
+          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <h3 className="text-sm font-semibold text-zinc-900 mb-6">Subscription Trends</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="date" stroke="#9ca3af" />
-                <YAxis stroke="#9ca3af" />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
-                  labelStyle={{ color: '#fff' }}
+                <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
+                <XAxis dataKey="date" stroke="#71717a" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
+                <YAxis stroke="#71717a" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#71717a' }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e4e4e7', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', color: '#18181b' }}
+                  labelStyle={{ color: '#18181b', fontWeight: 600, fontSize: 11 }}
                 />
-                <Legend />
-                <Line type="monotone" dataKey="count" stroke="#8b5cf6" strokeWidth={2} name="Total Created" />
-                <Line type="monotone" dataKey="active" stroke="#10b981" strokeWidth={2} name="Active" />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: 10 }} />
+                <Line type="monotone" dataKey="count" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, strokeWidth: 0, fill: '#8b5cf6' }} activeDot={{ r: 6 }} name="Total Created" />
+                <Line type="monotone" dataKey="active" stroke="#10b981" strokeWidth={3} dot={{ r: 4, strokeWidth: 0, fill: '#10b981' }} activeDot={{ r: 6 }} name="Active" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -578,69 +593,69 @@ export default function AnalyticsPanel() {
       </div>
 
       {/* Filters */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <label className="text-xs text-zinc-400">Plan:</label>
+            <label className="text-xs font-medium text-zinc-600">Plan:</label>
             <select
               value={planFilter}
               onChange={(e) => handleFilterChange('plan', e.target.value)}
-              className="px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-sm text-white"
+              className="px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             >
               <option value="">All Plans</option>
               <option value="monthly">Monthly</option>
               <option value="yearly">Yearly</option>
             </select>
           </div>
-          
+
           <div className="flex items-center gap-2">
-            <label className="text-xs text-zinc-400">Status:</label>
+            <label className="text-xs font-medium text-zinc-600">Status:</label>
             <select
               value={statusFilter}
               onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-sm text-white"
+              className="px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             >
               <option value="">All Status</option>
               <option value="active">Active</option>
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
-          
+
           <div className="flex items-center gap-2">
-            <label className="text-xs text-zinc-400">Autopay:</label>
+            <label className="text-xs font-medium text-zinc-600">Autopay:</label>
             <select
               value={autopayFilter}
               onChange={(e) => handleFilterChange('autopay', e.target.value)}
-              className="px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-sm text-white"
+              className="px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             >
               <option value="">All</option>
               <option value="true">Enabled</option>
               <option value="false">Disabled</option>
             </select>
           </div>
-          
+
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
-              className="px-3 py-1.5 rounded-lg border border-white/20 text-sm text-white hover:bg-white/10"
+              className="px-3 py-1.5 rounded-lg border border-zinc-200 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
             >
               Clear Filters
             </button>
           )}
-          
-          <div className="ml-auto text-xs text-zinc-400">
+
+          <div className="ml-auto text-xs text-zinc-500">
             Showing {subs.length} of {pagination?.total || 0} subscriptions
-            {totals && <span className="ml-2 text-green-300">• Real-time updates enabled</span>}
+            {totals && <span className="ml-2 text-green-600 font-medium">• Real-time updates enabled</span>}
           </div>
         </div>
       </div>
 
       {/* Subscriptions Table */}
       <div>
-        <h3 className="text-lg font-semibold mb-3">Subscriptions</h3>
-        <div className="overflow-x-auto rounded-2xl border border-white/10">
+        <h3 className="text-lg font-bold text-zinc-900 mb-4">Subscriptions</h3>
+        <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
           <table className="min-w-full text-sm">
-            <thead className="bg-white/5 text-left text-xs uppercase text-zinc-400">
+            <thead className="bg-zinc-50/80 border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500 font-semibold">
               <tr>
                 <th className="px-4 py-3">User</th>
                 <th className="px-4 py-3">Email</th>
@@ -654,10 +669,10 @@ export default function AnalyticsPanel() {
                 <th className="px-4 py-3">Updated</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-zinc-100">
               {subs.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-zinc-400">
+                  <td colSpan={10} className="px-4 py-8 text-center text-zinc-500">
                     {loading ? 'Loading...' : 'No subscriptions found'}
                   </td>
                 </tr>
@@ -666,70 +681,68 @@ export default function AnalyticsPanel() {
                   const isActive = s.is_actually_active;
                   const isExpired = s.is_active && s.valid_until && new Date(s.valid_until).getTime() <= Date.now();
                   const isCancelled = !s.is_active;
-                  
+
                   return (
-                    <tr key={s.user_id + (s.updated_at || '')} className="border-t border-white/10 hover:bg-white/5">
+                    <tr key={s.user_id + (s.updated_at || '')} className="hover:bg-zinc-50/50 transition-colors">
                       <td className="px-4 py-3">
-                        <span className="font-mono text-white text-xs">{s.user_id.slice(0, 8)}...</span>
+                        <span className="font-mono text-zinc-500 text-xs">{s.user_id.slice(0, 8)}...</span>
                       </td>
-                      <td className="px-4 py-3 text-zinc-300 text-xs">
+                      <td className="px-4 py-3 text-zinc-900 text-xs font-medium">
                         {s.user_email || '-'}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                          s.plan === 'yearly' ? 'bg-purple-500/20 text-purple-300' :
-                          s.plan === 'monthly' ? 'bg-blue-500/20 text-blue-300' :
-                          (s.plan === 'weekly' || s.plan === 'monthly') ? 'bg-green-500/20 text-green-300' :
-                          'bg-zinc-500/20 text-zinc-300'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-md text-xs font-semibold ${s.plan === 'yearly' ? 'bg-purple-50 text-purple-700 border border-purple-100' :
+                            s.plan === 'monthly' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                              (s.plan === 'weekly' || s.plan === 'monthly') ? 'bg-green-50 text-green-700 border border-green-100' :
+                                'bg-zinc-100 text-zinc-700 border border-zinc-200'
+                          }`}>
                           {s.plan ? s.plan.charAt(0).toUpperCase() + s.plan.slice(1) : '-'}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         {isActive ? (
-                          <span className="px-2 py-1 rounded text-xs font-semibold bg-green-500/20 text-green-300">Active</span>
+                          <span className="px-2 py-1 rounded-md text-xs font-semibold bg-green-50 text-green-700 border border-green-200">Active</span>
                         ) : isExpired ? (
-                          <span className="px-2 py-1 rounded text-xs font-semibold bg-yellow-500/20 text-yellow-300">Expired</span>
+                          <span className="px-2 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Expired</span>
                         ) : isCancelled ? (
-                          <span className="px-2 py-1 rounded text-xs font-semibold bg-red-500/20 text-red-300">Cancelled</span>
+                          <span className="px-2 py-1 rounded-md text-xs font-semibold bg-red-50 text-red-700 border border-red-200">Cancelled</span>
                         ) : (
-                          <span className="px-2 py-1 rounded text-xs font-semibold bg-zinc-500/20 text-zinc-300">Inactive</span>
+                          <span className="px-2 py-1 rounded-md text-xs font-semibold bg-zinc-100 text-zinc-600 border border-zinc-200">Inactive</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         {s.autopay_enabled ? (
-                          <span className="px-2 py-1 rounded text-xs font-semibold bg-green-500/20 text-green-300">Yes</span>
+                          <span className="px-2 py-1 rounded-md text-xs font-semibold bg-green-50 text-green-700 border border-green-200">Yes</span>
                         ) : (
-                          <span className="px-2 py-1 rounded text-xs font-semibold bg-zinc-500/20 text-zinc-300">No</span>
+                          <span className="px-2 py-1 rounded-md text-xs font-semibold bg-zinc-100 text-zinc-600 border border-zinc-200">No</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-zinc-300 text-xs">
+                      <td className="px-4 py-3 text-zinc-600 text-xs">
                         {s.valid_until ? new Date(s.valid_until).toLocaleDateString() : '-'}
                       </td>
                       <td className="px-4 py-3">
                         {s.days_remaining !== null ? (
-                          <span className={`text-xs font-semibold ${
-                            s.days_remaining > 7 ? 'text-green-300' :
-                            s.days_remaining > 0 ? 'text-yellow-300' :
-                            'text-red-300'
-                          }`}>
+                          <span className={`text-xs font-semibold ${s.days_remaining > 7 ? 'text-green-600' :
+                              s.days_remaining > 0 ? 'text-amber-600' :
+                                'text-red-600'
+                            }`}>
                             {s.days_remaining > 0 ? `${s.days_remaining}d` : 'Expired'}
                           </span>
                         ) : (
-                          <span className="text-zinc-500 text-xs">-</span>
+                          <span className="text-zinc-400 text-xs">-</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         {s.razorpay_subscription_id ? (
-                          <span className="font-mono text-zinc-400 text-xs">{s.razorpay_subscription_id.slice(0, 12)}...</span>
+                          <span className="font-mono text-zinc-500 text-xs">{s.razorpay_subscription_id.slice(0, 12)}...</span>
                         ) : (
-                          <span className="text-zinc-500 text-xs">-</span>
+                          <span className="text-zinc-400 text-xs">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-zinc-400 text-xs">
+                      <td className="px-4 py-3 text-zinc-500 text-xs">
                         {new Date(s.created_at).toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-3 text-zinc-400 text-xs">
+                      <td className="px-4 py-3 text-zinc-500 text-xs">
                         {new Date(s.updated_at).toLocaleDateString()}
                       </td>
                     </tr>
@@ -739,25 +752,25 @@ export default function AnalyticsPanel() {
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination */}
         {pagination && pagination.total > itemsPerPage && (
-          <div className="mt-4 flex items-center justify-between">
-            <div className="text-xs text-zinc-400">
+          <div className="mt-4 flex items-center justify-between border-t border-zinc-200 pt-4">
+            <div className="text-xs text-zinc-500 font-medium">
               Page {currentPage} of {Math.ceil(pagination.total / itemsPerPage)}
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1 || loading}
-                className="px-3 py-1.5 rounded-lg border border-white/20 text-sm text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 rounded-lg border border-zinc-200 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed bg-white shadow-sm"
               >
                 Previous
               </button>
               <button
                 onClick={() => setCurrentPage(p => p + 1)}
                 disabled={!pagination.hasMore || loading}
-                className="px-3 py-1.5 rounded-lg border border-white/20 text-sm text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 rounded-lg border border-zinc-200 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed bg-white shadow-sm"
               >
                 Next
               </button>
@@ -769,10 +782,10 @@ export default function AnalyticsPanel() {
       {/* Recent Downloads (if tracked) */}
       {downloads.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold mb-3">Recent Downloads</h3>
-          <div className="overflow-x-auto rounded-2xl border border-white/10">
+          <h3 className="text-lg font-bold text-zinc-900 mb-4">Recent Downloads</h3>
+          <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
             <table className="min-w-full text-sm">
-              <thead className="bg-white/5 text-left text-xs uppercase text-zinc-400">
+              <thead className="bg-zinc-50/80 border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500 font-semibold">
                 <tr>
                   <th className="px-4 py-3">Template</th>
                   <th className="px-4 py-3">User</th>
@@ -780,21 +793,21 @@ export default function AnalyticsPanel() {
                   <th className="px-4 py-3">Downloaded At</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-zinc-100">
                 {downloads.map((d) => (
-                  <tr key={d.id} className="border-t border-white/10">
-                    <td className="px-4 py-3 text-zinc-200 text-xs">
+                  <tr key={d.id} className="hover:bg-zinc-50/50 transition-colors">
+                    <td className="px-4 py-3 text-zinc-900 text-xs font-medium">
                       {d.template_name || d.template_slug}
                     </td>
-                    <td className="px-4 py-3 text-zinc-300 text-xs">
+                    <td className="px-4 py-3 text-zinc-600 text-xs">
                       {d.user_email || d.user_id.slice(0, 8) + '...'}
                     </td>
-                    <td className="px-4 py-3 text-zinc-300 text-xs">
+                    <td className="px-4 py-3 text-zinc-600 text-xs">
                       {d.subscription_plan
                         ? d.subscription_plan.charAt(0).toUpperCase() + d.subscription_plan.slice(1)
                         : '-'}
                     </td>
-                    <td className="px-4 py-3 text-zinc-400 text-xs">
+                    <td className="px-4 py-3 text-zinc-500 text-xs">
                       {new Date(d.downloaded_at).toLocaleString()}
                     </td>
                   </tr>
@@ -807,47 +820,46 @@ export default function AnalyticsPanel() {
 
       {/* Order History (if orders exist) */}
       {orders.length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold mb-3">Order History</h3>
-          <div className="overflow-x-auto rounded-2xl border border-white/10">
+        <div className="mb-8">
+          <h3 className="text-lg font-bold text-zinc-900 mb-4">Order History</h3>
+          <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
             <table className="min-w-full text-sm">
-              <thead className="bg-white/5 text-left text-xs uppercase text-zinc-400">
+              <thead className="bg-zinc-50/80 border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500 font-semibold">
                 <tr>
                   <th className="px-4 py-3">Order</th>
-                <th className="px-4 py-3">User</th>
-                <th className="px-4 py-3">Items</th>
-                <th className="px-4 py-3">Total</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((o) => {
-                const list = items.filter((it) => it.order_id === o.id);
-                const label = list.map((l) => l.name).join(', ');
-                return (
-                  <tr key={o.id} className="border-t border-white/10">
-                      <td className="px-4 py-3 text-white font-mono text-xs">{o.id.slice(0,8)}</td>
-                      <td className="px-4 py-3 text-zinc-300 font-mono text-xs">{o.user_id.slice(0,8)}</td>
-                      <td className="px-4 py-3 text-zinc-300 text-xs">{label || '-'}</td>
-                      <td className="px-4 py-3 text-zinc-300">₹{Number(o.total).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-zinc-400 text-xs">{new Date(o.created_at).toLocaleDateString()}</td>
+                  <th className="px-4 py-3">User</th>
+                  <th className="px-4 py-3">Items</th>
+                  <th className="px-4 py-3">Total</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100">
+                {orders.map((o) => {
+                  const list = items.filter((it) => it.order_id === o.id);
+                  const label = list.map((l) => l.name).join(', ');
+                  return (
+                    <tr key={o.id} className="hover:bg-zinc-50/50 transition-colors">
+                      <td className="px-4 py-3 text-zinc-900 font-mono text-xs font-medium">{o.id.slice(0, 8)}</td>
+                      <td className="px-4 py-3 text-zinc-500 font-mono text-xs">{o.user_id.slice(0, 8)}</td>
+                      <td className="px-4 py-3 text-zinc-600 text-xs">{label || '-'}</td>
+                      <td className="px-4 py-3 text-zinc-900 font-semibold">₹{Number(o.total).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-zinc-500 text-xs">{new Date(o.created_at).toLocaleDateString()}</td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                          o.status === 'paid' ? 'bg-green-500/20 text-green-300' :
-                          o.status === 'failed' ? 'bg-red-500/20 text-red-300' :
-                          'bg-yellow-500/20 text-yellow-300'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-md text-xs font-semibold ${o.status === 'paid' ? 'bg-green-50 text-green-700 border border-green-200' :
+                            o.status === 'failed' ? 'bg-red-50 text-red-700 border border-red-200' :
+                              'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}>
                           {o.status}
                         </span>
                       </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
       )}
     </div>
   );

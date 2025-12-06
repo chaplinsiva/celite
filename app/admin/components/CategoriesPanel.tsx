@@ -25,21 +25,21 @@ export default function CategoriesPanel() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'categories' | 'subcategories'>('categories');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  
+
   const [categoryForm, setCategoryForm] = useState({
     name: '',
     slug: '',
     description: '',
     icon: '',
   });
-  
+
   const [subcategoryForm, setSubcategoryForm] = useState({
     category_id: '',
     name: '',
     slug: '',
     description: '',
   });
-  
+
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingSubcategory, setEditingSubcategory] = useState<string | null>(null);
 
@@ -54,7 +54,7 @@ export default function CategoriesPanel() {
       setLoading(false);
       return;
     }
-    
+
     try {
       const [catsRes, subsRes] = await Promise.all([
         fetch('/api/admin/categories', {
@@ -64,10 +64,10 @@ export default function CategoriesPanel() {
           headers: { Authorization: `Bearer ${session.access_token}` },
         }),
       ]);
-      
+
       const catsJson = await catsRes.json();
       const subsJson = await subsRes.json();
-      
+
       if (catsJson.ok) {
         setCategories((catsJson.categories as Category[]) || []);
       }
@@ -86,7 +86,7 @@ export default function CategoriesPanel() {
     const supabase = getSupabaseBrowserClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    
+
     try {
       const res = await fetch('/api/admin/categories', {
         method: 'POST',
@@ -102,7 +102,7 @@ export default function CategoriesPanel() {
           icon: categoryForm.icon || null,
         }),
       });
-      
+
       const json = await res.json();
       if (json.ok) {
         setCategoryForm({ name: '', slug: '', description: '', icon: '' });
@@ -119,7 +119,7 @@ export default function CategoriesPanel() {
     const supabase = getSupabaseBrowserClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    
+
     try {
       const res = await fetch('/api/admin/subcategories', {
         method: 'POST',
@@ -135,7 +135,7 @@ export default function CategoriesPanel() {
           description: subcategoryForm.description || null,
         }),
       });
-      
+
       const json = await res.json();
       if (json.ok) {
         setSubcategoryForm({ category_id: '', name: '', slug: '', description: '' });
@@ -153,7 +153,7 @@ export default function CategoriesPanel() {
     const supabase = getSupabaseBrowserClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    
+
     try {
       const res = await fetch(`/api/admin/categories?id=${id}`, {
         method: 'DELETE',
@@ -173,7 +173,7 @@ export default function CategoriesPanel() {
     const supabase = getSupabaseBrowserClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    
+
     try {
       const res = await fetch(`/api/admin/subcategories?id=${id}`, {
         method: 'DELETE',
@@ -216,19 +216,19 @@ export default function CategoriesPanel() {
     : subcategories;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <header className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Categories & Subcategories</h2>
-        <div className="inline-flex rounded-full border border-white/15 bg-white/5 p-1 text-xs">
-          <button 
+        <h2 className="text-xl font-bold text-zinc-900">Categories & Subcategories</h2>
+        <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-1 text-xs font-medium">
+          <button
             onClick={() => { setTab('categories'); setSelectedCategoryId(null); }}
-            className={`px-3 py-1 rounded-full ${tab === 'categories' ? 'bg-white text-black' : 'text-white/80'}`}
+            className={`px-4 py-2 rounded-md transition-all ${tab === 'categories' ? 'bg-blue-600 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-900'}`}
           >
             Categories
           </button>
-          <button 
+          <button
             onClick={() => setTab('subcategories')}
-            className={`px-3 py-1 rounded-full ${tab === 'subcategories' ? 'bg-white text-black' : 'text-white/80'}`}
+            className={`px-4 py-2 rounded-md transition-all ${tab === 'subcategories' ? 'bg-blue-600 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-900'}`}
           >
             Subcategories
           </button>
@@ -236,26 +236,26 @@ export default function CategoriesPanel() {
       </header>
 
       {tab === 'categories' && (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Categories</h3>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-zinc-900">All Categories</h3>
+            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
               {categories.map((cat) => (
-                <div key={cat.id} className="rounded-lg border border-white/10 bg-white/5 p-3 flex items-center justify-between">
+                <div key={cat.id} className="rounded-xl border border-zinc-200 bg-white p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
                   <div>
-                    <p className="font-medium">{cat.name}</p>
-                    <p className="text-xs text-zinc-400">{cat.slug}</p>
+                    <p className="font-semibold text-zinc-900">{cat.name}</p>
+                    <p className="text-xs text-zinc-500 font-mono mt-0.5">{cat.slug}</p>
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditCategory(cat)}
-                      className="rounded-full border border-white/30 px-2 py-1 text-xs hover:bg-white/10"
+                      className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 transition-colors"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDeleteCategory(cat.id)}
-                      className="rounded-full border border-red-400 text-red-200 px-2 py-1 text-xs hover:bg-red-500/10"
+                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 transition-colors"
                     >
                       Delete
                     </button>
@@ -265,47 +265,65 @@ export default function CategoriesPanel() {
             </div>
           </div>
 
-          <form onSubmit={handleCategorySubmit} className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-4">
-            <h3 className="text-lg font-medium">{editingCategory ? 'Edit Category' : 'Add Category'}</h3>
-            <input
-              value={categoryForm.name}
-              onChange={(e) => {
-                const name = e.target.value;
-                setCategoryForm({
-                  ...categoryForm,
-                  name,
-                  slug: categoryForm.slug || name.toLowerCase().replace(/\s+/g, '-'),
-                });
-              }}
-              placeholder="Category name"
-              required
-              className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10"
-            />
-            <input
-              value={categoryForm.slug}
-              onChange={(e) => setCategoryForm({ ...categoryForm, slug: e.target.value })}
-              placeholder="slug (auto-generated)"
-              required
-              className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10"
-            />
-            <input
-              value={categoryForm.icon}
-              onChange={(e) => setCategoryForm({ ...categoryForm, icon: e.target.value })}
-              placeholder="icon (optional)"
-              className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10"
-            />
-            <textarea
-              value={categoryForm.description}
-              onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
-              placeholder="description (optional)"
-              className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10"
-            />
-            <div className="flex gap-2">
+          <form onSubmit={handleCategorySubmit} className="space-y-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm h-fit">
+            <h3 className="text-lg font-semibold text-zinc-900 border-b border-zinc-100 pb-4 mb-4">
+              {editingCategory ? 'Edit Category' : 'Add New Category'}
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider mb-1.5 block">Name</label>
+                <input
+                  value={categoryForm.name}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    setCategoryForm({
+                      ...categoryForm,
+                      name,
+                      slug: categoryForm.slug || name.toLowerCase().replace(/\s+/g, '-'),
+                    });
+                  }}
+                  placeholder="Category Name"
+                  required
+                  className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider mb-1.5 block">Slug</label>
+                <input
+                  value={categoryForm.slug}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, slug: e.target.value })}
+                  placeholder="slug-auto-generated"
+                  required
+                  className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm font-mono text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider mb-1.5 block">Icon Class used in code</label>
+                <input
+                  value={categoryForm.icon}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, icon: e.target.value })}
+                  placeholder="e.g. Activity, Box, Camera..."
+                  className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider mb-1.5 block">Description</label>
+                <textarea
+                  value={categoryForm.description}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
+                  placeholder="Optional description..."
+                  rows={3}
+                  className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
               <button
                 type="submit"
-                className="rounded-full bg-white text-black px-4 py-2 text-sm font-semibold hover:bg-zinc-200"
+                className="rounded-lg bg-blue-600 text-white px-6 py-2 text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all"
               >
-                {editingCategory ? 'Save' : 'Create'}
+                {editingCategory ? 'Save Changes' : 'Create Category'}
               </button>
               {editingCategory && (
                 <button
@@ -314,7 +332,7 @@ export default function CategoriesPanel() {
                     setCategoryForm({ name: '', slug: '', description: '', icon: '' });
                     setEditingCategory(null);
                   }}
-                  className="rounded-full border border-white/30 px-4 py-2 text-sm hover:bg-white/10"
+                  className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 transition-colors shadow-sm"
                 >
                   Cancel
                 </button>
@@ -325,14 +343,14 @@ export default function CategoriesPanel() {
       )}
 
       {tab === 'subcategories' && (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Subcategories</h3>
+              <h3 className="text-lg font-semibold text-zinc-900">Subcategories</h3>
               <select
                 value={selectedCategoryId || ''}
                 onChange={(e) => setSelectedCategoryId(e.target.value || null)}
-                className="rounded-lg bg-black/40 border border-white/10 px-3 py-1 text-sm"
+                className="rounded-lg bg-white border border-zinc-200 px-3 py-1.5 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm"
               >
                 <option value="">All Categories</option>
                 {categories.map((cat) => (
@@ -340,27 +358,27 @@ export default function CategoriesPanel() {
                 ))}
               </select>
             </div>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
               {filteredSubcategories.map((sub) => {
                 const category = categories.find(c => c.id === sub.category_id);
                 return (
-                  <div key={sub.id} className="rounded-lg border border-white/10 bg-white/5 p-3 flex items-center justify-between">
+                  <div key={sub.id} className="rounded-xl border border-zinc-200 bg-white p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
                     <div>
-                      <p className="font-medium">{sub.name}</p>
-                      <p className="text-xs text-zinc-400">
-                        {category?.name || 'Unknown'} • {sub.slug}
+                      <p className="font-semibold text-zinc-900">{sub.name}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        <span className="font-medium text-zinc-700">{category?.name || 'Unknown'}</span> • <span className="font-mono">{sub.slug}</span>
                       </p>
                     </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEditSubcategory(sub)}
-                        className="rounded-full border border-white/30 px-2 py-1 text-xs hover:bg-white/10"
+                        className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 transition-colors"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDeleteSubcategory(sub.id)}
-                        className="rounded-full border border-red-400 text-red-200 px-2 py-1 text-xs hover:bg-red-500/10"
+                        className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 transition-colors"
                       >
                         Delete
                       </button>
@@ -371,55 +389,73 @@ export default function CategoriesPanel() {
             </div>
           </div>
 
-          <form onSubmit={handleSubcategorySubmit} className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-4">
-            <h3 className="text-lg font-medium">{editingSubcategory ? 'Edit Subcategory' : 'Add Subcategory'}</h3>
-            <select
-              value={subcategoryForm.category_id}
-              onChange={(e) => {
-                setSubcategoryForm({ ...subcategoryForm, category_id: e.target.value });
-                setSelectedCategoryId(e.target.value);
-              }}
-              required
-              className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10"
-            >
-              <option value="">Select Category</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-            <input
-              value={subcategoryForm.name}
-              onChange={(e) => {
-                const name = e.target.value;
-                setSubcategoryForm({
-                  ...subcategoryForm,
-                  name,
-                  slug: subcategoryForm.slug || name.toLowerCase().replace(/\s+/g, '-'),
-                });
-              }}
-              placeholder="Subcategory name"
-              required
-              className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10"
-            />
-            <input
-              value={subcategoryForm.slug}
-              onChange={(e) => setSubcategoryForm({ ...subcategoryForm, slug: e.target.value })}
-              placeholder="slug (auto-generated)"
-              required
-              className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10"
-            />
-            <textarea
-              value={subcategoryForm.description}
-              onChange={(e) => setSubcategoryForm({ ...subcategoryForm, description: e.target.value })}
-              placeholder="description (optional)"
-              className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10"
-            />
-            <div className="flex gap-2">
+          <form onSubmit={handleSubcategorySubmit} className="space-y-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm h-fit">
+            <h3 className="text-lg font-semibold text-zinc-900 border-b border-zinc-100 pb-4 mb-4">
+              {editingSubcategory ? 'Edit Subcategory' : 'Add New Subcategory'}
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider mb-1.5 block">Parent Category</label>
+                <select
+                  value={subcategoryForm.category_id}
+                  onChange={(e) => {
+                    setSubcategoryForm({ ...subcategoryForm, category_id: e.target.value });
+                    setSelectedCategoryId(e.target.value);
+                  }}
+                  required
+                  className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm appearance-none"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider mb-1.5 block">Name</label>
+                <input
+                  value={subcategoryForm.name}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    setSubcategoryForm({
+                      ...subcategoryForm,
+                      name,
+                      slug: subcategoryForm.slug || name.toLowerCase().replace(/\s+/g, '-'),
+                    });
+                  }}
+                  placeholder="Subcategory Name"
+                  required
+                  className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider mb-1.5 block">Slug</label>
+                <input
+                  value={subcategoryForm.slug}
+                  onChange={(e) => setSubcategoryForm({ ...subcategoryForm, slug: e.target.value })}
+                  placeholder="slug-auto-generated"
+                  required
+                  className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm font-mono text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider mb-1.5 block">Description</label>
+                <textarea
+                  value={subcategoryForm.description}
+                  onChange={(e) => setSubcategoryForm({ ...subcategoryForm, description: e.target.value })}
+                  placeholder="Optional description..."
+                  rows={3}
+                  className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
               <button
                 type="submit"
-                className="rounded-full bg-white text-black px-4 py-2 text-sm font-semibold hover:bg-zinc-200"
+                className="rounded-lg bg-blue-600 text-white px-6 py-2 text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all"
               >
-                {editingSubcategory ? 'Save' : 'Create'}
+                {editingSubcategory ? 'Save Changes' : 'Create Subcategory'}
               </button>
               {editingSubcategory && (
                 <button
@@ -429,7 +465,7 @@ export default function CategoriesPanel() {
                     setEditingSubcategory(null);
                     setSelectedCategoryId(null);
                   }}
-                  className="rounded-full border border-white/30 px-4 py-2 text-sm hover:bg-white/10"
+                  className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 transition-colors shadow-sm"
                 >
                   Cancel
                 </button>

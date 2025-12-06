@@ -99,7 +99,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
       try {
         setLoadingMoreInStyle(true);
         const supabase = getSupabaseBrowserClient();
-        
+
         // Get keywords from current template
         const keywords: string[] = [
           ...(product.tags || []),
@@ -116,7 +116,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             .neq('slug', product.slug)
             .limit(8)
             .order('created_at', { ascending: false });
-          
+
           if (data) {
             setMoreInStyleTemplates(data.map((r: any) => ({
               slug: r.slug,
@@ -317,7 +317,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             .neq('slug', product.slug)
             .limit(8)
             .order('created_at', { ascending: false });
-          
+
           if (data) {
             setYouMayAlsoLikeTemplates(data.map((r: any) => ({
               slug: r.slug,
@@ -522,135 +522,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             </div>
 
             {/* More in this style */}
-            {loadingMoreInStyle ? (
-              <div className="mb-12">
-                <h2 className="text-2xl font-bold text-zinc-900 mb-6">More in This Style</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="aspect-video rounded-lg bg-zinc-200 mb-3"></div>
-                      <div className="h-4 bg-zinc-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-zinc-200 rounded w-1/2"></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : moreInStyleTemplates.length > 0 ? (
-              <div className="mb-12">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-zinc-900">More in This Style</h2>
-                  {moreInStyleTemplates.length > 4 && (
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => setMoreInStyleIndex(Math.max(0, moreInStyleIndex - 1))}
-                        disabled={moreInStyleIndex === 0}
-                        className="w-8 h-8 rounded-full border border-zinc-200 flex items-center justify-center hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                        aria-label="Previous templates"
-                      >
-                        ←
-                      </button>
-                      <button 
-                        onClick={() => setMoreInStyleIndex(Math.min(Math.floor((moreInStyleTemplates.length - 1) / 4), moreInStyleIndex + 1))}
-                        disabled={moreInStyleIndex >= Math.floor((moreInStyleTemplates.length - 1) / 4)}
-                        className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                        aria-label="Next templates"
-                      >
-                        →
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {moreInStyleTemplates.slice(moreInStyleIndex * 4, (moreInStyleIndex + 1) * 4).map((item) => (
-                    <Link key={item.slug} href={`/product/${item.slug}`} className="group">
-                      <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
-                        {item.video ? (
-                          <YouTubeVideoPlayer
-                            videoUrl={item.video}
-                            title={item.name}
-                            className="w-full h-full"
-                          />
-                        ) : (
-                          <>
-                            <img 
-                              src={getThumbnail(item)} 
-                              alt={item.name} 
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                              onError={(e) => {
-                                e.currentTarget.src = '/PNG1.png';
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                              <div className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
-                                <PlayCircle className="w-6 h-6 fill-current" />
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <h3 className="font-bold text-zinc-900 text-lg group-hover:text-blue-600 transition-colors">{item.name}</h3>
-                      <p className="text-sm text-zinc-500">By Celite</p>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ) : null}
 
-            {/* You May Also Like */}
-            {loadingYouMayAlsoLike ? (
-              <div>
-                <h2 className="text-2xl font-bold text-zinc-900 mb-6">You May Also Like</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="aspect-video rounded-lg bg-zinc-200 mb-3"></div>
-                      <div className="h-4 bg-zinc-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-zinc-200 rounded w-1/2"></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : youMayAlsoLikeTemplates.length > 0 ? (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-zinc-900">You May Also Like</h2>
-                  <Link href="/templates" className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-all">→</Link>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {youMayAlsoLikeTemplates.slice(0, 4).map((item) => (
-                    <Link key={item.slug} href={`/product/${item.slug}`} className="group">
-                      <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
-                        {item.video ? (
-                          <YouTubeVideoPlayer
-                            videoUrl={item.video}
-                            title={item.name}
-                            className="w-full h-full"
-                          />
-                        ) : (
-                          <>
-                            <img 
-                              src={getThumbnail(item)} 
-                              alt={item.name} 
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                              onError={(e) => {
-                                e.currentTarget.src = '/PNG1.png';
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                              <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
-                                <PlayCircle className="w-5 h-5 fill-current" />
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <h3 className="font-bold text-zinc-900 text-sm group-hover:text-blue-600 transition-colors truncate">{item.name}</h3>
-                      <p className="text-xs text-zinc-500">By Celite</p>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ) : null}
           </div>
 
 
@@ -806,6 +678,139 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             </div>
           </div>
 
+        </div>
+
+        {/* Recommendations - Moved to separate container to fix sticky sidebar scrolling */}
+        <div className="mt-12 w-full lg:w-2/3">
+          {loadingMoreInStyle ? (
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold text-zinc-900 mb-6">More in This Style</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="aspect-video rounded-lg bg-zinc-200 mb-3"></div>
+                    <div className="h-4 bg-zinc-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-zinc-200 rounded w-1/2"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : moreInStyleTemplates.length > 0 ? (
+            <div className="mb-12">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-zinc-900">More in This Style</h2>
+                {moreInStyleTemplates.length > 4 && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setMoreInStyleIndex(Math.max(0, moreInStyleIndex - 1))}
+                      disabled={moreInStyleIndex === 0}
+                      className="w-8 h-8 rounded-full border border-zinc-200 flex items-center justify-center hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      aria-label="Previous templates"
+                    >
+                      ←
+                    </button>
+                    <button
+                      onClick={() => setMoreInStyleIndex(Math.min(Math.floor((moreInStyleTemplates.length - 1) / 4), moreInStyleIndex + 1))}
+                      disabled={moreInStyleIndex >= Math.floor((moreInStyleTemplates.length - 1) / 4)}
+                      className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      aria-label="Next templates"
+                    >
+                      →
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {moreInStyleTemplates.slice(moreInStyleIndex * 4, (moreInStyleIndex + 1) * 4).map((item) => (
+                  <Link key={item.slug} href={`/product/${item.slug}`} className="group">
+                    <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
+                      {item.video ? (
+                        <YouTubeVideoPlayer
+                          videoUrl={item.video}
+                          title={item.name}
+                          className="w-full h-full"
+                        />
+                      ) : (
+                        <>
+                          <img
+                            src={getThumbnail(item)}
+                            alt={item.name}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            onError={(e) => {
+                              e.currentTarget.src = '/PNG1.png';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <div className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
+                              <PlayCircle className="w-6 h-6 fill-current" />
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <h3 className="font-bold text-zinc-900 text-lg group-hover:text-blue-600 transition-colors">{item.name}</h3>
+                    <p className="text-sm text-zinc-500">By Celite</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* You May Also Like */}
+          {loadingYouMayAlsoLike ? (
+            <div>
+              <h2 className="text-2xl font-bold text-zinc-900 mb-6">You May Also Like</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="aspect-video rounded-lg bg-zinc-200 mb-3"></div>
+                    <div className="h-4 bg-zinc-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-zinc-200 rounded w-1/2"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : youMayAlsoLikeTemplates.length > 0 ? (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-zinc-900">You May Also Like</h2>
+                <Link href="/templates" className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-all">→</Link>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {youMayAlsoLikeTemplates.slice(0, 4).map((item) => (
+                  <Link key={item.slug} href={`/product/${item.slug}`} className="group">
+                    <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
+                      {item.video ? (
+                        <YouTubeVideoPlayer
+                          videoUrl={item.video}
+                          title={item.name}
+                          className="w-full h-full"
+                        />
+                      ) : (
+                        <>
+                          <img
+                            src={getThumbnail(item)}
+                            alt={item.name}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            onError={(e) => {
+                              e.currentTarget.src = '/PNG1.png';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
+                              <PlayCircle className="w-5 h-5 fill-current" />
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <h3 className="font-bold text-zinc-900 text-sm group-hover:text-blue-600 transition-colors truncate">{item.name}</h3>
+                    <p className="text-xs text-zinc-500">By Celite</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </main>

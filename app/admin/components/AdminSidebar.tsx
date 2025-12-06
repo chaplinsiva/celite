@@ -4,16 +4,21 @@ type TabKey = 'overview' | 'products' | 'categories' | 'analytics' | 'users' | '
 
 export default function AdminSidebar({ active, onChange }: { active: TabKey; onChange: (key: TabKey) => void }) {
   return (
-    <aside className="border-r border-white/10 bg-white/5 p-4">
-      <h2 className="px-2 text-sm uppercase tracking-[0.25em] text-white/60">Admin</h2>
-      <nav className="mt-4 flex flex-col gap-1 text-sm">
-        <button onClick={() => onChange('overview')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='overview'?'bg-white/10':''}`}>Overview</button>
-        <button onClick={() => onChange('products')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='products'?'bg-white/10':''}`}>Products</button>
-        <button onClick={() => onChange('categories')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='categories'?'bg-white/10':''}`}>Categories</button>
-        <button onClick={() => onChange('analytics')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='analytics'?'bg-white/10':''}`}>Analytics</button>
-        <button onClick={() => onChange('users')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='users'?'bg-white/10':''}`}>User Management</button>
-        <button onClick={() => onChange('marketing')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='marketing'?'bg-white/10':''}`}>Marketing</button>
-        <button onClick={() => onChange('settings')} className={`text-left rounded-lg px-3 py-2 hover:bg-white/10 ${active==='settings'?'bg-white/10':''}`}>Settings</button>
+    <aside className="border-r border-zinc-200 bg-white p-4 h-full">
+      <h2 className="px-3 text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-4 mt-2">Navigation</h2>
+      <nav className="flex flex-col gap-1 text-sm font-medium">
+        {['overview', 'products', 'categories', 'analytics', 'users', 'marketing', 'settings'].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => onChange(tab as TabKey)}
+            className={`text-left rounded-lg px-3 py-2.5 transition-all outline-none ${active === tab
+                ? 'bg-blue-50 text-blue-600'
+                : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
+              }`}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1).replace(/([A-Z])/g, ' $1').trim()}
+          </button>
+        ))}
       </nav>
     </aside>
   );

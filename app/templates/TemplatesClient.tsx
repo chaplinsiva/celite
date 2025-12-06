@@ -7,7 +7,7 @@ import { useAppContext } from '../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
 import { getYouTubeThumbnailUrl, cn } from '../../lib/utils';
-import { Search, ChevronDown, ChevronRight, Check, PlayCircle, Download, Star, Filter, SlidersHorizontal, ArrowRight, Plus } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, ChevronLeft, Check, PlayCircle, Download, Star, Filter, SlidersHorizontal, ArrowRight, Plus } from 'lucide-react';
 import YouTubeVideoPlayer from '../../components/YouTubeVideoPlayer';
 
 type Template = {
@@ -55,6 +55,8 @@ const getThumbnail = (item: Template) => {
   return '/PNG1.png';
 };
 
+const ITEMS_PER_PAGE = 30;
+
 export default function TemplatesClient({ initialTemplates }: { initialTemplates: Template[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -71,6 +73,7 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
   const [selectedSoftware, setSelectedSoftware] = useState<string[]>([]);
   const [selectedPlugins, setSelectedPlugins] = useState<string[]>([]);
   const [selectedResolutions, setSelectedResolutions] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Expanded states for sidebar sections
   const [expandedSections, setExpandedSections] = useState({
@@ -118,7 +121,7 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
         const tagMatch = t.tags?.some(tag => tag?.toLowerCase().includes(q));
         const featureMatch = t.features?.some(feat => feat?.toLowerCase().includes(q));
         const softwareMatch = t.software?.some(sw => sw?.toLowerCase().includes(q));
-        
+
         return nameMatch || subtitleMatch || descriptionMatch || tagMatch || featureMatch || softwareMatch;
       });
     }
@@ -137,7 +140,7 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
     if (selectedSoftware.length > 0) {
       filtered = filtered.filter(t => {
         const templateSoftware = (t.software || []).map(s => s?.toLowerCase() || '');
-        return selectedSoftware.some(sw => 
+        return selectedSoftware.some(sw =>
           templateSoftware.some(ts => ts.includes(sw.toLowerCase()) || sw.toLowerCase().includes(ts))
         );
       });
@@ -147,17 +150,17 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
     if (selectedPlugins.length > 0) {
       filtered = filtered.filter(t => {
         const templatePlugins = (t.plugins || []).map(p => p?.toLowerCase() || '');
-        const hasNoPlugin = templatePlugins.length === 0 || templatePlugins.some(p => 
+        const hasNoPlugin = templatePlugins.length === 0 || templatePlugins.some(p =>
           p.includes('no plugin') || p.includes('none') || p === ''
         );
-        
+
         if (selectedPlugins.includes('No Plugin Required')) {
           return hasNoPlugin;
         }
-        
+
         return selectedPlugins.some(plugin => {
           if (plugin === 'No Plugin Required') return hasNoPlugin;
-          return templatePlugins.some(tp => 
+          return templatePlugins.some(tp =>
             tp.includes(plugin.toLowerCase()) || plugin.toLowerCase().includes(tp)
           );
         });
@@ -199,6 +202,17 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
 
     return filtered;
   }, [initialTemplates, searchQuery, selectedCategory, selectedSubcategory, sortBy, selectedSoftware, selectedPlugins, selectedResolutions]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory, selectedSubcategory, sortBy, selectedSoftware, selectedPlugins, selectedResolutions]);
+
+  const totalPages = Math.ceil(filteredTemplates.length / ITEMS_PER_PAGE);
+  const paginatedTemplates = filteredTemplates.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const handleDownload = async (slug: string) => {
     if (!user) return openLoginModal();
@@ -284,14 +298,9 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
                     router.replace(`/templates?${params.toString()}`, { scroll: false });
                   }
                 }}
-                className="block w-full pl-11 pr-32 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                className="block w-full pl-11 pr-4 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
                 placeholder="Search millions of creative assets..."
               />
-              <div className="absolute inset-y-0 right-2 flex items-center">
-                <button className="flex items-center gap-1 px-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm font-medium text-zinc-600 hover:bg-zinc-50 transition-colors shadow-sm">
-                  All Categories <ChevronDown className="w-4 h-4" />
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -355,13 +364,13 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
                   {['After Effects', 'Premiere Pro', 'Apple Motion', 'DaVinci Resolve'].map(sw => {
                     const isSelected = selectedSoftware.includes(sw);
                     return (
-                      <label 
-                        key={sw} 
+                      <label
+                        key={sw}
                         className="flex items-center gap-3 cursor-pointer group"
                         onClick={(e) => {
                           e.preventDefault();
-                          setSelectedSoftware(prev => 
-                            prev.includes(sw) 
+                          setSelectedSoftware(prev =>
+                            prev.includes(sw)
                               ? prev.filter(s => s !== sw)
                               : [...prev, sw]
                           );
@@ -369,16 +378,16 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
                       >
                         <div className={cn(
                           "w-5 h-5 rounded border bg-white flex items-center justify-center transition-colors",
-                          isSelected 
-                            ? "border-blue-600 bg-blue-600" 
+                          isSelected
+                            ? "border-blue-600 bg-blue-600"
                             : "border-zinc-300 group-hover:border-blue-500"
                         )}>
                           {isSelected && <Check className="w-3 h-3 text-white" />}
                         </div>
                         <span className={cn(
                           "text-sm transition-colors",
-                          isSelected 
-                            ? "text-blue-600 font-medium" 
+                          isSelected
+                            ? "text-blue-600 font-medium"
                             : "text-zinc-600 group-hover:text-blue-600"
                         )}>{sw}</span>
                       </label>
@@ -402,13 +411,13 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
                   {['No Plugin Required', 'Element 3D', 'Optical Flares', 'Particular'].map(plugin => {
                     const isSelected = selectedPlugins.includes(plugin);
                     return (
-                      <label 
-                        key={plugin} 
+                      <label
+                        key={plugin}
                         className="flex items-center gap-3 cursor-pointer group"
                         onClick={(e) => {
                           e.preventDefault();
-                          setSelectedPlugins(prev => 
-                            prev.includes(plugin) 
+                          setSelectedPlugins(prev =>
+                            prev.includes(plugin)
                               ? prev.filter(p => p !== plugin)
                               : [...prev, plugin]
                           );
@@ -416,16 +425,16 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
                       >
                         <div className={cn(
                           "w-5 h-5 rounded border bg-white flex items-center justify-center transition-colors",
-                          isSelected 
-                            ? "border-blue-600 bg-blue-600" 
+                          isSelected
+                            ? "border-blue-600 bg-blue-600"
                             : "border-zinc-300 group-hover:border-blue-500"
                         )}>
                           {isSelected && <Check className="w-3 h-3 text-white" />}
                         </div>
                         <span className={cn(
                           "text-sm transition-colors",
-                          isSelected 
-                            ? "text-blue-600 font-medium" 
+                          isSelected
+                            ? "text-blue-600 font-medium"
                             : "text-zinc-600 group-hover:text-blue-600"
                         )}>{plugin}</span>
                       </label>
@@ -449,13 +458,13 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
                   {['4K', '1080p (Full HD)', '720p', 'Vertical (9:16)'].map(res => {
                     const isSelected = selectedResolutions.includes(res);
                     return (
-                      <label 
-                        key={res} 
+                      <label
+                        key={res}
                         className="flex items-center gap-3 cursor-pointer group"
                         onClick={(e) => {
                           e.preventDefault();
-                          setSelectedResolutions(prev => 
-                            prev.includes(res) 
+                          setSelectedResolutions(prev =>
+                            prev.includes(res)
                               ? prev.filter(r => r !== res)
                               : [...prev, res]
                           );
@@ -463,16 +472,16 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
                       >
                         <div className={cn(
                           "w-5 h-5 rounded border bg-white flex items-center justify-center transition-colors",
-                          isSelected 
-                            ? "border-blue-600 bg-blue-600" 
+                          isSelected
+                            ? "border-blue-600 bg-blue-600"
                             : "border-zinc-300 group-hover:border-blue-500"
                         )}>
                           {isSelected && <Check className="w-3 h-3 text-white" />}
                         </div>
                         <span className={cn(
                           "text-sm transition-colors",
-                          isSelected 
-                            ? "text-blue-600 font-medium" 
+                          isSelected
+                            ? "text-blue-600 font-medium"
                             : "text-zinc-600 group-hover:text-blue-600"
                         )}>{res}</span>
                       </label>
@@ -495,7 +504,7 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
 
             {filteredTemplates.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredTemplates.map((template) => (
+                {paginatedTemplates.map((template) => (
                   <div key={template.slug} className="group flex flex-col bg-white rounded-xl overflow-hidden border border-zinc-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300">
                     {/* Thumbnail / Video Player */}
                     <div className="relative aspect-video overflow-hidden bg-zinc-100">
@@ -580,19 +589,48 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
               </div>
             )}
 
-            {/* Pagination (Visual Only) */}
-            {filteredTemplates.length > 0 && (
-              <div className="flex justify-center items-center gap-2 mt-12">
-                <button className="w-10 h-10 rounded-lg bg-white border border-zinc-200 flex items-center justify-center text-zinc-400 cursor-not-allowed">
-                  <ChevronDown className="w-4 h-4 rotate-90" />
+            {/* Pagination */}
+            {filteredTemplates.length > ITEMS_PER_PAGE && (
+              <div className="flex justify-center items-center gap-4 mt-12">
+                <button
+                  onClick={() => {
+                    setCurrentPage(p => Math.max(1, p - 1));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  disabled={currentPage === 1}
+                  className="w-8 h-8 flex items-center justify-center text-zinc-400 disabled:opacity-30 hover:text-zinc-900 transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
-                <button className="w-10 h-10 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center shadow-lg shadow-blue-600/20">1</button>
-                <button className="w-10 h-10 rounded-lg bg-white border border-zinc-200 text-zinc-600 font-medium flex items-center justify-center hover:bg-zinc-50">2</button>
-                <button className="w-10 h-10 rounded-lg bg-white border border-zinc-200 text-zinc-600 font-medium flex items-center justify-center hover:bg-zinc-50">3</button>
-                <span className="text-zinc-400 px-2">...</span>
-                <button className="w-10 h-10 rounded-lg bg-white border border-zinc-200 text-zinc-600 font-medium flex items-center justify-center hover:bg-zinc-50">5</button>
-                <button className="w-10 h-10 rounded-lg bg-white border border-zinc-200 text-zinc-600 flex items-center justify-center hover:bg-zinc-50 hover:text-blue-600">
-                  <ChevronRight className="w-4 h-4" />
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => {
+                        setCurrentPage(page);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-200",
+                        currentPage === page
+                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20 scale-100"
+                          : "bg-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 scale-95 hover:scale-100"
+                      )}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                <button
+                  onClick={() => {
+                    setCurrentPage(p => Math.min(totalPages, p + 1));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  disabled={currentPage === totalPages}
+                  className="w-8 h-8 flex items-center justify-center text-zinc-400 disabled:opacity-30 hover:text-zinc-900 transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
             )}

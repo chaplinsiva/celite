@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import AdminSidebar from './components/AdminSidebar';
 import OverviewPanel from './components/OverviewPanel';
@@ -61,27 +62,52 @@ export default function AdminClient() {
     if (res.ok) await refreshTemplates();
   };
 
-  if (loading) return <main className="bg-black min-h-screen pt-20 text-white px-6">Loading…</main>;
+  if (loading) return <main className="bg-zinc-50 min-h-screen pt-20 text-zinc-900 px-6">Loading…</main>;
   if (!isAdmin) return null;
 
   return (
-    <main className="bg-black min-h-screen pt-20 text-white">
-      <div className="grid grid-cols-[220px_1fr] min-h-[calc(100vh-4rem)]">
+    <main className="bg-zinc-50 min-h-screen text-zinc-900 flex flex-col font-sans">
+      {/* Admin Navbar */}
+      <header className="h-16 border-b border-zinc-200 flex items-center justify-between px-6 bg-white sticky top-0 z-50">
+        <div className="flex items-center gap-2">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2 focus:outline-none hover:opacity-80 transition-opacity">
+            <img src="/logo/logo.png" alt="Celite Logo" className="h-8 w-auto object-contain" />
+            <span className="font-bold text-xl tracking-tight text-zinc-900">Celite <span className="text-zinc-500 font-normal text-sm ml-1">Admin</span></span>
+          </Link>
+        </div>
+        <Link
+          href="/"
+          className="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-zinc-100"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+          Back to Home
+        </Link>
+      </header>
+
+      <div className="flex-1 grid grid-cols-[240px_1fr]">
         <AdminSidebar active={active} onChange={setActive} />
         {/* Content */}
-        <section className="p-6 space-y-6">
-          {active === 'overview' && (<OverviewPanel stats={stats} onSeed={runSeed} onUpload={runUpload} />)}
+        <div className="flex flex-col h-full overflow-hidden">
+          <section className="flex-1 p-8 space-y-8 overflow-y-auto">
+            {active === 'overview' && (<OverviewPanel stats={stats} onSeed={runSeed} onUpload={runUpload} />)}
 
-          {active === 'products' && (<ProductsPanel templates={templates} onDelete={deleteTemplate} onCreated={refreshTemplates} />)}
+            {active === 'products' && (<ProductsPanel templates={templates} onDelete={deleteTemplate} onCreated={refreshTemplates} />)}
 
-          {active === 'categories' && (<CategoriesPanel />)}
+            {active === 'categories' && (<CategoriesPanel />)}
 
-          {active === 'analytics' && (<AnalyticsPanel />)}
+            {active === 'analytics' && (<AnalyticsPanel />)}
 
-          {active === 'users' && (<UsersPanel />)}
-          {active === 'marketing' && (<MarketingPanel />)}
-          {active === 'settings' && (<SettingsPanel />)}
-        </section>
+            {active === 'users' && (<UsersPanel />)}
+            {active === 'marketing' && (<MarketingPanel />)}
+            {active === 'settings' && (<SettingsPanel />)}
+          </section>
+
+          {/* Admin Footer */}
+          <footer className="border-t border-zinc-200 py-6 px-8 text-center text-zinc-400 text-sm bg-white">
+            &copy; {new Date().getFullYear()} Celite Inc. All rights reserved. Admin Panel.
+          </footer>
+        </div>
       </div>
     </main>
   );

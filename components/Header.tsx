@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '../context/AppContext';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import { ShinyButton } from './ui/shiny-button';
-import { Search, Menu, ShoppingCart, User, X } from 'lucide-react';
+import { Menu, ShoppingCart, User, X } from 'lucide-react';
 import PromoBanner from './PromoBanner';
 
 export default function Header() {
@@ -15,26 +15,7 @@ export default function Header() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
 
-  // Close search dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsSearchOpen(false);
-      }
-    };
-
-    if (isSearchOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isSearchOpen]);
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -97,54 +78,7 @@ export default function Header() {
                   {link.name}
                 </Link>
               ))}
-              <div className="h-4 w-px bg-zinc-200 mx-2"></div>
-              <div className="relative" ref={searchRef}>
-                <button
-                  onClick={() => setIsSearchOpen(!isSearchOpen)}
-                  className="text-[14px] font-medium text-zinc-600 hover:text-black transition-colors flex items-center gap-2"
-                >
-                  <Search className="w-4 h-4" />
-                  <span>Search</span>
-                </button>
-                
-                {/* Search Dropdown */}
-                {isSearchOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-zinc-200 z-50 overflow-hidden">
-                    <div className="p-4">
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Search className="h-4 w-4 text-zinc-400" />
-                        </div>
-                        <input
-                          type="text"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && searchQuery.trim()) {
-                              setIsSearchOpen(false);
-                              router.push(`/templates?search=${encodeURIComponent(searchQuery.trim())}`);
-                            }
-                          }}
-                          placeholder="Search templates..."
-                          className="block w-full pl-10 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                          autoFocus
-                        />
-                      </div>
-                      <button
-                        onClick={() => {
-                          if (searchQuery.trim()) {
-                            setIsSearchOpen(false);
-                            router.push(`/templates?search=${encodeURIComponent(searchQuery.trim())}`);
-                          }
-                        }}
-                        className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                      >
-                        Search
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+
             </div>
           </div>
 

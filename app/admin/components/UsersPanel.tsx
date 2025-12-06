@@ -45,45 +45,67 @@ export default function UsersPanel() {
       const json = await res.json();
       if (!res.ok || !json.ok) { alert(json.error || 'Delete failed'); return; }
       await load();
-    } catch {}
+    } catch { }
   };
 
-  if (loading) return <div>Loading users…</div>;
-  if (error) return <div className="text-sm text-red-300">{error}</div>;
+  if (loading) return <div className="text-sm text-zinc-500">Loading users…</div>;
+  if (error) return <div className="text-sm text-red-500">{error}</div>;
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold">User Management</h2>
-      <p className="mt-2 text-sm text-zinc-400">View users and remove accounts.</p>
-      <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10">
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-zinc-900">User Management</h2>
+        <p className="mt-1 text-sm text-zinc-500">View users and manage accounts.</p>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
         <table className="min-w-full text-sm">
-          <thead className="bg-white/5 text-left text-xs uppercase text-zinc-400">
+          <thead className="bg-zinc-50/80 border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500 font-semibold">
             <tr>
-              <th className="px-4 py-3">Role</th>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Created</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-5 py-3.5">Role</th>
+              <th className="px-5 py-3.5">Name</th>
+              <th className="px-5 py-3.5">Email</th>
+              <th className="px-5 py-3.5">Created</th>
+              <th className="px-5 py-3.5 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-zinc-100">
             {users.map((u) => {
               const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || (u.email ? u.email.split('@')[0] : '');
               const role = adminIds.has(u.id) ? 'Admin' : 'User';
               return (
-                <tr key={u.id} className="border-t border-white/10">
-                  <td className="px-4 py-3 text-zinc-300">{role}</td>
-                  <td className="px-4 py-3 text-white">{name}</td>
-                  <td className="px-4 py-3 text-zinc-300">{u.email}</td>
-                  <td className="px-4 py-3 text-zinc-400">{new Date(u.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3">
+                <tr key={u.id} className="hover:bg-zinc-50/50 transition-colors">
+                  <td className="px-5 py-3.5">
+                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${role === 'Admin'
+                        ? 'bg-purple-50 text-purple-700 ring-purple-600/20'
+                        : 'bg-zinc-50 text-zinc-600 ring-zinc-500/10'
+                      }`}>
+                      {role}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5 font-medium text-zinc-900">{name}</td>
+                  <td className="px-5 py-3.5 text-zinc-600">{u.email}</td>
+                  <td className="px-5 py-3.5 text-zinc-500 text-xs">{new Date(u.created_at).toLocaleDateString()}</td>
+                  <td className="px-5 py-3.5">
                     <div className="flex justify-end">
-                      <button onClick={() => remove(u.id)} className="rounded-full border border-red-400 px-3 py-1 text-xs text-red-200 hover:bg-red-500/10">Delete</button>
+                      <button
+                        onClick={() => remove(u.id)}
+                        className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 transition-colors"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>
               );
             })}
+            {users.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-5 py-8 text-center text-zinc-500 italic">
+                  No users found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

@@ -137,20 +137,20 @@ export default function MarketingPanel() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold">Marketing</h1>
-        <p className="text-sm text-zinc-400">Send email to subscribers, non-subscribers, all users, or a specific user</p>
+        <h1 className="text-2xl font-bold text-zinc-900">Marketing</h1>
+        <p className="mt-1 text-sm text-zinc-500">Send email to subscribers, non-subscribers, all users, or a specific user</p>
       </header>
 
       {/* Mode Toggle */}
-      <div className="flex gap-2 rounded-xl border border-white/10 bg-black/40 p-1">
+      <div className="flex gap-1 rounded-xl border border-zinc-200 bg-zinc-100 p-1 w-fit">
         <button
           onClick={() => {
             setMode('bulk');
             setMessage(null);
           }}
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition ${mode === 'bulk'
-              ? 'bg-white text-black'
-              : 'text-zinc-300 hover:bg-white/10'
+          className={`px-6 py-2 rounded-lg text-sm font-medium transition-all shadow-sm ${mode === 'bulk'
+              ? 'bg-white text-zinc-900'
+              : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50 shadow-none'
             }`}
         >
           Bulk Email
@@ -160,9 +160,9 @@ export default function MarketingPanel() {
             setMode('single');
             setMessage(null);
           }}
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition ${mode === 'single'
-              ? 'bg-white text-black'
-              : 'text-zinc-300 hover:bg-white/10'
+          className={`px-6 py-2 rounded-lg text-sm font-medium transition-all shadow-sm ${mode === 'single'
+              ? 'bg-white text-zinc-900'
+              : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50 shadow-none'
             }`}
         >
           Send to User
@@ -171,60 +171,60 @@ export default function MarketingPanel() {
 
       {message && (
         <div
-          className={`rounded-2xl border p-4 ${message.type === 'success'
-              ? 'border-green-500/50 bg-green-500/10 text-green-300'
-              : 'border-red-500/50 bg-red-500/10 text-red-300'
+          className={`rounded-xl border p-4 text-sm font-medium ${message.type === 'success'
+              ? 'border-green-200 bg-green-50 text-green-700'
+              : 'border-red-200 bg-red-50 text-red-700'
             }`}
         >
           {message.text}
         </div>
       )}
 
-      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/40 p-6">
+      <div className="space-y-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
         {mode === 'bulk' ? (
-          <div className="space-y-2">
-            <label htmlFor="targetAudience" className="block text-sm font-medium text-zinc-200">
+          <div className="space-y-3">
+            <label className="block text-sm font-semibold text-zinc-700">
               Target Audience
             </label>
-            <div className="flex gap-3">
-              <label className="flex items-center gap-2 cursor-pointer">
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 cursor-pointer group">
                 <input
                   type="radio"
                   name="targetAudience"
                   value="subscribers"
                   checked={targetAudience === 'subscribers'}
                   onChange={(e) => setTargetAudience(e.target.value as TargetAudience)}
-                  className="h-4 w-4 text-purple-500 focus:ring-purple-500"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-zinc-300"
                 />
-                <span className="text-sm text-zinc-300">Subscribers Only</span>
+                <span className="text-sm text-zinc-600 group-hover:text-zinc-900 transition-colors">Subscribers Only</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer group">
                 <input
                   type="radio"
                   name="targetAudience"
                   value="non-subscribers"
                   checked={targetAudience === 'non-subscribers'}
                   onChange={(e) => setTargetAudience(e.target.value as TargetAudience)}
-                  className="h-4 w-4 text-purple-500 focus:ring-purple-500"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-zinc-300"
                 />
-                <span className="text-sm text-zinc-300">Non-Subscribers Only</span>
+                <span className="text-sm text-zinc-600 group-hover:text-zinc-900 transition-colors">Non-Subscribers Only</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer group">
                 <input
                   type="radio"
                   name="targetAudience"
                   value="all"
                   checked={targetAudience === 'all'}
                   onChange={(e) => setTargetAudience(e.target.value as TargetAudience)}
-                  className="h-4 w-4 text-purple-500 focus:ring-purple-500"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-zinc-300"
                 />
-                <span className="text-sm text-zinc-300">All Users</span>
+                <span className="text-sm text-zinc-600 group-hover:text-zinc-900 transition-colors">All Users</span>
               </label>
             </div>
           </div>
         ) : (
           <div className="space-y-2">
-            <label htmlFor="userSelect" className="block text-sm font-medium text-zinc-200">
+            <label htmlFor="userSelect" className="block text-sm font-semibold text-zinc-700">
               Select User
             </label>
             <div className="relative">
@@ -237,61 +237,60 @@ export default function MarketingPanel() {
                 }}
                 onFocus={() => setShowDropdown(true)}
                 onBlur={() => {
-                  // Delay hiding dropdown to allow click events
                   setTimeout(() => setShowDropdown(false), 200);
                 }}
-                placeholder="Search by email or name... (click to see all users)"
-                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-violet-400/70 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                placeholder="Search by email or name..."
+                className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all"
               />
               {showDropdown && users.length > 0 && (
-                <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-white/10 bg-black/80 backdrop-blur-sm">
+                <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-zinc-200 bg-white shadow-lg">
                   {(searchQuery === '' ? users : filteredUsers).slice(0, 100).map((user) => (
                     <button
                       key={user.id}
                       type="button"
                       onMouseDown={(e) => {
-                        e.preventDefault(); // Prevent input blur
+                        e.preventDefault();
                         setSelectedUser(user.id);
                         setSearchQuery(user.email || '');
                         setShowDropdown(false);
                       }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-white/10 ${selectedUser === user.id ? 'bg-white/10' : ''
+                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-zinc-50 border-b border-zinc-50 last:border-0 ${selectedUser === user.id ? 'bg-blue-50 text-blue-900' : 'text-zinc-700'
                         }`}
                     >
-                      <div className="text-white">{user.email}</div>
+                      <div className="font-medium">{user.email}</div>
                       {(user.first_name || user.last_name) && (
-                        <div className="text-xs text-zinc-400">
+                        <div className="text-xs text-zinc-500 mt-0.5">
                           {user.first_name} {user.last_name}
                         </div>
                       )}
                     </button>
                   ))}
                   {searchQuery === '' && users.length > 100 && (
-                    <div className="px-4 py-2 text-xs text-zinc-400 border-t border-white/10">
-                      Showing first 100 of {users.length} users. Type to search for specific users.
+                    <div className="px-4 py-2 text-xs text-zinc-500 border-t border-zinc-100 bg-zinc-50">
+                      Showing first 100 of {users.length} users. Type to search specifically.
                     </div>
                   )}
                   {searchQuery && filteredUsers.length === 0 && (
-                    <div className="px-4 py-2 text-sm text-zinc-400">
-                      No users found matching "{searchQuery}"
+                    <div className="px-4 py-3 text-sm text-zinc-500 text-center">
+                      No users found.
                     </div>
                   )}
                 </div>
               )}
             </div>
             {selectedUser && (
-              <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-300">
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 font-medium">
                 Selected: {users.find(u => u.id === selectedUser)?.email}
               </div>
             )}
             {loadingUsers && (
-              <div className="text-sm text-zinc-400">Loading users...</div>
+              <div className="text-sm text-zinc-500 animate-pulse">Loading users...</div>
             )}
           </div>
         )}
 
         <div className="space-y-2">
-          <label htmlFor="subject" className="block text-sm font-medium text-zinc-200">
+          <label htmlFor="subject" className="block text-sm font-semibold text-zinc-700">
             Email Subject
           </label>
           <input
@@ -300,26 +299,26 @@ export default function MarketingPanel() {
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             placeholder="Enter email subject..."
-            className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-violet-400/70 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+            className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all"
           />
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label htmlFor="content" className="block text-sm font-medium text-zinc-200">
+            <label htmlFor="content" className="block text-sm font-semibold text-zinc-700">
               Email Content
             </label>
             <button
               type="button"
               onClick={() => setPreview(!preview)}
-              className="text-xs text-zinc-400 hover:text-white"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700"
             >
-              {preview ? 'Edit' : 'Preview'}
+              {preview ? 'Edit Source' : 'Show Preview'}
             </button>
           </div>
           {preview ? (
-            <div className="rounded-xl border border-white/10 bg-black/40 p-4 text-sm text-zinc-300 whitespace-pre-wrap">
-              {content || <span className="text-zinc-500">No content to preview</span>}
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 whitespace-pre-wrap min-h-[200px]">
+              {content ? <div dangerouslySetInnerHTML={{ __html: content }} /> : <span className="text-zinc-400 italic">No content to preview</span>}
             </div>
           ) : (
             <textarea
@@ -328,11 +327,11 @@ export default function MarketingPanel() {
               onChange={(e) => setContent(e.target.value)}
               placeholder="Enter email content (HTML supported)..."
               rows={12}
-              className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-violet-400/70 focus:outline-none focus:ring-2 focus:ring-violet-500/20 font-mono"
+              className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-mono shadow-sm transition-all"
             />
           )}
           <p className="text-xs text-zinc-500">
-            You can use HTML tags for formatting. The content will be wrapped in a styled email template.
+            HTML formatting is supported. Content will be wrapped in a standard template.
           </p>
         </div>
 
@@ -340,7 +339,7 @@ export default function MarketingPanel() {
           <button
             onClick={handleSend}
             disabled={loading || !subject.trim() || !content.trim() || (mode === 'single' && !selectedUser)}
-            className="rounded-full bg-white px-6 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           >
             {loading ? 'Sending...' : mode === 'single'
               ? 'Send Email'
@@ -353,15 +352,19 @@ export default function MarketingPanel() {
               setMessage(null);
             }}
             disabled={loading}
-            className="rounded-full border border-white/30 px-6 py-2 text-sm hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-zinc-200 bg-white px-6 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
           >
             Clear
           </button>
         </div>
 
         {mode === 'bulk' && (
-          <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-300">
-            <strong>⚠️ Warning:</strong> This will send an email to {targetAudience === 'subscribers' ? 'all active subscribers' : targetAudience === 'non-subscribers' ? 'all non-subscribers' : 'all users'}. Make sure your content is correct before sending.
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 flex items-start gap-2">
+            <span className="text-lg leading-none">⚠️</span>
+            <div>
+              <strong className="font-semibold text-amber-900 block mb-0.5">Warning</strong>
+              This will send an email to {targetAudience === 'subscribers' ? 'all active subscribers' : targetAudience === 'non-subscribers' ? 'all non-subscribers' : 'all users'}. Please verify your content before sending.
+            </div>
           </div>
         )}
       </div>

@@ -63,6 +63,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     pathname === '/signup' ||
     pathname.startsWith('/auth');
 
+  // Check for admin route
+  const isAdminPage = pathname.startsWith('/admin');
+
   if (maintenance && !isAdmin && !isAuthRoute) {
     return (
       <main className="bg-white min-h-screen flex items-center justify-center px-4">
@@ -82,6 +85,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
         </div>
       </main>
     );
+  }
+
+  // Admin pages: Render without public layout
+  if (isAdminPage) {
+    return <>{children}</>;
   }
 
   return (

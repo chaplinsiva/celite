@@ -6,21 +6,34 @@ export default function OverviewPanel({ stats, onSeed, onUpload }: {
   onUpload: () => Promise<void> | void;
 }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <header>
-        <h1 className="text-2xl font-semibold">Overview</h1>
-        <p className="text-sm text-zinc-400">Manage templates, users, and orders.</p>
+        <h1 className="text-3xl font-bold text-zinc-900">Overview</h1>
+        <p className="text-zinc-500 mt-1">Manage templates, users, and orders.</p>
       </header>
       {stats && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-4"><div className="text-2xl font-bold">{stats.templates}</div><div className="text-xs text-zinc-400">Templates</div></div>
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-4"><div className="text-2xl font-bold">{stats.orders}</div><div className="text-xs text-zinc-400">Orders</div></div>
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-4"><div className="text-2xl font-bold">${stats.revenue.toFixed(2)}</div><div className="text-xs text-zinc-400">Revenue</div></div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+          <div className="rounded-xl border border-zinc-200 bg-white p-8 shadow-sm hover:shadow-md transition-shadow">
+            <div className="text-4xl font-bold text-zinc-900 mb-1">{stats.templates}</div>
+            <div className="text-sm font-medium text-zinc-500 uppercase tracking-wider">Templates</div>
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-white p-8 shadow-sm hover:shadow-md transition-shadow">
+            <div className="text-4xl font-bold text-zinc-900 mb-1">{stats.orders}</div>
+            <div className="text-sm font-medium text-zinc-500 uppercase tracking-wider">Orders</div>
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-white p-8 shadow-sm hover:shadow-md transition-shadow">
+            <div className="text-4xl font-bold text-zinc-900 mb-1">₹{stats.revenue.toFixed(2)}</div>
+            <div className="text-sm font-medium text-zinc-500 uppercase tracking-wider">Revenue</div>
+          </div>
         </div>
       )}
-      <div className="flex gap-3">
-        <button onClick={onSeed} className="rounded-full bg-white text-black px-4 py-2 text-sm font-semibold hover:bg-zinc-200">Seed Templates</button>
-        <button onClick={onUpload} className="rounded-full border border-white/30 px-4 py-2 text-sm hover:bg-white/10">Upload Previews</button>
+      <div className="flex gap-4">
+        <button onClick={onSeed} className="rounded-lg bg-blue-600 text-white px-6 py-2.5 text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+          Seed Templates
+        </button>
+        <button onClick={onUpload} className="rounded-lg border border-zinc-200 bg-white px-6 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors shadow-sm">
+          Upload Previews
+        </button>
       </div>
     </div>
   );

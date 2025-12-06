@@ -19,7 +19,7 @@ const extractYouTubeId = (url: string) => {
     if (parsed.hostname === 'youtu.be') {
       return parsed.pathname.slice(1);
     }
-  } catch {}
+  } catch { }
   return null;
 };
 
@@ -83,7 +83,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
       const supabase = getSupabaseBrowserClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      
+
       try {
         const [catsRes, subsRes] = await Promise.all([
           fetch('/api/admin/categories', {
@@ -93,10 +93,10 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
             headers: { Authorization: `Bearer ${session.access_token}` },
           }),
         ]);
-        
+
         const catsJson = await catsRes.json();
         const subsJson = await subsRes.json();
-        
+
         if (catsJson.ok) {
           setCategories((catsJson.categories || []).map((cat: any) => ({ id: cat.id, name: cat.name, slug: cat.slug })));
         }
@@ -140,103 +140,113 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <header className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Products</h2>
-        <div className="inline-flex rounded-full border border-white/15 bg-white/5 p-1 text-xs">
-          <button onClick={() => setTab('list')} className={`px-3 py-1 rounded-full ${tab==='list'?'bg-white text-black':'text-white/80'}`}>Product List</button>
-          <button onClick={() => setTab('add')} className={`px-3 py-1 rounded-full ${tab==='add'?'bg-white text-black':'text-white/80'}`}>Add New Product</button>
+        <h2 className="text-xl font-bold text-zinc-900">Products</h2>
+        <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-1 text-xs font-medium">
+          <button
+            onClick={() => setTab('list')}
+            className={`px-4 py-2 rounded-md transition-all ${tab === 'list' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-900'}`}
+          >
+            Product List
+          </button>
+          <button
+            onClick={() => setTab('add')}
+            className={`px-4 py-2 rounded-md transition-all ${tab === 'add' ? 'bg-blue-600 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-900'}`}
+          >
+            Add New Product
+          </button>
         </div>
       </header>
 
       {tab === 'list' && (
         <>
-        <div className="mb-4">
-          <input
-            value={searchTerm}
-            onChange={(e)=>setSearchTerm(e.target.value)}
-            placeholder="Search by name or slug"
-            className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10"
-          />
-        </div>
-        <ul className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-          {(templates || [])
-            .filter((t) => {
-              const q = searchTerm.trim().toLowerCase();
-              if (!q) return true;
-              return (t.name || '').toLowerCase().includes(q) || (t.slug || '').toLowerCase().includes(q);
-            })
-            .map((t) => {
-            const youtubeId = extractYouTubeId(t.video || '');
-            const thumbnail = t.img || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : null);
-            return (
-              <li key={t.slug} className="rounded-2xl border border-white/10 bg-white/5 p-3 flex flex-col">
-                {t.video ? (
-                  <div className="h-28 w-full overflow-hidden rounded-xl mb-3 bg-zinc-900">
-                    <YouTubeVideoPlayer 
-                      videoUrl={t.video || ''}
-                      title={t.name}
-                      className="w-full h-full"
-                    />
-                  </div>
-                ) : thumbnail ? (
-                  <div className="h-28 w-full overflow-hidden rounded-xl mb-3 bg-zinc-900">
-                    <img src={thumbnail} alt={t.name} className="h-full w-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="h-28 w-full overflow-hidden rounded-xl mb-3 bg-zinc-800 flex items-center justify-center">
-                    <span className="text-xs text-zinc-500">No Thumbnail</span>
-                  </div>
-                )}
-              <div className="flex-1">
-                <p className="text-sm font-medium">{t.name}</p>
-                <p className="text-xs text-zinc-400">{t.slug}</p>
-              </div>
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={async () => {
-                    try {
-                      const supabase = getSupabaseBrowserClient();
-                      const { data } = await supabase
-                        .from('templates')
-                        .select('slug,name,subtitle,description,img,video,source_path,features,software,plugins,tags,category_id,subcategory_id,meta_title,meta_description')
-                        .eq('slug', t.slug)
-                        .maybeSingle();
-                      if (!data) return;
-                      setForm({
-                        slug: data.slug || '',
-                        name: data.name || '',
-                        subtitle: data.subtitle || '',
-                        description: data.description || '',
-                        img: data.img || '',
-                        video: data.video || '',
-                        source_path: data.source_path || '',
-                        features: Array.isArray(data.features) ? data.features.join(', ') : '',
-                        software: Array.isArray(data.software) ? data.software.join(', ') : '',
-                        plugins: Array.isArray(data.plugins) ? data.plugins.join(', ') : '',
-                        tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
-                        category_id: data.category_id || '',
-                        subcategory_id: data.subcategory_id || '',
-                        meta_title: data.meta_title || '',
-                        meta_description: data.meta_description || '',
-                      });
-                      setSeo(null);
-                      setIsEditing(true);
-                      setOriginalSlug(data.slug || null);
-                      setSlugManuallyEdited(false);
-                      setTab('add');
-                    } catch {}
-                  }}
-                  className="rounded-full border border-white/30 px-3 py-1 text-xs hover:bg-white/10"
-                >
-                  Edit
-                </button>
-                <button onClick={() => onDelete(t.slug)} className="rounded-full border border-red-400 text-red-200 px-3 py-1 text-xs hover:bg-red-500/10">Delete</button>
-              </div>
-              </li>
-            );
-          })}
-        </ul>
+          <div className="mb-6">
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by name or slug"
+              className="w-full px-4 py-3 rounded-xl bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+            />
+          </div>
+          <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {(templates || [])
+              .filter((t) => {
+                const q = searchTerm.trim().toLowerCase();
+                if (!q) return true;
+                return (t.name || '').toLowerCase().includes(q) || (t.slug || '').toLowerCase().includes(q);
+              })
+              .map((t) => {
+                const youtubeId = extractYouTubeId(t.video || '');
+                const thumbnail = t.img || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : null);
+                return (
+                  <li key={t.slug} className="rounded-2xl border border-zinc-200 bg-white p-4 flex flex-col shadow-sm hover:shadow-md transition-shadow">
+                    {t.video ? (
+                      <div className="aspect-video w-full overflow-hidden rounded-xl mb-4 bg-zinc-100 border border-zinc-100">
+                        <YouTubeVideoPlayer
+                          videoUrl={t.video || ''}
+                          title={t.name}
+                          className="w-full h-full"
+                        />
+                      </div>
+                    ) : thumbnail ? (
+                      <div className="aspect-video w-full overflow-hidden rounded-xl mb-4 bg-zinc-100 border border-zinc-100">
+                        <img src={thumbnail} alt={t.name} className="h-full w-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="aspect-video w-full overflow-hidden rounded-xl mb-4 bg-zinc-100 flex items-center justify-center border border-zinc-200">
+                        <span className="text-xs text-zinc-400 font-medium">No Thumbnail</span>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold text-zinc-900 truncate" title={t.name}>{t.name}</h3>
+                      <p className="text-xs text-zinc-500 truncate mt-0.5">{t.slug}</p>
+                    </div>
+                    <div className="mt-4 flex items-center gap-2">
+                      <button
+                        onClick={async () => {
+                          try {
+                            const supabase = getSupabaseBrowserClient();
+                            const { data } = await supabase
+                              .from('templates')
+                              .select('slug,name,subtitle,description,img,video,source_path,features,software,plugins,tags,category_id,subcategory_id,meta_title,meta_description')
+                              .eq('slug', t.slug)
+                              .maybeSingle();
+                            if (!data) return;
+                            setForm({
+                              slug: data.slug || '',
+                              name: data.name || '',
+                              subtitle: data.subtitle || '',
+                              description: data.description || '',
+                              img: data.img || '',
+                              video: data.video || '',
+                              source_path: data.source_path || '',
+                              features: Array.isArray(data.features) ? data.features.join(', ') : '',
+                              software: Array.isArray(data.software) ? data.software.join(', ') : '',
+                              plugins: Array.isArray(data.plugins) ? data.plugins.join(', ') : '',
+                              tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
+                              category_id: data.category_id || '',
+                              subcategory_id: data.subcategory_id || '',
+                              meta_title: data.meta_title || '',
+                              meta_description: data.meta_description || '',
+                            });
+                            setSeo(null);
+                            setIsEditing(true);
+                            setOriginalSlug(data.slug || null);
+                            setSlugManuallyEdited(false);
+                            setTab('add');
+                          } catch { }
+                        }}
+                        className="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button onClick={() => onDelete(t.slug)} className="rounded-lg border border-red-200 bg-red-50 text-red-600 px-3 py-2 text-xs font-medium hover:bg-red-100 transition-colors">Delete</button>
+                    </div>
+                  </li>
+                );
+              })}
+          </ul>
         </>
       )}
 
@@ -252,10 +262,10 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                   {
                     slug: form.slug.trim(), name: form.name.trim(), subtitle: form.subtitle.trim(), description: form.description.trim(),
                     img: null, video: form.video.trim() || null, source_path: form.source_path.trim() || null,
-                    features: form.features ? form.features.split(',').map(s=>s.trim()).filter(Boolean) : [],
-                    software: form.software ? form.software.split(',').map(s=>s.trim()).filter(Boolean) : [],
-                    plugins: form.plugins ? form.plugins.split(',').map(s=>s.trim()).filter(Boolean) : [],
-                    tags: form.tags ? form.tags.split(',').map(s=>s.trim()).filter(Boolean) : [],
+                    features: form.features ? form.features.split(',').map(s => s.trim()).filter(Boolean) : [],
+                    software: form.software ? form.software.split(',').map(s => s.trim()).filter(Boolean) : [],
+                    plugins: form.plugins ? form.plugins.split(',').map(s => s.trim()).filter(Boolean) : [],
+                    tags: form.tags ? form.tags.split(',').map(s => s.trim()).filter(Boolean) : [],
                     category_id: form.category_id || null,
                     subcategory_id: form.subcategory_id || null,
                     meta_title: form.meta_title.trim() || null,
@@ -267,28 +277,34 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               if (!res.ok) throw new Error('Create failed');
               await onCreated();
               setTab('list');
-              setForm({ slug:'', name:'', subtitle:'', description:'', img:'', video:'', source_path:'', features:'', software:'', plugins:'', tags:'', category_id: '', subcategory_id: '', meta_title: '', meta_description: '' });
+              setForm({ slug: '', name: '', subtitle: '', description: '', img: '', video: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', meta_title: '', meta_description: '' });
               setIsEditing(false);
               setOriginalSlug(null);
               setSlugManuallyEdited(false);
-            } catch {}
+            } catch { }
             finally { setCreating(false); }
           }}
-          className="grid gap-4 sm:grid-cols-2"
+          className="grid gap-6 sm:grid-cols-2 max-w-4xl"
         >
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-zinc-400">Name (Title) *</label>
-            <input value={form.name} onChange={(e)=>handleNameChange(e.target.value)} placeholder="name (title)" required className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Name (Title) *</label>
+            <input
+              value={form.name}
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="Template Name"
+              required
+              className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+            />
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-zinc-400">Slug *</label>
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Slug *</label>
             <div className="flex items-center gap-2">
-              <input 
-                value={form.slug} 
-                onChange={(e)=>handleSlugChange(e.target.value)} 
-                placeholder="slug (auto-generated)" 
-                required 
-                className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 disabled:opacity-60 disabled:cursor-not-allowed" 
+              <input
+                value={form.slug}
+                onChange={(e) => handleSlugChange(e.target.value)}
+                placeholder="slug-auto-generated"
+                required
+                className="flex-1 px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm disabled:bg-zinc-50 disabled:text-zinc-500 cursor-text disabled:cursor-not-allowed"
               />
               {!isEditing && (
                 <button
@@ -297,7 +313,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                     setSlugManuallyEdited(false);
                     setForm((f) => ({ ...f, slug: generateSlug(f.name) }));
                   }}
-                  className="rounded-full border border-white/30 px-3 py-2 text-xs hover:bg-white/10 whitespace-nowrap"
+                  className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-600 hover:bg-zinc-50 transition-colors shadow-sm whitespace-nowrap"
                   title="Regenerate slug from name"
                 >
                   Auto
@@ -306,12 +322,21 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-zinc-400">Subtitle</label>
-            <input value={form.subtitle} onChange={(e)=>setForm({...form, subtitle:e.target.value})} placeholder="subtitle" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Subtitle</label>
+            <input
+              value={form.subtitle}
+              onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
+              placeholder="Brief subtitle"
+              className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+            />
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-zinc-400">Category</label>
-            <select value={form.category_id} onChange={(e)=>setForm({...form, category_id:e.target.value})} className="px-3 py-2 rounded-lg bg-black/40 border border-white/10">
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Category</label>
+            <select
+              value={form.category_id}
+              onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+              className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm appearance-none"
+            >
               <option value="">Select Category</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -319,8 +344,13 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
             </select>
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-zinc-400">Subcategory</label>
-            <select value={form.subcategory_id} onChange={(e)=>setForm({...form, subcategory_id:e.target.value})} disabled={!form.category_id} className="px-3 py-2 rounded-lg bg-black/40 border border-white/10 disabled:opacity-60">
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Subcategory</label>
+            <select
+              value={form.subcategory_id}
+              onChange={(e) => setForm({ ...form, subcategory_id: e.target.value })}
+              disabled={!form.category_id}
+              className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm appearance-none disabled:bg-zinc-50 disabled:text-zinc-400"
+            >
               <option value="">Select Subcategory</option>
               {filteredSubcategories.map((sub) => (
                 <option key={sub.id} value={sub.id}>{sub.name}</option>
@@ -329,12 +359,17 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
           </div>
 
           <div className="flex flex-col gap-3 sm:col-span-2">
-            <label className="text-xs text-zinc-400">YouTube Video Link</label>
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">YouTube Video Link</label>
             <div className="flex items-center gap-2">
-              <input value={form.video} onChange={(e)=>setForm({...form, video:e.target.value})} placeholder="YouTube Video Link (e.g., https://www.youtube.com/watch?v=VIDEO_ID)" className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+              <input
+                value={form.video}
+                onChange={(e) => setForm({ ...form, video: e.target.value })}
+                placeholder="YouTube Video Link (e.g., https://www.youtube.com/watch?v=VIDEO_ID)"
+                className="flex-1 px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+              />
             </div>
             {videoPreviewUrl && (
-              <div className="aspect-video w-full max-w-md self-center overflow-hidden rounded-xl border border-white/10">
+              <div className="aspect-video w-full max-w-md self-center overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 shadow-sm relative z-0">
                 <iframe
                   src={videoPreviewUrl}
                   title={form.name || 'YouTube preview'}
@@ -344,102 +379,152 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                 />
               </div>
             )}
+            <p className="text-xs text-zinc-500">Enter a YouTube video URL. The video will be embedded as a preview. Image uploads are no longer supported.</p>
           </div>
-          <p className="text-xs text-zinc-500 sm:col-span-2">Enter a YouTube video URL. The video will be embedded as a preview. Image uploads are no longer supported.</p>
+
           <div className="flex flex-col gap-2 sm:col-span-2">
-            <label className="text-xs text-zinc-400">Source File (Private)</label>
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Source File (Private)</label>
             <div className="flex items-center gap-2">
-              <input 
-                value={form.source_path} 
-                onChange={(e)=>setForm({...form, source_path:e.target.value})} 
-                placeholder="Upload file or paste direct drive link (Google Drive, Dropbox, etc.)" 
-                className="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10" 
+              <input
+                value={form.source_path}
+                onChange={(e) => setForm({ ...form, source_path: e.target.value })}
+                placeholder="Upload file or paste direct drive link (Google Drive, Dropbox, etc.)"
+                className="flex-1 px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
               />
-              <button 
-                type="button" 
-                onClick={() => sourceInputRef.current?.click()} 
-                className="rounded-full border border-white/30 px-3 py-2 text-xs hover:bg-white/10 whitespace-nowrap"
+              <button
+                type="button"
+                onClick={() => sourceInputRef.current?.click()}
+                className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors shadow-sm whitespace-nowrap"
               >
                 Upload File
               </button>
-              <input ref={sourceInputRef} type="file" accept="application/zip,application/x-rar-compressed,.zip,.rar" hidden onChange={(e)=>{ const file=e.target.files?.[0]; if (file) uploadFile('source', file); }} />
+              <input ref={sourceInputRef} type="file" accept="application/zip,application/x-rar-compressed,.zip,.rar" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('source', file); }} />
             </div>
             <p className="text-xs text-zinc-500">You can either upload a zip/rar file or paste a direct download link (Google Drive shareable link, Dropbox link, etc.)</p>
           </div>
 
           <div className="flex flex-col gap-2 sm:col-span-2">
-            <label className="text-xs text-zinc-400">Description</label>
-            <textarea value={form.description} onChange={(e)=>setForm({...form, description:e.target.value})} placeholder="description" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Description</label>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Product description..."
+              rows={4}
+              className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+            />
           </div>
           <div className="flex flex-col gap-2 sm:col-span-2">
-            <label className="text-xs text-zinc-400">Meta Title (SEO)</label>
-            <input value={form.meta_title} onChange={(e)=>setForm({...form, meta_title:e.target.value})} placeholder="Meta Title (SEO)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Meta Title (SEO)</label>
+            <input
+              value={form.meta_title}
+              onChange={(e) => setForm({ ...form, meta_title: e.target.value })}
+              placeholder="SEO Title"
+              className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+            />
           </div>
           <div className="flex flex-col gap-2 sm:col-span-2">
-            <label className="text-xs text-zinc-400">Meta Description (SEO)</label>
-            <textarea value={form.meta_description} onChange={(e)=>setForm({...form, meta_description:e.target.value})} placeholder="Meta Description (SEO)" rows={3} className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
-          </div>
-          <div className="sm:col-span-2 flex items-center gap-3">
-            <button type="button" disabled={checkingSeo} onClick={async ()=>{
-              try {
-                setCheckingSeo(true);
-                const supabase = getSupabaseBrowserClient();
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session) return;
-                const payload = {
-                  name: form.name,
-                  subtitle: form.subtitle,
-                  description: form.description,
-                  slug: form.slug,
-                  tags: form.tags ? form.tags.split(',').map(s=>s.trim()).filter(Boolean) : [],
-                  features: form.features ? form.features.split(',').map(s=>s.trim()).filter(Boolean) : [],
-                };
-                const res = await fetch('/api/admin/seo/analyze', { method: 'POST', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify(payload) });
-                const json = await res.json();
-                if (res.ok && json.ok) setSeo(json.result);
-              } finally { setCheckingSeo(false); }
-            }} className="rounded-full border border-white/30 px-4 py-2 text-sm hover:bg-white/10">{checkingSeo ? 'Checking…' : 'Check SEO'}</button>
-            {seo && (
-              <div className="text-xs text-zinc-300">
-                <div>SEO Score: <span className="font-semibold text-white">{seo.score}</span></div>
-                <div className="mt-1">Suggest Title: <span className="text-white">{seo.title}</span></div>
-                {seo.subtitle && <div className="mt-1">Suggest Subtitle: <span className="text-white">{seo.subtitle}</span></div>}
-                <div className="mt-1">Suggest Meta Title: <span className="text-white">{seo.metaTitle || seo.title}</span></div>
-                <div className="mt-1">Suggest Meta Description: <span className="text-white">{seo.metaDescription || seo.description}</span></div>
-                <div className="mt-1">Suggest Slug: <span className="text-white">{seo.slug}</span></div>
-                {Array.isArray(seo.tags) && seo.tags.length > 0 && (
-                  <div className="mt-1">Suggest Tags: <span className="text-white">{seo.tags.join(', ')}</span></div>
-                )}
-                {Array.isArray(seo.features) && seo.features.length > 0 && (
-                  <div className="mt-1">Suggest Features: <span className="text-white">{seo.features.join(', ')}</span></div>
-                )}
-                <div className="mt-1 text-zinc-400">{seo.rationale}</div>
-              </div>
-            )}
-            {seo && (
-              <button type="button" onClick={()=>{ setForm(f=>({ ...f, /* keep original name & slug to preserve template identity */ name: f.name, slug: f.slug, subtitle: seo.subtitle || f.subtitle, description: seo.metaDescription || seo.description, tags: Array.isArray(seo.tags)? seo.tags.join(', '): f.tags, features: Array.isArray(seo.features)? seo.features.join(', '): f.features })); }} className="ml-auto rounded-full bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-zinc-200">Apply Suggestion</button>
-            )}
-          </div>
-          <div className="flex flex-col gap-2 sm:col-span-2">
-            <label className="text-xs text-zinc-400">Features (comma separated)</label>
-            <input value={form.features} onChange={(e)=>setForm({...form, features:e.target.value})} placeholder="features (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
-          </div>
-          <div className="flex flex-col gap-2 sm:col-span-2">
-            <label className="text-xs text-zinc-400">Software (comma separated)</label>
-            <input value={form.software} onChange={(e)=>setForm({...form, software:e.target.value})} placeholder="software (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
-          </div>
-          <div className="flex flex-col gap-2 sm:col-span-2">
-            <label className="text-xs text-zinc-400">Plugins (comma separated)</label>
-            <input value={form.plugins} onChange={(e)=>setForm({...form, plugins:e.target.value})} placeholder="plugins (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
-          </div>
-          <div className="flex flex-col gap-2 sm:col-span-2">
-            <label className="text-xs text-zinc-400">Tags (comma separated)</label>
-            <input value={form.tags} onChange={(e)=>setForm({...form, tags:e.target.value})} placeholder="tags (comma separated)" className="px-3 py-2 rounded-lg bg-black/40 border border-white/10" />
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Meta Description (SEO)</label>
+            <textarea
+              value={form.meta_description}
+              onChange={(e) => setForm({ ...form, meta_description: e.target.value })}
+              placeholder="SEO Description"
+              rows={2}
+              className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+            />
           </div>
 
-          <div className="sm:col-span-2 flex gap-3">
-            <button disabled={creating} className="rounded-full bg-white text-black px-5 py-2 text-sm font-semibold hover:bg-zinc-200">{creating ? (isEditing ? 'Saving…' : 'Creating…') : (isEditing ? 'Save Changes' : 'Create Product')}</button>
-            <button type="button" onClick={()=>{ setTab('list'); setIsEditing(false); setOriginalSlug(null); setSlugManuallyEdited(false); }} className="rounded-full border border-white/30 px-5 py-2 text-sm hover:bg-white/10">Cancel</button>
+          <div className="sm:col-span-2 bg-zinc-50 rounded-xl p-4 border border-zinc-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-zinc-900">SEO Helper</h3>
+              <button
+                type="button"
+                disabled={checkingSeo}
+                onClick={async () => {
+                  try {
+                    setCheckingSeo(true);
+                    const supabase = getSupabaseBrowserClient();
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (!session) return;
+                    const payload = {
+                      name: form.name,
+                      subtitle: form.subtitle,
+                      description: form.description,
+                      slug: form.slug,
+                      tags: form.tags ? form.tags.split(',').map(s => s.trim()).filter(Boolean) : [],
+                      features: form.features ? form.features.split(',').map(s => s.trim()).filter(Boolean) : [],
+                    };
+                    const res = await fetch('/api/admin/seo/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify(payload) });
+                    const json = await res.json();
+                    if (res.ok && json.ok) setSeo(json.result);
+                  } finally { setCheckingSeo(false); }
+                }}
+                className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-100 transition-colors shadow-sm font-medium"
+              >
+                {checkingSeo ? 'Checking...' : 'Check SEO Analysis'}
+              </button>
+            </div>
+
+            {seo && (
+              <div className="text-xs text-zinc-600 space-y-2">
+                <div>SEO Score: <span className={`font-bold ${seo.score >= 80 ? 'text-green-600' : seo.score >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>{seo.score}</span></div>
+                <div>Rationale: <span className="text-zinc-500 italic">{seo.rationale}</span></div>
+
+                <div className="grid gap-2 mt-4 pt-4 border-t border-zinc-200">
+                  <div className="font-semibold text-zinc-900">Suggestions:</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>Title: <span className="text-zinc-800">{seo.title}</span></div>
+                    <div>Meta Title: <span className="text-zinc-800">{seo.metaTitle || seo.title}</span></div>
+                    <div>Subtitle: <span className="text-zinc-800">{seo.subtitle}</span></div>
+                    <div>Meta Desc: <span className="text-zinc-800">{seo.metaDescription || seo.description}</span></div>
+                    <div>Slug: <span className="text-zinc-800">{seo.slug}</span></div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end mt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForm(f => ({
+                        ...f,
+                        /* keep original name & slug to preserve template identity unless needed */
+                        // Actually let's just keep name/slug manual per old logic, but apply others
+                        name: f.name,
+                        slug: f.slug,
+                        subtitle: seo.subtitle || f.subtitle,
+                        description: seo.metaDescription || seo.description,
+                        tags: Array.isArray(seo?.tags) ? seo?.tags.join(', ') : f.tags,
+                        features: Array.isArray(seo?.features) ? seo?.features.join(', ') : f.features
+                      }));
+                    }}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 shadow-sm"
+                  >
+                    Apply Suggestions
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Features (comma separated)</label>
+            <input value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} placeholder="e.g. 4K Resolution, No Plugins Required" className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" />
+          </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Software (comma separated)</label>
+            <input value={form.software} onChange={(e) => setForm({ ...form, software: e.target.value })} placeholder="e.g. After Effects 2024" className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" />
+          </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Plugins (comma separated)</label>
+            <input value={form.plugins} onChange={(e) => setForm({ ...form, plugins: e.target.value })} placeholder="e.g. Element 3D, Optical Flares" className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" />
+          </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Tags (comma separated)</label>
+            <input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="e.g. intro, logo reveal, corporate" className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" />
+          </div>
+
+          <div className="sm:col-span-2 flex gap-4 mt-4 pt-4 border-t border-zinc-200">
+            <button disabled={creating} className="rounded-lg bg-blue-600 text-white px-6 py-2.5 text-sm font-semibold hover:bg-blue-700 shadow-sm transition-all">{creating ? (isEditing ? 'Saving...' : 'Creating...') : (isEditing ? 'Save Changes' : 'Create Product')}</button>
+            <button type="button" onClick={() => { setTab('list'); setIsEditing(false); setOriginalSlug(null); setSlugManuallyEdited(false); }} className="rounded-lg border border-zinc-200 bg-white px-6 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-all shadow-sm">Cancel</button>
           </div>
         </form>
       )}
