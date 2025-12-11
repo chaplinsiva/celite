@@ -90,8 +90,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       const key = sourcePath.slice(R2_PREFIX.length);
       try {
         const buffer = await downloadFromR2(key);
+        // Convert Node Buffer to ArrayBuffer for the Fetch Response body type
+        const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
         const filename = path.basename(key) || `${slug}.zip`;
-        return new Response(buffer, {
+        // Cast to BodyInit to satisfy TypeScript (runtime accepts ArrayBuffer)
+        return new Response(arrayBuffer as any, {
           status: 200,
           headers: {
             'Content-Type': 'application/octet-stream',
