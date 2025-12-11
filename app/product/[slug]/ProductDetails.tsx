@@ -44,6 +44,21 @@ const getThumbnail = (item: Template | (Template & { source_path?: string | null
   return '/PNG1.png';
 };
 
+function resolvePreviewUrl(rawUrl: string): string {
+  if (!rawUrl) return '/PNG1.png';
+  const isDirect = rawUrl.startsWith('http://') || rawUrl.startsWith('https://');
+  if (isDirect) return rawUrl;
+  const R2_PREFIX = 'r2:';
+  if (rawUrl.startsWith(R2_PREFIX)) {
+    const base = process.env.NEXT_PUBLIC_R2_DIRECT_BASE_URL || process.env.R2_DIRECT_BASE_URL;
+    if (!base) return '/PNG1.png';
+    const trimmedBase = base.replace(/\/+$/, '');
+    const key = rawUrl.slice(R2_PREFIX.length).replace(/^\/+/, '');
+    return `${trimmedBase}/${key}`;
+  }
+  return '/PNG1.png';
+}
+
 export default function ProductDetails({ product, related, reviews, previews }: ProductDetailsProps) {
   const { user } = useAppContext();
   const { openLoginModal } = useLoginModal();
@@ -466,9 +481,46 @@ export default function ProductDetails({ product, related, reviews, previews }: 
           {/* LEFT COLUMN - CONTENT (66%) */}
           <div className="w-full lg:w-2/3">
 
-            {/* Video Player */}
+            {/* Primary Preview Player */}
             <div className="w-full aspect-video rounded-xl overflow-hidden bg-black shadow-lg mb-8 relative group">
-              {product.video ? (
+              {previews && previews.length > 0 ? (
+                (() => {
+                  const primary = previews[0];
+                  if (primary.kind === 'youtube') {
+                    return (
+                      <YouTubeVideoPlayer
+                        videoUrl={primary.url}
+                        title={primary.title || product.name}
+                        className="w-full h-full"
+                        showFullscreen={true}
+                      />
+                    );
+                  }
+                  const mediaUrl = resolvePreviewUrl(primary.url);
+                  if (primary.kind === 'video') {
+                    return (
+                      <video
+                        src={mediaUrl}
+                        controls
+                        className="w-full h-full object-cover"
+                      />
+                    );
+                  }
+                  // image
+                  return (
+                    <div className="w-full h-full flex items-center justify-center bg-zinc-100">
+                      <img
+                        src={mediaUrl}
+                        alt={primary.title || product.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = getThumbnail(product);
+                        }}
+                      />
+                    </div>
+                  );
+                })()
+              ) : product.video ? (
                 <YouTubeVideoPlayer
                   videoUrl={product.video}
                   title={product.name}
@@ -486,11 +538,11 @@ export default function ProductDetails({ product, related, reviews, previews }: 
             </div>
 
             {/* Additional Preview Gallery */}
-            {previews && previews.length > 0 && (
+            {previews && previews.length > 1 && (
               <div className="mb-8">
                 <h2 className="text-xl font-bold text-zinc-900 mb-3">Preview Gallery</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {previews.map((p) => {
+                  {previews.slice(1).map((p) => {
                     const key = p.id;
                     if (p.kind === 'youtube') {
                       const embed = getYouTubeEmbedUrl(p.url);
@@ -520,10 +572,7 @@ export default function ProductDetails({ product, related, reviews, previews }: 
 
                     const isVideo = p.kind === 'video';
                     const isImage = p.kind === 'image';
-
-                    // For now we treat url as either direct http(s) or storage path (e.g. r2:)
-                    const isDirect = p.url.startsWith('http://') || p.url.startsWith('https://');
-                    const displayUrl = isDirect ? p.url : '/PNG1.png';
+                    const displayUrl = resolvePreviewUrl(p.url);
 
                     return (
                       <div key={key} className="rounded-xl overflow-hidden border border-zinc-200 bg-zinc-900/80">

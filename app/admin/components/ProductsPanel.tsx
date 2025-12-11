@@ -436,7 +436,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
           </div>
 
           <div className="flex flex-col gap-3 sm:col-span-2">
-            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Main Preview (YouTube)</label>
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">YouTube Preview (Optional)</label>
             <div className="flex items-center gap-2">
               <input
                 value={form.video}
@@ -456,7 +456,9 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                 />
               </div>
             )}
-            <p className="text-xs text-zinc-500">Enter a primary YouTube preview URL. Additional thumbnails/videos can be added below.</p>
+            <p className="text-xs text-zinc-500">
+              Optional YouTube preview. The main preview on the product page will use the first item in the Additional Previews gallery below.
+            </p>
           </div>
 
           {/* Additional Previews */}
