@@ -289,7 +289,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               const newSlug = form.slug.trim().toLowerCase();
               const supabase = getSupabaseBrowserClient();
               
-              // If editing and slug changed, we need to delete old and create new (since slug is primary key)
+              // If editing and slug changed, we need to update downloads and then delete old and create new (since slug is primary key)
               if (isEditing && originalSlug && newSlug !== originalSlug) {
                 // First, get the old template data
                 const { data: oldTemplate } = await supabase
@@ -308,6 +308,18 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                   
                   if (slugExists) {
                     throw new Error(`Slug "${newSlug}" already exists. Please choose a different slug.`);
+                  }
+                  
+                  // Update all downloads that reference the old slug to the new slug
+                  // This preserves download history when slug changes
+                  const { error: updateDownloadsError } = await supabase
+                    .from('downloads')
+                    .update({ template_slug: newSlug })
+                    .eq('template_slug', originalSlug);
+                  
+                  if (updateDownloadsError) {
+                    console.error('Failed to update downloads:', updateDownloadsError);
+                    // Continue anyway - the foreign key constraint should handle this
                   }
                   
                   // Delete the old template

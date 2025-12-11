@@ -21,7 +21,7 @@ export default function CreatorFollowButton({
   const [loading, setLoading] = useState(false);
 
   // Do not show follow button for the owner
-  if (user && user.id === shopOwnerId) {
+  if (user && (user as any).id === shopOwnerId) {
     return (
       <div className="text-xs text-zinc-500">
         {followers} {followers === 1 ? "Follower" : "Followers"}
@@ -41,7 +41,7 @@ export default function CreatorFollowButton({
           .from("creator_followers")
           .select("id")
           .eq("creator_shop_id", shopId)
-          .eq("user_id", user.id)
+          .eq("user_id", (user as any).id)
           .maybeSingle();
         setIsFollowing(!!data);
       } catch {
@@ -64,13 +64,13 @@ export default function CreatorFollowButton({
           .from("creator_followers")
           .delete()
           .eq("creator_shop_id", shopId)
-          .eq("user_id", user.id);
+          .eq("user_id", (user as any).id);
         setIsFollowing(false);
         setFollowers((f) => Math.max(0, f - 1));
       } else {
         await supabase.from("creator_followers").insert({
           creator_shop_id: shopId,
-          user_id: user.id,
+          user_id: (user as any).id,
         });
         setIsFollowing(true);
         setFollowers((f) => f + 1);

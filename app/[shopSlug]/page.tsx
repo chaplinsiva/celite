@@ -136,13 +136,15 @@ export default async function CreatorShopPage(props: PageProps) {
               {shop.description}
             </p>
           )}
-          <div className="mt-4">
-            <CreatorFollowButton
-              shopId={shop.id}
-              shopOwnerId={shop.user_id}
-              initialFollowers={followers}
-            />
-          </div>
+          {shop.user_id && (
+            <div className="mt-4">
+              <CreatorFollowButton
+                shopId={shop.id}
+                shopOwnerId={shop.user_id}
+                initialFollowers={followers}
+              />
+            </div>
+          )}
         </section>
 
         {/* Templates by this creator */}
