@@ -20,15 +20,7 @@ export default function CreatorFollowButton({
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Do not show follow button for the owner
-  if (user && (user as any).id === shopOwnerId) {
-    return (
-      <div className="text-xs text-zinc-500">
-        {followers} {followers === 1 ? "Follower" : "Followers"}
-      </div>
-    );
-  }
-
+  // All hooks must be called before any conditional returns
   useEffect(() => {
     const check = async () => {
       if (!user) {
@@ -50,6 +42,15 @@ export default function CreatorFollowButton({
     };
     check();
   }, [user, shopId]);
+
+  // Do not show follow button for the owner (after all hooks)
+  if (user && (user as any).id === shopOwnerId) {
+    return (
+      <div className="text-xs text-zinc-500">
+        {followers} {followers === 1 ? "Follower" : "Followers"}
+      </div>
+    );
+  }
 
   const toggleFollow = async () => {
     if (!user) {
