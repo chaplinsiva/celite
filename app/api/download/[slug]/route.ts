@@ -77,42 +77,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       }
     }
 
-    // Direct URL (Google Drive, Dropbox, etc.)
+    // Check if source_path is a direct URL (Google Drive, Dropbox, etc.)
     const isDirectUrl = sourcePath.startsWith('http://') || sourcePath.startsWith('https://');
+    
     if (isDirectUrl) {
+      // For direct URLs, return JSON with redirect URL for client to handle
       return NextResponse.json({ ok: true, redirect: true, url: sourcePath });
     }
 
-    // Cloudflare R2 path (prefixed with r2:)
-    const R2_PREFIX = 'r2:';
-    if (sourcePath.startsWith(R2_PREFIX)) {
-      const key = sourcePath.slice(R2_PREFIX.length);
-
-      // Always use redirect-style download for R2, using a public base URL:
-      // 1) Use env-configured base if present
-      // 2) Fallback to known public R2 endpoint (from your earlier config)
-      const envBase =
-        process.env.R2_DIRECT_BASE_URL ||
-        process.env.NEXT_PUBLIC_R2_DIRECT_BASE_URL ||
-        null;
-      const defaultBase = 'https://865ce9a5340c7969451a0f1978e34696.r2.cloudflarestorage.com/celite-templates';
-      const redirectBase = envBase || defaultBase;
-
-      if (!redirectBase) {
-        console.error('R2 redirect attempted but no public base URL is configured.');
-        return NextResponse.json(
-          { ok: false, error: 'R2 public base URL is not configured on the server.' },
-          { status: 500 },
-        );
-      }
-
-      const trimmedBase = redirectBase.replace(/\/+$/, '');
-      const trimmedKey = key.replace(/^\/+/, '');
-      const publicUrl = `${trimmedBase}/${trimmedKey}`;
-      return NextResponse.json({ ok: true, redirect: true, url: publicUrl });
-    }
-
-    // Supabase Storage (legacy) path
+    // For file paths in storage, download from Supabase storage
     const { data: fileData, error: dlErr } = await admin
       .storage
       .from('templatesource')

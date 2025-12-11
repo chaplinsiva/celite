@@ -19,19 +19,10 @@ interface Review {
   date: string;
 }
 
-interface TemplatePreview {
-  id: string;
-  kind: 'image' | 'video' | 'youtube';
-  title: string | null;
-  url: string;
-  sort_order: number;
-}
-
 interface ProductDetailsProps {
   product: Template & { source_path?: string | null };
   related: Template[];
   reviews: Review[];
-  previews: TemplatePreview[];
 }
 
 const getThumbnail = (item: Template | (Template & { source_path?: string | null })) => {
@@ -44,7 +35,7 @@ const getThumbnail = (item: Template | (Template & { source_path?: string | null
   return '/PNG1.png';
 };
 
-export default function ProductDetails({ product, related, reviews, previews }: ProductDetailsProps) {
+export default function ProductDetails({ product, related, reviews }: ProductDetailsProps) {
   const { user } = useAppContext();
   const { openLoginModal } = useLoginModal();
   const router = useRouter();
@@ -435,23 +426,6 @@ export default function ProductDetails({ product, related, reviews, previews }: 
     }
   };
 
-  // Determine hero preview and gallery items
-  const hasYouTubeHero = !!product.video;
-  const heroVideoPreview = !hasYouTubeHero
-    ? previews.find((p) => p.kind === 'video' && p.url)
-    : undefined;
-  const heroYouTubePreview = !hasYouTubeHero && !heroVideoPreview
-    ? previews.find((p) => p.kind === 'youtube' && p.url)
-    : undefined;
-  const heroImagePreview = !hasYouTubeHero && !heroVideoPreview && !heroYouTubePreview
-    ? previews.find((p) => p.kind === 'image' && p.url)
-    : undefined;
-  const heroPreview = heroVideoPreview || heroYouTubePreview || heroImagePreview || null;
-
-  const galleryPreviews = heroPreview
-    ? previews.filter((p) => p.id !== heroPreview.id)
-    : previews;
-
   return (
     <main className="bg-white min-h-screen pb-20 pt-20 sm:pt-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -483,7 +457,7 @@ export default function ProductDetails({ product, related, reviews, previews }: 
           {/* LEFT COLUMN - CONTENT (66%) */}
           <div className="w-full lg:w-2/3">
 
-            {/* Primary Preview Player */}
+            {/* Video Player */}
             <div className="w-full aspect-video rounded-xl overflow-hidden bg-black shadow-lg mb-8 relative group">
               {product.video ? (
                 <YouTubeVideoPlayer
@@ -492,45 +466,6 @@ export default function ProductDetails({ product, related, reviews, previews }: 
                   className="w-full h-full"
                   showFullscreen={true}
                 />
-              ) : heroPreview && heroPreview.url ? (
-                heroPreview.kind === 'youtube' ? (
-                  <YouTubeVideoPlayer
-                    videoUrl={heroPreview.url}
-                    title={heroPreview.title || product.name}
-                    className="w-full h-full"
-                    showFullscreen={true}
-                  />
-                ) : heroPreview.kind === 'video' ? (
-                  <video
-                    src={heroPreview.url}
-                    muted
-                    loop
-                    playsInline
-                    poster={previews.find((p) => p.kind === 'image')?.url || getThumbnail(product)}
-                    className="w-full h-full object-cover"
-                    onMouseEnter={(e) => {
-                      e.currentTarget.currentTime = 0;
-                      e.currentTarget.play();
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.pause();
-                      try {
-                        e.currentTarget.load(); // reset to poster frame
-                      } catch {}
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-zinc-100">
-                    <img
-                      src={heroPreview.url || getThumbnail(product)}
-                      alt={heroPreview.title || product.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = getThumbnail(product);
-                      }}
-                    />
-                  </div>
-                )
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-zinc-100">
                   <img src={getThumbnail(product)} alt={product.name} className="w-full h-full object-cover" />
@@ -540,73 +475,6 @@ export default function ProductDetails({ product, related, reviews, previews }: 
                 </div>
               )}
             </div>
-
-            {/* Additional Preview Gallery */}
-            {galleryPreviews && galleryPreviews.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-xl font-bold text-zinc-900 mb-3">Preview Gallery</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {galleryPreviews.map((p) => {
-                    const key = p.id;
-                    if (p.kind === 'youtube') {
-                      const embed = getYouTubeEmbedUrl(p.url);
-                      return (
-                        <div key={key} className="rounded-xl overflow-hidden border border-zinc-200 bg-zinc-900/80">
-                          {embed ? (
-                            <iframe
-                              src={embed}
-                              title={p.title || product.name}
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                              allowFullScreen
-                              className="w-full aspect-video"
-                            />
-                          ) : (
-                            <div className="w-full aspect-video flex items-center justify-center text-xs text-zinc-400">
-                              Invalid YouTube URL
-                            </div>
-                          )}
-                          {p.title && (
-                            <div className="px-3 py-2 text-xs text-zinc-100 bg-zinc-900/70">
-                              {p.title}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }
-
-                    const isVideo = p.kind === 'video';
-                    const isImage = p.kind === 'image';
-                    const displayUrl = p.url;
-
-                    return (
-                      <div key={key} className="rounded-xl overflow-hidden border border-zinc-200 bg-zinc-900/80">
-                        {isVideo ? (
-                          <video
-                            src={displayUrl}
-                            controls
-                            className="w-full aspect-video"
-                          />
-                        ) : isImage ? (
-                          <img
-                            src={displayUrl}
-                            alt={p.title || product.name}
-                            className="w-full aspect-video object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = '/PNG1.png';
-                            }}
-                          />
-                        ) : null}
-                        {p.title && (
-                          <div className="px-3 py-2 text-xs text-zinc-100 bg-zinc-900/70">
-                            {p.title}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* Mobile Subscription Card (Hidden on Desktop) */}
             <SubscriptionCard

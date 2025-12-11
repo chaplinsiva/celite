@@ -39,7 +39,6 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   const [form, setForm] = useState({
     slug: '', name: '', subtitle: '', description: '', img: '', video: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', meta_title: '', meta_description: '',
   });
-  const [previews, setPreviews] = useState<Array<{ id?: string; kind: 'image' | 'video' | 'youtube'; title?: string; url: string; sort_order?: number }>>([]);
   const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [subcategories, setSubcategories] = useState<Array<{ id: string; category_id: string; name: string; slug: string }>>([]);
   const [filteredSubcategories, setFilteredSubcategories] = useState<Array<{ id: string; category_id: string; name: string; slug: string }>>([]);
@@ -49,8 +48,6 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   const [originalSlug, setOriginalSlug] = useState<string | null>(null);
 
   const sourceInputRef = useRef<HTMLInputElement | null>(null);
-  const thumbInputRef = useRef<HTMLInputElement | null>(null);
-  const videoInputRef = useRef<HTMLInputElement | null>(null);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
 
   const videoPreviewUrl = getYouTubeEmbedUrl(form.video);
@@ -127,7 +124,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
     }
   }, [form.category_id, subcategories]);
 
-  const uploadFile = async (kind: 'source' | 'thumbnail' | 'video', file: File, extra?: { previewIndex?: number }) => {
+  const uploadFile = async (kind: 'source', file: File) => {
     const supabase = getSupabaseBrowserClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
@@ -135,46 +132,12 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
     fd.append('file', file);
     fd.append('kind', kind);
     if (form.slug) fd.append('slug', form.slug);
-    if (form.category_id) fd.append('category_id', form.category_id);
-    if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
     const res = await fetch('/api/admin/upload-file', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: fd });
     const json = await res.json();
     if (json.ok) {
-      if (kind === 'source' && json.path) {
-        setForm((f) => ({ ...f, source_path: json.path }));
-      }
-      if ((kind === 'thumbnail' || kind === 'video') && json.path && extra?.previewIndex != null) {
-        setPreviews(prev =>
-          prev.map((p, idx) =>
-            idx === extra.previewIndex ? { ...p, url: json.path } : p
-          ),
-        );
-      }
+      if (kind === 'source' && json.path) setForm((f) => ({ ...f, source_path: json.path }));
     }
   };
-
-  // Helper to load previews when editing
-  const loadPreviews = async (slug: string) => {
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const res = await fetch(`/api/admin/template-previews?template_slug=${encodeURIComponent(slug)}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const json = await res.json();
-      if (json.ok && Array.isArray(json.previews)) {
-        setPreviews(json.previews);
-      } else {
-        setPreviews([]);
-      }
-    } catch {
-      setPreviews([]);
-    }
-  };
-
-  const primaryPreview = previews[0] || null;
-  const galleryPreviews = previews.slice(1);
 
   return (
     <div className="space-y-6">
@@ -267,7 +230,6 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                               meta_title: data.meta_title || '',
                               meta_description: data.meta_description || '',
                             });
-                            await loadPreviews(data.slug);
                             setSeo(null);
                             setIsEditing(true);
                             setOriginalSlug(data.slug || null);
@@ -313,51 +275,9 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               };
               const res = await fetch('/api/admin/seed-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
               if (!res.ok) throw new Error('Create failed');
-              const supabase = getSupabaseBrowserClient();
-              const { data: { session } } = await supabase.auth.getSession();
-              // Save previews for this template
-              if (session && form.slug) {
-                const baseSlug = form.slug.trim();
-                const existingRes = await fetch(`/api/admin/template-previews?template_slug=${encodeURIComponent(baseSlug)}`, {
-                  headers: { Authorization: `Bearer ${session.access_token}` },
-                });
-                const existingJson = await existingRes.json();
-                const existingIds: string[] = (existingJson.ok && Array.isArray(existingJson.previews))
-                  ? existingJson.previews.map((p: any) => p.id)
-                  : [];
-
-                // Delete removed previews
-                for (const id of existingIds) {
-                  if (!previews.find(p => p.id === id)) {
-                    await fetch(`/api/admin/template-previews?id=${encodeURIComponent(id)}`, {
-                      method: 'DELETE',
-                      headers: { Authorization: `Bearer ${session.access_token}` },
-                    });
-                  }
-                }
-
-                // Upsert current previews
-                for (let i = 0; i < previews.length; i++) {
-                  const p = previews[i];
-                  if (!p.url) continue;
-                  await fetch('/api/admin/template-previews', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-                    body: JSON.stringify({
-                      id: p.id,
-                      template_slug: baseSlug,
-                      kind: p.kind,
-                      title: p.title,
-                      url: p.url,
-                      sort_order: i,
-                    }),
-                  });
-                }
-              }
               await onCreated();
               setTab('list');
               setForm({ slug: '', name: '', subtitle: '', description: '', img: '', video: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', meta_title: '', meta_description: '' });
-              setPreviews([]);
               setIsEditing(false);
               setOriginalSlug(null);
               setSlugManuallyEdited(false);
@@ -439,7 +359,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
           </div>
 
           <div className="flex flex-col gap-3 sm:col-span-2">
-            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">YouTube Preview (Optional)</label>
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">YouTube Video Link</label>
             <div className="flex items-center gap-2">
               <input
                 value={form.video}
@@ -459,260 +379,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                 />
               </div>
             )}
-            <p className="text-xs text-zinc-500">
-              Optional YouTube preview. The main preview on the product page will use the Primary Manual Preview below, or fall back to this YouTube link if no primary is set.
-            </p>
-          </div>
-
-          {/* Primary Manual Preview */}
-          <div className="flex flex-col gap-3 sm:col-span-2">
-            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Primary Manual Preview</label>
-            <p className="text-xs text-zinc-500 mb-1">
-              This controls the main image/video on the product page (thumbnail or video). Leave empty to fall back to YouTube or the default image.
-            </p>
-            <div className="space-y-3">
-              {primaryPreview ? (
-                (() => {
-                  const p = primaryPreview;
-                  const isYoutube = p.kind === 'youtube';
-                  return (
-                    <div className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-3 bg-white">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <select
-                          value={p.kind}
-                          onChange={(e) => {
-                            const kind = e.target.value as 'image' | 'video' | 'youtube';
-                            setPreviews(prev => {
-                              if (prev.length === 0) return [{ kind, url: '' }];
-                              const next = [...prev];
-                              next[0] = { ...next[0], kind };
-                              return next;
-                            });
-                          }}
-                          className="px-3 py-1 text-xs rounded-md border border-zinc-200 bg-zinc-50"
-                        >
-                          <option value="image">Image (thumbnail)</option>
-                          <option value="video">Video file</option>
-                          <option value="youtube">YouTube link</option>
-                        </select>
-                        <input
-                          value={p.title || ''}
-                          onChange={(e) =>
-                            setPreviews(prev => {
-                              if (prev.length === 0) return [{ kind: 'image', url: '', title: e.target.value }];
-                              const next = [...prev];
-                              next[0] = { ...next[0], title: e.target.value };
-                              return next;
-                            })
-                          }
-                          placeholder="Optional title"
-                          className="flex-1 min-w-[120px] px-3 py-1 rounded-md border border-zinc-200 text-xs"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setPreviews(prev => prev.slice(1))}
-                          className="px-2 py-1 text-xs rounded-md border border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
-                        >
-                          Remove Primary
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          value={p.url}
-                          onChange={(e) =>
-                            setPreviews(prev => {
-                              if (prev.length === 0) return [{ kind: 'image', url: e.target.value }];
-                              const next = [...prev];
-                              next[0] = { ...next[0], url: e.target.value };
-                              return next;
-                            })
-                          }
-                          placeholder={
-                            isYoutube
-                              ? 'YouTube link'
-                              : 'Direct URL or will be filled when you upload a file'
-                          }
-                          className="flex-1 px-3 py-2 rounded-md border border-zinc-200 text-xs"
-                        />
-                        {!isYoutube && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const ref = p.kind === 'image' ? thumbInputRef : videoInputRef;
-                              if (ref.current) {
-                                (ref.current as any).dataset.index = '0';
-                                ref.current.click();
-                              }
-                            }}
-                            className="px-3 py-2 text-xs rounded-md border border-zinc-200 bg-white hover:bg-zinc-50"
-                          >
-                            Upload
-                          </button>
-                        )}
-                      </div>
-                      {isYoutube && p.url && getYouTubeEmbedUrl(p.url) && (
-                        <div className="aspect-video w-full max-w-md overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 shadow-sm">
-                          <iframe
-                            src={getYouTubeEmbedUrl(p.url) || ''}
-                            title={p.title || form.name || 'Primary Preview'}
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                            allowFullScreen
-                            className="h-full w-full"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setPreviews(prev => [{ kind: 'image', url: '' }, ...prev])}
-                  className="px-3 py-2 text-xs rounded-md border border-dashed border-zinc-300 text-zinc-600 hover:bg-zinc-50"
-                >
-                  + Set Primary Preview
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Additional Previews */}
-          <div className="flex flex-col gap-3 sm:col-span-2">
-            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Additional Previews</label>
-            <p className="text-xs text-zinc-500 mb-1">
-              Add extra thumbnails or videos (either YouTube links or uploaded files). These will show as a preview gallery on the product page.
-            </p>
-            <div className="space-y-3">
-              {galleryPreviews.map((p, idx) => {
-                const absoluteIndex = idx + 1; // offset by primary
-                const isYoutube = p.kind === 'youtube';
-                return (
-                  <div key={p.id || absoluteIndex} className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-3 bg-white">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <select
-                        value={p.kind}
-                        onChange={(e) => {
-                          const kind = e.target.value as 'image' | 'video' | 'youtube';
-                          setPreviews(prev =>
-                            prev.map((row, i) => i === absoluteIndex ? { ...row, kind } : row),
-                          );
-                        }}
-                        className="px-3 py-1 text-xs rounded-md border border-zinc-200 bg-zinc-50"
-                      >
-                        <option value="image">Image (thumbnail)</option>
-                        <option value="video">Video file</option>
-                        <option value="youtube">YouTube link</option>
-                      </select>
-                      <input
-                        value={p.title || ''}
-                        onChange={(e) =>
-                          setPreviews(prev =>
-                            prev.map((row, i) => i === absoluteIndex ? { ...row, title: e.target.value } : row),
-                          )
-                        }
-                        placeholder="Optional title"
-                        className="flex-1 min-w-[120px] px-3 py-1 rounded-md border border-zinc-200 text-xs"
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setPreviews(prev => prev.filter((_, i) => i !== absoluteIndex))
-                        }
-                        className="px-2 py-1 text-xs rounded-md border border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        value={p.url}
-                        onChange={(e) =>
-                          setPreviews(prev =>
-                            prev.map((row, i) => i === absoluteIndex ? { ...row, url: e.target.value } : row),
-                          )
-                        }
-                        placeholder={
-                          isYoutube
-                            ? 'YouTube link'
-                            : 'Direct URL or will be filled when you upload a file'
-                        }
-                        className="flex-1 px-3 py-2 rounded-md border border-zinc-200 text-xs"
-                      />
-                      {!isYoutube && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const ref = p.kind === 'image' ? thumbInputRef : videoInputRef;
-                            if (ref.current) {
-                              (ref.current as any).dataset.index = String(absoluteIndex);
-                              ref.current.click();
-                            }
-                          }}
-                          className="px-3 py-2 text-xs rounded-md border border-zinc-200 bg-white hover:bg-zinc-50"
-                        >
-                          Upload
-                        </button>
-                      )}
-                    </div>
-                    {isYoutube && p.url && getYouTubeEmbedUrl(p.url) && (
-                      <div className="aspect-video w-full max-w-md overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 shadow-sm">
-                        <iframe
-                          src={getYouTubeEmbedUrl(p.url) || ''}
-                          title={p.title || form.name || 'Preview'}
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                          allowFullScreen
-                          className="h-full w-full"
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              <button
-                type="button"
-                onClick={() =>
-                  setPreviews(prev => [...prev, { kind: 'image', url: '' }])
-                }
-                className="px-3 py-2 text-xs rounded-md border border-dashed border-zinc-300 text-zinc-600 hover:bg-zinc-50"
-              >
-                + Add Preview
-              </button>
-            </div>
-            {/* Hidden file inputs for previews */}
-            <input
-              ref={thumbInputRef}
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                const idxStr = (thumbInputRef.current as any)?.dataset.index;
-                const index = idxStr ? parseInt(idxStr, 10) : -1;
-                if (file && index >= 0) {
-                  uploadFile('thumbnail', file, { previewIndex: index });
-                }
-                if (thumbInputRef.current) {
-                  thumbInputRef.current.value = '';
-                }
-              }}
-            />
-            <input
-              ref={videoInputRef}
-              type="file"
-              accept="video/*"
-              hidden
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                const idxStr = (videoInputRef.current as any)?.dataset.index;
-                const index = idxStr ? parseInt(idxStr, 10) : -1;
-                if (file && index >= 0) {
-                  uploadFile('video', file, { previewIndex: index });
-                }
-                if (videoInputRef.current) {
-                  videoInputRef.current.value = '';
-                }
-              }}
-            />
+            <p className="text-xs text-zinc-500">Enter a YouTube video URL. The video will be embedded as a preview. Image uploads are no longer supported.</p>
           </div>
 
           <div className="flex flex-col gap-2 sm:col-span-2">
@@ -721,7 +388,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               <input
                 value={form.source_path}
                 onChange={(e) => setForm({ ...form, source_path: e.target.value })}
-                placeholder="Upload file (stored in R2) or paste a direct download URL"
+                placeholder="Upload file or paste direct drive link (Google Drive, Dropbox, etc.)"
                 className="flex-1 px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
               />
               <button
@@ -733,7 +400,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               </button>
               <input ref={sourceInputRef} type="file" accept="application/zip,application/x-rar-compressed,.zip,.rar" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('source', file); }} />
             </div>
-            <p className="text-xs text-zinc-500">You can either upload a zip/rar file (saved in Cloudflare R2) or paste a direct download link.</p>
+            <p className="text-xs text-zinc-500">You can either upload a zip/rar file or paste a direct download link (Google Drive shareable link, Dropbox link, etc.)</p>
           </div>
 
           <div className="flex flex-col gap-2 sm:col-span-2">
