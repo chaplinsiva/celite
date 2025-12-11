@@ -286,10 +286,45 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
             if (creating) return;
             setCreating(true);
             try {
+              const newSlug = form.slug.trim().toLowerCase();
+              const supabase = getSupabaseBrowserClient();
+              
+              // If editing and slug changed, we need to delete old and create new (since slug is primary key)
+              if (isEditing && originalSlug && newSlug !== originalSlug) {
+                // First, get the old template data
+                const { data: oldTemplate } = await supabase
+                  .from('templates')
+                  .select('*')
+                  .eq('slug', originalSlug)
+                  .maybeSingle();
+                
+                if (oldTemplate) {
+                  // Check if new slug already exists
+                  const { data: slugExists } = await supabase
+                    .from('templates')
+                    .select('slug')
+                    .eq('slug', newSlug)
+                    .maybeSingle();
+                  
+                  if (slugExists) {
+                    throw new Error(`Slug "${newSlug}" already exists. Please choose a different slug.`);
+                  }
+                  
+                  // Delete the old template
+                  const { error: deleteError } = await supabase
+                    .from('templates')
+                    .delete()
+                    .eq('slug', originalSlug);
+                  
+                  if (deleteError) throw deleteError;
+                }
+              }
+              
+              // Create/update template with new slug
               const payload = {
                 templates: [
                   {
-                    slug: form.slug.trim(), name: form.name.trim(), subtitle: form.subtitle.trim(), description: form.description.trim(),
+                    slug: newSlug, name: form.name.trim(), subtitle: form.subtitle.trim(), description: form.description.trim(),
                     img: null, video: form.video.trim() || null, source_path: form.source_path.trim() || null,
                     features: form.features ? form.features.split(',').map(s => s.trim()).filter(Boolean) : [],
                     software: form.software ? form.software.split(',').map(s => s.trim()).filter(Boolean) : [],
@@ -303,14 +338,19 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                 ]
               };
               const res = await fetch('/api/admin/seed-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-              if (!res.ok) throw new Error('Create failed');
+              if (!res.ok) {
+                const json = await res.json();
+                throw new Error(json.error || 'Create/update failed');
+              }
               await onCreated();
               setTab('list');
               setForm({ slug: '', name: '', subtitle: '', description: '', img: '', video: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', meta_title: '', meta_description: '' });
               setIsEditing(false);
               setOriginalSlug(null);
               setSlugManuallyEdited(false);
-            } catch { }
+            } catch (err: any) {
+              alert(err?.message || 'Failed to save template');
+            }
             finally { setCreating(false); }
           }}
           className="grid gap-6 sm:grid-cols-2 max-w-4xl"
@@ -333,7 +373,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                 onChange={(e) => handleSlugChange(e.target.value)}
                 placeholder="slug-auto-generated"
                 required
-                className="flex-1 px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm disabled:bg-zinc-50 disabled:text-zinc-500 cursor-text disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
               />
               {!isEditing && (
                 <button

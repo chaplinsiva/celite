@@ -280,28 +280,58 @@ export async function POST(req: Request) {
     }
 
     const rawName: string = (input.name || '').toString().trim();
-    const rawSlug: string = (input.slug || '').toString().trim().toLowerCase();
-    if (!rawName || !rawSlug) {
-      return NextResponse.json({ ok: false, error: 'Template name and slug are required' }, { status: 400 });
+    let rawSlug: string = (input.slug || '').toString().trim().toLowerCase();
+    if (!rawName) {
+      return NextResponse.json({ ok: false, error: 'Template name is required' }, { status: 400 });
     }
 
-    // Ensure slug uniqueness: if an existing template uses this slug and is not ours, block
-    const { data: existing, error: existingErr } = await admin
-      .from('templates')
-      .select('slug, creator_shop_id')
-      .eq('slug', rawSlug)
-      .maybeSingle();
-
-    if (existingErr) {
-      return NextResponse.json({ ok: false, error: existingErr.message }, { status: 500 });
+    // Generate slug from name if not provided
+    if (!rawSlug) {
+      rawSlug = rawName
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '');
     }
 
-    if (existing && existing.creator_shop_id && existing.creator_shop_id !== shop.id) {
-      return NextResponse.json({ ok: false, error: 'Slug already in use by another creator' }, { status: 409 });
+    // Ensure slug is valid
+    if (!rawSlug || rawSlug.length === 0) {
+      return NextResponse.json({ ok: false, error: 'Invalid slug generated. Please provide a valid slug.' }, { status: 400 });
+    }
+
+    // Ensure slug uniqueness: if an existing template uses this slug and is not ours, generate a unique one
+    let finalSlug = rawSlug;
+    let attempt = 1;
+    while (true) {
+      const { data: existing, error: existingErr } = await admin
+        .from('templates')
+        .select('slug, creator_shop_id')
+        .eq('slug', finalSlug)
+        .maybeSingle();
+
+      if (existingErr) {
+        return NextResponse.json({ ok: false, error: existingErr.message }, { status: 500 });
+      }
+
+      // If slug doesn't exist, or exists and belongs to us, we can use it
+      if (!existing || (existing.creator_shop_id && existing.creator_shop_id === shop.id)) {
+        break;
+      }
+
+      // If slug exists and belongs to another creator, append a number
+      finalSlug = `${rawSlug}-${attempt}`;
+      attempt++;
+      
+      // Safety check to prevent infinite loop
+      if (attempt > 100) {
+        return NextResponse.json({ ok: false, error: 'Unable to generate unique slug. Please try a different name.' }, { status: 500 });
+      }
     }
 
     const row = {
-      slug: rawSlug,
+      slug: finalSlug,
       name: rawName,
       subtitle: (input.subtitle || '').toString().trim() || null,
       description: (input.description || '').toString().trim() || null,
