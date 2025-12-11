@@ -54,6 +54,7 @@ export default function CreatorDashboardPage() {
   const [revenue, setRevenue] = useState<number>(0);
 
   const [formOpen, setFormOpen] = useState(false);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [form, setForm] = useState({
     name: "",
     slug: "",
@@ -90,6 +91,7 @@ export default function CreatorDashboardPage() {
       plugins: "",
       tags: "",
     });
+    setSlugManuallyEdited(false);
   };
 
   const generateSlug = (name: string) =>
@@ -735,14 +737,16 @@ export default function CreatorDashboardPage() {
                             <input
                               type="text"
                               value={form.name}
-                              onChange={(e) =>
+                              onChange={(e) => {
+                                const newName = e.target.value;
                                 setForm((f) => ({
                                   ...f,
-                                  name: e.target.value,
-                                  slug:
-                                    f.slug || generateSlug(e.target.value),
-                                }))
-                              }
+                                  name: newName,
+                                  slug: slugManuallyEdited
+                                    ? f.slug
+                                    : generateSlug(newName),
+                                }));
+                              }}
                               required
                               className="w-full px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                             />
@@ -754,9 +758,10 @@ export default function CreatorDashboardPage() {
                             <input
                               type="text"
                               value={form.slug}
-                              onChange={(e) =>
-                                setForm((f) => ({ ...f, slug: e.target.value }))
-                              }
+                              onChange={(e) => {
+                                setSlugManuallyEdited(true);
+                                setForm((f) => ({ ...f, slug: e.target.value }));
+                              }}
                               className="w-full px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                               placeholder="auto-generated-from-name"
                             />
