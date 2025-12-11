@@ -24,11 +24,13 @@ type Template = {
   created_at?: string | null;
   category_id?: string | null;
   subcategory_id?: string | null;
+  creator_shop_id?: string | null;
   feature?: boolean | null;
   is_featured?: boolean | null;
   isFeatured?: boolean | null;
   meta_title?: string | null;
   meta_description?: string | null;
+  vendor_name?: string | null;
 };
 
 type Category = {
@@ -74,6 +76,9 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
   const [selectedPlugins, setSelectedPlugins] = useState<string[]>([]);
   const [selectedResolutions, setSelectedResolutions] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState<"discover" | "following">("discover");
+  const [followingCreatorIds, setFollowingCreatorIds] = useState<string[]>([]);
+  const [loadingFollowing, setLoadingFollowing] = useState(false);
 
   // Expanded states for sidebar sections
   const [expandedSections, setExpandedSections] = useState({
@@ -107,6 +112,32 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
     };
     fetchData();
   }, []);
+
+  // Load followed creators for current user
+  useEffect(() => {
+    const loadFollowing = async () => {
+      if (!user) {
+        setFollowingCreatorIds([]);
+        return;
+      }
+      try {
+        setLoadingFollowing(true);
+        const supabase = getSupabaseBrowserClient();
+        const { data } = await supabase
+          .from("creator_followers")
+          .select("creator_shop_id")
+          .eq("user_id", user.id);
+        const ids = (data as any[] | null)?.map((r) => r.creator_shop_id) ?? [];
+        setFollowingCreatorIds(ids);
+      } catch (e) {
+        console.error("Failed to load following creators", e);
+        setFollowingCreatorIds([]);
+      } finally {
+        setLoadingFollowing(false);
+      }
+    };
+    loadFollowing();
+  }, [user]);
 
   // Filter Logic
   const filteredTemplates = useMemo(() => {
@@ -203,13 +234,21 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
     return filtered;
   }, [initialTemplates, searchQuery, selectedCategory, selectedSubcategory, sortBy, selectedSoftware, selectedPlugins, selectedResolutions]);
 
+  const viewTemplates = useMemo(() => {
+    if (viewMode === "discover") return filteredTemplates;
+    if (!user || followingCreatorIds.length === 0) return [];
+    return filteredTemplates.filter((t) =>
+      followingCreatorIds.includes((t.creator_shop_id as any) || "")
+    );
+  }, [viewMode, filteredTemplates, followingCreatorIds, user]);
+
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedCategory, selectedSubcategory, sortBy, selectedSoftware, selectedPlugins, selectedResolutions]);
+  }, [searchQuery, selectedCategory, selectedSubcategory, sortBy, selectedSoftware, selectedPlugins, selectedResolutions, viewMode]);
 
-  const totalPages = Math.ceil(filteredTemplates.length / ITEMS_PER_PAGE);
-  const paginatedTemplates = filteredTemplates.slice(
+  const totalPages = Math.ceil(viewTemplates.length / ITEMS_PER_PAGE);
+  const paginatedTemplates = viewTemplates.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
@@ -237,14 +276,40 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
                 <h1 className="text-3xl md:text-4xl font-bold text-zinc-900">
                   <span className="text-blue-600">Video</span> Templates
                 </h1>
-                <div className="text-sm text-zinc-500 bg-zinc-100 px-3 py-1.5 rounded-full font-medium">
-                  {filteredTemplates.length === initialTemplates.length ? (
-                    <span>{filteredTemplates.length} {filteredTemplates.length === 1 ? 'template' : 'templates'}</span>
-                  ) : (
-                    <span>
-                      Showing <span className="text-blue-600 font-semibold">{filteredTemplates.length}</span> of {initialTemplates.length} {initialTemplates.length === 1 ? 'template' : 'templates'}
-                    </span>
-                  )}
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="text-sm text-zinc-500 bg-zinc-100 px-3 py-1.5 rounded-full font-medium">
+                    {viewTemplates.length === initialTemplates.length && viewMode === "discover" ? (
+                      <span>{viewTemplates.length} {viewTemplates.length === 1 ? 'template' : 'templates'}</span>
+                    ) : (
+                      <span>
+                        Showing <span className="text-blue-600 font-semibold">{viewTemplates.length}</span> of {initialTemplates.length} {initialTemplates.length === 1 ? 'template' : 'templates'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="inline-flex rounded-full bg-zinc-100 p-1 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("discover")}
+                      className={`px-4 py-1.5 rounded-full font-medium transition-colors ${
+                        viewMode === "discover"
+                          ? "bg-white text-zinc-900 shadow-sm"
+                          : "text-zinc-500 hover:text-zinc-900"
+                      }`}
+                    >
+                      Discover
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("following")}
+                      className={`px-4 py-1.5 rounded-full font-medium transition-colors ${
+                        viewMode === "following"
+                          ? "bg-white text-zinc-900 shadow-sm"
+                          : "text-zinc-500 hover:text-zinc-900"
+                      }`}
+                    >
+                      Following
+                    </button>
+                  </div>
                 </div>
               </div>
               <p className="text-zinc-500 mt-2 max-w-2xl">
@@ -492,7 +557,7 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
             </div>
           </aside>
 
-          {/* 3. Main Content Grid (75%) */}
+            {/* 3. Main Content Grid (75%) */}
           <div className="flex-1">
 
             {/* Mobile Filters Toggle */}
@@ -502,7 +567,15 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
               </button>
             </div>
 
-            {filteredTemplates.length > 0 ? (
+            {viewMode === "following" && (!user || followingCreatorIds.length === 0) && (
+              <div className="mb-6 rounded-2xl border border-dashed border-zinc-200 bg-white px-6 py-4 text-xs text-zinc-600">
+                {!user
+                  ? "Log in to follow creators and see their templates in the Following tab."
+                  : "You are not following any creators yet. Visit creator studio pages and follow your favorite creators to build your Following feed."}
+              </div>
+            )}
+
+            {viewTemplates.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {paginatedTemplates.map((template) => (
                   <div key={template.slug} className="group flex flex-col bg-white rounded-xl overflow-hidden border border-zinc-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300">
@@ -550,15 +623,25 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
 
                       <div className="mt-auto flex items-center justify-between pt-4 border-t border-zinc-100">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600">
-                            C
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-medium text-zinc-500">By Celite</span>
-                            <div className="w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
-                              <Check className="w-2 h-2 text-white" strokeWidth={3} />
-                            </div>
-                          </div>
+                          {(() => {
+                            const vendor = template.vendor_name || "Celite Studios";
+                            const initial = vendor.charAt(0).toUpperCase() || "C";
+                            return (
+                              <>
+                                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600">
+                                  {initial}
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-medium text-zinc-500">
+                                    By {vendor}
+                                  </span>
+                                  <div className="w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
+                                    <Check className="w-2 h-2 text-white" strokeWidth={3} />
+                                  </div>
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                         <div className="flex items-center gap-3 text-zinc-400">
                           <button
@@ -590,7 +673,7 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
             )}
 
             {/* Pagination */}
-            {filteredTemplates.length > ITEMS_PER_PAGE && (
+            {viewTemplates.length > ITEMS_PER_PAGE && (
               <div className="flex justify-center items-center gap-4 mt-12">
                 <button
                   onClick={() => {

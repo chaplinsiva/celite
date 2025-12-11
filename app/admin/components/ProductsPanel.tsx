@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import YouTubeVideoPlayer from '../../../components/YouTubeVideoPlayer';
 
-type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null };
+type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null };
 
 const extractYouTubeId = (url: string) => {
   try {
@@ -179,6 +179,22 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               .map((t) => {
                 const youtubeId = extractYouTubeId(t.video || '');
                 const thumbnail = t.img || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : null);
+                const isVendorTemplate = !!t.creator_shop_id || !!t.vendor_name;
+                const status = t.status || 'approved';
+                const statusLabel =
+                  status === 'pending'
+                    ? 'Pending review'
+                    : status === 'rejected'
+                      ? 'Rejected'
+                      : 'Approved';
+                const statusClass =
+                  status === 'pending'
+                    ? 'bg-amber-50 text-amber-700 border-amber-100'
+                    : status === 'rejected'
+                      ? 'bg-red-50 text-red-700 border-red-100'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-100';
+                const vendor = t.vendor_name || 'Celite Studios';
+
                 return (
                   <li key={t.slug} className="rounded-2xl border border-zinc-200 bg-white p-4 flex flex-col shadow-sm hover:shadow-md transition-shadow">
                     {t.video ? (
@@ -201,8 +217,16 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-semibold text-zinc-900 truncate" title={t.name}>{t.name}</h3>
                       <p className="text-xs text-zinc-500 truncate mt-0.5">{t.slug}</p>
+                      <p className="text-[11px] text-zinc-500 mt-1">
+                        Vendor: <span className="font-medium text-zinc-700">{vendor}</span>
+                      </p>
                     </div>
-                    <div className="mt-4 flex items-center gap-2">
+                    <div className="mt-4 flex items-center justify-between gap-2">
+                      {isVendorTemplate && (
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${statusClass}`}>
+                          {statusLabel}
+                        </span>
+                      )}
                       <button
                         onClick={async () => {
                           try {
@@ -241,7 +265,12 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                       >
                         Edit
                       </button>
-                      <button onClick={() => onDelete(t.slug)} className="rounded-lg border border-red-200 bg-red-50 text-red-600 px-3 py-2 text-xs font-medium hover:bg-red-100 transition-colors">Delete</button>
+                      <button
+                        onClick={() => onDelete(t.slug)}
+                        className="rounded-lg border border-red-200 bg-red-50 text-red-600 px-3 py-2 text-xs font-medium hover:bg-red-100 transition-colors"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </li>
                 );

@@ -12,8 +12,9 @@ import AnalyticsPanel from './components/AnalyticsPanel';
 import UsersPanel from './components/UsersPanel';
 import SettingsPanel from './components/SettingsPanel';
 import MarketingPanel from './components/MarketingPanel';
+import VendorApprovalPanel from './components/VendorApprovalPanel';
 
-type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null };
+type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null };
 
 export default function AdminClient() {
   const router = useRouter();
@@ -21,7 +22,9 @@ export default function AdminClient() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [templates, setTemplates] = useState<TemplateRow[]>([]);
   const [stats, setStats] = useState<{ templates: number; orders: number; revenue: number } | null>(null);
-  const [active, setActive] = useState<'overview' | 'products' | 'categories' | 'analytics' | 'users' | 'settings' | 'marketing'>('overview');
+  const [active, setActive] = useState<
+    'overview' | 'products' | 'vendorApproval' | 'categories' | 'analytics' | 'users' | 'settings' | 'marketing'
+  >('overview');
 
 
 
@@ -38,7 +41,7 @@ export default function AdminClient() {
     };
     const reload = async () => {
       const supabase = getSupabaseBrowserClient();
-      const { data } = await supabase.from('templates').select('slug,name,img,video').order('created_at', { ascending: false });
+      const { data } = await supabase.from('templates').select('slug,name,img,video,vendor_name,creator_shop_id,status').order('created_at', { ascending: false });
       setTemplates((data as any) ?? []);
       // stats via admin endpoint
       const res = await fetch('/api/admin/stats');
@@ -53,7 +56,7 @@ export default function AdminClient() {
   const runUpload = async () => { await fetch('/api/admin/upload-assets', { method: 'POST' }); };
   const refreshTemplates = async () => {
     const supabase = getSupabaseBrowserClient();
-    const { data } = await supabase.from('templates').select('slug,name,img,video').order('created_at', { ascending: false });
+    const { data } = await supabase.from('templates').select('slug,name,img,video,vendor_name,creator_shop_id,status').order('created_at', { ascending: false });
     setTemplates((data as any) ?? []);
   };
   const deleteTemplate = async (slug: string) => {
@@ -92,7 +95,13 @@ export default function AdminClient() {
           <section className="flex-1 p-8 space-y-8 overflow-y-auto">
             {active === 'overview' && (<OverviewPanel stats={stats} onSeed={runSeed} onUpload={runUpload} />)}
 
-            {active === 'products' && (<ProductsPanel templates={templates} onDelete={deleteTemplate} onCreated={refreshTemplates} />)}
+            {active === 'products' && (
+              <ProductsPanel templates={templates} onDelete={deleteTemplate} onCreated={refreshTemplates} />
+            )}
+
+            {active === 'vendorApproval' && (
+              <VendorApprovalPanel templates={templates} onReviewed={refreshTemplates} />
+            )}
 
             {active === 'categories' && (<CategoriesPanel />)}
 

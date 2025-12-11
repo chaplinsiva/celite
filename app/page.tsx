@@ -7,10 +7,12 @@ import CategoriesSection from '../components/CategoriesSection';
 import TestimonialsSection from '../components/TestimonialsSection';
 import CTASection from '../components/CTASection';
 import TrustSection from '../components/TrustSection';
+import HomeCreatorsSection from '../components/HomeCreatorsSection';
 
 export const metadata: Metadata = {
   title: "Celite - Professional After Effects Templates",
-  description: "Discover premium After Effects templates for logo reveals, slideshows, and more. Join thousands of creators using our templates.",
+  description:
+    "Discover premium After Effects templates for logo reveals, slideshows, and more. Join thousands of creators using our templates.",
 };
 
 // Force dynamic rendering so new templates appear immediately
@@ -25,6 +27,7 @@ export default function Home() {
       <CategoriesSection />
       <TrustSection />
       <TemplateCarousel />
+      <HomeCreatorsSection />
       <WebsiteShowcaseCarousel />
       <TestimonialsSection />
       <CTASection />

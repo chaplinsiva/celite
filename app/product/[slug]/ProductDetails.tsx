@@ -20,7 +20,7 @@ interface Review {
 }
 
 interface ProductDetailsProps {
-  product: Template & { source_path?: string | null };
+  product: Template & { source_path?: string | null; vendor_name?: string | null };
   related: Template[];
   reviews: Review[];
 }
@@ -440,15 +440,23 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
           </div>
           {/* Mobile: Smaller title */}
           <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-zinc-900 tracking-tight line-clamp-2 sm:line-clamp-none">{product.name}</h1>
-          {/* Mobile: Hide brand info */}
+          {/* Desktop: Vendor / brand info */}
           <div className="hidden sm:flex items-center gap-3 mt-3">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">C</div>
-              <span className="text-sm font-medium text-zinc-700">Celite Studios</span>
-              <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-              </div>
-            </div>
+            {(() => {
+              const vendor = (product as any).vendor_name || 'Celite Studios';
+              const initial = vendor.charAt(0).toUpperCase() || 'C';
+              return (
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">
+                    {initial}
+                  </div>
+                  <span className="text-sm font-medium text-zinc-700">{vendor}</span>
+                  <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

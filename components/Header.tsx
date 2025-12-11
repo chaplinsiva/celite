@@ -15,13 +15,15 @@ export default function Header() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [hasCreatorShop, setHasCreatorShop] = useState(false);
 
 
   useEffect(() => {
-    const checkSubscription = async () => {
+    const checkSubscriptionAndCreator = async () => {
       if (!user) {
         setIsSubscribed(false);
         setIsExpired(false);
+        setHasCreatorShop(false);
         return;
       }
       const supabase = getSupabaseBrowserClient();
@@ -34,18 +36,29 @@ export default function Header() {
       if (!sub) {
         setIsSubscribed(false);
         setIsExpired(false);
-        return;
+      } else {
+        const now = Date.now();
+        const validUntil = sub.valid_until ? new Date(sub.valid_until).getTime() : null;
+        const actuallyActive = !!sub.is_active && (!validUntil || validUntil > now);
+        const expired: boolean = !!(sub.is_active && validUntil && validUntil <= now);
+
+        setIsSubscribed(actuallyActive);
+        setIsExpired(expired);
       }
 
-      const now = Date.now();
-      const validUntil = sub.valid_until ? new Date(sub.valid_until).getTime() : null;
-      const actuallyActive = !!sub.is_active && (!validUntil || validUntil > now);
-      const expired: boolean = !!(sub.is_active && validUntil && validUntil <= now);
-
-      setIsSubscribed(actuallyActive);
-      setIsExpired(expired);
+      // Check if user has a creator shop
+      try {
+        const { data: shop } = await supabase
+          .from('creator_shops')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        setHasCreatorShop(!!shop);
+      } catch {
+        setHasCreatorShop(false);
+      }
     };
-    checkSubscription();
+    checkSubscriptionAndCreator();
   }, [user]);
 
   const navLinks = [
@@ -84,10 +97,23 @@ export default function Header() {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-4">
-            {/* Start Selling Link (Desktop) */}
-            <Link href="/start-selling" className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors mr-2">
-              Start Selling
-            </Link>
+            {/* Creator link (Desktop) - show Start Selling until shop exists, then Creator Dashboard */}
+            {user && !hasCreatorShop && (
+              <Link
+                href="/start-selling"
+                className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors mr-2"
+              >
+                Start Selling
+              </Link>
+            )}
+            {user && hasCreatorShop && (
+              <Link
+                href="/creator/dashboard"
+                className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors mr-2"
+              >
+                Creator Dashboard
+              </Link>
+            )}
 
             {/* Auth Buttons */}
             <div className="flex items-center gap-3">
@@ -163,13 +189,24 @@ export default function Header() {
                 {link.name}
               </Link>
             ))}
-            <Link
-              href="/start-selling"
-              className="text-lg font-medium text-zinc-500 py-2"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Start Selling
-            </Link>
+            {user && !hasCreatorShop && (
+              <Link
+                href="/start-selling"
+                className="text-lg font-medium text-zinc-500 py-2"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Start Selling
+              </Link>
+            )}
+            {user && hasCreatorShop && (
+              <Link
+                href="/creator/dashboard"
+                className="text-lg font-medium text-zinc-500 py-2"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Creator Dashboard
+              </Link>
+            )}
             <Link
               href="/templates"
               className="text-lg font-medium text-zinc-800 py-2 border-b border-zinc-50"

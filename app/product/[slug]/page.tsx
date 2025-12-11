@@ -30,7 +30,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,meta_title,meta_description')
+    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,meta_title,meta_description,vendor_name')
     .eq('slug', params.slug)
     .maybeSingle();
   const prod = row ? ({
@@ -115,11 +115,11 @@ export default async function ProductPage(props: PageProps) {
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,source_path,meta_title,meta_description')
+    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name')
     .eq('slug', params.slug)
     .maybeSingle();
   if (!row) return notFound();
-  const prod: Template & { source_path?: string | null } = {
+  const prod: Template & { source_path?: string | null; vendor_name?: string | null } = {
     slug: row.slug,
     name: row.name,
     subtitle: row.subtitle,
@@ -135,11 +135,13 @@ export default async function ProductPage(props: PageProps) {
     meta_title: row.meta_title ?? null,
     meta_description: row.meta_description ?? null,
     source_path: row.source_path ?? null,
+    vendor_name: (row as any).vendor_name ?? null,
   };
   const { data: relatedRows } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags')
+    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,status')
     .neq('slug', prod.slug)
+    .eq('status', 'approved')
     .limit(9);
   const related: Template[] = (relatedRows ?? []).map((r) => ({
     slug: r.slug,

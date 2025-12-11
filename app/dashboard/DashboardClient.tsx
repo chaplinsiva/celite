@@ -18,6 +18,12 @@ type DownloadItemRow = {
   downloaded_at: string;
 };
 
+type CreatorShop = {
+  slug: string;
+  name: string;
+  description: string | null;
+};
+
 // Component that uses search params (needs to be in Suspense)
 function DashboardContent() {
   const { user, logout } = useAppContext();
@@ -27,6 +33,8 @@ function DashboardContent() {
   const [monthlyPrice, setMonthlyPrice] = useState<number | null>(null);
   const [yearlyPrice, setYearlyPrice] = useState<number | null>(null);
   const [recentDownloads, setRecentDownloads] = useState<DownloadItemRow[]>([]);
+  const [creatorShop, setCreatorShop] = useState<CreatorShop | null>(null);
+  const [viewMode, setViewMode] = useState<"buyer" | "seller">("buyer");
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showManageSubscription, setShowManageSubscription] = useState(false);
@@ -95,6 +103,19 @@ function DashboardContent() {
       };
       setMonthlyPrice(parsePrice(map.RAZORPAY_MONTHLY_AMOUNT, 10000));
       setYearlyPrice(parsePrice(map.RAZORPAY_YEARLY_AMOUNT, 100000));
+    }
+
+    // Load creator shop (if any)
+    try {
+      const { data: shop } = await supabase
+        .from("creator_shops")
+        .select("slug, name, description")
+        .eq("user_id", (user as any).id)
+        .maybeSingle();
+      setCreatorShop(shop ?? null);
+    } catch (e) {
+      console.error("Failed to load creator shop", e);
+      setCreatorShop(null);
     }
 
     // Load recent downloads (subscription-based) for this user
@@ -351,6 +372,34 @@ function DashboardContent() {
             </div>
           </div>
 
+          {/* Buyer / Seller mode toggle (only if user has a creator shop) */}
+          {creatorShop && (
+            <div className="mt-6 inline-flex rounded-full bg-zinc-100 p-1 text-xs">
+              <button
+                type="button"
+                onClick={() => setViewMode("buyer")}
+                className={`px-4 py-1.5 rounded-full font-medium transition-colors ${
+                  viewMode === "buyer"
+                    ? "bg-white text-zinc-900 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-900"
+                }`}
+              >
+                Buyer mode
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("seller")}
+                className={`px-4 py-1.5 rounded-full font-medium transition-colors ${
+                  viewMode === "seller"
+                    ? "bg-white text-zinc-900 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-900"
+                }`}
+              >
+                Seller mode
+              </button>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="mt-6 flex flex-wrap gap-2 text-xs">
             {!isActuallyActive && !isPaused && !hasExpiredPlan && (
@@ -375,7 +424,8 @@ function DashboardContent() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {viewMode === "buyer" && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Recent Downloads (Main Column) */}
           <section className="lg:col-span-2 bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm h-fit">
             <div className="flex items-center justify-between mb-6">
@@ -484,7 +534,28 @@ function DashboardContent() {
               )}
             </section>
           </div>
-        </div>
+          </div>
+        )}
+
+        {viewMode === "seller" && creatorShop && (
+          <section className="mt-6 bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
+            <h2 className="text-xl font-bold text-zinc-900 mb-2">Seller mode</h2>
+            <p className="text-sm text-zinc-500 mb-4">
+              This is your creator hub view. Your public page is live at:
+            </p>
+            <a
+              href={`/${creatorShop.slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+            >
+              celite.in/{creatorShop.slug}
+            </a>
+            <div className="mt-8 rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 px-6 py-10 text-center text-sm text-zinc-400">
+              Blank seller page for now. We&apos;ll add uploads and stats here later.
+            </div>
+          </section>
+        )}
       </div>
 
       {/* Edit Profile Modal */}

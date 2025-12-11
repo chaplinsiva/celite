@@ -63,8 +63,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     pathname === '/signup' ||
     pathname.startsWith('/auth');
 
-  // Check for admin route
-  const isAdminPage = pathname.startsWith('/admin');
+  // Check for admin / creator routes that use their own layout
+  const isAdminPage = pathname.startsWith('/admin') || pathname.startsWith('/creator');
 
   if (maintenance && !isAdmin && !isAuthRoute) {
     return (
