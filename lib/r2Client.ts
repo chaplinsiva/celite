@@ -40,12 +40,41 @@ export async function uploadToR2(key: string, body: ArrayBuffer, contentType: st
   await client.send(cmd);
 }
 
-async function streamToBuffer(stream: Readable): Promise<Buffer> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+async function bodyToBuffer(body: any): Promise<Buffer> {
+  // Already a Node Buffer
+  if (Buffer.isBuffer(body)) {
+    return body;
   }
-  return Buffer.concat(chunks);
+
+  // Uint8Array / ArrayBuffer-like
+  if (body instanceof Uint8Array) {
+    return Buffer.from(body);
+  }
+
+  // Node Readable stream
+  if (body instanceof Readable) {
+    const chunks: Buffer[] = [];
+    for await (const chunk of body) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+  }
+
+  // Generic async iterable (ReadableStream, etc.)
+  if (body && typeof (body as any)[Symbol.asyncIterator] === 'function') {
+    const chunks: Buffer[] = [];
+    for await (const chunk of body as AsyncIterable<any>) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+  }
+
+  // String
+  if (typeof body === 'string') {
+    return Buffer.from(body);
+  }
+
+  throw new Error('Unexpected R2 response body type');
 }
 
 export async function downloadFromR2(key: string): Promise<Buffer> {
@@ -55,11 +84,11 @@ export async function downloadFromR2(key: string): Promise<Buffer> {
     Key: key,
   });
   const res = await client.send(cmd);
-  const body = res.Body;
-  if (!body || !(body instanceof Readable)) {
-    throw new Error('Unexpected R2 response body');
+  const body = (res as any).Body;
+  if (!body) {
+    throw new Error('Empty R2 response body');
   }
-  return streamToBuffer(body);
+  return bodyToBuffer(body);
 }
 
 
