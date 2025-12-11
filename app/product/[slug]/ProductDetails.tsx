@@ -44,21 +44,6 @@ const getThumbnail = (item: Template | (Template & { source_path?: string | null
   return '/PNG1.png';
 };
 
-function resolvePreviewUrl(rawUrl: string): string {
-  if (!rawUrl) return '/PNG1.png';
-  const isDirect = rawUrl.startsWith('http://') || rawUrl.startsWith('https://');
-  if (isDirect) return rawUrl;
-  const R2_PREFIX = 'r2:';
-  if (rawUrl.startsWith(R2_PREFIX)) {
-    const base = process.env.NEXT_PUBLIC_R2_DIRECT_BASE_URL || process.env.R2_DIRECT_BASE_URL;
-    if (!base) return '/PNG1.png';
-    const trimmedBase = base.replace(/\/+$/, '');
-    const key = rawUrl.slice(R2_PREFIX.length).replace(/^\/+/, '');
-    return `${trimmedBase}/${key}`;
-  }
-  return '/PNG1.png';
-}
-
 export default function ProductDetails({ product, related, reviews, previews }: ProductDetailsProps) {
   const { user } = useAppContext();
   const { openLoginModal } = useLoginModal();
@@ -496,11 +481,10 @@ export default function ProductDetails({ product, related, reviews, previews }: 
                       />
                     );
                   }
-                  const mediaUrl = resolvePreviewUrl(primary.url);
                   if (primary.kind === 'video') {
                     return (
                       <video
-                        src={mediaUrl}
+                        src={primary.url}
                         controls
                         className="w-full h-full object-cover"
                       />
@@ -510,7 +494,7 @@ export default function ProductDetails({ product, related, reviews, previews }: 
                   return (
                     <div className="w-full h-full flex items-center justify-center bg-zinc-100">
                       <img
-                        src={mediaUrl}
+                        src={primary.url || getThumbnail(product)}
                         alt={primary.title || product.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -572,7 +556,7 @@ export default function ProductDetails({ product, related, reviews, previews }: 
 
                     const isVideo = p.kind === 'video';
                     const isImage = p.kind === 'image';
-                    const displayUrl = resolvePreviewUrl(p.url);
+                    const displayUrl = p.url;
 
                     return (
                       <div key={key} className="rounded-xl overflow-hidden border border-zinc-200 bg-zinc-900/80">

@@ -110,6 +110,39 @@ export async function generateStaticParams() {
   return [];
 }
 
+function resolvePreviewUrl(url: string | null): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+
+  const R2_PREFIX = 'r2:';
+  if (url.startsWith(R2_PREFIX)) {
+    const key = url.slice(R2_PREFIX.length).replace(/^\/+/, '');
+
+    // Prefer explicit direct base if configured
+    const directBase =
+      process.env.R2_DIRECT_BASE_URL ||
+      process.env.NEXT_PUBLIC_R2_DIRECT_BASE_URL;
+
+    let base = directBase;
+
+    // Fallback: build from account + bucket if available
+    if (!base && process.env.R2_ACCOUNT_ID && process.env.R2_SOURCE_BUCKET) {
+      base = `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.R2_SOURCE_BUCKET}`;
+    }
+
+    if (!base) {
+      // If still missing, return key as-is so at least something is visible in logs,
+      // ProductDetails will treat non-http(s) as missing and fall back to logo.
+      return url;
+    }
+
+    const trimmedBase = base.replace(/\/+$/, '');
+    return `${trimmedBase}/${key}`;
+  }
+
+  return url;
+}
+
 export default async function ProductPage(props: PageProps) {
   const params = await props.params;
   const supabase = getSupabaseServerClient();
@@ -157,11 +190,19 @@ export default async function ProductPage(props: PageProps) {
   }));
 
   // Load additional previews
-  const { data: previews } = await supabase
+  const { data: previewsRows } = await supabase
     .from('template_previews')
     .select('id,kind,title,url,sort_order')
     .eq('template_slug', prod.slug)
     .order('sort_order');
 
-  return <ProductDetails product={prod} related={related} reviews={reviews} previews={previews || []} />;
+  const previews = (previewsRows || []).map((p: any) => ({
+    id: p.id,
+    kind: p.kind,
+    title: p.title,
+    sort_order: typeof p.sort_order === 'number' ? p.sort_order : 0,
+    url: resolvePreviewUrl(p.url),
+  }));
+
+  return <ProductDetails product={prod} related={related} reviews={reviews} previews={previews} />;
 }
