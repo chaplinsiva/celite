@@ -88,6 +88,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     const R2_PREFIX = 'r2:';
     if (sourcePath.startsWith(R2_PREFIX)) {
       const key = sourcePath.slice(R2_PREFIX.length);
+
       // Prefer using signed server-side download via R2 SDK when fully configured.
       const hasR2SdkConfig =
         !!process.env.R2_ENDPOINT &&
@@ -95,34 +96,52 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
         !!process.env.R2_ACCESS_KEY_ID &&
         !!process.env.R2_SECRET_ACCESS_KEY;
 
-      // If SDK config is missing but we have a direct base URL, fall back to redirect-style download.
-      const directBase = process.env.R2_DIRECT_BASE_URL;
+      // Compute a public base URL for redirect-style downloads:
+      // 1) Use env-configured base if present
+      // 2) Fallback to known public R2 endpoint (from your earlier config)
+      const envBase =
+        process.env.R2_DIRECT_BASE_URL ||
+        process.env.NEXT_PUBLIC_R2_DIRECT_BASE_URL ||
+        null;
+      const defaultBase = 'https://865ce9a5340c7969451a0f1978e34696.r2.cloudflarestorage.com/celite-templates';
+      const redirectBase = envBase || defaultBase;
 
-      if (!hasR2SdkConfig && directBase) {
-        const trimmedBase = directBase.replace(/\/+$/, '');
+      // If SDK is NOT configured but we do have a public base URL, redirect the client there.
+      if (!hasR2SdkConfig && redirectBase) {
+        const trimmedBase = redirectBase.replace(/\/+$/, '');
         const trimmedKey = key.replace(/^\/+/, '');
         const publicUrl = `${trimmedBase}/${trimmedKey}`;
         return NextResponse.json({ ok: true, redirect: true, url: publicUrl });
       }
 
-      try {
-        const buffer = await downloadFromR2(key);
-        // Convert Node Buffer to ArrayBuffer for the Fetch Response body type
-        const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
-        const filename = path.basename(key) || `${slug}.zip`;
-        // Cast to BodyInit to satisfy TypeScript (runtime accepts ArrayBuffer)
-        return new Response(arrayBuffer as any, {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/octet-stream',
-            'Content-Disposition': `attachment; filename="${filename}"`,
-            'Cache-Control': 'no-store',
-          },
-        });
-      } catch (e: any) {
-        console.error('R2 download failed', e);
-        return NextResponse.json({ ok: false, error: e?.message || 'R2 download failed' }, { status: 500 });
+      // If SDK is configured, stream the file from R2
+      if (hasR2SdkConfig) {
+        try {
+          const buffer = await downloadFromR2(key);
+          // Convert Node Buffer to ArrayBuffer for the Fetch Response body type
+          const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+          const filename = path.basename(key) || `${slug}.zip`;
+          // Cast to BodyInit to satisfy TypeScript (runtime accepts ArrayBuffer)
+          return new Response(arrayBuffer as any, {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/octet-stream',
+              'Content-Disposition': `attachment; filename="${filename}"`,
+              'Cache-Control': 'no-store',
+            },
+          });
+        } catch (e: any) {
+          console.error('R2 download failed', e);
+          return NextResponse.json({ ok: false, error: e?.message || 'R2 download failed' }, { status: 500 });
+        }
       }
+
+      // No SDK config and no usable redirect base – treat as misconfiguration
+      console.error('R2 download attempted but neither SDK nor redirect base is configured.');
+      return NextResponse.json(
+        { ok: false, error: 'R2 is not configured correctly on the server.' },
+        { status: 500 },
+      );
     }
 
     // Supabase Storage (legacy) path

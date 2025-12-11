@@ -17,6 +17,7 @@ type Template = {
   description: string | null;
   img: string | null;
   video: string | null;
+  manualVideoUrl?: string | null;
   features: string[];
   software: string[];
   plugins: string[];
@@ -508,8 +509,28 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
                   <div key={template.slug} className="group flex flex-col bg-white rounded-xl overflow-hidden border border-zinc-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300">
                     {/* Thumbnail / Video Player */}
                     <div className="relative aspect-video overflow-hidden bg-zinc-100">
-                      {/* Using the YouTubeVideoPlayer for hover autoplay behavior */}
-                      {template.video ? (
+                      {template.manualVideoUrl ? (
+                        <Link href={`/product/${template.slug}`} className="block w-full h-full">
+                          <video
+                            src={template.manualVideoUrl || ''}
+                            muted
+                            loop
+                            playsInline
+                            poster={getThumbnail(template)}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.currentTime = 0;
+                              e.currentTarget.play();
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.pause();
+                              try {
+                                e.currentTarget.load(); // reset to poster frame
+                              } catch {}
+                            }}
+                          />
+                        </Link>
+                      ) : template.video ? (
                         <div className="w-full h-full">
                           <YouTubeVideoPlayer
                             videoUrl={template.video}
@@ -524,7 +545,7 @@ export default function TemplatesClient({ initialTemplates }: { initialTemplates
                             alt={template.name}
                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                           />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
                             <div className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
                               <PlayCircle className="w-6 h-6 fill-current" />
                             </div>

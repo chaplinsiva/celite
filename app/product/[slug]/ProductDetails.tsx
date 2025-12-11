@@ -437,12 +437,14 @@ export default function ProductDetails({ product, related, reviews, previews }: 
 
   // Determine hero preview and gallery items
   const hasYouTubeHero = !!product.video;
-  const heroVideoPreview = !hasYouTubeHero ? previews.find((p) => p.kind === 'video') : undefined;
+  const heroVideoPreview = !hasYouTubeHero
+    ? previews.find((p) => p.kind === 'video' && p.url)
+    : undefined;
   const heroYouTubePreview = !hasYouTubeHero && !heroVideoPreview
-    ? previews.find((p) => p.kind === 'youtube')
+    ? previews.find((p) => p.kind === 'youtube' && p.url)
     : undefined;
   const heroImagePreview = !hasYouTubeHero && !heroVideoPreview && !heroYouTubePreview
-    ? previews.find((p) => p.kind === 'image')
+    ? previews.find((p) => p.kind === 'image' && p.url)
     : undefined;
   const heroPreview = heroVideoPreview || heroYouTubePreview || heroImagePreview || null;
 
@@ -490,7 +492,7 @@ export default function ProductDetails({ product, related, reviews, previews }: 
                   className="w-full h-full"
                   showFullscreen={true}
                 />
-              ) : heroPreview ? (
+              ) : heroPreview && heroPreview.url ? (
                 heroPreview.kind === 'youtube' ? (
                   <YouTubeVideoPlayer
                     videoUrl={heroPreview.url}
@@ -501,8 +503,21 @@ export default function ProductDetails({ product, related, reviews, previews }: 
                 ) : heroPreview.kind === 'video' ? (
                   <video
                     src={heroPreview.url}
-                    controls
+                    muted
+                    loop
+                    playsInline
+                    poster={previews.find((p) => p.kind === 'image')?.url || getThumbnail(product)}
                     className="w-full h-full object-cover"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.currentTime = 0;
+                      e.currentTarget.play();
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.pause();
+                      try {
+                        e.currentTarget.load(); // reset to poster frame
+                      } catch {}
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-zinc-100">

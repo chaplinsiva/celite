@@ -6,7 +6,7 @@ import type { Template } from '../data/templateData';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { useLoginModal } from '../context/LoginModalContext';
-import { getYouTubeEmbedUrl } from '../lib/utils';
+import { getYouTubeThumbnailUrl } from '../lib/utils';
 import YouTubeVideoPlayer from './YouTubeVideoPlayer';
 import { cn } from '@/lib/utils';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -14,6 +14,21 @@ import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 type LatestTemplate = Template & {
   category?: { id: string; name: string; slug: string } | null;
   subcategory?: { id: string; name: string; slug: string } | null;
+  thumbUrl?: string | null;
+  manualVideoUrl?: string | null;
+};
+
+const isLikelyVideoUrl = (url: string | null | undefined): boolean => {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return (
+    lower.endsWith('.mp4') ||
+    lower.endsWith('.mov') ||
+    lower.endsWith('.webm') ||
+    lower.endsWith('.m4v') ||
+    lower.endsWith('.ogg') ||
+    lower.endsWith('.ogv')
+  );
 };
 
 export default function LatestTemplatesCarousel() {
@@ -58,10 +73,61 @@ export default function LatestTemplatesCarousel() {
         console.log(`[LatestTemplatesCarousel] Loaded ${data?.length || 0} templates`);
       }
 
-      const mapped: LatestTemplate[] = (data ?? []).map((r: any) => {
+      const rows = data ?? [];
+
+      // Load preview media (thumbnails & manual videos) for these templates
+      const slugs = rows.map((r: any) => r.slug as string);
+      let previewsBySlug = new Map<string, any[]>();
+      if (slugs.length > 0) {
+        const { data: previewsRows, error: previewsError } = await supabase
+          .from('template_previews')
+          .select('template_slug,kind,url,sort_order')
+          .in('template_slug', slugs);
+
+        if (previewsError) {
+          console.error('Error loading template previews for latest carousel:', previewsError);
+        } else if (previewsRows) {
+          previewsBySlug = previewsRows.reduce((map: Map<string, any[]>, row: any) => {
+            const slug = row.template_slug as string;
+            const arr = map.get(slug) || [];
+            arr.push(row);
+            map.set(slug, arr);
+            return map;
+          }, new Map<string, any[]>());
+        }
+      }
+
+      const resolveClientPreviewUrl = (url: string | null): string | null => {
+        if (!url) return null;
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        const R2_PREFIX = 'r2:';
+        if (url.startsWith(R2_PREFIX)) {
+          // Prefer env-configured base, but fall back to known public R2 endpoint
+          const envBase = process.env.NEXT_PUBLIC_R2_DIRECT_BASE_URL;
+          const defaultBase = 'https://865ce9a5340c7969451a0f1978e34696.r2.cloudflarestorage.com/celite-templates';
+          const base = envBase || defaultBase;
+          const key = url.slice(R2_PREFIX.length).replace(/^\/+/, '');
+          const trimmedBase = base.replace(/\/+$/, '');
+          return `${trimmedBase}/${key}`;
+        }
+        return url;
+      };
+
+      const mapped: LatestTemplate[] = rows.map((r: any) => {
         const category = r.categories ? (Array.isArray(r.categories) ? r.categories[0] : r.categories) : null;
         const subcategory = r.subcategories ? (Array.isArray(r.subcategories) ? r.subcategories[0] : r.subcategories) : null;
         const isFeaturedFlag = Boolean(r.feature ?? r.is_featured ?? r.isFeatured);
+        const previews = previewsBySlug.get(r.slug) || [];
+        const imagePreview = previews
+          .filter((p: any) => p.kind === 'image')
+          .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0];
+        const manualVideoPreview = previews
+          .filter((p: any) => p.kind === 'video' && p.url)
+          .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0];
+
+        const thumbUrl = resolveClientPreviewUrl(imagePreview?.url ?? null) || r.img || null;
+        const resolvedManualVideo = resolveClientPreviewUrl(manualVideoPreview?.url ?? null);
+        const manualVideoUrl = isLikelyVideoUrl(resolvedManualVideo) ? resolvedManualVideo : null;
 
         const template: LatestTemplate = {
           slug: r.slug,
@@ -78,6 +144,8 @@ export default function LatestTemplatesCarousel() {
           feature: isFeaturedFlag,
           isFeatured: isFeaturedFlag,
           is_featured: isFeaturedFlag,
+          thumbUrl,
+          manualVideoUrl,
           category: category ? { id: category.id, name: category.name, slug: category.slug } : null,
           subcategory: subcategory ? { id: subcategory.id, name: subcategory.name, slug: subcategory.slug } : null,
         };
@@ -134,17 +202,56 @@ export default function LatestTemplatesCarousel() {
   };
 
   const TemplateCardComponent = ({ tpl, isSubscribed, handleDownload }: { tpl: LatestTemplate; isSubscribed: boolean; handleDownload: (slug: string) => void }) => {
+    const hasYouTube = !!tpl.video;
+    const hasManualVideo = isLikelyVideoUrl(tpl.manualVideoUrl);
+    const showYouTubePlayer = hasYouTube && !hasManualVideo;
+    const showManualVideo = hasManualVideo;
+    const thumbnailSrc =
+      tpl.thumbUrl ||
+      tpl.img ||
+      (tpl.video ? getYouTubeThumbnailUrl(tpl.video) : null) ||
+      '/PNG1.png';
+
     return (
       <div className="flex-shrink-0 w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(25%-0.75rem)] snap-center">
-        <div className="relative h-full group">
+        <Link href={`/product/${tpl.slug}`} aria-label={tpl.name} className="block h-full group">
           <div className="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white border border-zinc-200 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
-            <Link href={`/product/${tpl.slug}`} className="absolute inset-0 z-10" aria-label={tpl.name} />
             <div className="relative w-full aspect-video overflow-hidden">
-              {tpl.video ? (
+              {showManualVideo && tpl.manualVideoUrl ? (
+                <video
+                  src={tpl.manualVideoUrl}
+                  muted
+                  loop
+                  playsInline
+                  poster={thumbnailSrc || undefined}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  onMouseEnter={(e) => {
+                    try {
+                      e.currentTarget.currentTime = 0;
+                      const p = e.currentTarget.play();
+                      if (p && typeof (p as any).then === 'function') {
+                        (p as any).catch(() => {});
+                      }
+                    } catch {}
+                  }}
+                  onMouseLeave={(e) => {
+                    try {
+                      e.currentTarget.pause();
+                      e.currentTarget.load();
+                    } catch {}
+                  }}
+                />
+              ) : showYouTubePlayer ? (
                 <YouTubeVideoPlayer
                   videoUrl={tpl.video}
                   title={tpl.name}
                   className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                />
+              ) : thumbnailSrc ? (
+                <img
+                  src={thumbnailSrc}
+                  alt={tpl.name}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
               ) : (
                 <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">
@@ -163,7 +270,7 @@ export default function LatestTemplatesCarousel() {
               </h3>
             </div>
           </div>
-        </div>
+        </Link>
       </div>
     );
   };

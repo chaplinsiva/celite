@@ -54,29 +54,44 @@ export default async function TemplatesPage() {
     console.error('Error fetching templates:', error);
   }
 
-  // Resolve primary image previews for cards from template_previews (kind = 'image')
+  // Resolve primary image and manual video previews for cards from template_previews
   const thumbMap = new Map<string, string>();
+  const manualVideoMap = new Map<string, string>();
   if (templates && templates.length > 0) {
     const slugs = templates.map(t => t.slug);
     const { data: previewsRows } = await supabase
       .from('template_previews')
       .select('template_slug,kind,url,sort_order')
-      .in('template_slug', slugs)
-      .eq('kind', 'image');
+      .in('template_slug', slugs);
 
     if (previewsRows) {
       for (const row of previewsRows as any[]) {
         const slug = row.template_slug as string;
-        const existing = thumbMap.get(slug);
+        const kind = row.kind as string | null;
         const sortOrder = typeof row.sort_order === 'number' ? row.sort_order : 0;
-        const currentSort =
-          existing != null
-            ? (previewsRows.find((r: any) => r.template_slug === slug && resolvePreviewUrl(r.url) === existing)?.sort_order ?? 0)
-            : Number.POSITIVE_INFINITY;
-
         const resolvedUrl = resolvePreviewUrl(row.url);
-        if (resolvedUrl && (existing == null || sortOrder < currentSort)) {
-          thumbMap.set(slug, resolvedUrl);
+        if (!resolvedUrl) continue;
+
+        if (kind === 'image') {
+          const existing = thumbMap.get(slug);
+          const currentSort =
+            existing != null
+              ? (previewsRows.find((r: any) => r.template_slug === slug && resolvePreviewUrl(r.url) === existing)?.sort_order ?? 0)
+              : Number.POSITIVE_INFINITY;
+          if (existing == null || sortOrder < currentSort) {
+            thumbMap.set(slug, resolvedUrl);
+          }
+        }
+
+        if (kind === 'video') {
+          const existing = manualVideoMap.get(slug);
+          const currentSort =
+            existing != null
+              ? (previewsRows.find((r: any) => r.template_slug === slug && resolvePreviewUrl(r.url) === existing)?.sort_order ?? 0)
+              : Number.POSITIVE_INFINITY;
+          if (existing == null || sortOrder < currentSort) {
+            manualVideoMap.set(slug, resolvedUrl);
+          }
         }
       }
     }
@@ -86,6 +101,7 @@ export default async function TemplatesPage() {
   const mappedTemplates = (templates || []).map(t => ({
     ...t,
     img: thumbMap.get(t.slug) || t.img || null,
+    manualVideoUrl: manualVideoMap.get(t.slug) || null,
     price: 0,
     is_featured: Boolean(t.feature),
     feature: Boolean(t.feature),
