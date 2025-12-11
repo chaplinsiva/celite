@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
+import { downloadFromR2 } from '../../../../lib/r2Client';
 import path from 'path';
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -77,15 +78,33 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       }
     }
 
-    // Check if source_path is a direct URL (Google Drive, Dropbox, etc.)
+    // Direct URL (Google Drive, Dropbox, etc.)
     const isDirectUrl = sourcePath.startsWith('http://') || sourcePath.startsWith('https://');
-    
     if (isDirectUrl) {
-      // For direct URLs, return JSON with redirect URL for client to handle
       return NextResponse.json({ ok: true, redirect: true, url: sourcePath });
     }
 
-    // For file paths in storage, download from Supabase storage
+    // Cloudflare R2 path (prefixed with r2:)
+    const R2_PREFIX = 'r2:';
+    if (sourcePath.startsWith(R2_PREFIX)) {
+      const key = sourcePath.slice(R2_PREFIX.length);
+      try {
+        const buffer = await downloadFromR2(key);
+        const filename = path.basename(key) || `${slug}.zip`;
+        return new Response(buffer, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            'Content-Disposition': `attachment; filename="${filename}"`,
+            'Cache-Control': 'no-store',
+          },
+        });
+      } catch (e: any) {
+        return NextResponse.json({ ok: false, error: e?.message || 'R2 download failed' }, { status: 500 });
+      }
+    }
+
+    // Supabase Storage (legacy) path
     const { data: fileData, error: dlErr } = await admin
       .storage
       .from('templatesource')

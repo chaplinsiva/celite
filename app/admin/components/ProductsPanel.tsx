@@ -132,6 +132,8 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
     fd.append('file', file);
     fd.append('kind', kind);
     if (form.slug) fd.append('slug', form.slug);
+    if (form.category_id) fd.append('category_id', form.category_id);
+    if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
     const res = await fetch('/api/admin/upload-file', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: fd });
     const json = await res.json();
     if (json.ok) {
@@ -388,7 +390,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               <input
                 value={form.source_path}
                 onChange={(e) => setForm({ ...form, source_path: e.target.value })}
-                placeholder="Upload file or paste direct drive link (Google Drive, Dropbox, etc.)"
+                placeholder="Upload file (stored in R2) or paste a direct download URL"
                 className="flex-1 px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
               />
               <button
@@ -400,7 +402,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               </button>
               <input ref={sourceInputRef} type="file" accept="application/zip,application/x-rar-compressed,.zip,.rar" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('source', file); }} />
             </div>
-            <p className="text-xs text-zinc-500">You can either upload a zip/rar file or paste a direct download link (Google Drive shareable link, Dropbox link, etc.)</p>
+            <p className="text-xs text-zinc-500">You can either upload a zip/rar file (saved in Cloudflare R2) or paste a direct download link.</p>
           </div>
 
           <div className="flex flex-col gap-2 sm:col-span-2">
