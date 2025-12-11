@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
-import { downloadFromR2 } from '../../../../lib/r2Client';
 import path from 'path';
 
 export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -88,23 +87,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     const R2_PREFIX = 'r2:';
     if (sourcePath.startsWith(R2_PREFIX)) {
       const key = sourcePath.slice(R2_PREFIX.length);
-      try {
-        const buffer = await downloadFromR2(key);
-        // Convert Node Buffer to ArrayBuffer for the Fetch Response body type
-        const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
-        const filename = path.basename(key) || `${slug}.zip`;
-        // Cast to BodyInit to satisfy TypeScript (runtime accepts ArrayBuffer)
-        return new Response(arrayBuffer as any, {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/octet-stream',
-            'Content-Disposition': `attachment; filename="${filename}"`,
-            'Cache-Control': 'no-store',
-          },
-        });
-      } catch (e: any) {
-        return NextResponse.json({ ok: false, error: e?.message || 'R2 download failed' }, { status: 500 });
+      const base = process.env.R2_DIRECT_BASE_URL;
+      if (!base) {
+        return NextResponse.json({ ok: false, error: 'R2_DIRECT_BASE_URL not configured' }, { status: 500 });
       }
+
+      const trimmedBase = base.replace(/\/+$/, '');
+      const trimmedKey = key.replace(/^\/+/, '');
+      const publicUrl = `${trimmedBase}/${trimmedKey}`;
+
+      // Behave like Drive/Dropbox: return a redirect URL for the client to open
+      return NextResponse.json({ ok: true, redirect: true, url: publicUrl });
     }
 
     // Supabase Storage (legacy) path
