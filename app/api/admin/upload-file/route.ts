@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     const safeCategory = categorySlug || 'uncategorized';
     const safeSubcategory = subcategorySlug || 'general';
 
-    // Only support source file uploads here - previews still use YouTube or other flows
+    // Source file upload (R2, private)
     if (kind === 'source') {
       const fileExt = ext || extFromName(file.name) || '.zip';
       const baseName = slug || path.basename(file.name, fileExt);
@@ -73,9 +73,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, path: `r2:${objectKey}`, kind });
     }
 
-    // Thumbnail and video uploads are not handled in this endpoint
+    // Thumbnail or video preview upload (R2, public-ish path saved as r2: key)
     if (kind === 'thumbnail' || kind === 'video') {
-      return NextResponse.json({ ok: false, error: 'Thumbnail/video uploads are not supported in this endpoint.' }, { status: 400 });
+      const defaultExt = kind === 'thumbnail' ? '.jpg' : '.mp4';
+      const fileExt = ext || extFromName(file.name) || defaultExt;
+      const baseName = slug || path.basename(file.name, fileExt);
+      const folder = kind === 'thumbnail' ? 'thumbnails' : 'videos';
+      // R2 key structure: preview/category/subcategory/thumbnails|videos/slug.ext
+      const objectKey = `preview/${safeCategory}/${safeSubcategory}/${folder}/${baseName}${fileExt}`;
+
+      await uploadToR2(objectKey, blob, file.type || (kind === 'thumbnail' ? 'image/jpeg' : 'video/mp4'));
+
+      // Return path for client to store in template_previews.url (with r2: prefix)
+      return NextResponse.json({ ok: true, path: `r2:${objectKey}`, kind });
     }
 
     return NextResponse.json({ ok: false, error: 'Unknown kind' }, { status: 400 });

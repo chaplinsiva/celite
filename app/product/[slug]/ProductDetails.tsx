@@ -19,10 +19,19 @@ interface Review {
   date: string;
 }
 
+interface TemplatePreview {
+  id: string;
+  kind: 'image' | 'video' | 'youtube';
+  title: string | null;
+  url: string;
+  sort_order: number;
+}
+
 interface ProductDetailsProps {
   product: Template & { source_path?: string | null };
   related: Template[];
   reviews: Review[];
+  previews: TemplatePreview[];
 }
 
 const getThumbnail = (item: Template | (Template & { source_path?: string | null })) => {
@@ -35,7 +44,7 @@ const getThumbnail = (item: Template | (Template & { source_path?: string | null
   return '/PNG1.png';
 };
 
-export default function ProductDetails({ product, related, reviews }: ProductDetailsProps) {
+export default function ProductDetails({ product, related, reviews, previews }: ProductDetailsProps) {
   const { user } = useAppContext();
   const { openLoginModal } = useLoginModal();
   const router = useRouter();
@@ -475,6 +484,76 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 </div>
               )}
             </div>
+
+            {/* Additional Preview Gallery */}
+            {previews && previews.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-xl font-bold text-zinc-900 mb-3">Preview Gallery</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {previews.map((p) => {
+                    const key = p.id;
+                    if (p.kind === 'youtube') {
+                      const embed = getYouTubeEmbedUrl(p.url);
+                      return (
+                        <div key={key} className="rounded-xl overflow-hidden border border-zinc-200 bg-zinc-900/80">
+                          {embed ? (
+                            <iframe
+                              src={embed}
+                              title={p.title || product.name}
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                              allowFullScreen
+                              className="w-full aspect-video"
+                            />
+                          ) : (
+                            <div className="w-full aspect-video flex items-center justify-center text-xs text-zinc-400">
+                              Invalid YouTube URL
+                            </div>
+                          )}
+                          {p.title && (
+                            <div className="px-3 py-2 text-xs text-zinc-100 bg-zinc-900/70">
+                              {p.title}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    const isVideo = p.kind === 'video';
+                    const isImage = p.kind === 'image';
+
+                    // For now we treat url as either direct http(s) or storage path (e.g. r2:)
+                    const isDirect = p.url.startsWith('http://') || p.url.startsWith('https://');
+                    const displayUrl = isDirect ? p.url : '/PNG1.png';
+
+                    return (
+                      <div key={key} className="rounded-xl overflow-hidden border border-zinc-200 bg-zinc-900/80">
+                        {isVideo ? (
+                          <video
+                            src={displayUrl}
+                            controls
+                            className="w-full aspect-video"
+                          />
+                        ) : isImage ? (
+                          <img
+                            src={displayUrl}
+                            alt={p.title || product.name}
+                            className="w-full aspect-video object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = '/PNG1.png';
+                            }}
+                          />
+                        ) : null}
+                        {p.title && (
+                          <div className="px-3 py-2 text-xs text-zinc-100 bg-zinc-900/70">
+                            {p.title}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Mobile Subscription Card (Hidden on Desktop) */}
             <SubscriptionCard

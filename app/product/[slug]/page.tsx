@@ -155,5 +155,13 @@ export default async function ProductPage(props: PageProps) {
     tags: r.tags ?? [],
     isFeatured: false,
   }));
-  return <ProductDetails product={prod} related={related} reviews={reviews} />;
+
+  // Load additional previews
+  const { data: previews } = await supabase
+    .from('template_previews')
+    .select('id,kind,title,url,sort_order')
+    .eq('template_slug', prod.slug)
+    .order('sort_order');
+
+  return <ProductDetails product={prod} related={related} reviews={reviews} previews={previews || []} />;
 }
