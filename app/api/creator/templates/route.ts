@@ -49,6 +49,7 @@ export async function GET(req: Request) {
     const items = templates || [];
     const results: Array<any> = [];
 
+    // Per-template download counts
     for (const tpl of items) {
       let downloadCount = 0;
       try {
@@ -64,10 +65,200 @@ export async function GET(req: Request) {
       results.push({ ...tpl, downloadCount });
     }
 
+    // Aggregate stats across all templates for this creator
+    const totalDownloads = results.reduce(
+      (sum, t) => sum + (t.downloadCount || 0),
+      0
+    );
+
+    // Revenue-related unique user count (30-day windows per user/creator)
+    let uniqueUserPeriods = 0;
+    try {
+      const slugs = items.map((t: any) => t.slug).filter(Boolean);
+      if (slugs.length > 0) {
+        const { data: dl } = await admin
+          .from('downloads')
+          .select('user_id, template_slug, downloaded_at')
+          .in('template_slug', slugs)
+          .order('downloaded_at', { ascending: true });
+
+        if (dl && dl.length > 0) {
+          const byUser = new Map<string, Date[]>();
+          for (const d of dl as any[]) {
+            if (!d.user_id || !d.downloaded_at) continue;
+            const arr = byUser.get(d.user_id) || [];
+            arr.push(new Date(d.downloaded_at));
+            byUser.set(d.user_id, arr);
+          }
+
+          const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+          byUser.forEach((dates) => {
+            dates.sort((a, b) => a.getTime() - b.getTime());
+            let lastCounted: Date | null = null;
+            for (const dt of dates) {
+              if (!lastCounted) {
+                uniqueUserPeriods += 1;
+                lastCounted = dt;
+              } else if (dt.getTime() - lastCounted.getTime() > THIRTY_DAYS_MS) {
+                uniqueUserPeriods += 1;
+                lastCounted = dt;
+              }
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Failed to compute unique user periods for creator', e);
+      uniqueUserPeriods = 0;
+    }
+
+    // Calculate creator revenue based on unique user count
+    let creatorRevenue = 0;
+    try {
+      // Get subscription prices from settings
+      let monthlyPrice = 799; // Default
+      let yearlyPrice = 5499; // Default
+      
+      try {
+        const { data: settings } = await admin.from('settings').select('key,value');
+        if (settings) {
+          const settingsMap: Record<string, string> = {};
+          settings.forEach((row: any) => { settingsMap[row.key] = row.value; });
+          
+          const monthlyPaise = Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || 79900);
+          const yearlyPaise = Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || 549900);
+          
+          // Convert from paise to INR (if >= threshold, it's in paise)
+          monthlyPrice = monthlyPaise >= 10000 ? monthlyPaise / 100 : monthlyPaise;
+          yearlyPrice = yearlyPaise >= 100000 ? yearlyPaise / 100 : yearlyPaise;
+        }
+      } catch (e) {
+        console.log('Could not fetch prices from settings, using defaults');
+      }
+
+      // Get all active subscriptions
+      const { data: allSubs } = await admin
+        .from('subscriptions')
+        .select('plan, is_active, valid_until')
+        .eq('is_active', true);
+
+      if (allSubs && allSubs.length > 0) {
+        // Calculate total revenue pool from active subscriptions
+        let totalPool = 0;
+        const now = Date.now();
+        
+        allSubs.forEach((s: any) => {
+          const validUntil = s.valid_until ? new Date(s.valid_until as any).getTime() : null;
+          const isValid = !validUntil || validUntil > now;
+          
+          if (isValid) {
+            if (s.plan === 'monthly' || s.plan === 'weekly') {
+              totalPool += monthlyPrice;
+            } else if (s.plan === 'yearly') {
+              totalPool += yearlyPrice;
+            }
+          }
+        });
+
+        // Get all creators and their unique user counts
+        const { data: allShops } = await admin
+          .from('creator_shops')
+          .select('id');
+
+        if (allShops && allShops.length > 0) {
+          const creatorStats: Array<{ shopId: string; uniqueUsers: number }> = [];
+          
+          for (const creatorShop of allShops) {
+            // Get all templates for this creator
+            const { data: creatorTemplates } = await admin
+              .from('templates')
+              .select('slug')
+              .eq('creator_shop_id', creatorShop.id);
+            
+            if (creatorTemplates && creatorTemplates.length > 0) {
+              const creatorSlugs = creatorTemplates.map((t: any) => t.slug).filter(Boolean);
+              
+              // Get downloads for this creator's templates
+              const { data: creatorDownloads } = await admin
+                .from('downloads')
+                .select('user_id, downloaded_at')
+                .in('template_slug', creatorSlugs)
+                .order('downloaded_at', { ascending: true });
+
+              if (creatorDownloads && creatorDownloads.length > 0) {
+                const byUser = new Map<string, Date[]>();
+                for (const d of creatorDownloads as any[]) {
+                  if (!d.user_id || !d.downloaded_at) continue;
+                  const arr = byUser.get(d.user_id) || [];
+                  arr.push(new Date(d.downloaded_at));
+                  byUser.set(d.user_id, arr);
+                }
+
+                const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+                let creatorUniqueUsers = 0;
+
+                byUser.forEach((dates) => {
+                  dates.sort((a, b) => a.getTime() - b.getTime());
+                  let lastCounted: Date | null = null;
+                  for (const dt of dates) {
+                    if (!lastCounted) {
+                      creatorUniqueUsers += 1;
+                      lastCounted = dt;
+                    } else if (dt.getTime() - lastCounted.getTime() > THIRTY_DAYS_MS) {
+                      creatorUniqueUsers += 1;
+                      lastCounted = dt;
+                    }
+                  }
+                });
+
+                creatorStats.push({
+                  shopId: creatorShop.id,
+                  uniqueUsers: creatorUniqueUsers,
+                });
+              } else {
+                creatorStats.push({
+                  shopId: creatorShop.id,
+                  uniqueUsers: 0,
+                });
+              }
+            } else {
+              creatorStats.push({
+                shopId: creatorShop.id,
+                uniqueUsers: 0,
+              });
+            }
+          }
+
+          // Calculate total unique users across all creators
+          const totalUniqueUsers = creatorStats.reduce((sum, stat) => sum + stat.uniqueUsers, 0);
+
+          // Calculate this creator's share (40% of pool distributed proportionally)
+          if (totalUniqueUsers > 0 && uniqueUserPeriods > 0) {
+            const creatorShare = uniqueUserPeriods / totalUniqueUsers;
+            const creatorPool = totalPool * 0.4; // 40% of total pool
+            creatorRevenue = creatorPool * creatorShare;
+            
+            // Apply minimum payout of 800
+            // If revenue is less than 800, it's not eligible for payout yet
+            // But we still show the calculated revenue
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to calculate creator revenue', e);
+      creatorRevenue = 0;
+    }
+
     return NextResponse.json({
       ok: true,
       shop,
       templates: results,
+      stats: {
+        totalDownloads,
+        uniqueUserPeriods,
+        revenue: creatorRevenue,
+      },
     });
   } catch (e: any) {
     console.error('Creator GET error:', e);

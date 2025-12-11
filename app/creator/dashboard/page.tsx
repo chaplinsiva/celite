@@ -49,6 +49,9 @@ export default function CreatorDashboardPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [totalDownloads, setTotalDownloads] = useState<number>(0);
+  const [uniqueUserPeriods, setUniqueUserPeriods] = useState<number>(0);
+  const [revenue, setRevenue] = useState<number>(0);
 
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({
@@ -126,6 +129,19 @@ export default function CreatorDashboardPage() {
 
       setShop(json.shop);
       setTemplates(json.templates || []);
+      if (json.stats) {
+        setTotalDownloads(json.stats.totalDownloads ?? 0);
+        setUniqueUserPeriods(json.stats.uniqueUserPeriods ?? 0);
+        setRevenue(json.stats.revenue ?? 0);
+      } else {
+        const fallbackDownloads = (json.templates || []).reduce(
+          (sum: number, t: any) => sum + (t.downloadCount || 0),
+          0
+        );
+        setTotalDownloads(fallbackDownloads);
+        setUniqueUserPeriods(0);
+        setRevenue(0);
+      }
 
       if (!json.shop) {
         // No shop yet – send to onboarding
@@ -327,11 +343,6 @@ export default function CreatorDashboardPage() {
     );
   }
 
-  const totalDownloads = templates.reduce(
-    (sum, t) => sum + (t.downloadCount || 0),
-    0
-  );
-
   const getStatusLabel = (status?: string | null) => {
     if (!status || status === "approved") return "Approved";
     if (status === "pending") return "Pending review";
@@ -481,7 +492,7 @@ export default function CreatorDashboardPage() {
                     <h2 className="text-sm font-bold text-zinc-900 mb-4">
                       Quick stats
                     </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                       <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
                         <p className="text-xs text-zinc-500 mb-1">
                           Total templates
@@ -500,14 +511,39 @@ export default function CreatorDashboardPage() {
                       </div>
                       <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
                         <p className="text-xs text-zinc-500 mb-1">
-                          Public URL
+                          Unique users for revenue
                         </p>
-                        <p className="text-xs font-mono text-zinc-800 break-all">
-                          {shop
-                            ? `celite.in/${shop.slug}`
-                            : "Create your shop to get a URL"}
+                        <p className="text-2xl font-bold text-zinc-900">
+                          {uniqueUserPeriods}
+                        </p>
+                        <p className="text-[10px] text-zinc-400 mt-1">
+                          Each user counted once per 30 days across all your
+                          templates.
                         </p>
                       </div>
+                      <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
+                        <p className="text-xs text-zinc-500 mb-1">
+                          Revenue
+                        </p>
+                        <p className="text-2xl font-bold text-zinc-900">
+                          ₹{Math.round(revenue).toLocaleString('en-IN')}
+                        </p>
+                        {revenue > 0 && revenue < 800 && (
+                          <p className="text-[10px] text-amber-600 mt-1">
+                            Minimum payout: ₹800
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-4 rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
+                      <p className="text-xs text-zinc-500 mb-1">
+                        Public URL
+                      </p>
+                      <p className="text-xs font-mono text-zinc-800 break-all">
+                        {shop
+                          ? `celite.in/${shop.slug}`
+                          : "Create your shop to get a URL"}
+                      </p>
                     </div>
                   </div>
 
@@ -607,23 +643,45 @@ export default function CreatorDashboardPage() {
                       Bank &amp; payouts
                     </h3>
                     {shop ? (
-                      <div className="space-y-1 text-xs text-zinc-600">
-                        <p>
-                          <span className="font-semibold">Account name:</span>{" "}
-                          {shop.bank_account_name || "Not set"}
-                        </p>
-                        <p>
-                          <span className="font-semibold">Account number:</span>{" "}
-                          {shop.bank_account_number || "Not set"}
-                        </p>
-                        <p>
-                          <span className="font-semibold">IFSC:</span>{" "}
-                          {shop.bank_ifsc || "Not set"}
-                        </p>
-                        <p>
-                          <span className="font-semibold">UPI ID:</span>{" "}
-                          {shop.bank_upi_id || "Not set"}
-                        </p>
+                      <div className="space-y-3 text-xs text-zinc-600">
+                        {revenue > 0 && (
+                          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 mb-3">
+                            <p className="text-xs text-zinc-500 mb-1">
+                              Current revenue
+                            </p>
+                            <p className="text-lg font-bold text-zinc-900">
+                              ₹{Math.round(revenue).toLocaleString('en-IN')}
+                            </p>
+                            {revenue < 800 && (
+                              <p className="text-[10px] text-amber-600 mt-1">
+                                Minimum payout: ₹800
+                              </p>
+                            )}
+                            {revenue >= 800 && (
+                              <p className="text-[10px] text-emerald-600 mt-1">
+                                Eligible for payout
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        <div className="space-y-1">
+                          <p>
+                            <span className="font-semibold">Account name:</span>{" "}
+                            {shop.bank_account_name || "Not set"}
+                          </p>
+                          <p>
+                            <span className="font-semibold">Account number:</span>{" "}
+                            {shop.bank_account_number || "Not set"}
+                          </p>
+                          <p>
+                            <span className="font-semibold">IFSC:</span>{" "}
+                            {shop.bank_ifsc || "Not set"}
+                          </p>
+                          <p>
+                            <span className="font-semibold">UPI ID:</span>{" "}
+                            {shop.bank_upi_id || "Not set"}
+                          </p>
+                        </div>
                         <button
                           type="button"
                           onClick={() => router.push("/start-selling")}
