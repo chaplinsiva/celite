@@ -173,6 +173,9 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
     }
   };
 
+  const primaryPreview = previews[0] || null;
+  const galleryPreviews = previews.slice(1);
+
   return (
     <div className="space-y-6">
       <header className="flex items-center justify-between">
@@ -457,8 +460,120 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               </div>
             )}
             <p className="text-xs text-zinc-500">
-              Optional YouTube preview. The main preview on the product page will use the first item in the Additional Previews gallery below.
+              Optional YouTube preview. The main preview on the product page will use the Primary Manual Preview below, or fall back to this YouTube link if no primary is set.
             </p>
+          </div>
+
+          {/* Primary Manual Preview */}
+          <div className="flex flex-col gap-3 sm:col-span-2">
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Primary Manual Preview</label>
+            <p className="text-xs text-zinc-500 mb-1">
+              This controls the main image/video on the product page (thumbnail or video). Leave empty to fall back to YouTube or the default image.
+            </p>
+            <div className="space-y-3">
+              {primaryPreview ? (
+                (() => {
+                  const p = primaryPreview;
+                  const isYoutube = p.kind === 'youtube';
+                  return (
+                    <div className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-3 bg-white">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          value={p.kind}
+                          onChange={(e) => {
+                            const kind = e.target.value as 'image' | 'video' | 'youtube';
+                            setPreviews(prev => {
+                              if (prev.length === 0) return [{ kind, url: '' }];
+                              const next = [...prev];
+                              next[0] = { ...next[0], kind };
+                              return next;
+                            });
+                          }}
+                          className="px-3 py-1 text-xs rounded-md border border-zinc-200 bg-zinc-50"
+                        >
+                          <option value="image">Image (thumbnail)</option>
+                          <option value="video">Video file</option>
+                          <option value="youtube">YouTube link</option>
+                        </select>
+                        <input
+                          value={p.title || ''}
+                          onChange={(e) =>
+                            setPreviews(prev => {
+                              if (prev.length === 0) return [{ kind: 'image', url: '', title: e.target.value }];
+                              const next = [...prev];
+                              next[0] = { ...next[0], title: e.target.value };
+                              return next;
+                            })
+                          }
+                          placeholder="Optional title"
+                          className="flex-1 min-w-[120px] px-3 py-1 rounded-md border border-zinc-200 text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setPreviews(prev => prev.slice(1))}
+                          className="px-2 py-1 text-xs rounded-md border border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                        >
+                          Remove Primary
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={p.url}
+                          onChange={(e) =>
+                            setPreviews(prev => {
+                              if (prev.length === 0) return [{ kind: 'image', url: e.target.value }];
+                              const next = [...prev];
+                              next[0] = { ...next[0], url: e.target.value };
+                              return next;
+                            })
+                          }
+                          placeholder={
+                            isYoutube
+                              ? 'YouTube link'
+                              : 'Direct URL or will be filled when you upload a file'
+                          }
+                          className="flex-1 px-3 py-2 rounded-md border border-zinc-200 text-xs"
+                        />
+                        {!isYoutube && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const ref = p.kind === 'image' ? thumbInputRef : videoInputRef;
+                              if (ref.current) {
+                                (ref.current as any).dataset.index = '0';
+                                ref.current.click();
+                              }
+                            }}
+                            className="px-3 py-2 text-xs rounded-md border border-zinc-200 bg-white hover:bg-zinc-50"
+                          >
+                            Upload
+                          </button>
+                        )}
+                      </div>
+                      {isYoutube && p.url && getYouTubeEmbedUrl(p.url) && (
+                        <div className="aspect-video w-full max-w-md overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 shadow-sm">
+                          <iframe
+                            src={getYouTubeEmbedUrl(p.url) || ''}
+                            title={p.title || form.name || 'Primary Preview'}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                            className="h-full w-full"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setPreviews(prev => [{ kind: 'image', url: '' }, ...prev])}
+                  className="px-3 py-2 text-xs rounded-md border border-dashed border-zinc-300 text-zinc-600 hover:bg-zinc-50"
+                >
+                  + Set Primary Preview
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Additional Previews */}
@@ -468,16 +583,19 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               Add extra thumbnails or videos (either YouTube links or uploaded files). These will show as a preview gallery on the product page.
             </p>
             <div className="space-y-3">
-              {previews.map((p, idx) => {
+              {galleryPreviews.map((p, idx) => {
+                const absoluteIndex = idx + 1; // offset by primary
                 const isYoutube = p.kind === 'youtube';
                 return (
-                  <div key={p.id || idx} className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-3 bg-white">
+                  <div key={p.id || absoluteIndex} className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-3 bg-white">
                     <div className="flex flex-wrap items-center gap-2">
                       <select
                         value={p.kind}
                         onChange={(e) => {
                           const kind = e.target.value as 'image' | 'video' | 'youtube';
-                          setPreviews(prev => prev.map((row, i) => i === idx ? { ...row, kind } : row));
+                          setPreviews(prev =>
+                            prev.map((row, i) => i === absoluteIndex ? { ...row, kind } : row),
+                          );
                         }}
                         className="px-3 py-1 text-xs rounded-md border border-zinc-200 bg-zinc-50"
                       >
@@ -488,14 +606,18 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                       <input
                         value={p.title || ''}
                         onChange={(e) =>
-                          setPreviews(prev => prev.map((row, i) => i === idx ? { ...row, title: e.target.value } : row))
+                          setPreviews(prev =>
+                            prev.map((row, i) => i === absoluteIndex ? { ...row, title: e.target.value } : row),
+                          )
                         }
                         placeholder="Optional title"
                         className="flex-1 min-w-[120px] px-3 py-1 rounded-md border border-zinc-200 text-xs"
                       />
                       <button
                         type="button"
-                        onClick={() => setPreviews(prev => prev.filter((_, i) => i !== idx))}
+                        onClick={() =>
+                          setPreviews(prev => prev.filter((_, i) => i !== absoluteIndex))
+                        }
                         className="px-2 py-1 text-xs rounded-md border border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
                       >
                         Remove
@@ -505,7 +627,9 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                       <input
                         value={p.url}
                         onChange={(e) =>
-                          setPreviews(prev => prev.map((row, i) => i === idx ? { ...row, url: e.target.value } : row))
+                          setPreviews(prev =>
+                            prev.map((row, i) => i === absoluteIndex ? { ...row, url: e.target.value } : row),
+                          )
                         }
                         placeholder={
                           isYoutube
@@ -520,7 +644,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                           onClick={() => {
                             const ref = p.kind === 'image' ? thumbInputRef : videoInputRef;
                             if (ref.current) {
-                              (ref.current as any).dataset.index = String(idx);
+                              (ref.current as any).dataset.index = String(absoluteIndex);
                               ref.current.click();
                             }
                           }}
