@@ -27,6 +27,7 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [returnUrl, setReturnUrl] = useState<string | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     const returnParam = searchParams.get('return');
@@ -34,6 +35,17 @@ function LoginContent() {
       setReturnUrl(decodeURIComponent(returnParam));
     }
   }, [searchParams]);
+
+  // Redirect if user is already logged in
+  useEffect(() => {
+    if (user && !isRedirecting) {
+      setIsRedirecting(true);
+      // Use setTimeout to ensure this happens after render
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 0);
+    }
+  }, [user, router, isRedirecting]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -94,8 +106,8 @@ function LoginContent() {
     }
   };
 
-  if (user) {
-    router.push('/dashboard');
+  // Show loading spinner while redirecting if user is logged in
+  if (isRedirecting || user) {
     return <LoadingSpinner message="Redirecting..." />;
   }
 
