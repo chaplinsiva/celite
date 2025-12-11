@@ -155,6 +155,10 @@ export async function GET(req: Request) {
     const monthlyTotalRevenue = activeMonthly * monthlyPrice;
     const yearlyTotalRevenue = activeYearly * yearlyPrice;
     const totalSubscriptionRevenue = monthlyTotalRevenue + yearlyTotalRevenue;
+    
+    // Calculate revenue distribution: 40% to vendors, 60% to Celite
+    const vendorPoolAmount = totalSubscriptionRevenue * 0.4;
+    const celiteAmount = totalSubscriptionRevenue * 0.6;
 
     // Calculate total order revenue (if orders exist)
     const totalOrderRevenue = (ordersRes.data ?? []).reduce((s: number, o: any) => s + Number(o.total || 0), 0);
@@ -248,6 +252,8 @@ export async function GET(req: Request) {
         orderRevenue: totalOrderRevenue,
         subscriptionRevenue: Number(subscriptionMRR.toFixed(2)),
         totalSubscriptionRevenue: Number(totalSubscriptionRevenue.toFixed(2)),
+        vendorPoolAmount: Number(vendorPoolAmount.toFixed(2)),
+        celiteAmount: Number(celiteAmount.toFixed(2)),
         monthlyPrice,
         yearlyPrice,
         orders: totalOrders,

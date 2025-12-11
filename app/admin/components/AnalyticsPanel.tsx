@@ -275,6 +275,36 @@ export default function AnalyticsPanel() {
         <p className="text-sm text-zinc-500 mt-1">Comprehensive subscription and revenue analytics</p>
       </div>
 
+      {/* Revenue Distribution Section */}
+      {(totals?.totalSubscriptionRevenue !== undefined || totals?.vendorPoolAmount !== undefined || totals?.celiteAmount !== undefined) && (
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm mb-6">
+          <h3 className="text-lg font-bold text-zinc-900 mb-4">Revenue Distribution</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="rounded-lg border border-zinc-100 bg-zinc-50 p-5">
+              <div className="text-2xl font-bold text-zinc-900 mb-1">
+                ₹{(totals?.totalSubscriptionRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Total Revenue Pool</div>
+              <div className="text-[10px] text-zinc-400 mt-2">From active subscriptions</div>
+            </div>
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-5">
+              <div className="text-2xl font-bold text-blue-600 mb-1">
+                ₹{(totals?.vendorPoolAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="text-xs font-medium text-blue-600 uppercase tracking-wider">Vendor Pool</div>
+              <div className="text-[10px] text-blue-500 mt-2">40% distributed to creators</div>
+            </div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-5">
+              <div className="text-2xl font-bold text-emerald-600 mb-1">
+                ₹{(totals?.celiteAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="text-xs font-medium text-emerald-600 uppercase tracking-wider">Celite Amount</div>
+              <div className="text-[10px] text-emerald-500 mt-2">60% retained by Celite</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">

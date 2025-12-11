@@ -21,7 +21,14 @@ export default function AdminClient() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [templates, setTemplates] = useState<TemplateRow[]>([]);
-  const [stats, setStats] = useState<{ templates: number; orders: number; revenue: number } | null>(null);
+  const [stats, setStats] = useState<{ 
+    templates: number; 
+    orders: number; 
+    revenue: number;
+    totalSubscriptionRevenue?: number;
+    vendorPoolAmount?: number;
+    celiteAmount?: number;
+  } | null>(null);
   const [active, setActive] = useState<
     'overview' | 'products' | 'vendorApproval' | 'categories' | 'analytics' | 'users' | 'settings' | 'marketing'
   >('overview');
