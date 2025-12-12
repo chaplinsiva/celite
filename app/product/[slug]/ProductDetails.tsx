@@ -425,21 +425,56 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         return;
       }
 
-      if (!res.ok) {
-        setFeedback('Download link not available.');
+      if (res.status === 401) {
+        openLoginModal();
+        setFeedback('Please log in to download.');
         setDownloading(false);
         return;
       }
 
-      const contentType = res.headers.get('content-type');
-      if (contentType?.includes('application/json')) {
+      const contentType = res.headers.get('content-type') || '';
+      
+      // Check if response is JSON (error or redirect)
+      if (contentType.includes('application/json')) {
         const json = await res.json();
+        
+        // Handle redirect URL (for Supabase storage)
         if (json.redirect && json.url) {
           window.open(json.url, '_blank');
           setDownloading(false);
           return;
         }
+        
+        // Handle errors
+        if (json.error) {
+          if (json.error.includes('Access denied') || json.error.includes('subscribe')) {
+            router.push('/pricing');
+            setFeedback('Please subscribe to download this template.');
+          } else if (json.error.includes('not found') || json.error.includes('not available')) {
+            setFeedback('Source file not available for this template.');
+          } else {
+            setFeedback(json.error || 'Download failed.');
+          }
+          setDownloading(false);
+          return;
+        }
+        
+        // Unknown JSON response
         setFeedback('Download not available.');
+        setDownloading(false);
+        return;
+      }
+
+      // If not JSON, it should be a file download
+      if (!res.ok) {
+        // Try to get error message
+        try {
+          const errorText = await res.text();
+          const errorJson = JSON.parse(errorText);
+          setFeedback(errorJson.error || 'Download failed.');
+        } catch {
+          setFeedback('Download link not available.');
+        }
         setDownloading(false);
         return;
       }

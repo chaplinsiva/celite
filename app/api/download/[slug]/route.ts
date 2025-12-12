@@ -56,7 +56,7 @@ export async function GET(
 
     // Check if source_path is an R2 path (starts with category/ or is a relative path)
     // R2 paths are stored as: category/subcategory/source/{filename}
-    // Supabase storage paths are stored as: templatesource/{filename}
+    // Supabase storage paths are stored as: templatesource/{filename} or just the filename
     const isR2Path = sourcePath.includes('/') && !sourcePath.startsWith('templatesource/');
     
     if (isR2Path) {
@@ -65,11 +65,16 @@ export async function GET(
         const { body, contentType } = await getFileFromR2(sourcePath);
         
         // Record download
-        await admin.from('downloads').insert({
-          user_id: userId,
-          template_slug: slug,
-          downloaded_at: new Date().toISOString(),
-        });
+        try {
+          await admin.from('downloads').insert({
+            user_id: userId,
+            template_slug: slug,
+            downloaded_at: new Date().toISOString(),
+          });
+        } catch (downloadErr: any) {
+          // Log but don't fail the download if recording fails
+          console.error('Failed to record download:', downloadErr);
+        }
 
         // Return file
         return new NextResponse(body as any, {
@@ -79,27 +84,44 @@ export async function GET(
           },
         });
       } catch (r2Err: any) {
-        console.error('R2 download error:', r2Err);
-        return NextResponse.json({ error: 'Failed to download file from storage' }, { status: 500 });
+        console.error('R2 download error for', slug, ':', r2Err);
+        const errorMessage = r2Err?.message || 'Failed to download file from storage';
+        return NextResponse.json({ error: `Download failed: ${errorMessage}` }, { status: 500 });
       }
     } else {
       // Legacy Supabase storage path
+      // Remove 'templatesource/' prefix if present
+      const storagePath = sourcePath.startsWith('templatesource/') 
+        ? sourcePath.replace('templatesource/', '')
+        : sourcePath;
+      
       // Create signed URL from private bucket 'templatesource'
       const { data, error: signErr } = await admin
         .storage
         .from('templatesource')
-        .createSignedUrl(sourcePath.replace('templatesource/', ''), 60 * 60); // 1 hour
+        .createSignedUrl(storagePath, 60 * 60); // 1 hour
       
       if (signErr) {
-        return NextResponse.json({ error: signErr.message }, { status: 400 });
+        console.error('Supabase storage error:', signErr);
+        return NextResponse.json({ error: `Storage error: ${signErr.message}` }, { status: 500 });
+      }
+
+      if (!data || !data.signedUrl) {
+        console.error('No signed URL returned from Supabase storage');
+        return NextResponse.json({ error: 'Failed to generate download link' }, { status: 500 });
       }
 
       // Record download
-      await admin.from('downloads').insert({
-        user_id: userId,
-        template_slug: slug,
-        downloaded_at: new Date().toISOString(),
-      });
+      try {
+        await admin.from('downloads').insert({
+          user_id: userId,
+          template_slug: slug,
+          downloaded_at: new Date().toISOString(),
+        });
+      } catch (downloadErr: any) {
+        // Log but don't fail the download if recording fails
+        console.error('Failed to record download:', downloadErr);
+      }
 
       // Return redirect URL
       return NextResponse.json({ redirect: true, url: data.signedUrl });
