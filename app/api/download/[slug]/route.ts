@@ -50,14 +50,17 @@ export async function GET(
     }
 
     const sourcePath = template.source_path;
-    if (!sourcePath) {
-      return NextResponse.json({ error: 'Source file not available' }, { status: 404 });
+    if (!sourcePath || typeof sourcePath !== 'string' || sourcePath.trim() === '') {
+      console.error(`Template ${slug} has no source_path`);
+      return NextResponse.json({ error: 'Source file not available for this template' }, { status: 404 });
     }
 
     // Check if source_path is an R2 path (starts with category/ or is a relative path)
     // R2 paths are stored as: category/subcategory/source/{filename}
     // Supabase storage paths are stored as: templatesource/{filename} or just the filename
     const isR2Path = sourcePath.includes('/') && !sourcePath.startsWith('templatesource/');
+    
+    console.log(`Download request for ${slug}: sourcePath=${sourcePath}, isR2Path=${isR2Path}`);
     
     if (isR2Path) {
       // Download from R2
