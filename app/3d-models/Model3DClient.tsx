@@ -147,7 +147,7 @@ export default function Model3DClient({
         const descriptionMatch = t.description?.toLowerCase().includes(q);
         const tagMatch = t.tags?.some(tag => tag?.toLowerCase().includes(q));
         const featureMatch = t.features?.some(feat => feat?.toLowerCase().includes(q));
-        const softwareMatch = t.software?.some(sw => sw?.toLowerCase() || '').includes(q);
+        const softwareMatch = t.software?.some(sw => (sw?.toLowerCase() || '').includes(q));
 
         return nameMatch || subtitleMatch || descriptionMatch || tagMatch || featureMatch || softwareMatch;
       });
