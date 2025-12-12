@@ -9,6 +9,10 @@ import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { useLoginModal } from '../../../context/LoginModalContext';
 import { trackViewItem } from '../../../lib/gtag';
 import YouTubeVideoPlayer from '../../../components/YouTubeVideoPlayer';
+import VideoThumbnailPlayer from '../../../components/VideoThumbnailPlayer';
+import Model3DViewerInteractive from '../../../components/Model3DViewerInteractive';
+import StockPhotoViewer from '../../../components/StockPhotoViewer';
+import MusicSfxPlayer from '../../../components/MusicSfxPlayer';
 import { cn, getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '../../../lib/utils';
 import type { Template } from '../../../data/templateData';
 
@@ -20,14 +24,17 @@ interface Review {
 }
 
 interface ProductDetailsProps {
-  product: Template & { source_path?: string | null; vendor_name?: string | null };
+  product: Template & { source_path?: string | null; vendor_name?: string | null; model_3d_path?: string | null; category_id?: string | null; subcategory_id?: string | null; category_slug?: string | null; category_name?: string | null };
   related: Template[];
   reviews: Review[];
 }
 
-const getThumbnail = (item: Template | (Template & { source_path?: string | null })) => {
-  // Show any image, even if low quality
+const getThumbnail = (item: Template | (Template & { source_path?: string | null; thumbnail_path?: string | null })) => {
+  // Prioritize thumbnail_path for new templates
+  if ((item as any).thumbnail_path) return (item as any).thumbnail_path;
+  // Fallback to img
   if (item.img) return item.img;
+  // For YouTube videos, get thumbnail
   if (item.video) {
     const thumb = getYouTubeThumbnailUrl(item.video);
     if (thumb) return thumb;
@@ -99,7 +106,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
       try {
         setLoadingMoreInStyle(true);
         const supabase = getSupabaseBrowserClient();
-
+        
         // Get keywords from current template
         const keywords: string[] = [
           ...(product.tags || []),
@@ -109,14 +116,21 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         ].filter(k => k && typeof k === 'string' && k.trim() !== '');
 
         if (keywords.length === 0) {
-          // If no keywords, fetch random templates
-          const { data } = await supabase
+          // If no keywords, fetch templates from same category
+          let query = supabase
             .from('templates')
-            .select('slug,name,subtitle,description,img,video,features,software,plugins,tags')
+            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name')
             .neq('slug', product.slug)
+            .eq('status', 'approved');
+          
+          if (product.category_id) {
+            query = query.eq('category_id', product.category_id);
+          }
+          
+          const { data } = await query
             .limit(8)
             .order('created_at', { ascending: false });
-
+          
           if (data) {
             setMoreInStyleTemplates(data.map((r: any) => ({
               slug: r.slug,
@@ -126,6 +140,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               price: 0,
               img: r.img,
               video: r.video,
+              video_path: r.video_path ?? null,
+              thumbnail_path: r.thumbnail_path ?? null,
+              model_3d_path: r.model_3d_path ?? null,
+              vendor_name: r.vendor_name ?? null,
               features: r.features ?? [],
               software: r.software ?? [],
               plugins: r.plugins ?? [],
@@ -137,12 +155,18 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
           return;
         }
 
-        // Search for templates matching keywords
-        const { data: allTemplates } = await supabase
+        // Search for templates matching keywords in the same category
+        let query = supabase
           .from('templates')
-          .select('slug,name,subtitle,description,img,video,features,software,plugins,tags')
+          .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name')
           .neq('slug', product.slug)
-          .limit(50);
+          .eq('status', 'approved');
+        
+        if (product.category_id) {
+          query = query.eq('category_id', product.category_id);
+        }
+        
+        const { data: allTemplates } = await query.limit(50);
 
         if (!allTemplates) {
           setLoadingMoreInStyle(false);
@@ -181,6 +205,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             price: 0,
             img: item.template.img,
             video: item.template.video,
+            video_path: item.template.video_path ?? null,
+            thumbnail_path: item.template.thumbnail_path ?? null,
+            model_3d_path: item.template.model_3d_path ?? null,
+            vendor_name: item.template.vendor_name ?? null,
             features: item.template.features ?? [],
             software: item.template.software ?? [],
             plugins: item.template.plugins ?? [],
@@ -201,6 +229,9 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               price: 0,
               img: r.img,
               video: r.video,
+              video_path: r.video_path ?? null,
+              thumbnail_path: r.thumbnail_path ?? null,
+              vendor_name: r.vendor_name ?? null,
               features: r.features ?? [],
               software: r.software ?? [],
               plugins: r.plugins ?? [],
@@ -220,7 +251,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
     };
 
     fetchMoreInStyle();
-  }, [product.slug, product.tags, product.features, product.software, product.plugins]);
+  }, [product.slug, product.tags, product.features, product.software, product.plugins, product.category_id]);
 
   // Fetch "You May Also Like" templates based on subscription status
   useEffect(() => {
@@ -237,11 +268,18 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             'logo', 'title', 'trailer', 'promo', 'commercial'
           ];
 
-          const { data: allTemplates } = await supabase
+          // Fetch templates from same category
+          let query = supabase
             .from('templates')
-            .select('slug,name,subtitle,description,img,video,features,software,plugins,tags')
+            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name')
             .neq('slug', product.slug)
-            .limit(50);
+            .eq('status', 'approved');
+          
+          if (product.category_id) {
+            query = query.eq('category_id', product.category_id);
+          }
+          
+          const { data: allTemplates } = await query.limit(50);
 
           if (!allTemplates) {
             setLoadingYouMayAlsoLike(false);
@@ -279,6 +317,9 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               price: 0,
               img: item.template.img,
               video: item.template.video,
+              video_path: item.template.video_path ?? null,
+              thumbnail_path: item.template.thumbnail_path ?? null,
+              vendor_name: item.template.vendor_name ?? null,
               features: item.template.features ?? [],
               software: item.template.software ?? [],
               plugins: item.template.plugins ?? [],
@@ -299,6 +340,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 price: 0,
                 img: r.img,
                 video: r.video,
+                video_path: r.video_path ?? null,
+                thumbnail_path: r.thumbnail_path ?? null,
+                model_3d_path: r.model_3d_path ?? null,
+                vendor_name: r.vendor_name ?? null,
                 features: r.features ?? [],
                 software: r.software ?? [],
                 plugins: r.plugins ?? [],
@@ -310,14 +355,21 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             setYouMayAlsoLikeTemplates(scored);
           }
         } else {
-          // For non-subscribed users: fetch random templates
-          const { data } = await supabase
+          // For non-subscribed users: fetch templates from same category
+          let query = supabase
             .from('templates')
-            .select('slug,name,subtitle,description,img,video,features,software,plugins,tags')
+            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name')
             .neq('slug', product.slug)
+            .eq('status', 'approved');
+          
+          if (product.category_id) {
+            query = query.eq('category_id', product.category_id);
+          }
+          
+          const { data } = await query
             .limit(8)
             .order('created_at', { ascending: false });
-
+          
           if (data) {
             setYouMayAlsoLikeTemplates(data.map((r: any) => ({
               slug: r.slug,
@@ -327,6 +379,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               price: 0,
               img: r.img,
               video: r.video,
+              video_path: r.video_path ?? null,
+              thumbnail_path: r.thumbnail_path ?? null,
+              model_3d_path: r.model_3d_path ?? null,
+              vendor_name: r.vendor_name ?? null,
               features: r.features ?? [],
               software: r.software ?? [],
               plugins: r.plugins ?? [],
@@ -344,7 +400,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
     };
 
     fetchYouMayAlsoLike();
-  }, [isSubActive, user, product.slug]);
+  }, [isSubActive, user, product.slug, product.category_id]);
 
 
   const handleDownload = async () => {
@@ -434,27 +490,113 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         <div className="mb-8">
           {/* Mobile: Shorter breadcrumb */}
           <div className="text-xs sm:text-sm text-zinc-500 mb-2">
-            <Link href="/templates" className="hover:text-blue-600 transition-colors hidden sm:inline">Video Templates</Link>
-            <span className="mx-2 hidden sm:inline">›</span>
-            <span className="text-zinc-900 font-medium truncate block sm:inline">{product.name}</span>
+            {(() => {
+              const categorySlug = (product as any).category_slug?.toLowerCase() || '';
+              const categoryName = (product as any).category_name || '';
+              const categoryId = (product as any).category_id;
+              
+              // Determine category route and display name
+              let categoryRoute = '/video-templates';
+              let categoryDisplayName = 'Video Templates';
+              
+              // Check for 3D Models
+              if (categorySlug === '3d-models' || 
+                  (categorySlug.includes('3d') && categorySlug.includes('model')) ||
+                  (categoryName?.toLowerCase().includes('3d') && categoryName?.toLowerCase().includes('model'))) {
+                categoryRoute = '/3d-models';
+                categoryDisplayName = '3D Models';
+              }
+              // Check for Stock Photos
+              else if (categoryId === 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47' || 
+                  categorySlug === 'stock-images' || 
+                  categorySlug === 'stock-photos' ||
+                  (categorySlug.includes('stock') && (categorySlug.includes('photo') || categorySlug.includes('image'))) ||
+                  (categoryName?.toLowerCase().includes('stock') && (categoryName?.toLowerCase().includes('photo') || categoryName?.toLowerCase().includes('image')))) {
+                categoryRoute = '/stock-photos';
+                categoryDisplayName = 'Stock Photos';
+              } 
+              // Check for Music & SFX
+              else if (categoryId === '45456b94-cb11-449b-ab99-f0633d6e8848' || 
+                         categorySlug === 'musics-and-sfx' || 
+                         categorySlug === 'music' ||
+                         categorySlug === 'audio' ||
+                         categorySlug === 'sound-effects' ||
+                         (categorySlug.includes('music') || categorySlug.includes('audio') || categorySlug.includes('sfx') || categorySlug.includes('sound')) ||
+                         (categoryName?.toLowerCase().includes('music') || categoryName?.toLowerCase().includes('audio') || categoryName?.toLowerCase().includes('sfx') || categoryName?.toLowerCase().includes('sound'))) {
+                categoryRoute = '/music-sfx';
+                categoryDisplayName = 'Music & SFX';
+              } 
+              // Check for Web Templates
+              else if (categorySlug === 'website-templates' || 
+                         categorySlug === 'web-templates' ||
+                         (categorySlug.includes('web') || categorySlug.includes('website')) ||
+                         (categoryName?.toLowerCase().includes('web') || categoryName?.toLowerCase().includes('website'))) {
+                categoryRoute = '/web-templates';
+                categoryDisplayName = 'Web Templates';
+              } 
+              // Check for Graphics
+              else if (categorySlug === 'psd-templates' || 
+                         categorySlug === 'graphics' ||
+                         (categorySlug.includes('graphic') || categorySlug.includes('psd')) ||
+                         (categoryName?.toLowerCase().includes('graphic') || categoryName?.toLowerCase().includes('psd'))) {
+                categoryRoute = '/graphics';
+                categoryDisplayName = 'Graphics';
+              } 
+              // Check for After Effects / Video Templates
+              else if (categorySlug === 'after-effects' || 
+                         categorySlug === 'video-templates' ||
+                         (categorySlug.includes('after-effects') || categorySlug.includes('video')) ||
+                         (categoryName?.toLowerCase().includes('after effects') || categoryName?.toLowerCase().includes('video'))) {
+                categoryRoute = '/video-templates';
+                categoryDisplayName = 'Video Templates';
+              }
+              // Fallback: Use category name if available
+              else if (categoryName) {
+                categoryDisplayName = categoryName;
+                // Try to determine route from name
+                const nameLower = categoryName.toLowerCase();
+                if (nameLower.includes('music') || nameLower.includes('audio') || nameLower.includes('sfx')) {
+                  categoryRoute = '/music-sfx';
+                } else if (nameLower.includes('stock') && (nameLower.includes('photo') || nameLower.includes('image'))) {
+                  categoryRoute = '/stock-photos';
+                } else if (nameLower.includes('3d') && nameLower.includes('model')) {
+                  categoryRoute = '/3d-models';
+                } else if (nameLower.includes('web') || nameLower.includes('website')) {
+                  categoryRoute = '/web-templates';
+                } else if (nameLower.includes('graphic') || nameLower.includes('psd')) {
+                  categoryRoute = '/graphics';
+                }
+              }
+              
+              return (
+                <>
+                  <Link href={categoryRoute} className="hover:text-blue-600 transition-colors hidden sm:inline">
+                    {categoryDisplayName}
+                  </Link>
+                  <span className="mx-2 hidden sm:inline">›</span>
+                  <span className="text-zinc-900 font-medium truncate block sm:inline">{product.name}</span>
+                </>
+              );
+            })()}
           </div>
           {/* Mobile: Smaller title */}
           <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-zinc-900 tracking-tight line-clamp-2 sm:line-clamp-none">{product.name}</h1>
           {/* Desktop: Vendor / brand info */}
           <div className="hidden sm:flex items-center gap-3 mt-3">
             {(() => {
-              const vendor = (product as any).vendor_name || 'Celite Studios';
+              const vendor = (product as any).vendor_name;
+              if (!vendor) return null; // Don't show vendor section if no vendor name
               const initial = vendor.charAt(0).toUpperCase() || 'C';
               return (
-                <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">
                     {initial}
                   </div>
                   <span className="text-sm font-medium text-zinc-700">{vendor}</span>
-                  <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                    <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-                  </div>
-                </div>
+              <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+              </div>
+            </div>
               );
             })()}
           </div>
@@ -465,23 +607,101 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
           {/* LEFT COLUMN - CONTENT (66%) */}
           <div className="w-full lg:w-2/3">
 
-            {/* Video Player */}
+            {/* Video Player / 3D Model / Stock Photo / Music Preview */}
             <div className="w-full aspect-video rounded-xl overflow-hidden bg-black shadow-lg mb-8 relative group">
-              {product.video ? (
-                <YouTubeVideoPlayer
-                  videoUrl={product.video}
-                  title={product.name}
-                  className="w-full h-full"
-                  showFullscreen={true}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-zinc-100">
-                  <img src={getThumbnail(product)} alt={product.name} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
-                    <PlayCircle className="w-16 h-16 text-white opacity-90 drop-shadow-lg" />
+              {(() => {
+                const categorySlug = (product as any).category_slug?.toLowerCase() || '';
+                const categoryId = (product as any).category_id;
+                const isStockPhoto = categoryId === 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47' || 
+                                     categorySlug === 'stock-images' || 
+                                     categorySlug === 'stock-photos' ||
+                                     (categorySlug.includes('stock') && (categorySlug.includes('photo') || categorySlug.includes('image')));
+                const isMusicSfx = categoryId === '45456b94-cb11-449b-ab99-f0633d6e8848' || 
+                                   categorySlug === 'musics-and-sfx' || 
+                                   categorySlug === 'music' ||
+                                   categorySlug === 'audio' ||
+                                   categorySlug === 'sound-effects' ||
+                                   (categorySlug.includes('music') || categorySlug.includes('audio') || categorySlug.includes('sfx') || categorySlug.includes('sound'));
+
+                if (isStockPhoto) {
+                  const imageUrl = (product as any).thumbnail_path || product.img || '/PNG1.png';
+                  return (
+                    <StockPhotoViewer
+                      imageUrl={imageUrl}
+                      title={product.name}
+                      onDownload={isSubActive ? handleDownload : undefined}
+                      className="w-full h-full"
+                    />
+                  );
+                }
+
+                if (isMusicSfx && (product as any).audio_preview_path) {
+                  return (
+                    <MusicSfxPlayer
+                      audioUrl={(product as any).audio_preview_path}
+                      title={product.name}
+                      subtitle={product.subtitle}
+                      thumbnailUrl={(product as any).thumbnail_path || product.img || undefined}
+                      onDownload={isSubActive ? handleDownload : undefined}
+                      className="w-full h-full"
+                    />
+                  );
+                }
+
+                // Default: 3D Model, Video, or Image
+                if ((product as any).model_3d_path) {
+                  return (
+                    <Model3DViewerInteractive
+                      modelUrl={(product as any).model_3d_path}
+                      className="w-full h-full"
+                    />
+                  );
+                }
+
+                if ((product as any).video_path) {
+                  return (
+                    <VideoThumbnailPlayer
+                      videoUrl={(product as any).video_path}
+                      thumbnailUrl={(product as any).thumbnail_path || product.img || undefined}
+                      title={product.name}
+                      className="w-full h-full"
+                    />
+                  );
+                }
+
+                if (product.video) {
+                  return (
+                    <YouTubeVideoPlayer
+                      videoUrl={product.video}
+                      title={product.name}
+                      className="w-full h-full"
+                      showFullscreen={true}
+                    />
+                  );
+                }
+
+                if ((product as any).thumbnail_path) {
+                  return (
+                    <div className="w-full h-full flex items-center justify-center bg-zinc-100">
+                      <img src={(product as any).thumbnail_path} alt={product.name} className="w-full h-full object-cover" />
+                      {(product as any).audio_preview_path && (
+                        <div className="absolute bottom-4 left-4 right-4">
+                          <audio src={(product as any).audio_preview_path} controls className="w-full" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="w-full h-full flex items-center justify-center bg-zinc-100">
+                    <img src={getThumbnail(product)} alt={product.name} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+                      <PlayCircle className="w-16 h-16 text-white opacity-90 drop-shadow-lg" />
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
 
             {/* Mobile Subscription Card (Hidden on Desktop) */}
@@ -522,7 +742,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               <h2 className="text-xl font-bold text-zinc-900 mb-4">Product Tags</h2>
               <div className="flex flex-wrap gap-2">
                 {(product.tags || []).map((tag, i) => (
-                  <Link key={i} href={`/templates?search=${tag}`} className="px-4 py-2 rounded-lg bg-zinc-100 text-zinc-600 text-sm font-medium hover:bg-zinc-200 transition-colors">
+                  <Link key={i} href={`/video-templates?search=${tag}`} className="px-4 py-2 rounded-lg bg-zinc-100 text-zinc-600 text-sm font-medium hover:bg-zinc-200 transition-colors">
                     {tag}
                   </Link>
                 ))}
@@ -732,7 +952,23 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 {moreInStyleTemplates.slice(moreInStyleIndex * 4, (moreInStyleIndex + 1) * 4).map((item) => (
                   <Link key={item.slug} href={`/product/${item.slug}`} className="group">
                     <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
-                      {item.video ? (
+                      {(item as any).thumbnail_path ? (
+                        <img
+                          src={(item as any).thumbnail_path}
+                          alt={item.name}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          onError={(e) => {
+                            e.currentTarget.src = item.img || '/PNG1.png';
+                          }}
+                        />
+                      ) : (item as any).video_path ? (
+                        <VideoThumbnailPlayer
+                          videoUrl={(item as any).video_path}
+                          thumbnailUrl={(item as any).thumbnail_path || item.img || undefined}
+                          title={item.name}
+                          className="w-full h-full"
+                        />
+                      ) : item.video ? (
                         <YouTubeVideoPlayer
                           videoUrl={item.video}
                           title={item.name}
@@ -757,7 +993,9 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                       )}
                     </div>
                     <h3 className="font-bold text-zinc-900 text-lg group-hover:text-blue-600 transition-colors">{item.name}</h3>
-                    <p className="text-sm text-zinc-500">By Celite</p>
+                    {(item as any).vendor_name && (
+                      <p className="text-sm text-zinc-500">By {(item as any).vendor_name}</p>
+                    )}
                   </Link>
                 ))}
               </div>
@@ -782,13 +1020,29 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-zinc-900">You May Also Like</h2>
-                <Link href="/templates" className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-all">→</Link>
+                <Link href="/video-templates" className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-all">→</Link>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {youMayAlsoLikeTemplates.slice(0, 4).map((item) => (
                   <Link key={item.slug} href={`/product/${item.slug}`} className="group">
                     <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
-                      {item.video ? (
+                      {(item as any).thumbnail_path ? (
+                        <img
+                          src={(item as any).thumbnail_path}
+                          alt={item.name}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          onError={(e) => {
+                            e.currentTarget.src = item.img || '/PNG1.png';
+                          }}
+                        />
+                      ) : (item as any).video_path ? (
+                        <VideoThumbnailPlayer
+                          videoUrl={(item as any).video_path}
+                          thumbnailUrl={(item as any).thumbnail_path || item.img || undefined}
+                          title={item.name}
+                          className="w-full h-full"
+                        />
+                      ) : item.video ? (
                         <YouTubeVideoPlayer
                           videoUrl={item.video}
                           title={item.name}
@@ -813,7 +1067,9 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                       )}
                     </div>
                     <h3 className="font-bold text-zinc-900 text-sm group-hover:text-blue-600 transition-colors truncate">{item.name}</h3>
-                    <p className="text-xs text-zinc-500">By Celite</p>
+                    {(item as any).vendor_name && (
+                      <p className="text-xs text-zinc-500">By {(item as any).vendor_name}</p>
+                    )}
                   </Link>
                 ))}
               </div>
@@ -890,12 +1146,12 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
         ))}
       </ul>
 
-      <button
-        onClick={() => router.push('/pricing')}
-        className="w-full py-3 rounded-lg bg-blue-900 text-white font-bold text-sm shadow-xl shadow-blue-900/10 hover:bg-blue-800 active:scale-[0.98] transition-all"
-      >
-        Subscribe Monthly
-      </button>
+        <button
+          onClick={() => router.push('/pricing')}
+          className="w-full py-3 rounded-lg bg-blue-900 text-white font-bold text-sm shadow-xl shadow-blue-900/10 hover:bg-blue-800 active:scale-[0.98] transition-all"
+        >
+          Subscribe Monthly
+        </button>
     </div>
   );
 }

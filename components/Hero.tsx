@@ -13,15 +13,15 @@ export default function Hero() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/templates?search=${encodeURIComponent(searchQuery.trim())}`);
+      router.push(`/video-templates?search=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
   const popularSearches = [
-    { label: "Diwali Poster", href: "/templates?category=diwali" },
-    { label: "Instagram Reels", href: "/templates?category=reels" },
-    { label: "Logo Reveal", href: "/templates?category=logo-reveal" },
-    { label: "Wedding Invitation", href: "/templates?category=wedding" },
+    { label: "Diwali Poster", href: "/video-templates?category=diwali" },
+    { label: "Instagram Reels", href: "/video-templates?category=reels" },
+    { label: "Logo Reveal", href: "/video-templates?category=logo-reveal" },
+    { label: "Wedding Invitation", href: "/video-templates?category=wedding" },
   ];
 
   return (

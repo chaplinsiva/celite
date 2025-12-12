@@ -37,7 +37,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   const [creating, setCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [form, setForm] = useState({
-    slug: '', name: '', subtitle: '', description: '', img: '', video: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', meta_title: '', meta_description: '',
+    slug: '', name: '', subtitle: '', description: '', img: '', video: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', meta_title: '', meta_description: '',
   });
   const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [subcategories, setSubcategories] = useState<Array<{ id: string; category_id: string; name: string; slug: string }>>([]);
@@ -48,9 +48,17 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   const [originalSlug, setOriginalSlug] = useState<string | null>(null);
 
   const sourceInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement | null>(null);
+  const audioPreviewInputRef = useRef<HTMLInputElement | null>(null);
+  const model3DInputRef = useRef<HTMLInputElement | null>(null);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  const [uploadingSource, setUploadingSource] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [uploadingAudioPreview, setUploadingAudioPreview] = useState(false);
+  const [uploadingModel3D, setUploadingModel3D] = useState(false);
 
-  const videoPreviewUrl = getYouTubeEmbedUrl(form.video);
 
   // Function to generate slug from title
   const generateSlug = (title: string): string => {
@@ -124,18 +132,72 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
     }
   }, [form.category_id, subcategories]);
 
-  const uploadFile = async (kind: 'source', file: File) => {
+  const uploadFile = async (kind: 'source' | 'video' | 'thumbnail' | 'audio_preview' | 'model_3d', file: File) => {
+    if (!form.category_id) {
+      alert('Please select a category first');
+      return;
+    }
+    
     const supabase = getSupabaseBrowserClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
+    
+    if (kind === 'source') setUploadingSource(true);
+    else if (kind === 'video') setUploadingVideo(true);
+    else if (kind === 'thumbnail') setUploadingThumbnail(true);
+    else if (kind === 'audio_preview') setUploadingAudioPreview(true);
+    else if (kind === 'model_3d') setUploadingModel3D(true);
+    
+    try {
+      let fileToUpload = file;
+      
+      // Compress thumbnail images before uploading
+      if (kind === 'thumbnail' && file.type.startsWith('image/')) {
+        try {
+          const { compressThumbnail } = await import('../../../lib/imageCompression');
+          fileToUpload = await compressThumbnail(file);
+        } catch (compressionError) {
+          console.warn('Image compression failed, uploading original:', compressionError);
+          // Continue with original file if compression fails
+        }
+      }
+      
     const fd = new FormData();
-    fd.append('file', file);
+      fd.append('file', fileToUpload);
     fd.append('kind', kind);
+      fd.append('category_id', form.category_id);
+      if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
     if (form.slug) fd.append('slug', form.slug);
-    const res = await fetch('/api/admin/upload-file', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: fd });
+      
+      const res = await fetch('/api/admin/upload-r2', { 
+        method: 'POST', 
+        headers: { Authorization: `Bearer ${session.access_token}` }, 
+        body: fd 
+      });
     const json = await res.json();
     if (json.ok) {
-      if (kind === 'source' && json.path) setForm((f) => ({ ...f, source_path: json.path }));
+        if (kind === 'source' && json.url) {
+          setForm((f) => ({ ...f, source_path: json.url }));
+        } else if (kind === 'video' && json.url) {
+          setForm((f) => ({ ...f, video_path: json.url }));
+        } else if (kind === 'thumbnail' && json.url) {
+          setForm((f) => ({ ...f, thumbnail_path: json.url }));
+        } else if (kind === 'audio_preview' && json.url) {
+          setForm((f) => ({ ...f, audio_preview_path: json.url }));
+        } else if (kind === 'model_3d' && json.url) {
+          setForm((f) => ({ ...f, model_3d_path: json.url }));
+        }
+      } else {
+        alert(json.error || 'Upload failed');
+      }
+    } catch (e: any) {
+      alert(e?.message || 'Upload failed');
+    } finally {
+      if (kind === 'source') setUploadingSource(false);
+      else if (kind === 'video') setUploadingVideo(false);
+      else if (kind === 'thumbnail') setUploadingThumbnail(false);
+      else if (kind === 'audio_preview') setUploadingAudioPreview(false);
+      else if (kind === 'model_3d') setUploadingModel3D(false);
     }
   };
 
@@ -233,7 +295,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                             const supabase = getSupabaseBrowserClient();
                             const { data } = await supabase
                               .from('templates')
-                              .select('slug,name,subtitle,description,img,video,source_path,features,software,plugins,tags,category_id,subcategory_id,meta_title,meta_description')
+                              .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,model_3d_path,source_path,features,software,plugins,tags,category_id,subcategory_id,meta_title,meta_description')
                               .eq('slug', t.slug)
                               .maybeSingle();
                             if (!data) return;
@@ -243,7 +305,11 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                               subtitle: data.subtitle || '',
                               description: data.description || '',
                               img: data.img || '',
-                              video: data.video || '',
+                              video: data.video || '', // Keep for old templates
+                              video_path: data.video_path || '',
+                              thumbnail_path: data.thumbnail_path || '',
+                              audio_preview_path: (data.audio_preview_path || '') as string,
+                              model_3d_path: (data.model_3d_path || '') as string,
                               source_path: data.source_path || '',
                               features: Array.isArray(data.features) ? data.features.join(', ') : '',
                               software: Array.isArray(data.software) ? data.software.join(', ') : '',
@@ -337,7 +403,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                 templates: [
                   {
                     slug: newSlug, name: form.name.trim(), subtitle: form.subtitle.trim(), description: form.description.trim(),
-                    img: null, video: form.video.trim() || null, source_path: form.source_path.trim() || null,
+                    img: null, video: null, video_path: form.video_path.trim() || null, thumbnail_path: form.thumbnail_path.trim() || null, audio_preview_path: form.audio_preview_path.trim() || null, model_3d_path: form.model_3d_path.trim() || null, source_path: form.source_path.trim() || null,
                     features: form.features ? form.features.split(',').map(s => s.trim()).filter(Boolean) : [],
                     software: form.software ? form.software.split(',').map(s => s.trim()).filter(Boolean) : [],
                     plugins: form.plugins ? form.plugins.split(',').map(s => s.trim()).filter(Boolean) : [],
@@ -356,7 +422,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               }
               await onCreated();
               setTab('list');
-              setForm({ slug: '', name: '', subtitle: '', description: '', img: '', video: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', meta_title: '', meta_description: '' });
+              setForm({ slug: '', name: '', subtitle: '', description: '', img: '', video: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', meta_title: '', meta_description: '' });
               setIsEditing(false);
               setOriginalSlug(null);
               setSlugManuallyEdited(false);
@@ -439,49 +505,134 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
             </select>
           </div>
 
-          <div className="flex flex-col gap-3 sm:col-span-2">
-            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">YouTube Video Link</label>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Video File (R2 Storage)</label>
             <div className="flex items-center gap-2">
               <input
-                value={form.video}
-                onChange={(e) => setForm({ ...form, video: e.target.value })}
-                placeholder="YouTube Video Link (e.g., https://www.youtube.com/watch?v=VIDEO_ID)"
+                value={form.video_path || ''}
+                onChange={(e) => setForm({ ...form, video_path: e.target.value })}
+                placeholder="Upload video to R2 or paste direct link"
                 className="flex-1 px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
               />
+              <button
+                type="button"
+                onClick={() => videoInputRef.current?.click()}
+                disabled={uploadingVideo}
+                className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors shadow-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploadingVideo ? 'Uploading...' : 'Upload to R2'}
+              </button>
+              <input ref={videoInputRef} type="file" accept="video/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('video', file); }} />
             </div>
-            {videoPreviewUrl && (
-              <div className="aspect-video w-full max-w-md self-center overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 shadow-sm relative z-0">
-                <iframe
-                  src={videoPreviewUrl}
-                  title={form.name || 'YouTube preview'}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  className="h-full w-full"
-                />
+            {form.video_path && (
+              <div className="aspect-video w-full max-w-md self-center overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 shadow-sm">
+                <video src={form.video_path} controls className="h-full w-full" />
               </div>
             )}
-            <p className="text-xs text-zinc-500">Enter a YouTube video URL. The video will be embedded as a preview. Image uploads are no longer supported.</p>
+            <p className="text-xs text-zinc-500">Upload video file to Cloudflare R2. File will be stored at: category/subcategory/video/{'{filename}'}</p>
           </div>
 
           <div className="flex flex-col gap-2 sm:col-span-2">
-            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Source File (Private)</label>
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Thumbnail Image (R2 Storage)</label>
             <div className="flex items-center gap-2">
               <input
-                value={form.source_path}
+                value={form.thumbnail_path || ''}
+                onChange={(e) => setForm({ ...form, thumbnail_path: e.target.value })}
+                placeholder="Upload thumbnail to R2 or paste direct link"
+                className="flex-1 px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+              />
+              <button
+                type="button"
+                onClick={() => thumbnailInputRef.current?.click()}
+                disabled={uploadingThumbnail}
+                className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors shadow-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploadingThumbnail ? 'Uploading...' : 'Upload to R2'}
+              </button>
+              <input ref={thumbnailInputRef} type="file" accept="image/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('thumbnail', file); }} />
+            </div>
+            {form.thumbnail_path && (
+              <div className="w-full max-w-md self-center overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 shadow-sm">
+                <img src={form.thumbnail_path} alt="Thumbnail preview" className="w-full h-auto" />
+              </div>
+            )}
+            <p className="text-xs text-zinc-500">Upload thumbnail image to Cloudflare R2. File will be stored at: category/subcategory/thumbnail/{'{filename}'}</p>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Audio Preview (R2 Storage) - Optional</label>
+            <div className="flex items-center gap-2">
+              <input
+                value={form.audio_preview_path || ''}
+                onChange={(e) => setForm({ ...form, audio_preview_path: e.target.value })}
+                placeholder="Upload audio preview to R2 or paste direct link"
+                className="flex-1 px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+              />
+              <button
+                type="button"
+                onClick={() => audioPreviewInputRef.current?.click()}
+                disabled={uploadingAudioPreview}
+                className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors shadow-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploadingAudioPreview ? 'Uploading...' : 'Upload to R2'}
+              </button>
+              <input ref={audioPreviewInputRef} type="file" accept="audio/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('audio_preview', file); }} />
+            </div>
+            {form.audio_preview_path && (
+              <div className="w-full max-w-md self-center overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 shadow-sm p-2">
+                <audio src={form.audio_preview_path} controls className="w-full" />
+              </div>
+            )}
+            <p className="text-xs text-zinc-500">Upload audio preview file to Cloudflare R2. File will be stored at: category/subcategory/audio/{'{filename}'}</p>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">3D Model Preview (R2 Storage) - Optional</label>
+            <div className="flex items-center gap-2">
+              <input
+                value={form.model_3d_path || ''}
+                onChange={(e) => setForm({ ...form, model_3d_path: e.target.value })}
+                placeholder="Upload 3D model to R2 or paste direct link"
+                className="flex-1 px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+              />
+              <button
+                type="button"
+                onClick={() => model3DInputRef.current?.click()}
+                disabled={uploadingModel3D}
+                className="px-4 py-2 rounded-lg bg-zinc-100 text-zinc-700 font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploadingModel3D ? 'Uploading...' : 'Upload to R2'}
+              </button>
+              <input ref={model3DInputRef} type="file" accept=".glb,.gltf,.obj" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('model_3d', file); }} />
+            </div>
+            {form.model_3d_path && (
+              <div className="w-full max-w-md self-center overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 shadow-sm p-2">
+                <p className="text-xs text-zinc-600">3D Model: {form.model_3d_path}</p>
+              </div>
+            )}
+            <p className="text-xs text-zinc-500">Upload 3D model file (GLB, GLTF, OBJ) to Cloudflare R2. File will be stored at: category/subcategory/model/{'{filename}'}</p>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Source File (R2 Storage)</label>
+            <div className="flex items-center gap-2">
+              <input
+                value={form.source_path || ''}
                 onChange={(e) => setForm({ ...form, source_path: e.target.value })}
-                placeholder="Upload file or paste direct drive link (Google Drive, Dropbox, etc.)"
+                placeholder="Upload file to R2 or paste direct link"
                 className="flex-1 px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
               />
               <button
                 type="button"
                 onClick={() => sourceInputRef.current?.click()}
-                className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors shadow-sm whitespace-nowrap"
+                disabled={uploadingSource}
+                className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors shadow-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Upload File
+                {uploadingSource ? 'Uploading...' : 'Upload to R2'}
               </button>
               <input ref={sourceInputRef} type="file" accept="application/zip,application/x-rar-compressed,.zip,.rar" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('source', file); }} />
             </div>
-            <p className="text-xs text-zinc-500">You can either upload a zip/rar file or paste a direct download link (Google Drive shareable link, Dropbox link, etc.)</p>
+            <p className="text-xs text-zinc-500">Upload source file to Cloudflare R2. File will be stored at: category/subcategory/{'{filename}'}</p>
           </div>
 
           <div className="flex flex-col gap-2 sm:col-span-2">

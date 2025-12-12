@@ -8,12 +8,15 @@ import { useAppContext } from '../context/AppContext';
 import { useLoginModal } from '../context/LoginModalContext';
 import { getYouTubeEmbedUrl } from '../lib/utils';
 import YouTubeVideoPlayer from './YouTubeVideoPlayer';
+import VideoThumbnailPlayer from './VideoThumbnailPlayer';
 import { cn } from '@/lib/utils';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type LatestTemplate = Template & {
   category?: { id: string; name: string; slug: string } | null;
   subcategory?: { id: string; name: string; slug: string } | null;
+  video_path?: string | null;
+  thumbnail_path?: string | null;
 };
 
 export default function LatestTemplatesCarousel() {
@@ -44,7 +47,7 @@ export default function LatestTemplatesCarousel() {
       const { data, error: templateError } = await supabase
         .from('templates')
         .select(`
-          slug,name,subtitle,description,img,video,features,software,plugins,tags,created_at,feature,
+          slug,name,subtitle,description,img,video,video_path,thumbnail_path,features,software,plugins,tags,created_at,feature,
           category_id,subcategory_id,
           categories(id,name,slug),
           subcategories(id,name,slug)
@@ -52,13 +55,28 @@ export default function LatestTemplatesCarousel() {
         .order('created_at', { ascending: false })
         .limit(16);
 
+      // Exclude Music & SFX, Stock Photos, and 3D Models categories
+      const musicSfxCategoryId = '45456b94-cb11-449b-ab99-f0633d6e8848';
+      const stockPhotoCategoryId = 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47';
+      const filteredData = (data ?? []).filter((t: any) => {
+        const category = t.categories ? (Array.isArray(t.categories) ? t.categories[0] : t.categories) : null;
+        if (!category) return true;
+        // Exclude Music & SFX
+        if (category.id === musicSfxCategoryId || category.slug === 'musics-and-sfx') return false;
+        // Exclude Stock Photos
+        if (category.id === stockPhotoCategoryId || category.slug === 'stock-images' || category.slug === 'stock-photos' || category.name?.toLowerCase().includes('stock photo') || category.name?.toLowerCase().includes('stock image')) return false;
+        // Exclude 3D Models
+        if (category.slug === '3d-models' || category.slug === '3d-models' || (category.name?.toLowerCase().includes('3d') && category.name?.toLowerCase().includes('model'))) return false;
+        return true;
+      });
+
       if (templateError) {
         console.error('Error loading latest templates:', templateError);
       } else {
         console.log(`[LatestTemplatesCarousel] Loaded ${data?.length || 0} templates`);
       }
 
-      const mapped: LatestTemplate[] = (data ?? []).map((r: any) => {
+      const mapped: LatestTemplate[] = filteredData.map((r: any) => {
         const category = r.categories ? (Array.isArray(r.categories) ? r.categories[0] : r.categories) : null;
         const subcategory = r.subcategories ? (Array.isArray(r.subcategories) ? r.subcategories[0] : r.subcategories) : null;
         const isFeaturedFlag = Boolean(r.feature ?? r.is_featured ?? r.isFeatured);
@@ -71,6 +89,8 @@ export default function LatestTemplatesCarousel() {
           price: 0,
           img: r.img,
           video: r.video,
+          video_path: r.video_path,
+          thumbnail_path: r.thumbnail_path,
           features: r.features ?? [],
           software: r.software ?? [],
           plugins: r.plugins ?? [],
@@ -140,7 +160,14 @@ export default function LatestTemplatesCarousel() {
           <div className="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white border border-zinc-200 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
             <Link href={`/product/${tpl.slug}`} className="absolute inset-0 z-10" aria-label={tpl.name} />
             <div className="relative w-full aspect-video overflow-hidden">
-              {tpl.video ? (
+              {tpl.video_path ? (
+                <VideoThumbnailPlayer
+                  videoUrl={tpl.video_path}
+                  thumbnailUrl={tpl.thumbnail_path || tpl.img || undefined}
+                  title={tpl.name}
+                  className="w-full h-full"
+                />
+              ) : tpl.video ? (
                 <YouTubeVideoPlayer
                   videoUrl={tpl.video}
                   title={tpl.name}
@@ -148,7 +175,11 @@ export default function LatestTemplatesCarousel() {
                 />
               ) : (
                 <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">
-                  No Preview
+                  {tpl.img ? (
+                    <img src={tpl.img} alt={tpl.name} className="w-full h-full object-cover" />
+                  ) : (
+                    'No Preview'
+                  )}
                 </div>
               )}
             </div>
@@ -193,7 +224,7 @@ export default function LatestTemplatesCarousel() {
             </p>
           </div>
           <Link
-            href="/templates"
+            href="/video-templates"
             className="inline-flex items-center gap-2 text-violet-600 font-medium hover:text-violet-700 transition-colors group"
           >
             View All <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

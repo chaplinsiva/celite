@@ -93,7 +93,7 @@ export default function StartSellingContent() {
               Get Notified
             </Link>
             <Link
-              href="/templates"
+              href="/video-templates"
               className="inline-flex items-center justify-center rounded-lg border-2 border-white text-white px-8 py-3 font-semibold hover:bg-white/10 transition-colors"
             >
               Browse Templates

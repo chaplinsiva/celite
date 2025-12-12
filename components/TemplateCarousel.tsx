@@ -8,12 +8,15 @@ import { useAppContext } from '../context/AppContext';
 import { useLoginModal } from '../context/LoginModalContext';
 import { getYouTubeEmbedUrl } from '../lib/utils';
 import YouTubeVideoPlayer from './YouTubeVideoPlayer';
+import VideoThumbnailPlayer from './VideoThumbnailPlayer';
 import { cn } from '@/lib/utils';
 import { ArrowRight, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 
 type FeaturedTemplate = Template & {
   category?: { id: string; name: string; slug: string } | null;
   subcategory?: { id: string; name: string; slug: string } | null;
+  video_path?: string | null;
+  thumbnail_path?: string | null;
 };
 
 export default function TemplateCarousel() {
@@ -44,7 +47,7 @@ export default function TemplateCarousel() {
       let { data, error: templateError } = await supabase
         .from('templates')
         .select(`
-          slug,name,subtitle,description,img,video,features,software,plugins,tags,created_at,feature,
+          slug,name,subtitle,description,img,video,video_path,thumbnail_path,features,software,plugins,tags,created_at,feature,
           category_id,subcategory_id,
           categories(id,name,slug),
           subcategories(id,name,slug)
@@ -56,7 +59,7 @@ export default function TemplateCarousel() {
         const fallback = await supabase
           .from('templates')
           .select(`
-            slug,name,subtitle,description,img,video,features,software,plugins,tags,created_at,feature,
+            slug,name,subtitle,description,img,video,video_path,thumbnail_path,features,software,plugins,tags,created_at,feature,
             category_id,subcategory_id,
             categories(id,name,slug),
             subcategories(id,name,slug)
@@ -85,6 +88,8 @@ export default function TemplateCarousel() {
           price: 0,
           img: r.img,
           video: r.video,
+          video_path: r.video_path,
+          thumbnail_path: r.thumbnail_path,
           features: r.features ?? [],
           software: r.software ?? [],
           plugins: r.plugins ?? [],
@@ -155,7 +160,14 @@ export default function TemplateCarousel() {
           <div className="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white border border-zinc-200 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
             <Link href={`/product/${tpl.slug}`} className="absolute inset-0 z-10" aria-label={tpl.name} />
             <div className="relative w-full aspect-video overflow-hidden">
-              {tpl.video ? (
+              {tpl.video_path ? (
+                <VideoThumbnailPlayer
+                  videoUrl={tpl.video_path}
+                  thumbnailUrl={tpl.thumbnail_path || tpl.img || undefined}
+                  title={tpl.name}
+                  className="w-full h-full"
+                />
+              ) : tpl.video ? (
                 <YouTubeVideoPlayer
                   videoUrl={tpl.video}
                   title={tpl.name}
@@ -163,7 +175,11 @@ export default function TemplateCarousel() {
                 />
               ) : (
                 <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">
-                  No Preview
+                  {tpl.img ? (
+                    <img src={tpl.img} alt={tpl.name} className="w-full h-full object-cover" />
+                  ) : (
+                    'No Preview'
+                  )}
                 </div>
               )}
             </div>
@@ -208,7 +224,7 @@ export default function TemplateCarousel() {
             </p>
           </div>
           <Link
-            href="/templates?filter=featured"
+            href="/video-templates?filter=featured"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-zinc-200 text-zinc-600 text-sm font-semibold hover:bg-zinc-50 transition-colors"
           >
             View Featured <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

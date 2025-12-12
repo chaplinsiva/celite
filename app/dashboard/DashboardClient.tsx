@@ -425,18 +425,18 @@ function DashboardContent() {
         </section>
 
         {viewMode === "buyer" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Recent Downloads (Main Column) */}
           <section className="lg:col-span-2 bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm h-fit">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-zinc-900">Recent Downloads</h2>
-              <Link href="/templates" className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline">Browse templates</Link>
+              <Link href="/video-templates" className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline">Browse templates</Link>
             </div>
 
             {recentDownloads.length === 0 ? (
               <div className="text-center py-12 bg-zinc-50 rounded-2xl border border-zinc-100 border-dashed">
                 <p className="text-zinc-500 mb-4">You haven't downloaded any templates yet.</p>
-                <Link href="/templates" className="text-sm font-semibold text-blue-600 hover:underline">
+                <Link href="/video-templates" className="text-sm font-semibold text-blue-600 hover:underline">
                   Explore Collection
                 </Link>
               </div>
@@ -534,7 +534,7 @@ function DashboardContent() {
               )}
             </section>
           </div>
-          </div>
+        </div>
         )}
 
         {viewMode === "seller" && creatorShop && (

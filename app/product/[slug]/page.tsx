@@ -115,11 +115,15 @@ export default async function ProductPage(props: PageProps) {
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name')
+    .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,model_3d_path,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name,category_id,subcategory_id,categories(id,slug,name)')
     .eq('slug', params.slug)
     .maybeSingle();
   if (!row) return notFound();
-  const prod: Template & { source_path?: string | null; vendor_name?: string | null } = {
+  const category = (row as any)?.categories ? (Array.isArray((row as any).categories) ? (row as any).categories[0] : (row as any).categories) : null;
+  const categorySlug = category?.slug || '';
+  const categoryName = category?.name || '';
+  
+  const prod: Template & { source_path?: string | null; vendor_name?: string | null; video_path?: string | null; thumbnail_path?: string | null; audio_preview_path?: string | null; model_3d_path?: string | null; category_id?: string | null; subcategory_id?: string | null; category_slug?: string | null; category_name?: string | null } = {
     slug: row.slug,
     name: row.name,
     subtitle: row.subtitle,
@@ -136,13 +140,29 @@ export default async function ProductPage(props: PageProps) {
     meta_description: row.meta_description ?? null,
     source_path: row.source_path ?? null,
     vendor_name: (row as any).vendor_name ?? null,
+    video_path: (row as any).video_path ?? null,
+    thumbnail_path: (row as any).thumbnail_path ?? null,
+    audio_preview_path: (row as any).audio_preview_path ?? null,
+    model_3d_path: (row as any).model_3d_path ?? null,
+    category_id: (row as any).category_id ?? null,
+    subcategory_id: (row as any).subcategory_id ?? null,
+    category_slug: categorySlug,
+    category_name: categoryName,
   };
-  const { data: relatedRows } = await supabase
+  
+  // Fetch related templates from the same category
+  let relatedQuery = supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,status')
+    .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,features,software,plugins,tags,status,vendor_name')
     .neq('slug', prod.slug)
-    .eq('status', 'approved')
-    .limit(9);
+    .eq('status', 'approved');
+  
+  // Filter by category_id if available
+  if (prod.category_id) {
+    relatedQuery = relatedQuery.eq('category_id', prod.category_id);
+  }
+  
+  const { data: relatedRows } = await relatedQuery.limit(9);
   const related: Template[] = (relatedRows ?? []).map((r) => ({
     slug: r.slug,
     name: r.name,
@@ -151,6 +171,10 @@ export default async function ProductPage(props: PageProps) {
     price: 0,
     img: r.img,
     video: r.video,
+    video_path: (r as any).video_path ?? null,
+    thumbnail_path: (r as any).thumbnail_path ?? null,
+    model_3d_path: (r as any).model_3d_path ?? null,
+    vendor_name: (r as any).vendor_name ?? null,
     features: r.features ?? [],
     software: r.software ?? [],
     plugins: r.plugins ?? [],

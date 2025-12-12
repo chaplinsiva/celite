@@ -37,13 +37,13 @@ export default function Header() {
         setIsSubscribed(false);
         setIsExpired(false);
       } else {
-        const now = Date.now();
-        const validUntil = sub.valid_until ? new Date(sub.valid_until).getTime() : null;
-        const actuallyActive = !!sub.is_active && (!validUntil || validUntil > now);
-        const expired: boolean = !!(sub.is_active && validUntil && validUntil <= now);
+      const now = Date.now();
+      const validUntil = sub.valid_until ? new Date(sub.valid_until).getTime() : null;
+      const actuallyActive = !!sub.is_active && (!validUntil || validUntil > now);
+      const expired: boolean = !!(sub.is_active && validUntil && validUntil <= now);
 
-        setIsSubscribed(actuallyActive);
-        setIsExpired(expired);
+      setIsSubscribed(actuallyActive);
+      setIsExpired(expired);
       }
 
       // Check if user has a creator shop
@@ -62,11 +62,12 @@ export default function Header() {
   }, [user]);
 
   const navLinks = [
-    { name: 'Video Templates', href: '/templates?category=video-templates' },
-    { name: 'Stock Footage', href: '/templates?category=stock-footage' },
-    { name: 'Web Templates', href: '/templates?category=web-templates' },
-    { name: 'Audio', href: '/templates?category=audio' },
-    { name: 'Graphics', href: '/templates?category=graphics' },
+    { name: 'Video Templates', href: '/video-templates' },
+    { name: 'Web Templates', href: '/web-templates' },
+    { name: 'Stock Images', href: '/stock-photos' },
+    { name: 'Music & SFX', href: '/music-sfx' },
+    { name: 'Graphics', href: '/graphics' },
+    { name: '3D Models', href: '/3d-models' },
   ];
 
   return (
@@ -103,8 +104,8 @@ export default function Header() {
                 href="/start-selling"
                 className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors mr-2"
               >
-                Start Selling
-              </Link>
+              Start Selling
+            </Link>
             )}
             {user && hasCreatorShop && (
               <Link
@@ -190,13 +191,13 @@ export default function Header() {
               </Link>
             ))}
             {user && !hasCreatorShop && (
-              <Link
-                href="/start-selling"
-                className="text-lg font-medium text-zinc-500 py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Start Selling
-              </Link>
+            <Link
+              href="/start-selling"
+              className="text-lg font-medium text-zinc-500 py-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Start Selling
+            </Link>
             )}
             {user && hasCreatorShop && (
               <Link
@@ -208,7 +209,7 @@ export default function Header() {
               </Link>
             )}
             <Link
-              href="/templates"
+              href="/video-templates"
               className="text-lg font-medium text-zinc-800 py-2 border-b border-zinc-50"
               onClick={() => setIsMobileMenuOpen(false)}
             >

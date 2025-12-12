@@ -29,7 +29,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/templates" className="text-zinc-500 hover:text-violet-600 transition-colors">
+                <Link href="/video-templates" className="text-zinc-500 hover:text-violet-600 transition-colors">
                   All Templates
                 </Link>
               </li>

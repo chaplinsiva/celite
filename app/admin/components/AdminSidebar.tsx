@@ -42,7 +42,7 @@ export default function AdminSidebar({
               active === tab.key
                 ? 'bg-blue-50 text-blue-600'
                 : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
-            }`}
+              }`}
           >
             {tab.label}
           </button>

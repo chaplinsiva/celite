@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAppContext } from "../../../context/AppContext";
@@ -60,6 +60,10 @@ export default function CreatorDashboardPage() {
     slug: "",
     subtitle: "",
     video: "",
+    video_path: "",
+    thumbnail_path: "",
+    audio_preview_path: "",
+    model_3d_path: "",
     source_path: "",
     description: "",
     category_id: "",
@@ -69,6 +73,16 @@ export default function CreatorDashboardPage() {
     plugins: "",
     tags: "",
   });
+  const sourceInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement | null>(null);
+  const audioPreviewInputRef = useRef<HTMLInputElement | null>(null);
+  const model3DInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadingSource, setUploadingSource] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [uploadingAudioPreview, setUploadingAudioPreview] = useState(false);
+  const [uploadingModel3D, setUploadingModel3D] = useState(false);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
@@ -82,6 +96,10 @@ export default function CreatorDashboardPage() {
       slug: "",
       subtitle: "",
       video: "",
+      video_path: "",
+      thumbnail_path: "",
+      audio_preview_path: "",
+      model_3d_path: "",
       source_path: "",
       description: "",
       category_id: "",
@@ -92,6 +110,80 @@ export default function CreatorDashboardPage() {
       tags: "",
     });
     setSlugManuallyEdited(false);
+  };
+
+  const uploadFile = async (kind: 'source' | 'video' | 'thumbnail' | 'audio_preview' | 'model_3d', file: File) => {
+    if (!form.category_id) {
+      setError('Please select a category first');
+      return;
+    }
+    
+    // Compress thumbnail images before uploading
+    let fileToUpload = file;
+    if (kind === 'thumbnail' && file.type.startsWith('image/')) {
+      try {
+        // Show compression message
+        setMessage('Compressing thumbnail image...');
+        const { compressThumbnail } = await import('../../../lib/imageCompression');
+        fileToUpload = await compressThumbnail(file);
+        const originalSize = (file.size / 1024 / 1024).toFixed(2);
+        const compressedSize = (fileToUpload.size / 1024 / 1024).toFixed(2);
+        console.log(`Thumbnail compressed: ${originalSize}MB → ${compressedSize}MB`);
+      } catch (compressionError) {
+        console.warn('Image compression failed, uploading original:', compressionError);
+        // Continue with original file if compression fails
+      }
+    }
+    
+    const supabase = getSupabaseBrowserClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    
+    if (kind === 'source') setUploadingSource(true);
+    else if (kind === 'video') setUploadingVideo(true);
+    else if (kind === 'thumbnail') setUploadingThumbnail(true);
+    else if (kind === 'audio_preview') setUploadingAudioPreview(true);
+    else if (kind === 'model_3d') setUploadingModel3D(true);
+    
+    try {
+      const fd = new FormData();
+      fd.append('file', fileToUpload);
+      fd.append('kind', kind);
+      fd.append('category_id', form.category_id);
+      if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
+      if (form.slug) fd.append('slug', form.slug);
+      
+      const res = await fetch('/api/creator/upload-r2', { 
+        method: 'POST', 
+        headers: { Authorization: `Bearer ${session.access_token}` }, 
+        body: fd 
+      });
+      const json = await res.json();
+      if (json.ok) {
+        if (kind === 'source' && json.url) {
+          setForm((f) => ({ ...f, source_path: json.url }));
+        } else if (kind === 'video' && json.url) {
+          setForm((f) => ({ ...f, video_path: json.url }));
+        } else if (kind === 'thumbnail' && json.url) {
+          setForm((f) => ({ ...f, thumbnail_path: json.url }));
+        } else if (kind === 'audio_preview' && json.url) {
+          setForm((f) => ({ ...f, audio_preview_path: json.url }));
+        } else if (kind === 'model_3d' && json.url) {
+          setForm((f) => ({ ...f, model_3d_path: json.url }));
+        }
+        setMessage('File uploaded successfully');
+      } else {
+        setError(json.error || 'Upload failed');
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Upload failed');
+    } finally {
+      if (kind === 'source') setUploadingSource(false);
+      else if (kind === 'video') setUploadingVideo(false);
+      else if (kind === 'thumbnail') setUploadingThumbnail(false);
+      else if (kind === 'audio_preview') setUploadingAudioPreview(false);
+      else if (kind === 'model_3d') setUploadingModel3D(false);
+    }
   };
 
   const generateSlug = (name: string) =>
@@ -231,7 +323,11 @@ export default function CreatorDashboardPage() {
           slug,
           subtitle: form.subtitle,
           description: form.description,
-          video: form.video,
+          video: null, // New templates don't use YouTube
+          video_path: form.video_path,
+          thumbnail_path: form.thumbnail_path,
+          audio_preview_path: form.audio_preview_path,
+          model_3d_path: form.model_3d_path,
           source_path: form.source_path,
           features: form.features
             ? form.features
@@ -819,34 +915,163 @@ export default function CreatorDashboardPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
                             <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                              YouTube video link
+                              Video File (R2 Storage)
                             </label>
-                            <input
-                              type="text"
-                              value={form.video}
-                              onChange={(e) =>
-                                setForm((f) => ({ ...f, video: e.target.value }))
-                              }
-                              placeholder="https://www.youtube.com/watch?v=..."
-                              className="w-full px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                            />
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={form.video_path || ''}
+                                onChange={(e) =>
+                                  setForm((f) => ({ ...f, video_path: e.target.value }))
+                                }
+                                placeholder="Upload video to R2 or paste direct link"
+                                className="flex-1 px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => videoInputRef.current?.click()}
+                                disabled={uploadingVideo}
+                                className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                              >
+                                {uploadingVideo ? 'Uploading...' : 'Upload'}
+                              </button>
+                              <input ref={videoInputRef} type="file" accept="video/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('video', file); }} />
+                            </div>
+                            {form.video_path && (
+                              <div className="mt-2 aspect-video w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100">
+                                <video src={form.video_path} controls className="h-full w-full" />
+                              </div>
+                            )}
+                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: category/subcategory/video/{'{filename}'}</p>
                           </div>
                           <div>
                             <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                              Source download link
+                              Thumbnail Image (R2 Storage)
                             </label>
-                            <input
-                              type="text"
-                              value={form.source_path}
-                              onChange={(e) =>
-                                setForm((f) => ({
-                                  ...f,
-                                  source_path: e.target.value,
-                                }))
-                              }
-                              placeholder="Google Drive / Dropbox direct link"
-                              className="w-full px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                            />
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={form.thumbnail_path || ''}
+                                onChange={(e) =>
+                                  setForm((f) => ({ ...f, thumbnail_path: e.target.value }))
+                                }
+                                placeholder="Upload thumbnail to R2 or paste direct link"
+                                className="flex-1 px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => thumbnailInputRef.current?.click()}
+                                disabled={uploadingThumbnail}
+                                className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                              >
+                                {uploadingThumbnail ? 'Uploading...' : 'Upload'}
+                              </button>
+                              <input ref={thumbnailInputRef} type="file" accept="image/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('thumbnail', file); }} />
+                            </div>
+                            {form.thumbnail_path && (
+                              <div className="mt-2 w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100">
+                                <img src={form.thumbnail_path} alt="Thumbnail preview" className="w-full h-auto" />
+                              </div>
+                            )}
+                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: category/subcategory/thumbnail/{'{filename}'}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                              Audio Preview (R2 Storage) - Optional
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={form.audio_preview_path || ''}
+                                onChange={(e) =>
+                                  setForm((f) => ({ ...f, audio_preview_path: e.target.value }))
+                                }
+                                placeholder="Upload audio preview to R2 or paste direct link"
+                                className="flex-1 px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => audioPreviewInputRef.current?.click()}
+                                disabled={uploadingAudioPreview}
+                                className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                              >
+                                {uploadingAudioPreview ? 'Uploading...' : 'Upload'}
+                              </button>
+                              <input ref={audioPreviewInputRef} type="file" accept="audio/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('audio_preview', file); }} />
+                            </div>
+                            {form.audio_preview_path && (
+                              <div className="mt-2 w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 p-2">
+                                <audio src={form.audio_preview_path} controls className="w-full" />
+                              </div>
+                            )}
+                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: category/subcategory/audio/{'{filename}'}</p>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                              3D Model Preview (R2 Storage) - Optional
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={form.model_3d_path || ''}
+                                onChange={(e) =>
+                                  setForm((f) => ({ ...f, model_3d_path: e.target.value }))
+                                }
+                                placeholder="Upload 3D model to R2 or paste direct link"
+                                className="flex-1 px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => model3DInputRef.current?.click()}
+                                disabled={uploadingModel3D}
+                                className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                              >
+                                {uploadingModel3D ? 'Uploading...' : 'Upload'}
+                              </button>
+                              <input ref={model3DInputRef} type="file" accept=".glb,.gltf,.obj" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('model_3d', file); }} />
+                            </div>
+                            {form.model_3d_path && (
+                              <div className="mt-2 w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 p-2">
+                                <p className="text-xs text-zinc-600">3D Model: {form.model_3d_path}</p>
+                              </div>
+                            )}
+                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: category/subcategory/model/{'{filename}'}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                              Source File (R2 Storage)
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={form.source_path || ''}
+                                onChange={(e) =>
+                                  setForm((f) => ({
+                                    ...f,
+                                    source_path: e.target.value,
+                                  }))
+                                }
+                                placeholder="Upload to R2 or paste direct link"
+                                className="flex-1 px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => sourceInputRef.current?.click()}
+                                disabled={uploadingSource}
+                                className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                              >
+                                {uploadingSource ? 'Uploading...' : 'Upload'}
+                              </button>
+                              <input ref={sourceInputRef} type="file" accept="application/zip,application/x-rar-compressed,.zip,.rar" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('source', file); }} />
+                            </div>
+                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: category/subcategory/{'{filename}'}</p>
                           </div>
                         </div>
 

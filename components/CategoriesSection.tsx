@@ -5,39 +5,45 @@ import { cn } from "@/lib/utils";
 
 const categories = [
   {
-    name: "UI & Web Templates",
-    href: "/templates?category=web-templates",
-    imageUrl: "https://images.unsplash.com/photo-1547658719-da2b51169166?w=800&q=80",
-    span: "col-span-1 row-span-1"
-  },
-  {
     name: "Video Templates",
-    href: "/templates?category=video-templates",
+    href: "/video-templates",
     imageUrl: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&q=80",
     span: "col-span-1 row-span-2"
   },
   {
-    name: "Graphic Templates",
-    href: "/templates?category=graphics",
+    name: "Web Templates",
+    href: "/web-templates",
+    imageUrl: "https://images.unsplash.com/photo-1547658719-da2b51169166?w=800&q=80",
+    span: "col-span-1 row-span-1"
+  },
+  {
+    name: "Graphics",
+    href: "/graphics",
     imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80",
     span: "col-span-1 row-span-2"
   },
   {
-    name: "All Categories",
-    href: "/categories",
+    name: "Stock Photos",
+    href: "/stock-photos",
     imageUrl: "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=800&q=80",
-    span: "col-span-1 row-span-2"
-  },
-  {
-    name: "Fonts",
-    href: "/templates?category=fonts",
-    imageUrl: "https://images.unsplash.com/photo-1618556450994-a6a128ef0d9d?w=800&q=80",
     span: "col-span-1 row-span-1"
   },
   {
-    name: "Royalty-Free Music",
-    href: "/templates?category=audio",
+    name: "Music & SFX",
+    href: "/music-sfx",
     imageUrl: "https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=800&q=80",
+    span: "col-span-1 row-span-1"
+  },
+  {
+    name: "3D Models",
+    href: "/3d-models",
+    imageUrl: "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=800&q=80",
+    span: "col-span-1 row-span-1"
+  },
+  {
+    name: "All Categories",
+    href: "/categories",
+    imageUrl: "https://images.unsplash.com/photo-1618556450994-a6a128ef0d9d?w=800&q=80",
     span: "col-span-1 row-span-1"
   },
 ];

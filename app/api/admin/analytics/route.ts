@@ -155,7 +155,7 @@ export async function GET(req: Request) {
     const monthlyTotalRevenue = activeMonthly * monthlyPrice;
     const yearlyTotalRevenue = activeYearly * yearlyPrice;
     const totalSubscriptionRevenue = monthlyTotalRevenue + yearlyTotalRevenue;
-    
+
     // Calculate revenue distribution: 40% to vendors, 60% to Celite
     const vendorPoolAmount = totalSubscriptionRevenue * 0.4;
     const celiteAmount = totalSubscriptionRevenue * 0.6;

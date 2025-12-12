@@ -54,7 +54,7 @@ export default function CTASection() {
                   </LiquidButton>
                 </Link>
                 <Link
-                  href="/templates"
+                  href="/video-templates"
                   className="relative px-8 py-3 rounded-full border border-zinc-200 bg-white text-zinc-700 font-semibold text-sm hover:bg-zinc-50 hover:border-zinc-300 transition-all duration-200 shadow-sm"
                 >
                   Browse Templates

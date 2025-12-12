@@ -240,7 +240,7 @@ export default function ShowcasesSection() {
         {/* View All Button */}
         <div className="text-center mt-12">
           <Link
-            href="/templates"
+            href="/video-templates"
             className="inline-flex items-center px-8 py-3 rounded-full bg-white text-black font-semibold hover:bg-zinc-200 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
           >
             View All Showcases

@@ -34,19 +34,72 @@ type CategoryGroup = {
     templates: Template[];
 };
 
+// Helper function to get the correct route for a category
+const getCategoryRoute = (categoryName: string): string => {
+    const normalizedName = categoryName.toLowerCase().trim();
+    
+    const routeMap: Record<string, string> = {
+        // Database category slugs
+        'after-effects': '/video-templates',
+        'website-templates': '/web-templates',
+        'psd-templates': '/graphics',
+        'musics-and-sfx': '/music-sfx',
+        'stock-images': '/stock-photos',
+        // Alternative names
+        'web-templates': '/web-templates',
+        'graphics': '/graphics',
+        'music': '/music-sfx',
+        'audio': '/music-sfx',
+        'sound-effects': '/music-sfx',
+        'stock-photos': '/stock-photos',
+        'video-templates': '/video-templates',
+        'ui-templates': '/web-templates',
+    };
+    
+    // Check for exact match first
+    if (routeMap[normalizedName]) {
+        return routeMap[normalizedName];
+    }
+    
+    // Check for partial matches
+    if (normalizedName.includes('music') || normalizedName.includes('audio') || normalizedName.includes('sfx') || normalizedName.includes('sound')) {
+        return '/music-sfx';
+    }
+    if (normalizedName.includes('stock') && (normalizedName.includes('photo') || normalizedName.includes('image'))) {
+        return '/stock-photos';
+    }
+    if (normalizedName.includes('web') || normalizedName.includes('website') || normalizedName.includes('ui')) {
+        return '/web-templates';
+    }
+    if (normalizedName.includes('graphic') || normalizedName.includes('psd')) {
+        return '/graphics';
+    }
+    if (normalizedName.includes('after-effects') || normalizedName.includes('video')) {
+        return '/video-templates';
+    }
+    
+    // Default to video templates with category filter
+    return `/video-templates?category=${categoryName}`;
+};
+
 const CATEGORY_CONFIG = [
-    { name: 'stock-videos', displayName: 'Stock Videos' },
-    { name: 'video-templates', displayName: 'Video Templates' },
-    { name: 'graphics', displayName: 'Graphic Templates' },
-    { name: 'presentations', displayName: 'Presentation Templates' },
-    { name: 'fonts', displayName: 'Fonts' },
-    { name: 'sound-effects', displayName: 'Sound Effects' },
-    { name: 'stock-photos', displayName: 'Stock Photos' },
-    { name: 'after-effects', displayName: 'After Effects Templates' },
-    { name: 'ui-templates', displayName: 'UI Templates' },
-    { name: 'music', displayName: 'Music Templates' },
-    { name: 'web-templates', displayName: 'Web Templates' },
-    { name: 'audio', displayName: 'Royalty-Free Music' },
+    { name: 'after-effects', displayName: 'After Effects Templates', route: '/video-templates' },
+    { name: 'website-templates', displayName: 'Web Templates', route: '/web-templates' },
+    { name: 'psd-templates', displayName: 'Graphics Templates', route: '/graphics' },
+    { name: 'musics-and-sfx', displayName: 'Music & SFX', route: '/music-sfx' },
+    { name: 'stock-images', displayName: 'Stock Photos', route: '/stock-photos' },
+    { name: 'stock-videos', displayName: 'Stock Videos', route: '/video-templates?category=stock-videos' },
+    { name: 'video-templates', displayName: 'Video Templates', route: '/video-templates' },
+    { name: 'graphics', displayName: 'Graphic Templates', route: '/graphics' },
+    { name: 'presentations', displayName: 'Presentation Templates', route: '/video-templates?category=presentations' },
+    { name: 'fonts', displayName: 'Fonts', route: '/video-templates?category=fonts' },
+    { name: 'sound-effects', displayName: 'Sound Effects', route: '/music-sfx' },
+    { name: 'stock-photos', displayName: 'Stock Photos', route: '/stock-photos' },
+    { name: 'ui-templates', displayName: 'UI Templates', route: '/web-templates' },
+    { name: 'music', displayName: 'Music Templates', route: '/music-sfx' },
+    { name: 'web-templates', displayName: 'Web Templates', route: '/web-templates' },
+    { name: 'audio', displayName: 'Royalty-Free Music', route: '/music-sfx' },
+    { name: '3d-models', displayName: '3D Models', route: '/3d-models' },
 ];
 
 export default function CategoriesClient() {
@@ -195,7 +248,7 @@ export default function CategoriesClient() {
                         {CATEGORY_CONFIG.map((category) => (
                             <Link
                                 key={category.name}
-                                href={`/templates?category=${category.name}`}
+                                href={category.route}
                                 className="px-4 py-2 bg-white border-2 border-zinc-200 rounded-full text-sm font-medium text-zinc-700 hover:border-blue-500 hover:text-blue-600 transition-colors shadow-sm hover:shadow-md"
                             >
                                 {category.displayName}
@@ -212,7 +265,7 @@ export default function CategoriesClient() {
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-2xl font-bold text-zinc-900">{group.displayName}</h2>
                                 <Link
-                                    href={`/templates?category=${group.name}`}
+                                    href={getCategoryRoute(group.name)}
                                     className="flex items-center gap-1 text-blue-600 font-medium hover:text-blue-700 transition-colors group"
                                 >
                                     See all
