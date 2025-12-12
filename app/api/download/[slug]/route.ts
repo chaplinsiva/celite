@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
-import { getFileFromR2 } from '../../../../lib/r2Client';
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
@@ -55,41 +54,31 @@ export async function GET(
       return NextResponse.json({ error: 'Source file not available for this template' }, { status: 404 });
     }
 
+    // Check if source_path is a full URL (starts with http:// or https://)
+    const isFullUrl = sourcePath.startsWith('http://') || sourcePath.startsWith('https://');
+    
     // Check if source_path is an R2 path (starts with category/ or is a relative path)
     // R2 paths are stored as: category/subcategory/source/{filename}
     // Supabase storage paths are stored as: templatesource/{filename} or just the filename
-    const isR2Path = sourcePath.includes('/') && !sourcePath.startsWith('templatesource/');
+    const isR2Path = !isFullUrl && sourcePath.includes('/') && !sourcePath.startsWith('templatesource/');
     
-    console.log(`Download request for ${slug}: sourcePath=${sourcePath}, isR2Path=${isR2Path}`);
+    console.log(`Download request for ${slug}: sourcePath=${sourcePath}, isFullUrl=${isFullUrl}, isR2Path=${isR2Path}`);
     
-    if (isR2Path) {
-      // Download from R2
-      try {
-        const { body, contentType } = await getFileFromR2(sourcePath);
-        
-        // Record download
-        try {
-          await admin.from('downloads').insert({
-            user_id: userId,
-            template_slug: slug,
-            downloaded_at: new Date().toISOString(),
-          });
-        } catch (downloadErr: any) {
-          // Log but don't fail the download if recording fails
-          console.error('Failed to record download:', downloadErr);
-        }
-
-        // Return file
-        return new NextResponse(body as any, {
-          headers: {
-            'Content-Type': contentType,
-            'Content-Disposition': `attachment; filename="${template.name.replace(/[^a-z0-9]/gi, '_')}.zip"`,
-          },
-        });
-      } catch (r2Err: any) {
-        console.error('R2 download error for', slug, ':', r2Err);
-        const errorMessage = r2Err?.message || 'Failed to download file from storage';
-        return NextResponse.json({ error: `Download failed: ${errorMessage}` }, { status: 500 });
+    let downloadUrl: string;
+    
+    // If it's a full URL, use it directly
+    if (isFullUrl) {
+      downloadUrl = sourcePath;
+    } else if (isR2Path) {
+      // For R2 paths, construct the public URL
+      // R2 public URL format: R2_PUBLIC_URL/category/subcategory/source/{filename}
+      const R2_PUBLIC_URL = process.env.R2_DIRECT_BASE_URL || '';
+      
+      if (R2_PUBLIC_URL) {
+        downloadUrl = `${R2_PUBLIC_URL}/${sourcePath}`;
+      } else {
+        // If no public URL configured, return error
+        return NextResponse.json({ error: 'R2 public URL not configured' }, { status: 500 });
       }
     } else {
       // Legacy Supabase storage path
@@ -114,21 +103,23 @@ export async function GET(
         return NextResponse.json({ error: 'Failed to generate download link' }, { status: 500 });
       }
 
-      // Record download
-      try {
-        await admin.from('downloads').insert({
-          user_id: userId,
-          template_slug: slug,
-          downloaded_at: new Date().toISOString(),
-        });
-      } catch (downloadErr: any) {
-        // Log but don't fail the download if recording fails
-        console.error('Failed to record download:', downloadErr);
-      }
-
-      // Return redirect URL
-      return NextResponse.json({ redirect: true, url: data.signedUrl });
+      downloadUrl = data.signedUrl;
     }
+
+    // Record download
+    try {
+      await admin.from('downloads').insert({
+        user_id: userId,
+        template_slug: slug,
+        downloaded_at: new Date().toISOString(),
+      });
+    } catch (downloadErr: any) {
+      // Log but don't fail the download if recording fails
+      console.error('Failed to record download:', downloadErr);
+    }
+
+    // Return redirect URL
+    return NextResponse.json({ redirect: true, url: downloadUrl });
   } catch (e: any) {
     console.error('Download error:', e);
     return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 });
