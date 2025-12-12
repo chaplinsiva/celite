@@ -106,16 +106,27 @@ export async function GET(
       downloadUrl = data.signedUrl;
     }
 
-    // Record download
+    // Record download - do this before returning the URL
     try {
-      await admin.from('downloads').insert({
+      // Get subscription_id if available
+      const subscriptionId = sub?.id || null;
+      
+      const { error: downloadErr } = await admin.from('downloads').insert({
         user_id: userId,
         template_slug: slug,
         downloaded_at: new Date().toISOString(),
+        ...(subscriptionId && { subscription_id: subscriptionId }),
       });
+      
+      if (downloadErr) {
+        console.error('Failed to record download:', downloadErr);
+        // Don't fail the download, but log the error for debugging
+      } else {
+        console.log(`Download recorded successfully for user ${userId}, template ${slug}`);
+      }
     } catch (downloadErr: any) {
       // Log but don't fail the download if recording fails
-      console.error('Failed to record download:', downloadErr);
+      console.error('Failed to record download (exception):', downloadErr);
     }
 
     // Return redirect URL
