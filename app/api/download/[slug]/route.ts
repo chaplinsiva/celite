@@ -29,7 +29,7 @@ export async function GET(
     // Check subscription
     const { data: sub } = await admin
       .from('subscriptions')
-      .select('is_active, valid_until')
+      .select('id, is_active, valid_until')
       .eq('user_id', userId)
       .maybeSingle();
     const active = !!sub?.is_active && (!sub?.valid_until || new Date(sub.valid_until as any).getTime() > Date.now());
