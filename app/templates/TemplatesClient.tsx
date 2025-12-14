@@ -241,13 +241,13 @@ export default function TemplatesClient() {
         if (isMusicItem(template) && template.audio_preview_path) {
             return (
                 <div className="relative w-full h-full bg-gradient-to-br from-purple-500 via-blue-500 to-pink-500">
-                    {template.thumbnail_path || template.img ? (
-                        <img
-                            src={convertR2UrlToCdn(template.thumbnail_path) || template.thumbnail_path || convertR2UrlToCdn(template.img) || template.img}
-                            alt={template.name}
-                            className="w-full h-full object-cover"
-                        />
-                    ) : null}
+                        {template.thumbnail_path || template.img ? (
+                            <img
+                                src={convertR2UrlToCdn(template.thumbnail_path) || template.thumbnail_path || convertR2UrlToCdn(template.img) || template.img || '/PNG1.png'}
+                                alt={template.name}
+                                className="w-full h-full object-cover"
+                            />
+                        ) : null}
                     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/60 via-black/20 to-transparent">
                         <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-2xl border border-white/30">
                             <Music2 className="w-6 h-6 text-white" />
@@ -258,7 +258,7 @@ export default function TemplatesClient() {
         }
 
         if (isStockPhoto(template) && (template.thumbnail_path || template.img)) {
-            const imageUrl = convertR2UrlToCdn(template.thumbnail_path) || template.thumbnail_path || convertR2UrlToCdn(template.img) || template.img;
+            const imageUrl = convertR2UrlToCdn(template.thumbnail_path) || template.thumbnail_path || convertR2UrlToCdn(template.img) || template.img || '/PNG1.png';
             return (
                 <img
                     src={imageUrl}
