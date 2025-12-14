@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     const categoryId = (form.get('category_id') as string | null) || '';
     const subcategoryId = (form.get('subcategory_id') as string | null) || '';
     const slug = (form.get('slug') as string | null) || '';
-    
+
     if (!file || !kind) return NextResponse.json({ ok: false, error: 'Missing file or kind' }, { status: 400 });
     if (!categoryId) return NextResponse.json({ ok: false, error: 'Missing category_id' }, { status: 400 });
 
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
       .select('slug')
       .eq('id', categoryId)
       .maybeSingle();
-    
+
     if (!category) return NextResponse.json({ ok: false, error: 'Category not found' }, { status: 400 });
 
     let subcategorySlug: string | null = null;
@@ -101,11 +101,11 @@ export async function POST(req: Request) {
     // Upload to R2
     const result = await uploadToR2(file, r2Key, file.type || 'application/octet-stream');
 
-    return NextResponse.json({ 
-      ok: true, 
-      url: result.url, 
+    return NextResponse.json({
+      ok: true,
+      url: result.url,
       key: result.key,
-      kind 
+      kind
     });
   } catch (e: any) {
     console.error('R2 upload error:', e);
