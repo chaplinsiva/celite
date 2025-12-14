@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Share2, Check, Download, AlertCircle, PlayCircle, Star, Shield, Clock, Layers, Zap, HardDrive } from 'lucide-react';
+import { Share2, Check, Download, AlertCircle, PlayCircle, Star, Shield, Clock, Layers, Zap, HardDrive, Music2 } from 'lucide-react';
 import { useAppContext } from '../../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { useLoginModal } from '../../../context/LoginModalContext';
@@ -13,6 +13,7 @@ import VideoThumbnailPlayer from '../../../components/VideoThumbnailPlayer';
 import Model3DViewerInteractive from '../../../components/Model3DViewerInteractive';
 import StockPhotoViewer from '../../../components/StockPhotoViewer';
 import MusicSfxPlayer from '../../../components/MusicSfxPlayer';
+import SimpleMusicPlayer from '../../../components/SimpleMusicPlayer';
 import { cn, getYouTubeEmbedUrl, getYouTubeThumbnailUrl, convertR2UrlToCdn } from '../../../lib/utils';
 import type { Template } from '../../../data/templateData';
 
@@ -40,6 +41,13 @@ const getThumbnail = (item: Template | (Template & { source_path?: string | null
     if (thumb) return thumb;
   }
   return '/PNG1.png';
+};
+
+const MUSIC_SFX_CATEGORY_ID = '45456b94-cb11-449b-ab99-f0633d6e8848';
+
+const isMusicItem = (item: any) => {
+  const categoryId = item.category_id;
+  return categoryId === MUSIC_SFX_CATEGORY_ID;
 };
 
 export default function ProductDetails({ product, related, reviews }: ProductDetailsProps) {
@@ -119,7 +127,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
           // If no keywords, fetch templates from same category
           let query = supabase
             .from('templates')
-            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name')
+            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name,category_id')
             .neq('slug', product.slug)
             .eq('status', 'approved');
           
@@ -144,6 +152,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               thumbnail_path: r.thumbnail_path ?? null,
               model_3d_path: r.model_3d_path ?? null,
               vendor_name: r.vendor_name ?? null,
+              category_id: r.category_id ?? null,
               features: r.features ?? [],
               software: r.software ?? [],
               plugins: r.plugins ?? [],
@@ -209,6 +218,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             thumbnail_path: item.template.thumbnail_path ?? null,
             model_3d_path: item.template.model_3d_path ?? null,
             vendor_name: item.template.vendor_name ?? null,
+            category_id: item.template.category_id ?? null,
             features: item.template.features ?? [],
             software: item.template.software ?? [],
             plugins: item.template.plugins ?? [],
@@ -232,6 +242,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               video_path: r.video_path ?? null,
               thumbnail_path: r.thumbnail_path ?? null,
               vendor_name: r.vendor_name ?? null,
+              category_id: r.category_id ?? null,
               features: r.features ?? [],
               software: r.software ?? [],
               plugins: r.plugins ?? [],
@@ -271,7 +282,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
           // Fetch templates from same category
           let query = supabase
             .from('templates')
-            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name')
+            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name,category_id')
             .neq('slug', product.slug)
             .eq('status', 'approved');
           
@@ -320,6 +331,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               video_path: item.template.video_path ?? null,
               thumbnail_path: item.template.thumbnail_path ?? null,
               vendor_name: item.template.vendor_name ?? null,
+              category_id: item.template.category_id ?? null,
               features: item.template.features ?? [],
               software: item.template.software ?? [],
               plugins: item.template.plugins ?? [],
@@ -358,7 +370,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
           // For non-subscribed users: fetch templates from same category
           let query = supabase
             .from('templates')
-            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name')
+            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name,category_id')
             .neq('slug', product.slug)
             .eq('status', 'approved');
           
@@ -383,6 +395,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               thumbnail_path: r.thumbnail_path ?? null,
               model_3d_path: r.model_3d_path ?? null,
               vendor_name: r.vendor_name ?? null,
+              category_id: r.category_id ?? null,
               features: r.features ?? [],
               software: r.software ?? [],
               plugins: r.plugins ?? [],
@@ -672,14 +685,15 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
 
                 if (isMusicSfx && (product as any).audio_preview_path) {
                   return (
-                    <MusicSfxPlayer
-                      audioUrl={convertR2UrlToCdn((product as any).audio_preview_path) || (product as any).audio_preview_path}
-                      title={product.name}
-                      subtitle={product.subtitle}
-                      thumbnailUrl={convertR2UrlToCdn((product as any).thumbnail_path) || (product as any).thumbnail_path || convertR2UrlToCdn(product.img) || product.img || undefined}
-                      onDownload={isSubActive ? handleDownload : undefined}
-                      className="w-full h-full"
-                    />
+                    <div className="w-full h-full flex items-center justify-center p-4">
+                      <SimpleMusicPlayer
+                        audioUrl={convertR2UrlToCdn((product as any).audio_preview_path) || (product as any).audio_preview_path}
+                        title={product.name}
+                        subtitle={product.subtitle}
+                        thumbnailUrl={convertR2UrlToCdn((product as any).thumbnail_path) || (product as any).thumbnail_path || convertR2UrlToCdn(product.img) || product.img || undefined}
+                        className="w-full max-w-2xl"
+                      />
+                    </div>
                   );
                 }
 
@@ -984,55 +998,76 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {moreInStyleTemplates.slice(moreInStyleIndex * 4, (moreInStyleIndex + 1) * 4).map((item) => (
-                  <Link key={item.slug} href={`/product/${item.slug}`} className="group">
-                    <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
-                      {(item as any).thumbnail_path ? (
-                        <img
-                          src={convertR2UrlToCdn((item as any).thumbnail_path) || (item as any).thumbnail_path}
-                          alt={item.name}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          onError={(e) => {
-                            e.currentTarget.src = convertR2UrlToCdn(item.img) || item.img || '/PNG1.png';
-                          }}
-                        />
-                      ) : (item as any).video_path ? (
-                        <VideoThumbnailPlayer
-                          videoUrl={(item as any).video_path}
-                          thumbnailUrl={(item as any).thumbnail_path || item.img || undefined}
-                          title={item.name}
-                          className="w-full h-full"
-                        />
-                      ) : item.video ? (
-                        <YouTubeVideoPlayer
-                          videoUrl={item.video}
-                          title={item.name}
-                          className="w-full h-full"
-                        />
-                      ) : (
-                        <>
+                {moreInStyleTemplates.slice(moreInStyleIndex * 4, (moreInStyleIndex + 1) * 4).map((item) => {
+                  const itemIsMusic = isMusicItem(item);
+                  return (
+                    <Link key={item.slug} href={`/product/${item.slug}`} className="group">
+                      <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
+                        {itemIsMusic ? (
+                          // Music items - show simple thumbnail with music icon
+                          <div className="relative w-full h-full bg-gradient-to-br from-purple-500 via-blue-500 to-pink-500">
+                            {(item as any).thumbnail_path || item.img ? (
+                              <img
+                                src={convertR2UrlToCdn((item as any).thumbnail_path) || (item as any).thumbnail_path || convertR2UrlToCdn(item.img) || item.img}
+                                alt={item.name}
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-purple-500 via-blue-500 to-pink-500"></div>
+                            )}
+                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/50 via-black/10 to-transparent">
+                              <div className="w-14 h-14 rounded-xl bg-white/25 backdrop-blur-sm flex items-center justify-center shadow-xl border border-white/40">
+                                <Music2 className="w-7 h-7 text-white" />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (item as any).thumbnail_path ? (
                           <img
-                            src={getThumbnail(item)}
+                            src={convertR2UrlToCdn((item as any).thumbnail_path) || (item as any).thumbnail_path}
                             alt={item.name}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                             onError={(e) => {
-                              e.currentTarget.src = '/PNG1.png';
+                              e.currentTarget.src = convertR2UrlToCdn(item.img) || item.img || '/PNG1.png';
                             }}
                           />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                            <div className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
-                              <PlayCircle className="w-6 h-6 fill-current" />
+                        ) : (item as any).video_path ? (
+                          <VideoThumbnailPlayer
+                            videoUrl={(item as any).video_path}
+                            thumbnailUrl={(item as any).thumbnail_path || item.img || undefined}
+                            title={item.name}
+                            className="w-full h-full"
+                          />
+                        ) : item.video ? (
+                          <YouTubeVideoPlayer
+                            videoUrl={item.video}
+                            title={item.name}
+                            className="w-full h-full"
+                          />
+                        ) : (
+                          <>
+                            <img
+                              src={getThumbnail(item)}
+                              alt={item.name}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              onError={(e) => {
+                                e.currentTarget.src = '/PNG1.png';
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <div className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
+                                <PlayCircle className="w-6 h-6 fill-current" />
+                              </div>
                             </div>
-                          </div>
-                        </>
+                          </>
+                        )}
+                      </div>
+                      <h3 className="font-bold text-zinc-900 text-lg group-hover:text-blue-600 transition-colors">{item.name}</h3>
+                      {(item as any).vendor_name && (
+                        <p className="text-sm text-zinc-500">By {(item as any).vendor_name}</p>
                       )}
-                    </div>
-                    <h3 className="font-bold text-zinc-900 text-lg group-hover:text-blue-600 transition-colors">{item.name}</h3>
-                    {(item as any).vendor_name && (
-                      <p className="text-sm text-zinc-500">By {(item as any).vendor_name}</p>
-                    )}
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           ) : null}
@@ -1058,55 +1093,76 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 <Link href="/video-templates" className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-all">→</Link>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {youMayAlsoLikeTemplates.slice(0, 4).map((item) => (
-                  <Link key={item.slug} href={`/product/${item.slug}`} className="group">
-                    <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
-                      {(item as any).thumbnail_path ? (
-                        <img
-                          src={convertR2UrlToCdn((item as any).thumbnail_path) || (item as any).thumbnail_path}
-                          alt={item.name}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          onError={(e) => {
-                            e.currentTarget.src = convertR2UrlToCdn(item.img) || item.img || '/PNG1.png';
-                          }}
-                        />
-                      ) : (item as any).video_path ? (
-                        <VideoThumbnailPlayer
-                          videoUrl={(item as any).video_path}
-                          thumbnailUrl={(item as any).thumbnail_path || item.img || undefined}
-                          title={item.name}
-                          className="w-full h-full"
-                        />
-                      ) : item.video ? (
-                        <YouTubeVideoPlayer
-                          videoUrl={item.video}
-                          title={item.name}
-                          className="w-full h-full"
-                        />
-                      ) : (
-                        <>
+                {youMayAlsoLikeTemplates.slice(0, 4).map((item) => {
+                  const itemIsMusic = isMusicItem(item);
+                  return (
+                    <Link key={item.slug} href={`/product/${item.slug}`} className="group">
+                      <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
+                        {itemIsMusic ? (
+                          // Music items - show simple thumbnail with music icon
+                          <div className="relative w-full h-full bg-gradient-to-br from-purple-500 via-blue-500 to-pink-500">
+                            {(item as any).thumbnail_path || item.img ? (
+                              <img
+                                src={convertR2UrlToCdn((item as any).thumbnail_path) || (item as any).thumbnail_path || convertR2UrlToCdn(item.img) || item.img}
+                                alt={item.name}
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-purple-500 via-blue-500 to-pink-500"></div>
+                            )}
+                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/50 via-black/10 to-transparent">
+                              <div className="w-14 h-14 rounded-xl bg-white/25 backdrop-blur-sm flex items-center justify-center shadow-xl border border-white/40">
+                                <Music2 className="w-7 h-7 text-white" />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (item as any).thumbnail_path ? (
                           <img
-                            src={getThumbnail(item)}
+                            src={convertR2UrlToCdn((item as any).thumbnail_path) || (item as any).thumbnail_path}
                             alt={item.name}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                             onError={(e) => {
-                              e.currentTarget.src = '/PNG1.png';
+                              e.currentTarget.src = convertR2UrlToCdn(item.img) || item.img || '/PNG1.png';
                             }}
                           />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                            <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
-                              <PlayCircle className="w-5 h-5 fill-current" />
+                        ) : (item as any).video_path ? (
+                          <VideoThumbnailPlayer
+                            videoUrl={(item as any).video_path}
+                            thumbnailUrl={(item as any).thumbnail_path || item.img || undefined}
+                            title={item.name}
+                            className="w-full h-full"
+                          />
+                        ) : item.video ? (
+                          <YouTubeVideoPlayer
+                            videoUrl={item.video}
+                            title={item.name}
+                            className="w-full h-full"
+                          />
+                        ) : (
+                          <>
+                            <img
+                              src={getThumbnail(item)}
+                              alt={item.name}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              onError={(e) => {
+                                e.currentTarget.src = '/PNG1.png';
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
+                                <PlayCircle className="w-5 h-5 fill-current" />
+                              </div>
                             </div>
-                          </div>
-                        </>
+                          </>
+                        )}
+                      </div>
+                      <h3 className="font-bold text-zinc-900 text-sm group-hover:text-blue-600 transition-colors truncate">{item.name}</h3>
+                      {(item as any).vendor_name && (
+                        <p className="text-xs text-zinc-500">By {(item as any).vendor_name}</p>
                       )}
-                    </div>
-                    <h3 className="font-bold text-zinc-900 text-sm group-hover:text-blue-600 transition-colors truncate">{item.name}</h3>
-                    {(item as any).vendor_name && (
-                      <p className="text-xs text-zinc-500">By {(item as any).vendor_name}</p>
-                    )}
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           ) : null}

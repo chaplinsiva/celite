@@ -158,7 +158,12 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
     setFilteredTemplates(filtered);
   }, [searchQuery, initialTemplates, selectedSubcategory]);
 
-  const handleDownload = async (slug: string) => {
+  const handleDownload = async (slug: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     if (!user) {
       openLoginModal();
       return;
@@ -194,23 +199,52 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
+      // Check response status first
+      if (!res.ok) {
+        // Handle error responses
+        try {
+          const errorJson = await res.json();
+          if (errorJson.error?.includes('Access denied') || errorJson.error?.includes('subscription')) {
+            router.push('/pricing');
+          } else {
+            alert(errorJson.error || 'Download failed');
+          }
+        } catch {
+          if (res.status === 403) {
+            router.push('/pricing');
+          } else if (res.status === 401) {
+            openLoginModal();
+          } else {
+            alert('Download failed');
+          }
+        }
+        return;
+      }
+
       // Check content type before parsing
       const contentType = res.headers.get('content-type') || '';
       
       if (contentType.includes('application/json')) {
         const json = await res.json();
         
-        if (json.ok && json.redirect && json.url) {
-          window.open(json.url, '_blank');
-        } else if (json.error) {
+        // Handle redirect URL (for CDN or external URLs)
+        if (json.redirect && json.url) {
+          // Open the download URL directly - this will trigger the browser download
+          window.location.href = json.url;
+          return;
+        }
+        
+        // Handle errors in JSON response
+        if (json.error) {
           if (json.error.includes('Access denied') || json.error.includes('subscription')) {
             router.push('/pricing');
           } else {
             alert(json.error || 'Download failed');
           }
+          return;
         }
       } else {
-        // It's a file download
+        // It's a file download (blob)
         if (res.ok) {
           const blob = await res.blob();
           const url = window.URL.createObjectURL(blob);
@@ -242,7 +276,7 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
       }
     } catch (e: any) {
       console.error('Download failed:', e);
-      alert('Download failed');
+      alert('Download failed: ' + (e.message || 'Unknown error'));
     }
   };
 
@@ -410,10 +444,11 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleDownload(template.slug);
+                              handleDownload(template.slug, e);
                             }}
                             className="p-2 text-zinc-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Download"
+                            type="button"
                           >
                             <Download className="w-5 h-5" />
                           </button>
@@ -516,10 +551,11 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleDownload(template.slug);
+                              handleDownload(template.slug, e);
                             }}
                             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
                             title="Download"
+                            type="button"
                           >
                             <Download className="w-4 h-4" />
                             <span>Download</span>

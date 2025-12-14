@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { getYouTubeThumbnailUrl } from "@/lib/utils";
 import CreatorFollowButton from "@/components/CreatorFollowButton";
+import CreatorShopClient from "./CreatorShopClient";
 
 interface PageProps {
   params: Promise<{ shopSlug: string }>;
@@ -16,6 +15,10 @@ type CreatorTemplate = {
   description: string | null;
   img: string | null;
   video: string | null;
+  video_path?: string | null;
+  thumbnail_path?: string | null;
+  audio_preview_path?: string | null;
+  model_3d_path?: string | null;
   category_id: string | null;
   created_at: string | null;
 };
@@ -23,16 +26,8 @@ type CreatorTemplate = {
 type Category = {
   id: string;
   name: string;
+  slug?: string | null;
 };
-
-function getThumbnail(t: CreatorTemplate) {
-  if (t.img) return t.img;
-  if (t.video) {
-    const thumb = getYouTubeThumbnailUrl(t.video);
-    if (thumb) return thumb;
-  }
-  return "/PNG1.png";
-}
 
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const params = await props.params;
@@ -76,7 +71,7 @@ export default async function CreatorShopPage(props: PageProps) {
   const { data: templates } = await supabase
     .from("templates")
     .select(
-      "slug,name,subtitle,description,img,video,category_id,created_at,status"
+      "slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,model_3d_path,category_id,created_at,status"
     )
     .eq("creator_shop_id", shop.id)
     .eq("status", "approved")
@@ -86,12 +81,12 @@ export default async function CreatorShopPage(props: PageProps) {
 
   const { data: categories } = await supabase
     .from("categories")
-    .select("id,name")
+    .select("id,name,slug")
     .order("name");
 
   const categoryMap = new Map<string, Category>();
   (categories || []).forEach((c: any) => {
-    categoryMap.set(c.id, { id: c.id, name: c.name });
+    categoryMap.set(c.id, { id: c.id, name: c.name, slug: c.slug });
   });
 
   const grouped = new Map<string, { category: Category | null; items: CreatorTemplate[] }>();
@@ -121,77 +116,54 @@ export default async function CreatorShopPage(props: PageProps) {
   const followers = followerCount ?? 0;
 
   return (
-    <main className="bg-zinc-50 min-h-screen pt-24 pb-20 px-4">
-      <div className="max-w-7xl mx-auto space-y-10">
+    <main className="bg-gradient-to-br from-zinc-50 via-white to-zinc-50 min-h-screen pt-24 pb-20 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-12">
         {/* Header */}
-        <section className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-6 sm:p-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 mb-2">
-            Creator Hub
-          </p>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-zinc-900 mb-2">
-            {shop.name}
-          </h1>
-          {shop.description && (
-            <p className="text-sm sm:text-base text-zinc-600 max-w-2xl">
-              {shop.description}
+        <section className="bg-gradient-to-br from-white to-zinc-50 rounded-3xl border border-zinc-200 shadow-lg p-8 sm:p-12 relative overflow-hidden">
+          {/* Decorative background elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-pink-500/10 to-orange-500/10 rounded-full blur-3xl -ml-24 -mb-24"></div>
+          
+          <div className="relative z-10">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600 mb-3 inline-block px-3 py-1 bg-blue-50 rounded-full">
+              Creator Hub
             </p>
-          )}
-          {shop.user_id && (
-            <div className="mt-4">
-              <CreatorFollowButton
-                shopId={shop.id}
-                shopOwnerId={shop.user_id}
-                initialFollowers={followers}
-              />
-            </div>
-          )}
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-zinc-900 mb-4 bg-gradient-to-r from-zinc-900 to-zinc-700 bg-clip-text text-transparent">
+              {shop.name}
+            </h1>
+            {shop.description && (
+              <p className="text-base sm:text-lg text-zinc-600 max-w-3xl leading-relaxed mb-6">
+                {shop.description}
+              </p>
+            )}
+            {shop.user_id && (
+              <div className="mt-6">
+                <CreatorFollowButton
+                  shopId={shop.id}
+                  shopOwnerId={shop.user_id}
+                  initialFollowers={followers}
+                />
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Templates by this creator */}
         {creatorTemplates.length === 0 ? (
-          <section className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-8 text-center text-sm text-zinc-500">
-            This creator hasn&apos;t published any templates yet.
+          <section className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-12 text-center">
+            <div className="max-w-md mx-auto">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-zinc-100 flex items-center justify-center">
+                <svg className="w-10 h-10 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              </div>
+              <p className="text-base text-zinc-600 font-medium">
+                This creator hasn&apos;t published any templates yet.
+              </p>
+            </div>
           </section>
         ) : (
-          <section className="space-y-8">
-            {groupedSections.map((group, idx) => (
-              <div key={group.category?.id || `uncat-${idx}`} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg sm:text-xl font-bold text-zinc-900">
-                    {group.category ? group.category.name : "Other Templates"}
-                  </h2>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {group.items.map((t) => (
-                    <Link
-                      key={t.slug}
-                      href={`/product/${t.slug}`}
-                      className="group flex flex-col bg-white rounded-xl overflow-hidden border border-zinc-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300"
-                    >
-                      <div className="relative aspect-video overflow-hidden bg-zinc-100">
-                        <img
-                          src={getThumbnail(t)}
-                          alt={t.name}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                      </div>
-                      <div className="p-4 flex flex-col flex-1">
-                        <h3 className="font-bold text-zinc-900 text-base leading-tight mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                          {t.name}
-                        </h3>
-                        {t.subtitle && (
-                          <p className="text-xs text-zinc-500 line-clamp-2">
-                            {t.subtitle}
-                          </p>
-                        )}
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </section>
+          <CreatorShopClient groupedSections={groupedSections} />
         )}
       </div>
     </main>

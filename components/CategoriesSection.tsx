@@ -42,7 +42,7 @@ const categories = [
   },
   {
     name: "All Categories",
-    href: "/categories",
+    href: "/templates",
     imageUrl: "https://images.unsplash.com/photo-1618556450994-a6a128ef0d9d?w=800&q=80",
     span: "col-span-1 row-span-1"
   },

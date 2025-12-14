@@ -13,7 +13,9 @@ export default function Hero() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/video-templates?search=${encodeURIComponent(searchQuery.trim())}`);
+      router.push(`/templates?search=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      router.push(`/templates`);
     }
   };
 
