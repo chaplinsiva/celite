@@ -7,7 +7,7 @@ import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
 import { Download, Search } from 'lucide-react';
 import Link from 'next/link';
-import { cn } from '../../lib/utils';
+import { cn, convertR2UrlToCdn } from '../../lib/utils';
 
 type Template = {
   slug: string;
@@ -190,7 +190,13 @@ export default function StockPhotosClient({ initialTemplates }: { initialTemplat
   };
 
   const getThumbnail = (template: Template) => {
-    return template.thumbnail_path || template.img || '/PNG1.png';
+    if (template.thumbnail_path) {
+      return convertR2UrlToCdn(template.thumbnail_path) || template.thumbnail_path;
+    }
+    if (template.img) {
+      return convertR2UrlToCdn(template.img) || template.img;
+    }
+    return '/PNG1.png';
   };
 
   // Create collage layout with varying sizes
