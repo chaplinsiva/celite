@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
+import { convertR2UrlToCdn } from '../../../../lib/utils';
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
@@ -66,20 +67,13 @@ export async function GET(
     
     let downloadUrl: string;
     
-    // If it's a full URL, use it directly
+    // If it's a full URL, convert it if it's an old R2 URL
     if (isFullUrl) {
-      downloadUrl = sourcePath;
+      downloadUrl = convertR2UrlToCdn(sourcePath) || sourcePath;
     } else if (isR2Path) {
-      // For R2 paths, construct the public URL
-      // R2 public URL format: R2_PUBLIC_URL/category/subcategory/source/{filename}
-      const R2_PUBLIC_URL = process.env.R2_DIRECT_BASE_URL || '';
-      
-      if (R2_PUBLIC_URL) {
-        downloadUrl = `${R2_PUBLIC_URL}/${sourcePath}`;
-      } else {
-        // If no public URL configured, return error
-        return NextResponse.json({ error: 'R2 public URL not configured' }, { status: 500 });
-      }
+      // For R2 paths, construct the public URL using CDN domain
+      // Use cdn.celite.in directly instead of R2_DIRECT_BASE_URL
+      downloadUrl = `https://cdn.celite.in/${sourcePath}`;
     } else {
       // Legacy Supabase storage path
       // Remove 'templatesource/' prefix if present
