@@ -6,16 +6,19 @@ const R2_ENDPOINT = process.env.R2_ENDPOINT || (R2_ACCOUNT_ID ? `https://${R2_AC
 const BUCKET_NAME = process.env.R2_SOURCE_BUCKET || '';
 const R2_PUBLIC_URL = process.env.R2_DIRECT_BASE_URL || '';
 
-// Validate that R2_ENDPOINT doesn't contain template strings
-if (R2_ENDPOINT && (R2_ENDPOINT.includes('${') || R2_ENDPOINT.includes('${r2_account_id}'))) {
-  console.error('Invalid R2_ENDPOINT: contains template string. Please set the actual endpoint URL.');
-  throw new Error('R2_ENDPOINT environment variable contains template string. Set it to the actual endpoint URL (e.g., https://your-account-id.r2.cloudflarestorage.com)');
-}
+// Validate R2 configuration (only at runtime, not during build)
+function validateR2Config() {
+  // Validate that R2_ENDPOINT doesn't contain template strings
+  if (R2_ENDPOINT && (R2_ENDPOINT.includes('${') || R2_ENDPOINT.includes('${r2_account_id}'))) {
+    console.error('Invalid R2_ENDPOINT: contains template string. Please set the actual endpoint URL.');
+    throw new Error('R2_ENDPOINT environment variable contains template string. Set it to the actual endpoint URL (e.g., https://your-account-id.r2.cloudflarestorage.com)');
+  }
 
-// Validate that R2_PUBLIC_URL doesn't contain template strings
-if (R2_PUBLIC_URL && (R2_PUBLIC_URL.includes('${') || R2_PUBLIC_URL.includes('${r2_account_id}'))) {
-  console.error('Invalid R2_DIRECT_BASE_URL: contains template string. Please set the actual public URL.');
-  throw new Error('R2_DIRECT_BASE_URL environment variable contains template string. Set it to the actual public URL (e.g., https://cdn.celite.in)');
+  // Validate that R2_PUBLIC_URL doesn't contain template strings
+  if (R2_PUBLIC_URL && (R2_PUBLIC_URL.includes('${') || R2_PUBLIC_URL.includes('${r2_account_id}'))) {
+    console.error('Invalid R2_DIRECT_BASE_URL: contains template string. Please set the actual public URL.');
+    throw new Error('R2_DIRECT_BASE_URL environment variable contains template string. Set it to the actual public URL (e.g., https://cdn.celite.in)');
+  }
 }
 
 const r2Client = new S3Client({
@@ -44,6 +47,9 @@ export async function uploadToR2(
   key: string,
   contentType: string = 'application/octet-stream'
 ): Promise<UploadResult> {
+  // Validate configuration only when actually using R2
+  validateR2Config();
+  
   let body: Buffer;
   if (file instanceof File) {
     const arrayBuffer = await file.arrayBuffer();
@@ -83,6 +89,9 @@ export async function uploadToR2(
  * @param key - The object key (path) in R2
  */
 export async function deleteFromR2(key: string): Promise<void> {
+  // Validate configuration only when actually using R2
+  validateR2Config();
+  
   const command = new DeleteObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,
@@ -97,6 +106,9 @@ export async function deleteFromR2(key: string): Promise<void> {
  * @returns The file buffer and content type
  */
 export async function getFileFromR2(key: string): Promise<{ body: Buffer; contentType: string }> {
+  // Validate configuration only when actually using R2
+  validateR2Config();
+  
   const command = new GetObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,
