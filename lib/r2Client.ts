@@ -6,6 +6,18 @@ const R2_ENDPOINT = process.env.R2_ENDPOINT || (R2_ACCOUNT_ID ? `https://${R2_AC
 const BUCKET_NAME = process.env.R2_SOURCE_BUCKET || '';
 const R2_PUBLIC_URL = process.env.R2_DIRECT_BASE_URL || '';
 
+// Validate that R2_ENDPOINT doesn't contain template strings
+if (R2_ENDPOINT && (R2_ENDPOINT.includes('${') || R2_ENDPOINT.includes('${r2_account_id}'))) {
+  console.error('Invalid R2_ENDPOINT: contains template string. Please set the actual endpoint URL.');
+  throw new Error('R2_ENDPOINT environment variable contains template string. Set it to the actual endpoint URL (e.g., https://your-account-id.r2.cloudflarestorage.com)');
+}
+
+// Validate that R2_PUBLIC_URL doesn't contain template strings
+if (R2_PUBLIC_URL && (R2_PUBLIC_URL.includes('${') || R2_PUBLIC_URL.includes('${r2_account_id}'))) {
+  console.error('Invalid R2_DIRECT_BASE_URL: contains template string. Please set the actual public URL.');
+  throw new Error('R2_DIRECT_BASE_URL environment variable contains template string. Set it to the actual public URL (e.g., https://cdn.celite.in)');
+}
+
 const r2Client = new S3Client({
   region: 'auto',
   endpoint: R2_ENDPOINT,
@@ -50,9 +62,15 @@ export async function uploadToR2(
   await r2Client.send(command);
 
   // Construct public URL
-  const publicUrl = R2_PUBLIC_URL 
-    ? `${R2_PUBLIC_URL}/${key}`
-    : `${R2_ENDPOINT?.replace('https://', `https://${BUCKET_NAME}.`)}/${key}`;
+  let publicUrl: string;
+  if (R2_PUBLIC_URL) {
+    publicUrl = `${R2_PUBLIC_URL}/${key}`;
+  } else if (R2_ENDPOINT && BUCKET_NAME) {
+    // Construct URL from endpoint: replace https:// with https://bucket-name.
+    publicUrl = `${R2_ENDPOINT.replace('https://', `https://${BUCKET_NAME}.`)}/${key}`;
+  } else {
+    throw new Error('R2 configuration error: Either R2_DIRECT_BASE_URL or both R2_ENDPOINT and R2_SOURCE_BUCKET must be set');
+  }
 
   return {
     url: publicUrl,

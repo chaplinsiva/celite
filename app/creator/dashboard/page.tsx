@@ -185,16 +185,17 @@ export default function CreatorDashboardPage() {
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
               const json = JSON.parse(xhr.responseText);
-              if (json.ok) {
-                if (kind === 'source' && json.url) {
+              if (json.ok && json.url) {
+                // Update the form field immediately with the uploaded URL
+                if (kind === 'source') {
                   setForm((f) => ({ ...f, source_path: json.url }));
-                } else if (kind === 'video' && json.url) {
+                } else if (kind === 'video') {
                   setForm((f) => ({ ...f, video_path: json.url }));
-                } else if (kind === 'thumbnail' && json.url) {
+                } else if (kind === 'thumbnail') {
                   setForm((f) => ({ ...f, thumbnail_path: json.url }));
-                } else if (kind === 'audio_preview' && json.url) {
+                } else if (kind === 'audio_preview') {
                   setForm((f) => ({ ...f, audio_preview_path: json.url }));
-                } else if (kind === 'model_3d' && json.url) {
+                } else if (kind === 'model_3d') {
                   setForm((f) => ({ ...f, model_3d_path: json.url }));
                 }
                 setMessage('File uploaded successfully');
@@ -984,12 +985,13 @@ export default function CreatorDashboardPage() {
                             <div className="flex items-center gap-2">
                               <input
                                 type="text"
-                                value={form.video_path || ''}
+                                value={uploadingVideo ? (form.video_path || `Uploading... ${uploadProgress.video}%`) : (form.video_path || '')}
                                 onChange={(e) =>
                                   setForm((f) => ({ ...f, video_path: e.target.value }))
                                 }
                                 placeholder="Upload video to R2 or paste direct link"
                                 className="flex-1 px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                readOnly={uploadingVideo && !form.video_path}
                               />
                               <button
                                 type="button"
@@ -1023,12 +1025,13 @@ export default function CreatorDashboardPage() {
                             <div className="flex items-center gap-2">
                               <input
                                 type="text"
-                                value={form.thumbnail_path || ''}
+                                value={uploadingThumbnail ? (form.thumbnail_path || `Uploading... ${uploadProgress.thumbnail}%`) : (form.thumbnail_path || '')}
                                 onChange={(e) =>
                                   setForm((f) => ({ ...f, thumbnail_path: e.target.value }))
                                 }
                                 placeholder="Upload thumbnail to R2 or paste direct link"
                                 className="flex-1 px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                readOnly={uploadingThumbnail && !form.thumbnail_path}
                               />
                               <button
                                 type="button"
@@ -1065,12 +1068,13 @@ export default function CreatorDashboardPage() {
                             <div className="flex items-center gap-2">
                               <input
                                 type="text"
-                                value={form.audio_preview_path || ''}
+                                value={uploadingAudioPreview ? (form.audio_preview_path || `Uploading... ${uploadProgress.audio_preview}%`) : (form.audio_preview_path || '')}
                                 onChange={(e) =>
                                   setForm((f) => ({ ...f, audio_preview_path: e.target.value }))
                                 }
                                 placeholder="Upload audio preview to R2 or paste direct link"
                                 className="flex-1 px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                readOnly={uploadingAudioPreview && !form.audio_preview_path}
                               />
                               <button
                                 type="button"
@@ -1105,12 +1109,13 @@ export default function CreatorDashboardPage() {
                             <div className="flex items-center gap-2">
                               <input
                                 type="text"
-                                value={form.model_3d_path || ''}
+                                value={uploadingModel3D ? (form.model_3d_path || `Uploading... ${uploadProgress.model_3d}%`) : (form.model_3d_path || '')}
                                 onChange={(e) =>
                                   setForm((f) => ({ ...f, model_3d_path: e.target.value }))
                                 }
                                 placeholder="Upload 3D model to R2 or paste direct link"
                                 className="flex-1 px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                readOnly={uploadingModel3D && !form.model_3d_path}
                               />
                               <button
                                 type="button"
@@ -1147,7 +1152,7 @@ export default function CreatorDashboardPage() {
                             <div className="flex items-center gap-2">
                               <input
                                 type="text"
-                                value={form.source_path || ''}
+                                value={uploadingSource ? (form.source_path || `Uploading... ${uploadProgress.source}%`) : (form.source_path || '')}
                                 onChange={(e) =>
                                   setForm((f) => ({
                                     ...f,
@@ -1156,6 +1161,7 @@ export default function CreatorDashboardPage() {
                                 }
                                 placeholder="Upload to R2 or paste direct link"
                                 className="flex-1 px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                readOnly={uploadingSource && !form.source_path}
                               />
                               <button
                                 type="button"
