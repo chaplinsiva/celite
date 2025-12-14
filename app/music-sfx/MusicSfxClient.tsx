@@ -7,7 +7,7 @@ import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
 import { Download, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
-import { cn } from '../../lib/utils';
+import { cn, convertR2UrlToCdn } from '../../lib/utils';
 
 type Template = {
   slug: string;
@@ -314,7 +314,8 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
             <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
               <div className="divide-y divide-zinc-100">
                 {filteredTemplates.map((template, index) => {
-                  const audioUrl = template.audio_preview_path || template.video_path;
+                  const rawAudioUrl = template.audio_preview_path || template.video_path;
+                  const audioUrl = rawAudioUrl ? convertR2UrlToCdn(rawAudioUrl) || rawAudioUrl : null;
                   return (
                     <Link key={template.slug} href={`/product/${template.slug}`} className="group hover:bg-zinc-50 transition-colors block">
                       {/* Desktop Layout */}

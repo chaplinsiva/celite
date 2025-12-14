@@ -13,7 +13,7 @@ import VideoThumbnailPlayer from '../../../components/VideoThumbnailPlayer';
 import Model3DViewerInteractive from '../../../components/Model3DViewerInteractive';
 import StockPhotoViewer from '../../../components/StockPhotoViewer';
 import MusicSfxPlayer from '../../../components/MusicSfxPlayer';
-import { cn, getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '../../../lib/utils';
+import { cn, getYouTubeEmbedUrl, getYouTubeThumbnailUrl, convertR2UrlToCdn } from '../../../lib/utils';
 import type { Template } from '../../../data/templateData';
 
 interface Review {
@@ -31,9 +31,9 @@ interface ProductDetailsProps {
 
 const getThumbnail = (item: Template | (Template & { source_path?: string | null; thumbnail_path?: string | null })) => {
   // Prioritize thumbnail_path for new templates
-  if ((item as any).thumbnail_path) return (item as any).thumbnail_path;
+  if ((item as any).thumbnail_path) return convertR2UrlToCdn((item as any).thumbnail_path) || (item as any).thumbnail_path;
   // Fallback to img
-  if (item.img) return item.img;
+  if (item.img) return convertR2UrlToCdn(item.img) || item.img;
   // For YouTube videos, get thumbnail
   if (item.video) {
     const thumb = getYouTubeThumbnailUrl(item.video);
@@ -659,7 +659,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                                    (categorySlug.includes('music') || categorySlug.includes('audio') || categorySlug.includes('sfx') || categorySlug.includes('sound'));
 
                 if (isStockPhoto) {
-                  const imageUrl = (product as any).thumbnail_path || product.img || '/PNG1.png';
+                  const imageUrl = convertR2UrlToCdn((product as any).thumbnail_path) || (product as any).thumbnail_path || convertR2UrlToCdn(product.img) || product.img || '/PNG1.png';
                   return (
                     <StockPhotoViewer
                       imageUrl={imageUrl}
@@ -673,10 +673,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 if (isMusicSfx && (product as any).audio_preview_path) {
                   return (
                     <MusicSfxPlayer
-                      audioUrl={(product as any).audio_preview_path}
+                      audioUrl={convertR2UrlToCdn((product as any).audio_preview_path) || (product as any).audio_preview_path}
                       title={product.name}
                       subtitle={product.subtitle}
-                      thumbnailUrl={(product as any).thumbnail_path || product.img || undefined}
+                      thumbnailUrl={convertR2UrlToCdn((product as any).thumbnail_path) || (product as any).thumbnail_path || convertR2UrlToCdn(product.img) || product.img || undefined}
                       onDownload={isSubActive ? handleDownload : undefined}
                       className="w-full h-full"
                     />
@@ -718,10 +718,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 if ((product as any).thumbnail_path) {
                   return (
                     <div className="w-full h-full flex items-center justify-center bg-zinc-100">
-                      <img src={(product as any).thumbnail_path} alt={product.name} className="w-full h-full object-cover" />
+                      <img src={convertR2UrlToCdn((product as any).thumbnail_path) || (product as any).thumbnail_path} alt={product.name} className="w-full h-full object-cover" />
                       {(product as any).audio_preview_path && (
                         <div className="absolute bottom-4 left-4 right-4">
-                          <audio src={(product as any).audio_preview_path} controls className="w-full" />
+                          <audio src={convertR2UrlToCdn((product as any).audio_preview_path) || (product as any).audio_preview_path} controls className="w-full" />
                         </div>
                       )}
                     </div>
@@ -989,11 +989,11 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                     <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
                       {(item as any).thumbnail_path ? (
                         <img
-                          src={(item as any).thumbnail_path}
+                          src={convertR2UrlToCdn((item as any).thumbnail_path) || (item as any).thumbnail_path}
                           alt={item.name}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           onError={(e) => {
-                            e.currentTarget.src = item.img || '/PNG1.png';
+                            e.currentTarget.src = convertR2UrlToCdn(item.img) || item.img || '/PNG1.png';
                           }}
                         />
                       ) : (item as any).video_path ? (
@@ -1063,11 +1063,11 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                     <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
                       {(item as any).thumbnail_path ? (
                         <img
-                          src={(item as any).thumbnail_path}
+                          src={convertR2UrlToCdn((item as any).thumbnail_path) || (item as any).thumbnail_path}
                           alt={item.name}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           onError={(e) => {
-                            e.currentTarget.src = item.img || '/PNG1.png';
+                            e.currentTarget.src = convertR2UrlToCdn(item.img) || item.img || '/PNG1.png';
                           }}
                         />
                       ) : (item as any).video_path ? (

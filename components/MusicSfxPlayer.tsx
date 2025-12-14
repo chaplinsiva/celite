@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Download, Volume2, VolumeX, SkipBack, SkipForward, Music2 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, convertR2UrlToCdn } from '../lib/utils';
 
 interface MusicSfxPlayerProps {
   audioUrl: string;
@@ -14,6 +14,9 @@ interface MusicSfxPlayerProps {
 }
 
 export default function MusicSfxPlayer({ audioUrl, title, subtitle, thumbnailUrl, onDownload, className = '' }: MusicSfxPlayerProps) {
+  // Convert R2 URLs to CDN
+  const convertedAudioUrl = convertR2UrlToCdn(audioUrl) || audioUrl;
+  const convertedThumbnailUrl = convertR2UrlToCdn(thumbnailUrl);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -124,7 +127,7 @@ export default function MusicSfxPlayer({ audioUrl, title, subtitle, thumbnailUrl
     <div className={cn("relative w-full h-full bg-gradient-to-br from-zinc-50 via-white to-zinc-50 flex flex-col rounded-xl overflow-hidden shadow-xl", className)}>
       <audio
         ref={audioRef}
-        src={audioUrl}
+        src={convertedAudioUrl}
         preload="metadata"
         onLoadedData={() => setIsLoading(false)}
       />
@@ -141,11 +144,11 @@ export default function MusicSfxPlayer({ audioUrl, title, subtitle, thumbnailUrl
 
         {/* Thumbnail/Artwork */}
         <div className="relative z-10 w-full max-w-md">
-          {thumbnailUrl ? (
+          {convertedThumbnailUrl ? (
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-300" />
               <img
-                src={thumbnailUrl}
+                src={convertedThumbnailUrl}
                 alt={title}
                 className="relative w-full aspect-square object-cover rounded-2xl shadow-2xl ring-4 ring-white/50"
               />

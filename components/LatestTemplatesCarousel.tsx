@@ -6,7 +6,7 @@ import type { Template } from '../data/templateData';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { useLoginModal } from '../context/LoginModalContext';
-import { getYouTubeEmbedUrl } from '../lib/utils';
+import { getYouTubeEmbedUrl, convertR2UrlToCdn } from '../lib/utils';
 import YouTubeVideoPlayer from './YouTubeVideoPlayer';
 import VideoThumbnailPlayer from './VideoThumbnailPlayer';
 import { cn } from '@/lib/utils';
@@ -176,7 +176,7 @@ export default function LatestTemplatesCarousel() {
               ) : (
                 <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">
                   {tpl.img ? (
-                    <img src={tpl.img} alt={tpl.name} className="w-full h-full object-cover" />
+                    <img src={convertR2UrlToCdn(tpl.img) || tpl.img} alt={tpl.name} className="w-full h-full object-cover" />
                   ) : (
                     'No Preview'
                   )}

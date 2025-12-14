@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { PlayCircle } from 'lucide-react';
+import { convertR2UrlToCdn } from '../lib/utils';
 
 interface VideoThumbnailPlayerProps {
   videoUrl?: string | null;
@@ -16,12 +17,15 @@ export default function VideoThumbnailPlayer({
   title, 
   className = '' 
 }: VideoThumbnailPlayerProps) {
+  // Convert R2 URLs to CDN
+  const convertedVideoUrl = convertR2UrlToCdn(videoUrl);
+  const convertedThumbnailUrl = convertR2UrlToCdn(thumbnailUrl);
   const [isHovered, setIsHovered] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (videoRef.current && videoUrl) {
+    if (videoRef.current && convertedVideoUrl) {
       if (isHovered) {
         videoRef.current.play().catch((e) => {
           console.error('Error playing video:', e);
@@ -34,7 +38,7 @@ export default function VideoThumbnailPlayer({
         }
       }
     }
-  }, [isHovered, videoUrl]);
+  }, [isHovered, convertedVideoUrl]);
 
   const handleMouseEnter = () => {
     setIsHovered(true);
@@ -53,9 +57,9 @@ export default function VideoThumbnailPlayer({
     }
   };
 
-  const displayThumbnail = thumbnailUrl || '/PNG1.png';
+  const displayThumbnail = convertedThumbnailUrl || '/PNG1.png';
 
-  if (!videoUrl) {
+  if (!convertedVideoUrl) {
     return (
       <img
         src={displayThumbnail}
@@ -84,7 +88,7 @@ export default function VideoThumbnailPlayer({
       {/* Video - shown when hovered */}
       <video
         ref={videoRef}
-        src={videoUrl}
+        src={convertedVideoUrl}
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
           isHovered ? 'opacity-100' : 'opacity-0'
         }`}

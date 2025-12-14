@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppContext } from '../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
-import { getYouTubeThumbnailUrl, cn } from '../../lib/utils';
+import { getYouTubeThumbnailUrl, cn, convertR2UrlToCdn } from '../../lib/utils';
 import { Search, ChevronDown, ChevronRight, ChevronLeft, Check, PlayCircle, Download, Filter, ArrowRight } from 'lucide-react';
 import YouTubeVideoPlayer from '../../components/YouTubeVideoPlayer';
 import VideoThumbnailPlayer from '../../components/VideoThumbnailPlayer';
@@ -53,9 +53,9 @@ type Subcategory = {
 // Helper for thumbnails
 const getThumbnail = (item: Template) => {
   // Prioritize thumbnail_path for new templates
-  if (item.thumbnail_path) return item.thumbnail_path;
+  if (item.thumbnail_path) return convertR2UrlToCdn(item.thumbnail_path) || item.thumbnail_path;
   // Fallback to img
-  if (item.img) return item.img;
+  if (item.img) return convertR2UrlToCdn(item.img) || item.img;
   // For YouTube videos, get thumbnail
   if (item.video) {
     const thumb = getYouTubeThumbnailUrl(item.video);

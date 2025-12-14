@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { convertR2UrlToCdn } from '../lib/utils';
 
 interface Model3DViewerInteractiveProps {
   modelUrl: string;
@@ -9,6 +10,8 @@ interface Model3DViewerInteractiveProps {
 }
 
 export default function Model3DViewerInteractive({ modelUrl, className = '' }: Model3DViewerInteractiveProps) {
+  // Convert R2 URL to CDN
+  const convertedModelUrl = convertR2UrlToCdn(modelUrl) || modelUrl;
   const containerRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<any>(null);
   const cameraRef = useRef<any>(null);
@@ -17,7 +20,7 @@ export default function Model3DViewerInteractive({ modelUrl, className = '' }: M
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current || !modelUrl) return;
+    if (!containerRef.current || !convertedModelUrl) return;
 
     let scene: any = null;
     let camera: any = null;
@@ -90,7 +93,7 @@ export default function Model3DViewerInteractive({ modelUrl, className = '' }: M
         // Load model
         const loader = new GLTFLoader();
         loader.load(
-          modelUrl,
+          convertedModelUrl,
           (gltf) => {
             model = gltf.scene;
             
@@ -173,7 +176,7 @@ export default function Model3DViewerInteractive({ modelUrl, className = '' }: M
         renderer?.dispose();
       }
     };
-  }, [modelUrl]);
+  }, [convertedModelUrl]);
 
   const handleZoomIn = () => {
     if (!cameraRef.current || !controlsRef.current) return;

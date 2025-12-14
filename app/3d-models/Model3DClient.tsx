@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppContext } from '../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
-import { cn } from '../../lib/utils';
+import { cn, convertR2UrlToCdn } from '../../lib/utils';
 import { Search, ChevronDown, ChevronLeft, ChevronRight, Check, Download, Filter, ArrowRight } from 'lucide-react';
 
 type Template = {
@@ -434,13 +434,13 @@ export default function Model3DClient({
                     <Link href={`/product/${template.slug}`} className="block relative aspect-video overflow-hidden bg-zinc-100">
                       {template.thumbnail_path ? (
                         <img
-                          src={template.thumbnail_path}
+                          src={convertR2UrlToCdn(template.thumbnail_path) || template.thumbnail_path}
                           alt={template.name}
                           className="w-full h-full object-cover"
                         />
                       ) : template.img ? (
                         <img
-                          src={template.img}
+                          src={convertR2UrlToCdn(template.img) || template.img}
                           alt={template.name}
                           className="w-full h-full object-cover"
                         />

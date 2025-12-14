@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ZoomIn, ZoomOut, Download, Maximize2, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, convertR2UrlToCdn } from '../lib/utils';
 
 interface StockPhotoViewerProps {
   imageUrl: string;
@@ -12,6 +12,8 @@ interface StockPhotoViewerProps {
 }
 
 export default function StockPhotoViewer({ imageUrl, title, onDownload, className = '' }: StockPhotoViewerProps) {
+  // Convert R2 URL to CDN
+  const convertedImageUrl = convertR2UrlToCdn(imageUrl) || imageUrl;
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -116,7 +118,7 @@ export default function StockPhotoViewer({ imageUrl, title, onDownload, classNam
       >
         <img
           ref={imageRef}
-          src={imageUrl}
+          src={convertedImageUrl}
           alt={title}
           className="max-w-full max-h-full object-contain select-none"
           draggable={false}
