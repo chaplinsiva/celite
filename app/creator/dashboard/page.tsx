@@ -83,6 +83,19 @@ export default function CreatorDashboardPage() {
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
   const [uploadingAudioPreview, setUploadingAudioPreview] = useState(false);
   const [uploadingModel3D, setUploadingModel3D] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    source: number;
+    video: number;
+    thumbnail: number;
+    audio_preview: number;
+    model_3d: number;
+  }>({
+    source: 0,
+    video: 0,
+    thumbnail: 0,
+    audio_preview: 0,
+    model_3d: 0,
+  });
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
@@ -139,6 +152,8 @@ export default function CreatorDashboardPage() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
     
+    // Reset progress and set uploading state
+    setUploadProgress((prev) => ({ ...prev, [kind]: 0 }));
     if (kind === 'source') setUploadingSource(true);
     else if (kind === 'video') setUploadingVideo(true);
     else if (kind === 'thumbnail') setUploadingThumbnail(true);
@@ -153,36 +168,85 @@ export default function CreatorDashboardPage() {
       if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
       if (form.slug) fd.append('slug', form.slug);
       
-      const res = await fetch('/api/creator/upload-r2', { 
-        method: 'POST', 
-        headers: { Authorization: `Bearer ${session.access_token}` }, 
-        body: fd 
+      // Use XMLHttpRequest for progress tracking
+      return new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        // Track upload progress
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const percentComplete = Math.round((e.loaded / e.total) * 100);
+            setUploadProgress((prev) => ({ ...prev, [kind]: percentComplete }));
+          }
+        });
+        
+        // Handle completion
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const json = JSON.parse(xhr.responseText);
+              if (json.ok) {
+                if (kind === 'source' && json.url) {
+                  setForm((f) => ({ ...f, source_path: json.url }));
+                } else if (kind === 'video' && json.url) {
+                  setForm((f) => ({ ...f, video_path: json.url }));
+                } else if (kind === 'thumbnail' && json.url) {
+                  setForm((f) => ({ ...f, thumbnail_path: json.url }));
+                } else if (kind === 'audio_preview' && json.url) {
+                  setForm((f) => ({ ...f, audio_preview_path: json.url }));
+                } else if (kind === 'model_3d' && json.url) {
+                  setForm((f) => ({ ...f, model_3d_path: json.url }));
+                }
+                setMessage('File uploaded successfully');
+                setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
+                resolve();
+              } else {
+                setError(json.error || 'Upload failed');
+                reject(new Error(json.error || 'Upload failed'));
+              }
+            } catch (e) {
+              setError('Failed to parse response');
+              reject(e);
+            }
+          } else {
+            try {
+              const json = JSON.parse(xhr.responseText);
+              setError(json.error || 'Upload failed');
+            } catch {
+              setError('Upload failed');
+            }
+            reject(new Error('Upload failed'));
+          }
+        });
+        
+        // Handle errors
+        xhr.addEventListener('error', () => {
+          setError('Upload failed');
+          reject(new Error('Upload failed'));
+        });
+        
+        xhr.addEventListener('abort', () => {
+          setError('Upload cancelled');
+          reject(new Error('Upload cancelled'));
+        });
+        
+        // Open and send request
+        xhr.open('POST', '/api/creator/upload-r2');
+        xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+        xhr.send(fd);
       });
-      const json = await res.json();
-      if (json.ok) {
-        if (kind === 'source' && json.url) {
-          setForm((f) => ({ ...f, source_path: json.url }));
-        } else if (kind === 'video' && json.url) {
-          setForm((f) => ({ ...f, video_path: json.url }));
-        } else if (kind === 'thumbnail' && json.url) {
-          setForm((f) => ({ ...f, thumbnail_path: json.url }));
-        } else if (kind === 'audio_preview' && json.url) {
-          setForm((f) => ({ ...f, audio_preview_path: json.url }));
-        } else if (kind === 'model_3d' && json.url) {
-          setForm((f) => ({ ...f, model_3d_path: json.url }));
-        }
-        setMessage('File uploaded successfully');
-      } else {
-        setError(json.error || 'Upload failed');
-      }
     } catch (e: any) {
       setError(e?.message || 'Upload failed');
     } finally {
-      if (kind === 'source') setUploadingSource(false);
-      else if (kind === 'video') setUploadingVideo(false);
-      else if (kind === 'thumbnail') setUploadingThumbnail(false);
-      else if (kind === 'audio_preview') setUploadingAudioPreview(false);
-      else if (kind === 'model_3d') setUploadingModel3D(false);
+      // Reset uploading state after a short delay to show 100% completion
+      setTimeout(() => {
+        if (kind === 'source') setUploadingSource(false);
+        else if (kind === 'video') setUploadingVideo(false);
+        else if (kind === 'thumbnail') setUploadingThumbnail(false);
+        else if (kind === 'audio_preview') setUploadingAudioPreview(false);
+        else if (kind === 'model_3d') setUploadingModel3D(false);
+        setUploadProgress((prev) => ({ ...prev, [kind]: 0 }));
+      }, 1000);
     }
   };
 
@@ -933,10 +997,18 @@ export default function CreatorDashboardPage() {
                                 disabled={uploadingVideo}
                                 className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                               >
-                                {uploadingVideo ? 'Uploading...' : 'Upload'}
+                                {uploadingVideo ? `Uploading ${uploadProgress.video}%` : 'Upload'}
                               </button>
                               <input ref={videoInputRef} type="file" accept="video/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('video', file); }} />
                             </div>
+                            {uploadingVideo && (
+                              <div className="mt-2 w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                  style={{ width: `${uploadProgress.video}%` }}
+                                />
+                              </div>
+                            )}
                             {form.video_path && (
                               <div className="mt-2 aspect-video w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100">
                                 <video src={form.video_path} controls className="h-full w-full" />
@@ -964,10 +1036,18 @@ export default function CreatorDashboardPage() {
                                 disabled={uploadingThumbnail}
                                 className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                               >
-                                {uploadingThumbnail ? 'Uploading...' : 'Upload'}
+                                {uploadingThumbnail ? `Uploading ${uploadProgress.thumbnail}%` : 'Upload'}
                               </button>
                               <input ref={thumbnailInputRef} type="file" accept="image/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('thumbnail', file); }} />
                             </div>
+                            {uploadingThumbnail && (
+                              <div className="mt-2 w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                  style={{ width: `${uploadProgress.thumbnail}%` }}
+                                />
+                              </div>
+                            )}
                             {form.thumbnail_path && (
                               <div className="mt-2 w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100">
                                 <img src={form.thumbnail_path} alt="Thumbnail preview" className="w-full h-auto" />
@@ -998,10 +1078,18 @@ export default function CreatorDashboardPage() {
                                 disabled={uploadingAudioPreview}
                                 className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                               >
-                                {uploadingAudioPreview ? 'Uploading...' : 'Upload'}
+                                {uploadingAudioPreview ? `Uploading ${uploadProgress.audio_preview}%` : 'Upload'}
                               </button>
                               <input ref={audioPreviewInputRef} type="file" accept="audio/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('audio_preview', file); }} />
                             </div>
+                            {uploadingAudioPreview && (
+                              <div className="mt-2 w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                  style={{ width: `${uploadProgress.audio_preview}%` }}
+                                />
+                              </div>
+                            )}
                             {form.audio_preview_path && (
                               <div className="mt-2 w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 p-2">
                                 <audio src={form.audio_preview_path} controls className="w-full" />
@@ -1030,10 +1118,18 @@ export default function CreatorDashboardPage() {
                                 disabled={uploadingModel3D}
                                 className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                               >
-                                {uploadingModel3D ? 'Uploading...' : 'Upload'}
+                                {uploadingModel3D ? `Uploading ${uploadProgress.model_3d}%` : 'Upload'}
                               </button>
                               <input ref={model3DInputRef} type="file" accept=".glb,.gltf,.obj" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('model_3d', file); }} />
                             </div>
+                            {uploadingModel3D && (
+                              <div className="mt-2 w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                  style={{ width: `${uploadProgress.model_3d}%` }}
+                                />
+                              </div>
+                            )}
                             {form.model_3d_path && (
                               <div className="mt-2 w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 p-2">
                                 <p className="text-xs text-zinc-600">3D Model: {form.model_3d_path}</p>
@@ -1067,10 +1163,18 @@ export default function CreatorDashboardPage() {
                                 disabled={uploadingSource}
                                 className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                               >
-                                {uploadingSource ? 'Uploading...' : 'Upload'}
+                                {uploadingSource ? `Uploading ${uploadProgress.source}%` : 'Upload'}
                               </button>
                               <input ref={sourceInputRef} type="file" accept="application/zip,application/x-rar-compressed,.zip,.rar" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('source', file); }} />
                             </div>
+                            {uploadingSource && (
+                              <div className="mt-2 w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                  style={{ width: `${uploadProgress.source}%` }}
+                                />
+                              </div>
+                            )}
                             <p className="text-[10px] text-zinc-400 mt-1">Stored at: category/subcategory/{'{filename}'}</p>
                           </div>
                         </div>
