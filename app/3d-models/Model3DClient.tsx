@@ -27,6 +27,7 @@ type Template = {
   created_at?: string | null;
   category_id?: string | null;
   subcategory_id?: string | null;
+  sub_subcategory_id?: string | null;
   creator_shop_id?: string | null;
   feature?: boolean | null;
   is_featured?: boolean | null;
@@ -45,6 +46,13 @@ type Category = {
 type Subcategory = {
   id: string;
   category_id: string;
+  name: string;
+  slug: string;
+};
+
+type SubSubcategory = {
+  id: string;
+  subcategory_id: string;
   name: string;
   slug: string;
 };
@@ -73,10 +81,13 @@ export default function Model3DClient({
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
+  const [selectedSubSubcategory, setSelectedSubSubcategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('newest');
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [availableSubcategories, setAvailableSubcategories] = useState<Subcategory[]>([]);
+  const [subSubcategories, setSubSubcategories] = useState<SubSubcategory[]>([]);
+  const [availableSubSubcategories, setAvailableSubSubcategories] = useState<SubSubcategory[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedSections, setExpandedSections] = useState({
     categories: true,
@@ -100,6 +111,7 @@ export default function Model3DClient({
       const supabase = getSupabaseBrowserClient();
       const { data: cats } = await supabase.from('categories').select('id,name,slug').order('name');
       const { data: subcats } = await supabase.from('subcategories').select('id,category_id,name,slug').order('name');
+      const { data: subSubcats } = await supabase.from('sub_subcategories').select('id,subcategory_id,name,slug').order('name');
 
       // Filter to only show 3D Models category
       const filteredCats = (cats || []).filter(cat => 
@@ -110,6 +122,7 @@ export default function Model3DClient({
 
       setCategories([{ id: 'featured', name: 'Featured Models', slug: 'featured' }, ...filteredCats]);
       setSubcategories(subcats || []);
+      setSubSubcategories(subSubcats || []);
       
       // Auto-select the category if there's only one
       if (filteredCats.length === 1) {
@@ -135,6 +148,26 @@ export default function Model3DClient({
     setAvailableSubcategories(subcatsWithTemplates);
   }, [subcategories, initialTemplates, selectedCategory]);
 
+  // Filter sub-subcategories to only show those with available templates for the selected subcategory
+  useEffect(() => {
+    if (subSubcategories.length === 0 || initialTemplates.length === 0 || !selectedSubcategory || selectedSubcategory === 'all') {
+      setAvailableSubSubcategories([]);
+      setSelectedSubSubcategory('all');
+      return;
+    }
+
+    const subSubcatsWithTemplates = subSubcategories
+      .filter(subSubcat => subSubcat.subcategory_id === selectedSubcategory)
+      .filter(subSubcat => {
+        return initialTemplates.some(t => t.sub_subcategory_id === subSubcat.id);
+      });
+
+    setAvailableSubSubcategories(subSubcatsWithTemplates);
+    if (selectedSubSubcategory !== 'all' && !subSubcatsWithTemplates.find(s => s.id === selectedSubSubcategory)) {
+      setSelectedSubSubcategory('all');
+    }
+  }, [subSubcategories, initialTemplates, selectedSubcategory, selectedSubSubcategory]);
+
   // Filter Logic
   const filteredTemplates = useMemo(() => {
     let filtered = [...initialTemplates];
@@ -156,7 +189,9 @@ export default function Model3DClient({
     if (selectedCategory === 'featured') {
       filtered = filtered.filter(t => t.feature || t.is_featured || (t as any).isFeatured);
     } else if (selectedCategory && selectedCategory !== 'all') {
-      if (selectedSubcategory !== 'all') {
+      if (selectedSubSubcategory !== 'all') {
+        filtered = filtered.filter(t => t.sub_subcategory_id === selectedSubSubcategory);
+      } else if (selectedSubcategory !== 'all') {
         filtered = filtered.filter(t => t.subcategory_id === selectedSubcategory);
       } else {
         filtered = filtered.filter(t => t.category_id === selectedCategory);
@@ -168,7 +203,7 @@ export default function Model3DClient({
     if (sortBy === 'name') filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     return filtered;
-  }, [initialTemplates, searchQuery, selectedCategory, selectedSubcategory, sortBy]);
+  }, [initialTemplates, searchQuery, selectedCategory, selectedSubcategory, selectedSubSubcategory, sortBy]);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -368,6 +403,7 @@ export default function Model3DClient({
                         onClick={() => {
                           setSelectedCategory(cat.id);
                           setSelectedSubcategory('all');
+                          setSelectedSubSubcategory('all');
                         }}
                         className={cn("block w-full text-left px-3 py-1.5 text-sm rounded-r-lg transition-colors border-l-2 -ml-[1px]",
                           selectedCategory === cat.id
@@ -380,7 +416,10 @@ export default function Model3DClient({
                       {selectedCategory === cat.id && availableSubcategories.length > 0 && (
                         <div className="ml-4 mt-1 space-y-1 border-l border-zinc-200 pl-2">
                           <button
-                            onClick={() => setSelectedSubcategory('all')}
+                            onClick={() => {
+                              setSelectedSubcategory('all');
+                              setSelectedSubSubcategory('all');
+                            }}
                             className={cn("block w-full text-left px-2 py-1 text-xs rounded-r transition-colors",
                               selectedSubcategory === 'all'
                                 ? "text-blue-600 font-medium"
@@ -392,13 +431,17 @@ export default function Model3DClient({
                           {availableSubcategories
                             .filter(subcat => subcat.category_id === cat.id)
                             .map(subcat => {
-                              const templateCount = initialTemplates.filter(t => t.subcategory_id === subcat.id).length;
+                              const templateCount = initialTemplates.filter(t => t.subcategory_id === subcat.id && !t.sub_subcategory_id).length;
+                              const subSubcatsForThis = availableSubSubcategories.filter(s => s.subcategory_id === subcat.id);
                               return (
+                                <div key={subcat.id}>
                                 <button
-                                  key={subcat.id}
-                                  onClick={() => setSelectedSubcategory(subcat.id)}
+                                    onClick={() => {
+                                      setSelectedSubcategory(subcat.id);
+                                      setSelectedSubSubcategory('all');
+                                    }}
                                   className={cn("block w-full text-left px-2 py-1 text-xs rounded-r transition-colors flex items-center justify-between",
-                                    selectedSubcategory === subcat.id
+                                      selectedSubcategory === subcat.id && selectedSubSubcategory === 'all'
                                       ? "text-blue-600 font-medium"
                                       : "text-zinc-500 hover:text-zinc-700"
                                   )}
@@ -406,6 +449,38 @@ export default function Model3DClient({
                                   <span>{subcat.name}</span>
                                   <span className="text-zinc-400 text-[10px]">({templateCount})</span>
                                 </button>
+                                  {selectedSubcategory === subcat.id && subSubcatsForThis.length > 0 && (
+                                    <div className="ml-4 mt-1 space-y-1 border-l border-zinc-200 pl-2">
+                                      <button
+                                        onClick={() => setSelectedSubSubcategory('all')}
+                                        className={cn("block w-full text-left px-2 py-1 text-[10px] rounded-r transition-colors",
+                                          selectedSubSubcategory === 'all'
+                                            ? "text-blue-600 font-medium"
+                                            : "text-zinc-500 hover:text-zinc-700"
+                                        )}
+                                      >
+                                        All {subcat.name}
+                                      </button>
+                                      {subSubcatsForThis.map(subSubcat => {
+                                        const subSubTemplateCount = initialTemplates.filter(t => t.sub_subcategory_id === subSubcat.id).length;
+                                        return (
+                                          <button
+                                            key={subSubcat.id}
+                                            onClick={() => setSelectedSubSubcategory(subSubcat.id)}
+                                            className={cn("block w-full text-left px-2 py-1 text-[10px] rounded-r transition-colors flex items-center justify-between",
+                                              selectedSubSubcategory === subSubcat.id
+                                                ? "text-blue-600 font-medium"
+                                                : "text-zinc-500 hover:text-zinc-700"
+                                            )}
+                                          >
+                                            <span>{subSubcat.name}</span>
+                                            <span className="text-zinc-400 text-[9px]">({subSubTemplateCount})</span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
                               );
                             })}
                         </div>

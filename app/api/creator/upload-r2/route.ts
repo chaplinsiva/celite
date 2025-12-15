@@ -47,6 +47,7 @@ export async function POST(req: Request) {
     const kind = (form.get('kind') as string | null) || null; // 'source' | 'preview' | 'video' | 'thumbnail' | 'audio_preview' | 'model_3d'
     const categoryId = (form.get('category_id') as string | null) || '';
     const subcategoryId = (form.get('subcategory_id') as string | null) || '';
+    const subSubcategoryId = (form.get('sub_subcategory_id') as string | null) || '';
     const slug = (form.get('slug') as string | null) || '';
 
     if (!file || !kind) return NextResponse.json({ ok: false, error: 'Missing file or kind' }, { status: 400 });
@@ -73,6 +74,18 @@ export async function POST(req: Request) {
       }
     }
 
+    let subSubcategorySlug: string | null = null;
+    if (subSubcategoryId) {
+      const { data: subSubcategory } = await admin
+        .from('sub_subcategories')
+        .select('slug')
+        .eq('id', subSubcategoryId)
+        .maybeSingle();
+      if (subSubcategory) {
+        subSubcategorySlug = subSubcategory.slug;
+      }
+    }
+
     let defaultExt = '.zip';
     if (kind === 'video') defaultExt = '.mp4';
     else if (kind === 'thumbnail') defaultExt = '.jpg';
@@ -83,17 +96,17 @@ export async function POST(req: Request) {
 
     let r2Key: string;
     if (kind === 'source') {
-      r2Key = generateSourceKey(category.slug, subcategorySlug, filename);
+      r2Key = generateSourceKey(category.slug, subcategorySlug, filename, subSubcategorySlug);
     } else if (kind === 'preview') {
-      r2Key = generatePreviewKey(category.slug, subcategorySlug, filename);
+      r2Key = generatePreviewKey(category.slug, subcategorySlug, filename, subSubcategorySlug);
     } else if (kind === 'video') {
-      r2Key = generateVideoKey(category.slug, subcategorySlug, filename);
+      r2Key = generateVideoKey(category.slug, subcategorySlug, filename, subSubcategorySlug);
     } else if (kind === 'thumbnail') {
-      r2Key = generateThumbnailKey(category.slug, subcategorySlug, filename);
+      r2Key = generateThumbnailKey(category.slug, subcategorySlug, filename, subSubcategorySlug);
     } else if (kind === 'audio_preview') {
-      r2Key = generateAudioPreviewKey(category.slug, subcategorySlug, filename);
+      r2Key = generateAudioPreviewKey(category.slug, subcategorySlug, filename, subSubcategorySlug);
     } else if (kind === 'model_3d') {
-      r2Key = generateModel3DKey(category.slug, subcategorySlug, filename);
+      r2Key = generateModel3DKey(category.slug, subcategorySlug, filename, subSubcategorySlug);
     } else {
       return NextResponse.json({ ok: false, error: 'Invalid kind. Use "source", "preview", "video", "thumbnail", "audio_preview", or "model_3d"' }, { status: 400 });
     }

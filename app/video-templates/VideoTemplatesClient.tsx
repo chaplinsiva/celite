@@ -28,6 +28,7 @@ type Template = {
   created_at?: string | null;
   category_id?: string | null;
   subcategory_id?: string | null;
+  sub_subcategory_id?: string | null;
   creator_shop_id?: string | null;
   feature?: boolean | null;
   is_featured?: boolean | null;
@@ -50,7 +51,13 @@ type Subcategory = {
   slug: string;
 };
 
-// Helper for thumbnails
+type SubSubcategory = {
+  id: string;
+  subcategory_id: string;
+  name: string;
+  slug: string;
+};
+
 const getThumbnail = (item: Template) => {
   // Prioritize thumbnail_path for new templates
   if (item.thumbnail_path) return convertR2UrlToCdn(item.thumbnail_path) || item.thumbnail_path;
@@ -86,128 +93,121 @@ export default function VideoTemplatesClient({
   const { user } = useAppContext();
   const { openLoginModal } = useLoginModal();
 
+  const subcategorySlugFromUrl = searchParams.get('subcategory') || null;
+
   // State
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('newest');
+  const [selectedSubSubcategory, setSelectedSubSubcategory] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest');
+  const [viewMode, setViewMode] = useState<'discover' | 'following'>('discover');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [expandedSections, setExpandedSections] = useState({ categories: true, filters: false });
+  
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [availableSubcategories, setAvailableSubcategories] = useState<Subcategory[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<"discover" | "following">("discover");
+  const [subSubcategories, setSubSubcategories] = useState<SubSubcategory[]>([]);
   const [followingCreatorIds, setFollowingCreatorIds] = useState<string[]>([]);
-  const [loadingFollowing, setLoadingFollowing] = useState(false);
 
-  // Expanded states for sidebar sections
-  const [expandedSections, setExpandedSections] = useState({
-    categories: true
-  });
-
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
-  };
-
-  // Sync search query with URL params
-  useEffect(() => {
-    const searchParam = searchParams.get('search');
-    if (searchParam !== null && searchParam !== searchQuery) {
-      setSearchQuery(searchParam);
-    }
-  }, [searchParams, searchQuery]);
-
-  // Fetch Categories
+  // Fetch Categories, Subcategories, and Sub-Subcategories
   useEffect(() => {
     const fetchData = async () => {
       const supabase = getSupabaseBrowserClient();
-      const { data: cats } = await supabase.from('categories').select('id,name,slug').order('name');
-      const { data: subcats } = await supabase.from('subcategories').select('id,category_id,name,slug').order('name');
+      
+      const [catsResult, subcatsResult, subSubcatsResult] = await Promise.all([
+        supabase.from('categories').select('id,name,slug').order('name'),
+        supabase.from('subcategories').select('id,category_id,name,slug').order('name'),
+        supabase.from('sub_subcategories').select('id,subcategory_id,name,slug').order('name')
+      ]);
 
-      // Filter categories based on page type
-      let filteredCats = (cats || []).filter(cat => 
-        cat.id !== MUSIC_SFX_CATEGORY_ID && 
-        cat.id !== STOCK_PHOTOS_CATEGORY_ID &&
-        cat.slug !== 'musics-and-sfx' &&
-        cat.slug !== 'stock-images' &&
-        cat.slug !== 'stock-photos'
+      let filteredCats = (catsResult.data || []).filter(cat => 
+        cat.id !== MUSIC_SFX_CATEGORY_ID && cat.id !== STOCK_PHOTOS_CATEGORY_ID
       );
 
-      // For specific pages, only show relevant categories
       if (basePath === '/video-templates') {
-        // After Effects page - only show After Effects category
-        filteredCats = filteredCats.filter(cat => cat.slug === 'after-effects');
-      } else if (basePath === '/web-templates') {
-        // Website Templates page - only show Website Templates category
-        filteredCats = filteredCats.filter(cat => cat.slug === 'website-templates');
-      } else if (basePath === '/graphics') {
-        // Graphics page - only show PSD Templates category
-        filteredCats = filteredCats.filter(cat => cat.slug === 'psd-templates');
+        filteredCats = filteredCats.filter(cat => 
+          cat.slug === 'video-templates' ||
+          (cat.name.toLowerCase().includes('video') && cat.name.toLowerCase().includes('template'))
+        );
       }
-      // Stock Footage page doesn't filter by category (uses tags/features)
 
       setCategories([{ id: 'featured', name: 'Featured Templates', slug: 'featured' }, ...filteredCats]);
-      setSubcategories(subcats || []);
-      
-      // Auto-select the category if there's only one (like After Effects page)
-      if (filteredCats.length === 1) {
-        setSelectedCategory(filteredCats[0].id);
+      setSubcategories(subcatsResult.data || []);
+      setSubSubcategories(subSubcatsResult.data || []);
+
+      // Auto-select Video Templates category
+      if (basePath === '/video-templates') {
+        const videoTemplatesCat = filteredCats.find(cat => 
+          cat.slug === 'video-templates' || 
+          (cat.name.toLowerCase().includes('video') && cat.name.toLowerCase().includes('template'))
+        );
+        if (videoTemplatesCat) {
+          setSelectedCategory(videoTemplatesCat.id);
+          setSelectedSubcategory('all');
+          setSelectedSubSubcategory('all');
+        }
       }
     };
     fetchData();
   }, [basePath]);
 
-  // Filter subcategories to only show those with available templates for the selected category
+  // Sync subcategory from URL
   useEffect(() => {
-    if (subcategories.length === 0 || initialTemplates.length === 0 || !selectedCategory || selectedCategory === 'featured' || selectedCategory === 'all') {
-      setAvailableSubcategories([]);
+    if (subcategorySlugFromUrl && subcategories.length > 0) {
+      const subcategory = subcategories.find(sub => sub.slug === subcategorySlugFromUrl);
+      if (subcategory) {
+        setSelectedSubcategory(subcategory.id);
+        setSelectedCategory(subcategory.category_id);
+      }
+    }
+  }, [subcategorySlugFromUrl, subcategories]);
+
+  // Fetch following creators
+  useEffect(() => {
+    if (!user) {
+      setFollowingCreatorIds([]);
       return;
     }
 
-    // Filter subcategories that belong to the selected category and have templates
-    const subcatsWithTemplates = subcategories
-      .filter(subcat => subcat.category_id === selectedCategory)
-      .filter(subcat => {
-        // Check if any template has this subcategory_id
-        return initialTemplates.some(t => t.subcategory_id === subcat.id);
-      });
-
-    setAvailableSubcategories(subcatsWithTemplates);
-  }, [subcategories, initialTemplates, selectedCategory]);
-
-  // Load followed creators for current user
-  useEffect(() => {
-    const loadFollowing = async () => {
-      if (!user) {
-        setFollowingCreatorIds([]);
-        return;
-      }
-      try {
-        setLoadingFollowing(true);
-        const supabase = getSupabaseBrowserClient();
-        const { data } = await supabase
-          .from("creator_followers")
-          .select("creator_shop_id")
-          .eq("user_id", user.id);
-        const ids = (data as any[] | null)?.map((r) => r.creator_shop_id) ?? [];
-        setFollowingCreatorIds(ids);
-      } catch (e) {
-        console.error("Failed to load following creators", e);
-        setFollowingCreatorIds([]);
-      } finally {
-        setLoadingFollowing(false);
+    const fetchFollowing = async () => {
+      const supabase = getSupabaseBrowserClient();
+      const { data } = await supabase
+        .from('follows')
+        .select('creator_shop_id')
+        .eq('follower_id', user.id);
+      
+      if (data) {
+        setFollowingCreatorIds(data.map(f => f.creator_shop_id).filter(Boolean));
       }
     };
-    loadFollowing();
+    fetchFollowing();
   }, [user]);
 
-  // Filter Logic
+  // Get available subcategories for selected category
+  const availableSubcategories = useMemo(() => {
+    if (!selectedCategory || selectedCategory === 'featured' || selectedCategory === 'all') {
+      return [];
+    }
+    return subcategories.filter(sub => sub.category_id === selectedCategory);
+  }, [selectedCategory, subcategories]);
+
+  // Get available sub-subcategories for selected subcategory
+  const availableSubSubcategories = useMemo(() => {
+    if (!selectedSubcategory || selectedSubcategory === 'all') {
+      return [];
+    }
+    return subSubcategories.filter(sub => sub.subcategory_id === selectedSubcategory);
+  }, [selectedSubcategory, subSubcategories]);
+
+  // Filter templates
   const filteredTemplates = useMemo(() => {
-    // Exclude Music & SFX and Stock Photos from regular templates
     let filtered = [...initialTemplates].filter(t => 
       t.category_id !== MUSIC_SFX_CATEGORY_ID && 
       t.category_id !== STOCK_PHOTOS_CATEGORY_ID
     );
 
+    // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(t => {
@@ -217,29 +217,50 @@ export default function VideoTemplatesClient({
         const tagMatch = t.tags?.some(tag => tag?.toLowerCase().includes(q));
         const featureMatch = t.features?.some(feat => feat?.toLowerCase().includes(q));
         const softwareMatch = t.software?.some(sw => sw?.toLowerCase().includes(q));
-
         return nameMatch || subtitleMatch || descriptionMatch || tagMatch || featureMatch || softwareMatch;
       });
     }
 
+    // Category/Subcategory filter
     if (selectedCategory === 'featured') {
       filtered = filtered.filter(t => t.feature || t.is_featured || (t as any).isFeatured);
-    } else if (selectedCategory && selectedCategory !== 'all') {
-      if (selectedSubcategory !== 'all') {
+    } else if (selectedCategory && selectedCategory !== 'all' && selectedCategory !== '') {
+      if (selectedSubSubcategory && selectedSubSubcategory !== 'all' && selectedSubSubcategory !== '') {
+        // Filter by sub-subcategory
+        filtered = filtered.filter(t => t.sub_subcategory_id === selectedSubSubcategory);
+      } else if (selectedSubcategory && selectedSubcategory !== 'all' && selectedSubcategory !== '') {
+        // Filter by subcategory - show all templates in this subcategory (including those with sub-subcategories)
         filtered = filtered.filter(t => t.subcategory_id === selectedSubcategory);
       } else {
-        filtered = filtered.filter(t => t.category_id === selectedCategory);
+        // Show all templates in the category
+        // Include templates that have category_id matching OR templates whose subcategory belongs to this category
+        filtered = filtered.filter(t => {
+          // Direct category match
+          if (t.category_id === selectedCategory) return true;
+          // Template's subcategory belongs to selected category
+          if (t.subcategory_id) {
+            const templateSubcategory = subcategories.find(sub => sub.id === t.subcategory_id);
+            if (templateSubcategory?.category_id === selectedCategory) return true;
+          }
+          return false;
+        });
       }
     }
+    // If no category selected, show all templates (shouldn't happen on /video-templates page as it auto-selects)
 
-
-    if (sortBy === 'newest') filtered.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-    if (sortBy === 'oldest') filtered.sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
-    if (sortBy === 'name') filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    // Sort
+    if (sortBy === 'newest') {
+      filtered.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    } else if (sortBy === 'oldest') {
+      filtered.sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+    } else if (sortBy === 'name') {
+      filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }
 
     return filtered;
-  }, [initialTemplates, searchQuery, selectedCategory, selectedSubcategory, sortBy]);
+  }, [initialTemplates, searchQuery, selectedCategory, selectedSubcategory, selectedSubSubcategory, sortBy]);
 
+  // View mode filter
   const viewTemplates = useMemo(() => {
     if (viewMode === "discover") return filteredTemplates;
     if (!user || followingCreatorIds.length === 0) return [];
@@ -251,7 +272,7 @@ export default function VideoTemplatesClient({
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedCategory, selectedSubcategory, sortBy, viewMode]);
+  }, [searchQuery, selectedCategory, selectedSubcategory, selectedSubSubcategory, sortBy, viewMode]);
 
   const totalPages = Math.ceil(viewTemplates.length / ITEMS_PER_PAGE);
   const paginatedTemplates = viewTemplates.slice(
@@ -266,8 +287,7 @@ export default function VideoTemplatesClient({
 
   return (
     <main className="bg-zinc-50 min-h-screen pt-20 pb-20">
-
-      {/* 1. Header Section */}
+      {/* Header Section */}
       <div className="bg-white border-b border-zinc-200 pb-8 mb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -278,15 +298,7 @@ export default function VideoTemplatesClient({
                 <span className="text-zinc-900">{breadcrumbLabel}</span>
               </div>
               <div className="flex items-center gap-4 flex-wrap">
-                <h1 className="text-3xl md:text-4xl font-bold text-zinc-900">
-                  {pageTitle === 'After Effects Templates' ? (
-                    <>
-                      <span className="text-blue-600">After Effects</span> Templates
-                    </>
-                  ) : (
-                    pageTitle
-                  )}
-                </h1>
+                <h1 className="text-3xl md:text-4xl font-bold text-zinc-900">{pageTitle}</h1>
                 <div className="flex items-center gap-3 flex-wrap">
                   <div className="text-sm text-zinc-500 bg-zinc-100 px-3 py-1.5 rounded-full font-medium">
                     {viewTemplates.length === initialTemplates.length && viewMode === "discover" ? (
@@ -297,43 +309,40 @@ export default function VideoTemplatesClient({
                       </span>
                     )}
                   </div>
-                  <div className="inline-flex rounded-full bg-zinc-100 p-1 text-xs">
+                  <div className="flex items-center gap-2 bg-white border border-zinc-200 rounded-xl p-1">
                     <button
-                      type="button"
-                      onClick={() => setViewMode("discover")}
-                      className={`px-4 py-1.5 rounded-full font-medium transition-colors ${
-                        viewMode === "discover"
-                          ? "bg-white text-zinc-900 shadow-sm"
-                          : "text-zinc-500 hover:text-zinc-900"
-                      }`}
+                      onClick={() => setViewMode('discover')}
+                      className={cn(
+                        "px-4 py-1.5 text-sm font-medium rounded-lg transition-all",
+                        viewMode === 'discover'
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "text-zinc-600 hover:text-zinc-900"
+                      )}
                     >
                       Discover
                     </button>
                     <button
-                      type="button"
-                      onClick={() => setViewMode("following")}
-                      className={`px-4 py-1.5 rounded-full font-medium transition-colors ${
-                        viewMode === "following"
-                          ? "bg-white text-zinc-900 shadow-sm"
-                          : "text-zinc-500 hover:text-zinc-900"
-                      }`}
+                      onClick={() => setViewMode('following')}
+                      className={cn(
+                        "px-4 py-1.5 text-sm font-medium rounded-lg transition-all",
+                        viewMode === 'following'
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "text-zinc-600 hover:text-zinc-900"
+                      )}
                     >
                       Following
                     </button>
                   </div>
                 </div>
               </div>
-              <p className="text-zinc-500 mt-2 max-w-2xl">
-                {pageSubtitle}
-              </p>
+              <p className="text-zinc-600 mt-4 max-w-3xl">{pageSubtitle}</p>
             </div>
-
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-zinc-600">Sort by:</span>
+              <span className="text-sm text-zinc-500">Sort by:</span>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium cursor-pointer"
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="px-4 py-2 border border-zinc-200 rounded-xl bg-white text-sm font-medium text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
@@ -343,70 +352,46 @@ export default function VideoTemplatesClient({
           </div>
 
           {/* Search Bar */}
-          <div className="relative max-w-2xl mx-auto md:max-w-none md:mx-0">
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-zinc-400 group-focus-within:text-blue-600 transition-colors" />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  // Update URL without page reload
-                  const params = new URLSearchParams(window.location.search);
-                  if (e.target.value.trim()) {
-                    params.set('search', e.target.value.trim());
-                  } else {
-                    params.delete('search');
-                  }
-                  router.replace(`${basePath}?${params.toString()}`, { scroll: false });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const params = new URLSearchParams(window.location.search);
-                    if (searchQuery.trim()) {
-                      params.set('search', searchQuery.trim());
-                    } else {
-                      params.delete('search');
-                    }
-                    router.replace(`${basePath}?${params.toString()}`, { scroll: false });
-                  }
-                }}
-                className="block w-full pl-11 pr-4 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                placeholder="Search millions of creative assets..."
-              />
-            </div>
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search millions of creative assets..."
+              className="w-full pl-12 pr-4 py-4 border border-zinc-200 rounded-2xl bg-white text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-
-          {/* 2. Left Sidebar Filters (25%) */}
-          <aside className="w-full lg:w-64 flex-shrink-0 space-y-8 hidden lg:block">
-            {/* Categories */}
-            <div>
-              <div
-                className="flex items-center justify-between cursor-pointer mb-2"
-                onClick={() => toggleSection('categories')}
+        <div className="flex gap-8">
+          {/* Sidebar */}
+          <aside className="w-64 flex-shrink-0 hidden lg:block">
+            <div className="bg-white rounded-2xl border border-zinc-200 p-4 sticky top-24">
+              <button
+                onClick={() => setExpandedSections(prev => ({ ...prev, categories: !prev.categories }))}
+                className="w-full flex items-center justify-between text-sm font-semibold text-zinc-900 mb-4"
               >
-                <h3 className="font-bold text-zinc-900">Categories</h3>
-                <ChevronDown className={cn("w-4 h-4 text-zinc-400 transition-transform", !expandedSections.categories && "-rotate-90")} />
-              </div>
+                Categories
+                {expandedSections.categories ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </button>
 
               {expandedSections.categories && (
                 <div className="space-y-1 pl-2 border-l border-zinc-200">
                   {categories.filter(cat => cat.id !== 'featured' && cat.id !== MUSIC_SFX_CATEGORY_ID && cat.id !== STOCK_PHOTOS_CATEGORY_ID).map(cat => (
                     <div key={cat.id}>
                       <button
+                        type="button"
                         onClick={() => {
                           setSelectedCategory(cat.id);
                           setSelectedSubcategory('all');
+                          setSelectedSubSubcategory('all');
                         }}
-                        className={cn("block w-full text-left px-3 py-1.5 text-sm rounded-r-lg transition-colors border-l-2 -ml-[1px]",
+                        className={cn(
+                          "block w-full text-left px-3 py-1.5 text-sm rounded-r-lg transition-colors border-l-2 -ml-[1px] cursor-pointer",
                           selectedCategory === cat.id
                             ? "border-blue-600 bg-blue-50 text-blue-700 font-medium"
                             : "border-transparent text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
@@ -414,12 +399,16 @@ export default function VideoTemplatesClient({
                       >
                         {cat.name}
                       </button>
-                      {/* Show subcategories for the selected category */}
                       {selectedCategory === cat.id && availableSubcategories.length > 0 && (
                         <div className="ml-4 mt-1 space-y-1 border-l border-zinc-200 pl-2">
                           <button
-                            onClick={() => setSelectedSubcategory('all')}
-                            className={cn("block w-full text-left px-2 py-1 text-xs rounded-r transition-colors",
+                            type="button"
+                            onClick={() => {
+                              setSelectedSubcategory('all');
+                              setSelectedSubSubcategory('all');
+                            }}
+                            className={cn(
+                              "block w-full text-left px-2 py-1 text-xs rounded-r transition-colors cursor-pointer",
                               selectedSubcategory === 'all'
                                 ? "text-blue-600 font-medium"
                                 : "text-zinc-500 hover:text-zinc-700"
@@ -430,20 +419,65 @@ export default function VideoTemplatesClient({
                           {availableSubcategories
                             .filter(subcat => subcat.category_id === cat.id)
                             .map(subcat => {
+                              // Count ALL templates in this subcategory (including those with sub-subcategories)
                               const templateCount = initialTemplates.filter(t => t.subcategory_id === subcat.id).length;
+                              // Get sub-subcategories for THIS subcategory (not just the selected one)
+                              const subSubcatsForThis = subSubcategories.filter(s => s.subcategory_id === subcat.id);
                               return (
-                                <button
-                                  key={subcat.id}
-                                  onClick={() => setSelectedSubcategory(subcat.id)}
-                                  className={cn("block w-full text-left px-2 py-1 text-xs rounded-r transition-colors flex items-center justify-between",
-                                    selectedSubcategory === subcat.id
-                                      ? "text-blue-600 font-medium"
-                                      : "text-zinc-500 hover:text-zinc-700"
+                                <div key={subcat.id}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedSubcategory(subcat.id);
+                                      setSelectedSubSubcategory('all');
+                                    }}
+                                    className={cn(
+                                      "block w-full text-left px-2 py-1 text-xs rounded-r transition-colors flex items-center justify-between cursor-pointer",
+                                      selectedSubcategory === subcat.id && selectedSubSubcategory === 'all'
+                                        ? "text-blue-600 font-medium"
+                                        : "text-zinc-500 hover:text-zinc-700"
+                                    )}
+                                  >
+                                    <span>{subcat.name}</span>
+                                    <span className="text-zinc-400 text-[10px]">({templateCount})</span>
+                                  </button>
+                                  {selectedSubcategory === subcat.id && subSubcatsForThis.length > 0 && (
+                                    <div className="ml-4 mt-1 space-y-1 border-l border-zinc-200 pl-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => setSelectedSubSubcategory('all')}
+                                        className={cn(
+                                          "block w-full text-left px-2 py-1 text-[10px] rounded-r transition-colors cursor-pointer",
+                                          selectedSubSubcategory === 'all'
+                                            ? "text-blue-600 font-medium"
+                                            : "text-zinc-500 hover:text-zinc-700"
+                                        )}
+                                      >
+                                        All {subcat.name}
+                                      </button>
+                                      {subSubcatsForThis.map(subSubcat => {
+                                        const subSubTemplateCount = initialTemplates.filter(t => t.sub_subcategory_id === subSubcat.id).length;
+                                        // Show sub-subcategory even if it has 0 templates (so users can see it exists)
+                                        return (
+                                          <button
+                                            key={subSubcat.id}
+                                            type="button"
+                                            onClick={() => setSelectedSubSubcategory(subSubcat.id)}
+                                            className={cn(
+                                              "block w-full text-left px-2 py-1 text-[10px] rounded-r transition-colors flex items-center justify-between cursor-pointer",
+                                              selectedSubSubcategory === subSubcat.id
+                                                ? "text-blue-600 font-medium"
+                                                : "text-zinc-500 hover:text-zinc-700"
+                                            )}
+                                          >
+                                            <span>{subSubcat.name}</span>
+                                            <span className="text-zinc-400 text-[9px]">({subSubTemplateCount})</span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
                                   )}
-                                >
-                                  <span>{subcat.name}</span>
-                                  <span className="text-zinc-400 text-[10px]">({templateCount})</span>
-                                </button>
+                                </div>
                               );
                             })}
                         </div>
@@ -453,19 +487,10 @@ export default function VideoTemplatesClient({
                 </div>
               )}
             </div>
-
           </aside>
 
-            {/* 3. Main Content Grid (75%) */}
+          {/* Main Content Grid */}
           <div className="flex-1">
-
-            {/* Mobile Filters Toggle */}
-            <div className="lg:hidden mb-6">
-              <button className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-zinc-200 rounded-xl text-zinc-700 font-medium hover:bg-zinc-50">
-                <Filter className="w-4 h-4" /> Filters & Categories
-              </button>
-            </div>
-
             {viewMode === "following" && (!user || followingCreatorIds.length === 0) && (
               <div className="mb-6 rounded-2xl border border-dashed border-zinc-200 bg-white px-6 py-4 text-xs text-zinc-600">
                 {!user
@@ -474,14 +499,11 @@ export default function VideoTemplatesClient({
               </div>
             )}
 
-
-            {viewTemplates.length > 0 && (
+            {viewTemplates.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {paginatedTemplates.map((template) => (
                   <div key={template.slug} className="group flex flex-col bg-white rounded-xl overflow-hidden border border-zinc-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300">
-                    {/* Thumbnail / Video Player */}
                     <Link href={`/product/${template.slug}`} className="block relative aspect-video overflow-hidden bg-zinc-100">
-                      {/* For new templates with R2 video_path - show thumbnail, play video on hover */}
                       {template.video_path ? (
                         <VideoThumbnailPlayer
                           videoUrl={template.video_path}
@@ -490,7 +512,6 @@ export default function VideoTemplatesClient({
                           className="w-full h-full"
                         />
                       ) : template.video ? (
-                        /* For old templates with YouTube videos - use YouTubeVideoPlayer */
                         <div className="w-full h-full">
                           <YouTubeVideoPlayer
                             videoUrl={template.video}
@@ -499,7 +520,6 @@ export default function VideoTemplatesClient({
                           />
                         </div>
                       ) : (
-                        /* Fallback for templates without video */
                         <>
                           <img
                             src={getThumbnail(template)}
@@ -514,15 +534,13 @@ export default function VideoTemplatesClient({
                         </>
                       )}
 
-                      {/* Badges */}
                       <div className="absolute top-3 left-3 flex items-center gap-2 pointer-events-none z-30">
-                        {template.software.includes('After Effects') && (
+                        {template.software?.includes('After Effects') && (
                           <span className="px-2 py-1 rounded bg-black/60 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider">Ae</span>
                         )}
                       </div>
                     </Link>
 
-                    {/* Content */}
                     <div className="p-4 flex flex-col flex-1 relative z-30 bg-white">
                       <Link href={`/product/${template.slug}`} className="block">
                         <h3 className="font-bold text-zinc-900 text-lg leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
@@ -541,25 +559,45 @@ export default function VideoTemplatesClient({
                                 By {template.vendor_name}
                               </span>
                               <div className="w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
-                                <Check className="w-2 h-2 text-white" strokeWidth={3} />
+                                <Check className="w-2 h-2 text-white" />
                               </div>
                             </div>
                           </div>
                         ) : (
-                          <div></div>
+                          <span className="text-xs text-zinc-400">Celite</span>
                         )}
-                        <div className="flex items-center gap-3 text-zinc-400">
-                          <button
-                            onClick={() => handleDownload(template.slug)}
-                            className="hover:text-blue-600 transition-colors"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => handleDownload(template.slug)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   </div>
                 ))}
+              </div>
+            ) : (
+              <div className="text-center py-20">
+                <div className="max-w-md mx-auto">
+                  <div className="text-6xl mb-4">🔍</div>
+                  <h3 className="text-xl font-bold text-zinc-900 mb-2">No templates found</h3>
+                  <p className="text-zinc-500 mb-6">
+                    {searchQuery.trim() 
+                      ? `No templates match your search "${searchQuery}"`
+                      : selectedSubcategory !== 'all' && selectedSubcategory !== ''
+                        ? "No templates in this subcategory"
+                        : "Try selecting a different category or subcategory"}
+                  </p>
+                  {searchQuery.trim() && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Clear search
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -612,7 +650,7 @@ export default function VideoTemplatesClient({
         </div>
       </div>
 
-      {/* 4. Become a Creator Section */}
+      {/* Become a Creator Section */}
       <section className="bg-gradient-to-r from-blue-50 to-indigo-50 py-20 mt-20 border-y border-blue-100/50">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 mb-4">
@@ -622,8 +660,8 @@ export default function VideoTemplatesClient({
             Upload your designs and become part of a growing creator community celebrated for creativity and innovation.
           </p>
           <Link
-            href="/signup"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-blue-900 text-white rounded-xl font-bold shadow-xl shadow-blue-900/10 hover:bg-blue-800 hover:shadow-2xl hover:-translate-y-1 transition-all"
+            href="/creator/dashboard"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors"
           >
             Get Started <ArrowRight className="w-4 h-4" />
           </Link>
@@ -632,4 +670,3 @@ export default function VideoTemplatesClient({
     </main>
   );
 }
-

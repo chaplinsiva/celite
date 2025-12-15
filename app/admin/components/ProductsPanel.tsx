@@ -37,11 +37,13 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   const [creating, setCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [form, setForm] = useState({
-    slug: '', name: '', subtitle: '', description: '', img: '', video: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', meta_title: '', meta_description: '',
+    slug: '', name: '', subtitle: '', description: '', img: '', video: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', meta_title: '', meta_description: '',
   });
   const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [subcategories, setSubcategories] = useState<Array<{ id: string; category_id: string; name: string; slug: string }>>([]);
   const [filteredSubcategories, setFilteredSubcategories] = useState<Array<{ id: string; category_id: string; name: string; slug: string }>>([]);
+  const [subSubcategories, setSubSubcategories] = useState<Array<{ id: string; subcategory_id: string; name: string; slug: string }>>([]);
+  const [filteredSubSubcategories, setFilteredSubSubcategories] = useState<Array<{ id: string; subcategory_id: string; name: string; slug: string }>>([]);
   const [seo, setSeo] = useState<{ score: number; title: string; subtitle?: string; metaTitle?: string; metaDescription?: string; description: string; rationale: string; slug?: string; tags?: string[]; features?: string[] } | null>(null);
   const [checkingSeo, setCheckingSeo] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -93,17 +95,21 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
       if (!session) return;
 
       try {
-        const [catsRes, subsRes] = await Promise.all([
+        const [catsRes, subsRes, subSubsRes] = await Promise.all([
           fetch('/api/admin/categories', {
             headers: { Authorization: `Bearer ${session.access_token}` },
           }),
           fetch('/api/admin/subcategories', {
             headers: { Authorization: `Bearer ${session.access_token}` },
           }),
+          fetch('/api/admin/sub-subcategories', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }),
         ]);
 
         const catsJson = await catsRes.json();
         const subsJson = await subsRes.json();
+        const subSubsJson = await subSubsRes.json();
 
         if (catsJson.ok) {
           setCategories((catsJson.categories || []).map((cat: any) => ({ id: cat.id, name: cat.name, slug: cat.slug })));
@@ -113,8 +119,13 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
           setSubcategories(subs);
           setFilteredSubcategories(subs);
         }
+        if (subSubsJson.ok) {
+          const subSubs = (subSubsJson.sub_subcategories || []).map((subSub: any) => ({ id: subSub.id, subcategory_id: subSub.subcategory_id, name: subSub.name, slug: subSub.slug }));
+          setSubSubcategories(subSubs);
+          setFilteredSubSubcategories(subSubs);
+        }
       } catch (e) {
-        console.error('Failed to load categories/subcategories:', e);
+        console.error('Failed to load categories/subcategories/sub-subcategories:', e);
       }
     };
     loadCategories();
@@ -124,13 +135,25 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
     if (form.category_id) {
       setFilteredSubcategories(subcategories.filter(s => s.category_id === form.category_id));
       if (form.subcategory_id && !subcategories.find(s => s.id === form.subcategory_id && s.category_id === form.category_id)) {
-        setForm(f => ({ ...f, subcategory_id: '' }));
+        setForm(f => ({ ...f, subcategory_id: '', sub_subcategory_id: '' }));
       }
     } else {
       setFilteredSubcategories([]);
-      setForm(f => ({ ...f, subcategory_id: '' }));
+      setForm(f => ({ ...f, subcategory_id: '', sub_subcategory_id: '' }));
     }
   }, [form.category_id, subcategories]);
+
+  useEffect(() => {
+    if (form.subcategory_id) {
+      setFilteredSubSubcategories(subSubcategories.filter(s => s.subcategory_id === form.subcategory_id));
+      if (form.sub_subcategory_id && !subSubcategories.find(s => s.id === form.sub_subcategory_id && s.subcategory_id === form.subcategory_id)) {
+        setForm(f => ({ ...f, sub_subcategory_id: '' }));
+      }
+    } else {
+      setFilteredSubSubcategories([]);
+      setForm(f => ({ ...f, sub_subcategory_id: '' }));
+    }
+  }, [form.subcategory_id, subSubcategories]);
 
   const uploadFile = async (kind: 'source' | 'video' | 'thumbnail' | 'audio_preview' | 'model_3d', file: File) => {
     if (!form.category_id) {
@@ -167,6 +190,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
     fd.append('kind', kind);
       fd.append('category_id', form.category_id);
       if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
+      if (form.sub_subcategory_id) fd.append('sub_subcategory_id', form.sub_subcategory_id);
     if (form.slug) fd.append('slug', form.slug);
       
       const res = await fetch('/api/admin/upload-r2', { 
@@ -295,7 +319,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                             const supabase = getSupabaseBrowserClient();
                             const { data } = await supabase
                               .from('templates')
-                              .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,model_3d_path,source_path,features,software,plugins,tags,category_id,subcategory_id,meta_title,meta_description')
+                              .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,model_3d_path,source_path,features,software,plugins,tags,category_id,subcategory_id,sub_subcategory_id,meta_title,meta_description')
                               .eq('slug', t.slug)
                               .maybeSingle();
                             if (!data) return;
@@ -317,6 +341,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                               tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
                               category_id: data.category_id || '',
                               subcategory_id: data.subcategory_id || '',
+                              sub_subcategory_id: data.sub_subcategory_id || '',
                               meta_title: data.meta_title || '',
                               meta_description: data.meta_description || '',
                             });
@@ -410,6 +435,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                     tags: form.tags ? form.tags.split(',').map(s => s.trim()).filter(Boolean) : [],
                     category_id: form.category_id || null,
                     subcategory_id: form.subcategory_id || null,
+                    sub_subcategory_id: form.sub_subcategory_id || null,
                     meta_title: form.meta_title.trim() || null,
                     meta_description: form.meta_description.trim() || null,
                   }
@@ -422,7 +448,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               }
               await onCreated();
               setTab('list');
-              setForm({ slug: '', name: '', subtitle: '', description: '', img: '', video: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', meta_title: '', meta_description: '' });
+              setForm({ slug: '', name: '', subtitle: '', description: '', img: '', video: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', meta_title: '', meta_description: '' });
               setIsEditing(false);
               setOriginalSlug(null);
               setSlugManuallyEdited(false);
@@ -494,13 +520,27 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
             <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Subcategory</label>
             <select
               value={form.subcategory_id}
-              onChange={(e) => setForm({ ...form, subcategory_id: e.target.value })}
+              onChange={(e) => setForm({ ...form, subcategory_id: e.target.value, sub_subcategory_id: '' })}
               disabled={!form.category_id}
               className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm appearance-none disabled:bg-zinc-50 disabled:text-zinc-400"
             >
               <option value="">Select Subcategory</option>
               {filteredSubcategories.map((sub) => (
                 <option key={sub.id} value={sub.id}>{sub.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Sub-Subcategory</label>
+            <select
+              value={form.sub_subcategory_id}
+              onChange={(e) => setForm({ ...form, sub_subcategory_id: e.target.value })}
+              disabled={!form.subcategory_id}
+              className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm appearance-none disabled:bg-zinc-50 disabled:text-zinc-400"
+            >
+              <option value="">Select Sub-Subcategory (Optional)</option>
+              {filteredSubSubcategories.map((subSub) => (
+                <option key={subSub.id} value={subSub.id}>{subSub.name}</option>
               ))}
             </select>
           </div>

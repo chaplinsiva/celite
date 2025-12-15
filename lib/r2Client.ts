@@ -11,7 +11,10 @@ function validateR2Config() {
   // Validate that R2_ENDPOINT doesn't contain template strings
   if (R2_ENDPOINT && (R2_ENDPOINT.includes('${') || R2_ENDPOINT.includes('${r2_account_id}'))) {
     console.error('Invalid R2_ENDPOINT: contains template string. Please set the actual endpoint URL.');
-    throw new Error('R2_ENDPOINT environment variable contains template string. Set it to the actual endpoint URL (e.g., https://your-account-id.r2.cloudflarestorage.com)');
+    const suggestion = R2_ACCOUNT_ID 
+      ? `\n\nSOLUTION: Either:\n1. Set R2_ENDPOINT=https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com\n2. Or remove R2_ENDPOINT and let it auto-generate from R2_ACCOUNT_ID`
+      : '\n\nSOLUTION: Set R2_ENDPOINT to your actual endpoint URL (e.g., https://your-account-id.r2.cloudflarestorage.com) or set R2_ACCOUNT_ID to auto-generate it.';
+    throw new Error('R2_ENDPOINT environment variable contains template string. Set it to the actual endpoint URL (e.g., https://your-account-id.r2.cloudflarestorage.com)' + suggestion);
   }
 
   // Validate that R2_PUBLIC_URL doesn't contain template strings
@@ -156,80 +159,92 @@ export function extractR2KeyFromUrl(url: string): string | null {
 }
 
 /**
- * Generate R2 key path for source files: category/subcategory/{filename}
+ * Generate R2 key path for source files: category/subcategory/sub-subcategory/{filename}
  * @param categorySlug - Category slug
  * @param subcategorySlug - Subcategory slug (optional)
+ * @param subSubcategorySlug - Sub-subcategory slug (optional)
  * @param filename - Filename with extension
  */
-export function generateSourceKey(categorySlug: string, subcategorySlug: string | null, filename: string): string {
-  if (subcategorySlug) {
-    return `${categorySlug}/${subcategorySlug}/${filename}`;
-  }
-  return `${categorySlug}/${filename}`;
+export function generateSourceKey(categorySlug: string, subcategorySlug: string | null, filename: string, subSubcategorySlug?: string | null): string {
+  const parts = [categorySlug];
+  if (subcategorySlug) parts.push(subcategorySlug);
+  if (subSubcategorySlug) parts.push(subSubcategorySlug);
+  parts.push(filename);
+  return parts.join('/');
 }
 
 /**
- * Generate R2 key path for preview files: category/subcategory/preview/{filename}
+ * Generate R2 key path for preview files: category/subcategory/sub-subcategory/preview/{filename}
  * @param categorySlug - Category slug
  * @param subcategorySlug - Subcategory slug (optional)
+ * @param subSubcategorySlug - Sub-subcategory slug (optional)
  * @param filename - Filename with extension
  */
-export function generatePreviewKey(categorySlug: string, subcategorySlug: string | null, filename: string): string {
-  if (subcategorySlug) {
-    return `${categorySlug}/${subcategorySlug}/preview/${filename}`;
-  }
-  return `${categorySlug}/preview/${filename}`;
+export function generatePreviewKey(categorySlug: string, subcategorySlug: string | null, filename: string, subSubcategorySlug?: string | null): string {
+  const parts = [categorySlug];
+  if (subcategorySlug) parts.push(subcategorySlug);
+  if (subSubcategorySlug) parts.push(subSubcategorySlug);
+  parts.push('preview', filename);
+  return parts.join('/');
 }
 
 /**
- * Generate R2 key path for video files: category/subcategory/video/{filename}
+ * Generate R2 key path for video files: category/subcategory/sub-subcategory/video/{filename}
  * @param categorySlug - Category slug
  * @param subcategorySlug - Subcategory slug (optional)
+ * @param subSubcategorySlug - Sub-subcategory slug (optional)
  * @param filename - Filename with extension
  */
-export function generateVideoKey(categorySlug: string, subcategorySlug: string | null, filename: string): string {
-  if (subcategorySlug) {
-    return `${categorySlug}/${subcategorySlug}/video/${filename}`;
-  }
-  return `${categorySlug}/video/${filename}`;
+export function generateVideoKey(categorySlug: string, subcategorySlug: string | null, filename: string, subSubcategorySlug?: string | null): string {
+  const parts = [categorySlug];
+  if (subcategorySlug) parts.push(subcategorySlug);
+  if (subSubcategorySlug) parts.push(subSubcategorySlug);
+  parts.push('video', filename);
+  return parts.join('/');
 }
 
 /**
- * Generate R2 key path for thumbnail files: category/subcategory/thumbnail/{filename}
+ * Generate R2 key path for thumbnail files: category/subcategory/sub-subcategory/thumbnail/{filename}
  * @param categorySlug - Category slug
  * @param subcategorySlug - Subcategory slug (optional)
+ * @param subSubcategorySlug - Sub-subcategory slug (optional)
  * @param filename - Filename with extension
  */
-export function generateThumbnailKey(categorySlug: string, subcategorySlug: string | null, filename: string): string {
-  if (subcategorySlug) {
-    return `${categorySlug}/${subcategorySlug}/thumbnail/${filename}`;
-  }
-  return `${categorySlug}/thumbnail/${filename}`;
+export function generateThumbnailKey(categorySlug: string, subcategorySlug: string | null, filename: string, subSubcategorySlug?: string | null): string {
+  const parts = [categorySlug];
+  if (subcategorySlug) parts.push(subcategorySlug);
+  if (subSubcategorySlug) parts.push(subSubcategorySlug);
+  parts.push('thumbnail', filename);
+  return parts.join('/');
 }
 
 /**
- * Generate R2 key path for audio preview files: category/subcategory/audio/{filename}
+ * Generate R2 key path for audio preview files: category/subcategory/sub-subcategory/audio/{filename}
  * @param categorySlug - Category slug
  * @param subcategorySlug - Subcategory slug (optional)
+ * @param subSubcategorySlug - Sub-subcategory slug (optional)
  * @param filename - Filename with extension
  */
-export function generateAudioPreviewKey(categorySlug: string, subcategorySlug: string | null, filename: string): string {
-  if (subcategorySlug) {
-    return `${categorySlug}/${subcategorySlug}/audio/${filename}`;
-  }
-  return `${categorySlug}/audio/${filename}`;
+export function generateAudioPreviewKey(categorySlug: string, subcategorySlug: string | null, filename: string, subSubcategorySlug?: string | null): string {
+  const parts = [categorySlug];
+  if (subcategorySlug) parts.push(subcategorySlug);
+  if (subSubcategorySlug) parts.push(subSubcategorySlug);
+  parts.push('audio', filename);
+  return parts.join('/');
 }
 
 /**
- * Generate R2 key path for 3D model files: category/subcategory/model/{filename}
+ * Generate R2 key path for 3D model files: category/subcategory/sub-subcategory/model/{filename}
  * @param categorySlug - Category slug
  * @param subcategorySlug - Subcategory slug (optional)
+ * @param subSubcategorySlug - Sub-subcategory slug (optional)
  * @param filename - Filename with extension
  */
-export function generateModel3DKey(categorySlug: string, subcategorySlug: string | null, filename: string): string {
-  if (subcategorySlug) {
-    return `${categorySlug}/${subcategorySlug}/model/${filename}`;
-  }
-  return `${categorySlug}/model/${filename}`;
+export function generateModel3DKey(categorySlug: string, subcategorySlug: string | null, filename: string, subSubcategorySlug?: string | null): string {
+  const parts = [categorySlug];
+  if (subcategorySlug) parts.push(subcategorySlug);
+  if (subSubcategorySlug) parts.push(subSubcategorySlug);
+  parts.push('model', filename);
+  return parts.join('/');
 }
 

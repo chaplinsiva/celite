@@ -68,6 +68,7 @@ export default function CreatorDashboardPage() {
     description: "",
     category_id: "",
     subcategory_id: "",
+    sub_subcategory_id: "",
     features: "",
     software: "",
     plugins: "",
@@ -102,6 +103,8 @@ export default function CreatorDashboardPage() {
   const [filteredSubcategories, setFilteredSubcategories] = useState<
     Subcategory[]
   >([]);
+  const [subSubcategories, setSubSubcategories] = useState<Array<{ id: string; subcategory_id: string; name: string; slug: string }>>([]);
+  const [filteredSubSubcategories, setFilteredSubSubcategories] = useState<Array<{ id: string; subcategory_id: string; name: string; slug: string }>>([]);
 
   const resetForm = () => {
     setForm({
@@ -117,6 +120,7 @@ export default function CreatorDashboardPage() {
       description: "",
       category_id: "",
       subcategory_id: "",
+      sub_subcategory_id: "",
       features: "",
       software: "",
       plugins: "",
@@ -166,6 +170,7 @@ export default function CreatorDashboardPage() {
       fd.append('kind', kind);
       fd.append('category_id', form.category_id);
       if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
+      if (form.sub_subcategory_id) fd.append('sub_subcategory_id', form.sub_subcategory_id);
       if (form.slug) fd.append('slug', form.slug);
       
       // Use XMLHttpRequest for progress tracking
@@ -317,9 +322,15 @@ export default function CreatorDashboardPage() {
           .from("subcategories")
           .select("id,category_id,name,slug")
           .order("name");
+        const { data: subSubs } = await supabase
+          .from("sub_subcategories")
+          .select("id,subcategory_id,name,slug")
+          .order("name");
         setCategories((cats as any) || []);
         setSubcategories((subs as any) || []);
         setFilteredSubcategories((subs as any) || []);
+        setSubSubcategories((subSubs as any) || []);
+        setFilteredSubSubcategories((subSubs as any) || []);
       } catch (e) {
         console.error("Failed to load categories/subcategories for creator", e);
       }
@@ -342,14 +353,34 @@ export default function CreatorDashboardPage() {
         form.subcategory_id &&
         !filtered.find((s) => s.id === form.subcategory_id)
       ) {
-        setForm((f) => ({ ...f, subcategory_id: "" }));
+        setForm((f) => ({ ...f, subcategory_id: "", sub_subcategory_id: "" }));
       }
     } else {
       setFilteredSubcategories(subcategories);
-      setForm((f) => ({ ...f, subcategory_id: "" }));
+      setForm((f) => ({ ...f, subcategory_id: "", sub_subcategory_id: "" }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.category_id, subcategories]);
+
+  // Keep filtered sub-subcategories in sync with selected subcategory
+  useEffect(() => {
+    if (form.subcategory_id) {
+      const filtered = subSubcategories.filter(
+        (s) => s.subcategory_id === form.subcategory_id
+      );
+      setFilteredSubSubcategories(filtered);
+      if (
+        form.sub_subcategory_id &&
+        !filtered.find((s) => s.id === form.sub_subcategory_id)
+      ) {
+        setForm((f) => ({ ...f, sub_subcategory_id: "" }));
+      }
+    } else {
+      setFilteredSubSubcategories([]);
+      setForm((f) => ({ ...f, sub_subcategory_id: "" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.subcategory_id, subSubcategories]);
 
   useEffect(() => {
     if (!user) {
@@ -420,6 +451,7 @@ export default function CreatorDashboardPage() {
             : [],
           category_id: form.category_id || null,
           subcategory_id: form.subcategory_id || null,
+          sub_subcategory_id: form.sub_subcategory_id || null,
         },
       };
 
@@ -962,6 +994,7 @@ export default function CreatorDashboardPage() {
                                 setForm((f) => ({
                                   ...f,
                                   subcategory_id: e.target.value,
+                                  sub_subcategory_id: "",
                                 }))
                               }
                               disabled={!form.category_id}
@@ -971,6 +1004,29 @@ export default function CreatorDashboardPage() {
                               {filteredSubcategories.map((sub) => (
                                 <option key={sub.id} value={sub.id}>
                                   {sub.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                              Sub-Subcategory
+                            </label>
+                            <select
+                              value={form.sub_subcategory_id}
+                              onChange={(e) =>
+                                setForm((f) => ({
+                                  ...f,
+                                  sub_subcategory_id: e.target.value,
+                                }))
+                              }
+                              disabled={!form.subcategory_id}
+                              className="w-full px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-zinc-100 disabled:text-zinc-400"
+                            >
+                              <option value="">Select sub-subcategory (Optional)</option>
+                              {filteredSubSubcategories.map((subSub) => (
+                                <option key={subSub.id} value={subSub.id}>
+                                  {subSub.name}
                                 </option>
                               ))}
                             </select>

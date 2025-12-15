@@ -118,19 +118,16 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
     fetchSubcategories();
   }, []);
 
-  // Filter subcategories to only show those with available templates
+  // Show all subcategories for the category (even if they have no templates)
   useEffect(() => {
-    if (subcategories.length === 0 || initialTemplates.length === 0) {
+    if (subcategories.length === 0) {
       setAvailableSubcategories([]);
       return;
     }
 
-    const subcatsWithTemplates = subcategories.filter(subcat => {
-      return initialTemplates.some(t => t.subcategory_id === subcat.id);
-    });
-
-    setAvailableSubcategories(subcatsWithTemplates);
-  }, [subcategories, initialTemplates]);
+    // Show all subcategories that belong to Music & SFX category
+    setAvailableSubcategories(subcategories);
+  }, [subcategories]);
 
   // Filter templates based on search and subcategory
   useEffect(() => {
@@ -315,14 +312,14 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
                 placeholder="Search music and sound effects..."
               />
             </div>
-            {availableSubcategories.length > 0 && (
+            {subcategories.length > 0 && (
               <select
                 value={selectedSubcategory}
                 onChange={(e) => setSelectedSubcategory(e.target.value)}
                 className="px-3 sm:px-4 py-3 sm:py-4 bg-zinc-50 border border-zinc-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm font-medium cursor-pointer"
               >
                 <option value="all">All Categories</option>
-                {availableSubcategories.map(subcat => {
+                {subcategories.map(subcat => {
                   const count = initialTemplates.filter(t => t.subcategory_id === subcat.id).length;
                   return (
                     <option key={subcat.id} value={subcat.id}>

@@ -5,9 +5,78 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '../context/AppContext';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
-import { ShinyButton } from './ui/shiny-button';
-import { Menu, ShoppingCart, User, X } from 'lucide-react';
-import PromoBanner from './PromoBanner';
+import { Menu, X } from 'lucide-react';
+import { Menu as NavMenu, MenuItem, HoveredLink } from './ui/navbar-menu';
+import { motion } from 'framer-motion';
+import { cn } from '../lib/utils';
+
+type Category = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+type Subcategory = {
+  id: string;
+  category_id: string;
+  name: string;
+  slug: string;
+};
+
+type SubSubcategory = {
+  id: string;
+  subcategory_id: string;
+  name: string;
+  slug: string;
+};
+
+// Helper function to get the correct route for a category
+const getCategoryRoute = (categorySlug: string): string => {
+  const normalizedSlug = categorySlug.toLowerCase().trim();
+  
+  const routeMap: Record<string, string> = {
+    'after-effects': '/video-templates',
+    'website-templates': '/web-templates',
+    'psd-templates': '/graphics',
+    'musics-and-sfx': '/music-sfx',
+    'stock-images': '/stock-photos',
+    'web-templates': '/web-templates',
+    'graphics': '/graphics',
+    'music': '/music-sfx',
+    'audio': '/music-sfx',
+    'sound-effects': '/music-sfx',
+    'stock-photos': '/stock-photos',
+    'video-templates': '/video-templates',
+    'ui-templates': '/web-templates',
+    '3d-models': '/3d-models',
+  };
+  
+  if (routeMap[normalizedSlug]) {
+    return routeMap[normalizedSlug];
+  }
+  
+  // Check for partial matches
+  if (normalizedSlug.includes('music') || normalizedSlug.includes('audio') || normalizedSlug.includes('sfx') || normalizedSlug.includes('sound')) {
+    return '/music-sfx';
+  }
+  if (normalizedSlug.includes('stock') && (normalizedSlug.includes('photo') || normalizedSlug.includes('image'))) {
+    return '/stock-photos';
+  }
+  if (normalizedSlug.includes('web') || normalizedSlug.includes('website') || normalizedSlug.includes('ui')) {
+    return '/web-templates';
+  }
+  if (normalizedSlug.includes('graphic') || normalizedSlug.includes('psd')) {
+    return '/graphics';
+  }
+  if (normalizedSlug.includes('after-effects') || normalizedSlug.includes('video')) {
+    return '/video-templates';
+  }
+  if (normalizedSlug.includes('3d') || normalizedSlug.includes('model')) {
+    return '/3d-models';
+  }
+  
+  return `/video-templates?category=${categorySlug}`;
+};
 
 export default function Header() {
   const router = useRouter();
@@ -16,7 +85,40 @@ export default function Header() {
   const [isExpired, setIsExpired] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hasCreatorShop, setHasCreatorShop] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [subSubcategories, setSubSubcategories] = useState<SubSubcategory[]>([]);
+  const [activeNavItem, setActiveNavItem] = useState<string | null>(null);
+  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
 
+
+  // Fetch categories, subcategories, and sub-subcategories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const supabase = getSupabaseBrowserClient();
+      try {
+        const [catsRes, subcatsRes, subSubcatsRes] = await Promise.all([
+          supabase.from('categories').select('id,name,slug').order('name'),
+          supabase.from('subcategories').select('id,category_id,name,slug').order('name'),
+          supabase.from('sub_subcategories').select('id,subcategory_id,name,slug').order('name'),
+        ]);
+
+        if (catsRes.data) {
+          // Include all categories in the navbar menu
+          setCategories(catsRes.data);
+        }
+        if (subcatsRes.data) {
+          setSubcategories(subcatsRes.data);
+        }
+        if (subSubcatsRes.data) {
+          setSubSubcategories(subSubcatsRes.data);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     const checkSubscriptionAndCreator = async () => {
@@ -61,14 +163,6 @@ export default function Header() {
     checkSubscriptionAndCreator();
   }, [user]);
 
-  const navLinks = [
-    { name: 'Video Templates', href: '/video-templates' },
-    { name: 'Web Templates', href: '/web-templates' },
-    { name: 'Stock Images', href: '/stock-photos' },
-    { name: 'Music & SFX', href: '/music-sfx' },
-    { name: 'Graphics', href: '/graphics' },
-    { name: '3D Models', href: '/3d-models' },
-  ];
 
   return (
     <>
@@ -83,16 +177,99 @@ export default function Header() {
 
             {/* Desktop Nav */}
             <div className="hidden lg:flex items-center gap-6">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  className="text-[14px] font-medium text-zinc-600 hover:text-black transition-colors"
-                >
-                  {link.name}
-                </Link>
-              ))}
-
+              {categories.length > 0 ? (
+                <NavMenu setActive={setActiveNavItem} className="relative flex items-center gap-6">
+                  {/* Define the order for main categories */}
+                  {[
+                    { name: 'Video Templates', route: '/video-templates', slug: 'video-templates' },
+                    { name: 'Stock Images', route: '/stock-photos', slug: 'stock-images' },
+                    { name: 'Music & SFX', route: '/music-sfx', slug: 'musics-and-sfx' },
+                    { name: 'Web Templates', route: '/web-templates', slug: 'website-templates' },
+                    { name: 'Graphics', route: '/graphics', slug: 'psd-templates' },
+                    { name: '3D Models', route: '/3d-models', slug: '3d-models' },
+                  ].map((navItem) => {
+                    // Find the category
+                    const category = categories.find(cat => 
+                      cat.slug === navItem.slug || 
+                      cat.name.toLowerCase() === navItem.name.toLowerCase()
+                    );
+                    
+                    if (!category) return null;
+                    
+                    const categorySubcategories = subcategories.filter(
+                      sub => sub.category_id === category.id
+                    );
+                    const categoryRoute = getCategoryRoute(category.slug);
+                    
+                    return (
+                      <MenuItem
+                        key={category.id}
+                        setActive={setActiveNavItem}
+                        active={activeNavItem}
+                        item={navItem.name}
+                        className="relative"
+                      >
+                        {categorySubcategories.length > 0 ? (
+                          <div className="flex flex-col space-y-1 text-sm min-w-[200px]">
+                            {/* Show subcategories with nested sub-subcategories on hover */}
+                            {categorySubcategories.map((subcategory) => {
+                              const subSubcats = subSubcategories.filter(
+                                ss => ss.subcategory_id === subcategory.id
+                              );
+                              
+                              return (
+                                <div
+                                  key={subcategory.id}
+                                  className="relative group/subcat"
+                                  onMouseEnter={() => setActiveSubcategory(subcategory.id)}
+                                  onMouseLeave={() => setActiveSubcategory(null)}
+                                >
+                                  <HoveredLink
+                                    href={`${categoryRoute}?subcategory=${subcategory.slug}`}
+                                    className="block py-1.5 px-2 rounded hover:bg-zinc-50"
+                                  >
+                                    {subcategory.name}
+                                  </HoveredLink>
+                                  {/* Show sub-subcategories on hover - positioned to the right */}
+                                  {subSubcats.length > 0 && activeSubcategory === subcategory.id && (
+                                    <div className="absolute left-full top-0 ml-2 z-50">
+                                      <motion.div
+                                        initial={{ opacity: 0, scale: 0.9, x: -10 }}
+                                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                                        exit={{ opacity: 0, scale: 0.9, x: -10 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="bg-white dark:bg-black backdrop-blur-sm rounded-lg border border-zinc-200 dark:border-white/[0.2] shadow-xl p-3 min-w-[180px]"
+                                      >
+                                        <div className="flex flex-col space-y-1">
+                                          {subSubcats.map((subSubcat) => (
+                                            <HoveredLink
+                                              key={subSubcat.id}
+                                              href={`${categoryRoute}?subcategory=${subcategory.slug}&subsubcategory=${subSubcat.slug}`}
+                                              className="block py-1.5 px-2 rounded hover:bg-zinc-50 text-xs"
+                                            >
+                                              {subSubcat.name}
+                                            </HoveredLink>
+                                          ))}
+                                        </div>
+                                      </motion.div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-sm">
+                            <HoveredLink href={categoryRoute}>
+                              View {category.name}
+                            </HoveredLink>
+                          </div>
+                        )}
+                      </MenuItem>
+                    );
+                  })}
+                </NavMenu>
+              ) : null}
             </div>
           </div>
 
@@ -179,17 +356,53 @@ export default function Header() {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden absolute top-20 left-0 w-full bg-white border-b border-zinc-100 shadow-xl py-6 px-6 flex flex-col gap-4 animate-in slide-in-from-top-4">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                href={link.href}
-                className="text-lg font-medium text-zinc-800 py-2 border-b border-zinc-50"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                {link.name}
-              </Link>
-            ))}
+          <div className="lg:hidden absolute top-20 left-0 w-full bg-white border-b border-zinc-100 shadow-xl py-6 px-6 flex flex-col gap-4 animate-in slide-in-from-top-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
+            {/* Mobile nav in specific order */}
+            {[
+              { name: 'Video Templates', route: '/video-templates', slug: 'video-templates' },
+              { name: 'Stock Images', route: '/stock-photos', slug: 'stock-images' },
+              { name: 'Music & SFX', route: '/music-sfx', slug: 'musics-and-sfx' },
+              { name: 'Web Templates', route: '/web-templates', slug: 'website-templates' },
+              { name: 'Graphics', route: '/graphics', slug: 'psd-templates' },
+              { name: '3D Models', route: '/3d-models', slug: '3d-models' },
+            ].map((navItem) => {
+              const category = categories.find(cat => 
+                cat.slug === navItem.slug || 
+                cat.name.toLowerCase() === navItem.name.toLowerCase()
+              );
+              
+              if (!category) return null;
+              
+              const categorySubcategories = subcategories.filter(
+                sub => sub.category_id === category.id
+              );
+              
+              return (
+                <div key={navItem.slug} className="border-b border-zinc-50 pb-2">
+                  <Link
+                    href={navItem.route}
+                    className="text-lg font-semibold text-zinc-900 py-2 block"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {navItem.name}
+                  </Link>
+                  {categorySubcategories.length > 0 && (
+                    <div className="ml-4 mt-2 space-y-1">
+                      {categorySubcategories.map((subcategory) => (
+                        <Link
+                          key={subcategory.id}
+                          href={`${navItem.route}?subcategory=${subcategory.slug}`}
+                          className="text-sm text-zinc-600 py-1 block hover:text-zinc-900"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          {subcategory.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             {user && !hasCreatorShop && (
             <Link
               href="/start-selling"
