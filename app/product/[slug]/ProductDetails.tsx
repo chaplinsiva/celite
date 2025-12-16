@@ -439,75 +439,33 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         return;
       }
 
-      const contentType = res.headers.get('content-type') || '';
+      const json = await res.json();
 
-      // Check if response is JSON (error or redirect)
-      if (contentType.includes('application/json')) {
-        const json = await res.json();
-
-        // Handle redirect URL (for legacy external URLs)
-        if (json.redirect && json.url) {
-          window.open(json.url, '_blank');
-          setDownloading(false);
-          return;
-        }
-
-        // Handle errors
-        if (json.error) {
-          if (json.error.includes('Access denied') || json.error.includes('subscribe')) {
-            router.push('/pricing');
-            setFeedback('Please subscribe to download this template.');
-          } else if (json.error.includes('not found') || json.error.includes('not available')) {
-            setFeedback('Source file not available for this template.');
-          } else {
-            setFeedback(json.error || 'Download failed.');
-          }
-          setDownloading(false);
-          return;
-        }
-
-        // Unknown JSON response
-        setFeedback('Download not available.');
+      // Handle redirect URL (signed URL for direct download)
+      if (json.redirect && json.url) {
+        // Use window.location.href for direct browser download
+        // This allows the browser to handle large files efficiently
+        window.location.href = json.url;
         setDownloading(false);
         return;
       }
 
-      // If not JSON, it should be a file download
-      if (!res.ok) {
-        // Try to get error message
-        try {
-          const errorText = await res.text();
-          const errorJson = JSON.parse(errorText);
-          setFeedback(errorJson.error || 'Download failed.');
-        } catch {
-          setFeedback('Download link not available.');
+      // Handle errors
+      if (json.error) {
+        if (json.error.includes('Access denied') || json.error.includes('subscribe')) {
+          router.push('/pricing');
+          setFeedback('Please subscribe to download this template.');
+        } else if (json.error.includes('not found') || json.error.includes('not available')) {
+          setFeedback('Source file not available for this template.');
+        } else {
+          setFeedback(json.error || 'Download failed.');
         }
         setDownloading(false);
         return;
       }
 
-      // Direct file download - get filename from header
-      const contentDisposition = res.headers.get('content-disposition') || '';
-      let filename = `${product.slug}.zip`;
-      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-      if (filenameMatch && filenameMatch[1]) {
-        filename = filenameMatch[1].replace(/['"]/g, '');
-      }
-
-      // Create blob and download without exposing URL
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      link.style.display = 'none'; // Hide the link
-      document.body.appendChild(link);
-      link.click();
-      // Clean up immediately to hide the blob URL
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 100);
+      // Unknown response
+      setFeedback('Download not available.');
       setDownloading(false);
     } catch (e) {
       setFeedback('Error opening download.');

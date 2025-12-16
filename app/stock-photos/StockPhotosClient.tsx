@@ -134,50 +134,20 @@ export default function StockPhotosClient({ initialTemplates }: { initialTemplat
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
-      // Check content type before parsing
-      const contentType = res.headers.get('content-type') || '';
-      
-      if (contentType.includes('application/json')) {
-        const json = await res.json();
-        
-        if (json.ok && json.redirect && json.url) {
-          window.open(json.url, '_blank');
-        } else if (json.error) {
-          if (json.error.includes('Access denied') || json.error.includes('subscription')) {
-            router.push('/pricing');
-          } else {
-            alert(json.error || 'Download failed');
-          }
-        }
-      } else {
-        // It's a file download
-        if (res.ok) {
-          const blob = await res.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${slug}.zip`;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
+      const json = await res.json();
+
+      // Handle redirect URL (signed URL for direct download)
+      if (json.redirect && json.url) {
+        window.location.href = json.url;
+        return;
+      }
+
+      // Handle errors
+      if (json.error) {
+        if (json.error.includes('Access denied') || json.error.includes('subscription')) {
+          router.push('/pricing');
         } else {
-          // Try to parse error as JSON
-          try {
-            const errorText = await res.text();
-            const errorJson = JSON.parse(errorText);
-            if (errorJson.error?.includes('Access denied') || errorJson.error?.includes('subscription')) {
-              router.push('/pricing');
-            } else {
-              alert(errorJson.error || 'Download failed');
-            }
-          } catch {
-            if (res.status === 403) {
-              router.push('/pricing');
-            } else {
-              alert('Download failed');
-            }
-          }
+          alert(json.error || 'Download failed');
         }
       }
     } catch (e: any) {

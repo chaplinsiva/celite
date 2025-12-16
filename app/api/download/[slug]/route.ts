@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
-import { getSourceFileFromR2 } from '../../../../lib/r2Client';
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
@@ -78,7 +77,7 @@ export async function GET(
 
     // Check if source_path is a full URL (legacy support - redirect to external URL)
     const isFullUrl = sourcePath.startsWith('http://') || sourcePath.startsWith('https://');
-    
+
     if (isFullUrl) {
       // Legacy: For external URLs, redirect (but record download first)
       try {
@@ -92,62 +91,60 @@ export async function GET(
       } catch (err) {
         console.error('Failed to record download:', err);
       }
-      
+
       // Return redirect for legacy URLs
       return NextResponse.json({ redirect: true, url: sourcePath });
     }
 
-    // New R2 system: Fetch file directly from private bucket
-    // This ensures the R2 URL is never exposed to the client
-    let fileData: { body: Buffer; contentType: string };
+    // New R2 system: Generate signed URL for direct download
+    // This avoids loading large files into memory
+    let signedUrl: string;
     let filename: string;
-    
+
     try {
-      console.log(`[Download] Fetching file from R2 for template ${slug}, key: ${sourcePath}`);
-      
-      // Fetch file from R2 (source_path is the R2 key)
-      fileData = await getSourceFileFromR2(sourcePath);
-      
-      if (!fileData || !fileData.body) {
-        console.error(`[Download] File data is empty for ${slug}`);
-        return NextResponse.json({ error: 'File data is empty' }, { status: 500 });
-      }
-      
-      console.log(`[Download] File fetched successfully, size: ${fileData.body.length} bytes`);
-      
+      console.log(`[Download] Generating signed URL for template ${slug}, key: ${sourcePath}`);
+
+      // Import the signed URL function
+      const { getSignedSourceUrl } = await import('../../../../lib/r2Client');
+
+      // Generate signed URL (expires in 1 hour)
+      signedUrl = await getSignedSourceUrl(sourcePath, 3600);
+
+      console.log(`[Download] Signed URL generated successfully for ${slug}`);
+
       // Extract filename from R2 key or use slug with detected extension
       const keyFilename = getFilenameFromKey(sourcePath);
       const ext = getFileExtension(keyFilename);
       filename = `${slug}${ext}`;
     } catch (r2Error: any) {
-      console.error(`[Download] R2 file fetch error for ${slug}:`, r2Error);
+      console.error(`[Download] R2 signed URL error for ${slug}:`, r2Error);
       console.error(`[Download] Error details:`, {
         message: r2Error?.message,
         name: r2Error?.name,
         code: r2Error?.code,
         stack: r2Error?.stack,
       });
-      
+
       // Handle specific R2 errors
       if (r2Error?.name === 'NoSuchKey' || r2Error?.message?.includes('not found') || r2Error?.message?.includes('NoSuchKey')) {
         return NextResponse.json({ error: 'Source file not found in storage' }, { status: 404 });
       }
-      
+
       if (r2Error?.name === 'NoSuchBucket' || r2Error?.message?.includes('bucket')) {
         return NextResponse.json({ error: 'Storage bucket not configured. Please contact support.' }, { status: 500 });
       }
-      
+
       if (r2Error?.message?.includes('credentials') || r2Error?.message?.includes('Access')) {
         return NextResponse.json({ error: 'Storage authentication failed. Please contact support.' }, { status: 500 });
       }
-      
-      return NextResponse.json({ 
-        error: 'Failed to retrieve file. Please try again later.',
+
+      return NextResponse.json({
+        error: 'Failed to generate download link. Please try again later.',
         details: process.env.NODE_ENV === 'development' ? r2Error?.message : undefined
       }, { status: 500 });
     }
 
-    // Record download BEFORE streaming the file
+    // Record download BEFORE returning the signed URL
     try {
       const subscriptionId = sub?.id || null;
       const { error: downloadErr } = await admin.from('downloads').insert({
@@ -156,7 +153,7 @@ export async function GET(
         downloaded_at: new Date().toISOString(),
         ...(subscriptionId && { subscription_id: subscriptionId }),
       });
-      
+
       if (downloadErr) {
         console.error('Failed to record download:', downloadErr);
         // Don't fail the download, but log the error
@@ -168,43 +165,22 @@ export async function GET(
       // Continue with download even if recording fails
     }
 
-    // Stream the file directly to the client
-    // This hides the R2 URL completely - the client never sees it
-    try {
-      // Convert Buffer to Uint8Array for NextResponse
-      const fileBytes = new Uint8Array(fileData.body);
-      
-      console.log(`[Download] Streaming file ${filename} (${fileData.body.length} bytes) to client`);
-      
-      return new NextResponse(fileBytes, {
-        status: 200,
-        headers: {
-          'Content-Type': fileData.contentType || 'application/octet-stream',
-          'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
-          'Content-Length': fileData.body.length.toString(),
-          // Security headers
-          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-          // Prevent exposing the R2 URL
-          'X-Content-Type-Options': 'nosniff',
-        },
-      });
-    } catch (streamError: any) {
-      console.error(`[Download] Error streaming file for ${slug}:`, streamError);
-      return NextResponse.json({ 
-        error: 'Failed to stream file',
-        details: process.env.NODE_ENV === 'development' ? streamError?.message : undefined
-      }, { status: 500 });
-    }
+    // Return signed URL for direct browser download
+    // The client will redirect to this URL for actual download
+    return NextResponse.json({
+      redirect: true,
+      url: signedUrl,
+      filename: filename
+    });
   } catch (e: any) {
     const errorSlug = slug || 'unknown';
     console.error(`[Download] Unexpected error for ${errorSlug}:`, e);
     console.error(`[Download] Error stack:`, e?.stack);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: e?.message || 'Server error',
       details: process.env.NODE_ENV === 'development' ? e?.stack : undefined
     }, { status: 500 });
   }
 }
+
 

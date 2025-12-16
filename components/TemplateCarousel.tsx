@@ -137,49 +137,19 @@ export default function TemplateCarousel() {
       const res = await fetch(`/api/download/${slug}`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      if (!res.ok) {
+
+      const json = await res.json();
+
+      // Handle redirect URL (signed URL for direct download)
+      if (json.redirect && json.url) {
+        window.location.href = json.url;
         return;
       }
 
-      const contentType = res.headers.get('content-type') || '';
-      
-      // Check if response is JSON (error or redirect)
-      if (contentType.includes('application/json')) {
-        const json = await res.json();
-        if (json.redirect && json.url) {
-          // Legacy external URL - open in new tab
-          window.open(json.url, '_blank');
-          return;
-        }
-        return;
+      // Handle errors
+      if (json.error) {
+        console.error('Download failed:', json.error);
       }
-
-      if (!res.ok) {
-        return;
-      }
-
-      // Direct file download - get filename from header
-      const contentDisposition = res.headers.get('content-disposition') || '';
-      let filename = `${slug}.zip`;
-      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-      if (filenameMatch && filenameMatch[1]) {
-        filename = filenameMatch[1].replace(/['"]/g, '');
-      }
-
-      // Create blob and download without exposing URL
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      link.style.display = 'none'; // Hide the link
-      document.body.appendChild(link);
-      link.click();
-      // Clean up immediately to hide the blob URL
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 100);
     } catch (e) {
       console.error('Download failed:', e);
     }

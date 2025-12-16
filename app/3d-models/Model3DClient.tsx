@@ -59,13 +59,13 @@ type SubSubcategory = {
 
 const ITEMS_PER_PAGE = 30;
 
-export default function Model3DClient({ 
+export default function Model3DClient({
   initialTemplates,
   pageTitle = '3D Models',
   pageSubtitle = 'Discover high-quality 3D models for your projects.',
   breadcrumbLabel = '3D Models',
   basePath = '/3d-models'
-}: { 
+}: {
   initialTemplates: Template[];
   pageTitle?: string;
   pageSubtitle?: string;
@@ -114,8 +114,8 @@ export default function Model3DClient({
       const { data: subSubcats } = await supabase.from('sub_subcategories').select('id,subcategory_id,name,slug').order('name');
 
       // Filter to only show 3D Models category
-      const filteredCats = (cats || []).filter(cat => 
-        cat.slug === '3d-models' || 
+      const filteredCats = (cats || []).filter(cat =>
+        cat.slug === '3d-models' ||
         cat.slug === '3d-models' ||
         cat.name.toLowerCase().includes('3d') && cat.name.toLowerCase().includes('model')
       );
@@ -123,7 +123,7 @@ export default function Model3DClient({
       setCategories([{ id: 'featured', name: 'Featured Models', slug: 'featured' }, ...filteredCats]);
       setSubcategories(subcats || []);
       setSubSubcategories(subSubcats || []);
-      
+
       // Auto-select the category if there's only one
       if (filteredCats.length === 1) {
         setSelectedCategory(filteredCats[0].id);
@@ -249,47 +249,20 @@ export default function Model3DClient({
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
-      const contentType = res.headers.get('content-type') || '';
-      
-      if (contentType.includes('application/json')) {
-        const json = await res.json();
-        
-        if (json.ok && json.redirect && json.url) {
-          window.open(json.url, '_blank');
-        } else if (json.error) {
-          if (json.error.includes('Access denied') || json.error.includes('subscription')) {
-            router.push('/pricing');
-          } else {
-            alert(json.error || 'Download failed');
-          }
-        }
-      } else {
-        if (res.ok) {
-          const blob = await res.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${slug}.zip`;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
+      const json = await res.json();
+
+      // Handle redirect URL (signed URL for direct download)
+      if (json.redirect && json.url) {
+        window.location.href = json.url;
+        return;
+      }
+
+      // Handle errors
+      if (json.error) {
+        if (json.error.includes('Access denied') || json.error.includes('subscription')) {
+          router.push('/pricing');
         } else {
-          try {
-            const errorText = await res.text();
-            const errorJson = JSON.parse(errorText);
-            if (errorJson.error?.includes('Access denied') || errorJson.error?.includes('subscription')) {
-              router.push('/pricing');
-            } else {
-              alert(errorJson.error || 'Download failed');
-            }
-          } catch {
-            if (res.status === 403) {
-              router.push('/pricing');
-            } else {
-              alert('Download failed');
-            }
-          }
+          alert(json.error || 'Download failed');
         }
       }
     } catch (e: any) {
@@ -435,20 +408,20 @@ export default function Model3DClient({
                               const subSubcatsForThis = availableSubSubcategories.filter(s => s.subcategory_id === subcat.id);
                               return (
                                 <div key={subcat.id}>
-                                <button
+                                  <button
                                     onClick={() => {
                                       setSelectedSubcategory(subcat.id);
                                       setSelectedSubSubcategory('all');
                                     }}
-                                  className={cn("block w-full text-left px-2 py-1 text-xs rounded-r transition-colors flex items-center justify-between",
+                                    className={cn("block w-full text-left px-2 py-1 text-xs rounded-r transition-colors flex items-center justify-between",
                                       selectedSubcategory === subcat.id && selectedSubSubcategory === 'all'
-                                      ? "text-blue-600 font-medium"
-                                      : "text-zinc-500 hover:text-zinc-700"
-                                  )}
-                                >
-                                  <span>{subcat.name}</span>
-                                  <span className="text-zinc-400 text-[10px]">({templateCount})</span>
-                                </button>
+                                        ? "text-blue-600 font-medium"
+                                        : "text-zinc-500 hover:text-zinc-700"
+                                    )}
+                                  >
+                                    <span>{subcat.name}</span>
+                                    <span className="text-zinc-400 text-[10px]">({templateCount})</span>
+                                  </button>
                                   {selectedSubcategory === subcat.id && subSubcatsForThis.length > 0 && (
                                     <div className="ml-4 mt-1 space-y-1 border-l border-zinc-200 pl-2">
                                       <button
