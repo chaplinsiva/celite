@@ -197,28 +197,55 @@ export async function deleteFromR2(key: string): Promise<void> {
 export async function getSourceFileFromR2(key: string): Promise<{ body: Buffer; contentType: string }> {
   validateR2Config();
   
+  // Validate bucket name
+  if (!R2_SOURCE_BUCKET || R2_SOURCE_BUCKET.trim() === '') {
+    throw new Error('R2_SOURCE_BUCKET environment variable is not set');
+  }
+  
+  // Validate credentials
+  if (!process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY) {
+    throw new Error('R2 credentials are missing');
+  }
+  
   const command = new GetObjectCommand({
     Bucket: R2_SOURCE_BUCKET,
     Key: key,
   });
 
-  const response = await r2Client.send(command);
-  
-  if (!response.Body) {
-    throw new Error('File not found in R2');
-  }
+  try {
+    const response = await r2Client.send(command);
+    
+    if (!response.Body) {
+      throw new Error(`File not found in R2: ${key}`);
+    }
 
-  // Convert stream to buffer
-  const chunks: Uint8Array[] = [];
-  for await (const chunk of response.Body as any) {
-    chunks.push(chunk);
-  }
-  const buffer = Buffer.concat(chunks);
+    // Convert stream to buffer
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of response.Body as any) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
 
-  return {
-    body: buffer,
-    contentType: response.ContentType || 'application/octet-stream',
-  };
+    if (buffer.length === 0) {
+      throw new Error(`File is empty in R2: ${key}`);
+    }
+
+    return {
+      body: buffer,
+      contentType: response.ContentType || 'application/octet-stream',
+    };
+  } catch (error: any) {
+    // Provide more detailed error information
+    if (error.name === 'NoSuchKey') {
+      throw new Error(`File not found in R2 bucket: ${key}`);
+    } else if (error.name === 'NoSuchBucket') {
+      throw new Error(`R2 bucket "${R2_SOURCE_BUCKET}" does not exist`);
+    } else if (error.name === 'InvalidAccessKeyId' || error.name === 'SignatureDoesNotMatch') {
+      throw new Error('Invalid R2 credentials');
+    } else {
+      throw new Error(`R2 error: ${error.message || error}`);
+    }
+  }
 }
 
 /**
