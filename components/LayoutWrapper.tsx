@@ -70,17 +70,23 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     return (
       <main className="bg-white min-h-screen flex items-center justify-center px-4">
         <div className="max-w-md mx-auto text-center">
-          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 mb-4">
-            Celite is on maintenance mode
+          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 mb-6">
+            We're Under Maintenance
           </h1>
-          <p className="text-zinc-500 mb-6">
-            Please check back later. You can still sign in to your account once maintenance is over.
+          <p className="text-lg text-zinc-700 mb-4">
+            Our site will be back online before December 18, 2025.
+          </p>
+          <p className="text-base text-zinc-600 mb-4">
+            For subscribed users: Don't worry, we will extend your subscription days accordingly.
+          </p>
+          <p className="text-base text-zinc-600 mb-8">
+            More templates are coming soon.
           </p>
           <a
             href="/login"
             className="inline-flex items-center justify-center rounded-full bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition"
           >
-            Go to Login
+            Login
           </a>
         </div>
       </main>
