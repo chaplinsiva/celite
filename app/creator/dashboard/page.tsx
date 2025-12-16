@@ -149,9 +149,141 @@ export default function CreatorDashboardPage() {
     return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
   };
 
+  // Chunk size: 10MB (matches server)
+  const CHUNK_SIZE = 10 * 1024 * 1024;
+  // Threshold for chunked upload: 4MB (below Vercel's limit)
+  const CHUNKED_UPLOAD_THRESHOLD = 4 * 1024 * 1024;
+  // Maximum file size: 1GB
+  const MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024;
+
+  // Chunked upload for large files
+  const uploadFileChunked = async (
+    kind: 'source' | 'video' | 'thumbnail' | 'audio_preview' | 'model_3d',
+    file: File,
+    accessToken: string
+  ): Promise<{ url: string; key: string }> => {
+    // Step 1: Initialize chunked upload
+    const initRes = await fetch('/api/creator/chunked-upload/init', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        kind,
+        category_id: form.category_id,
+        subcategory_id: form.subcategory_id || null,
+        sub_subcategory_id: form.sub_subcategory_id || null,
+        slug: form.slug || null,
+        template_name: form.name,
+        filename: file.name,
+        contentType: file.type || 'application/octet-stream',
+        fileSize: file.size,
+      }),
+    });
+
+    const initData = await initRes.json();
+    if (!initRes.ok || !initData.ok) {
+      throw new Error(initData.error || 'Failed to initialize upload');
+    }
+
+    const { uploadId, key, bucket, totalChunks } = initData;
+    const parts: { partNumber: number; eTag: string }[] = [];
+    let uploadedBytes = 0;
+    const startTime = Date.now();
+
+    try {
+      // Step 2: Upload each chunk
+      for (let i = 0; i < totalChunks; i++) {
+        const partNumber = i + 1;
+        const start = i * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, file.size);
+        const chunk = file.slice(start, end);
+
+        const partFormData = new FormData();
+        partFormData.append('uploadId', uploadId);
+        partFormData.append('key', key);
+        partFormData.append('bucket', bucket);
+        partFormData.append('partNumber', String(partNumber));
+        partFormData.append('chunk', chunk);
+
+        const partRes = await fetch('/api/creator/chunked-upload/part', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: partFormData,
+        });
+
+        const partData = await partRes.json();
+        if (!partRes.ok || !partData.ok) {
+          throw new Error(partData.error || `Failed to upload part ${partNumber}`);
+        }
+
+        parts.push({ partNumber: partData.partNumber, eTag: partData.eTag });
+        uploadedBytes += (end - start);
+
+        // Update progress
+        const progress = Math.round((uploadedBytes / file.size) * 100);
+        setUploadProgress((prev) => ({ ...prev, [kind]: progress }));
+
+        // Calculate speed
+        const elapsed = (Date.now() - startTime) / 1000;
+        if (elapsed > 0) {
+          const speed = uploadedBytes / elapsed;
+          setUploadSpeed((prev) => ({ ...prev, [kind]: formatSpeed(speed) }));
+        }
+      }
+
+      // Step 3: Complete the upload
+      const completeRes = await fetch('/api/creator/chunked-upload/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          uploadId,
+          key,
+          bucket,
+          kind,
+          parts,
+        }),
+      });
+
+      const completeData = await completeRes.json();
+      if (!completeRes.ok || !completeData.ok) {
+        throw new Error(completeData.error || 'Failed to complete upload');
+      }
+
+      return { url: completeData.url, key: completeData.key };
+    } catch (error) {
+      // Abort the multipart upload on failure
+      try {
+        await fetch('/api/creator/chunked-upload/complete', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ uploadId, key, bucket }),
+        });
+      } catch (abortError) {
+        console.error('Failed to abort upload:', abortError);
+      }
+      throw error;
+    }
+  };
+
   const uploadFile = async (kind: 'source' | 'video' | 'thumbnail' | 'audio_preview' | 'model_3d', file: File) => {
     if (!form.category_id) {
       setError('Please select a category first');
+      return;
+    }
+
+    // Check file size limit (1GB max)
+    if (file.size > MAX_FILE_SIZE) {
+      setError('File too large. Maximum size is 1GB.');
       return;
     }
 
@@ -186,7 +318,29 @@ export default function CreatorDashboardPage() {
     else if (kind === 'model_3d') setUploadingModel3D(true);
 
     try {
-      // Server-side upload to R2
+      // Use chunked upload for large files (> 4MB)
+      if (fileToUpload.size > CHUNKED_UPLOAD_THRESHOLD) {
+        setMessage(`Uploading large file (${(fileToUpload.size / (1024 * 1024)).toFixed(1)}MB)...`);
+        const result = await uploadFileChunked(kind, fileToUpload, session.access_token);
+
+        if (kind === 'source') {
+          setForm((f) => ({ ...f, source_path: result.key }));
+        } else if (kind === 'video') {
+          setForm((f) => ({ ...f, video_path: result.url }));
+        } else if (kind === 'thumbnail') {
+          setForm((f) => ({ ...f, thumbnail_path: result.url }));
+        } else if (kind === 'audio_preview') {
+          setForm((f) => ({ ...f, audio_preview_path: result.url }));
+        } else if (kind === 'model_3d') {
+          setForm((f) => ({ ...f, model_3d_path: result.url }));
+        }
+        setMessage('File uploaded successfully');
+        setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
+        setUploadSpeed((prev) => ({ ...prev, [kind]: '' }));
+        return;
+      }
+
+      // Regular upload for small files (< 4MB)
       const fd = new FormData();
       fd.append('file', fileToUpload);
       fd.append('kind', kind);
@@ -250,7 +404,7 @@ export default function CreatorDashboardPage() {
               reject(e);
             }
           } else if (xhr.status === 413) {
-            setError('File too large. Please upload a smaller file or contact support.');
+            setError('File too large for single upload. Please try again.');
             reject(new Error('File too large'));
           } else {
             try {
