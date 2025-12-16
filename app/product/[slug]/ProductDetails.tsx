@@ -976,30 +976,16 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                               </div>
                             </div>
                           </div>
-                        ) : (item as any).thumbnail_path ? (
-                          <img
-                            src={convertR2UrlToCdn((item as any).thumbnail_path) || (item as any).thumbnail_path}
-                            alt={item.name}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            onError={(e) => {
-                              e.currentTarget.src = convertR2UrlToCdn(item.img) || item.img || '/PNG1.png';
-                            }}
-                          />
                         ) : (item as any).video_path ? (
+                          // Video items - show hover-to-play video player
                           <VideoThumbnailPlayer
                             videoUrl={(item as any).video_path}
                             thumbnailUrl={(item as any).thumbnail_path || item.img || undefined}
                             title={item.name}
                             className="w-full h-full"
                           />
-                        ) : (item as any).video_path ? (
-                          <VideoThumbnailPlayer
-                            videoUrl={(item as any).video_path}
-                            thumbnailUrl={getThumbnail(item)}
-                            title={item.name}
-                            className="w-full h-full"
-                          />
                         ) : (
+                          // Static images with hover effect
                           <>
                             <img
                               src={getThumbnail(item)}
@@ -1072,30 +1058,16 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                               </div>
                             </div>
                           </div>
-                        ) : (item as any).thumbnail_path ? (
-                          <img
-                            src={convertR2UrlToCdn((item as any).thumbnail_path) || (item as any).thumbnail_path}
-                            alt={item.name}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            onError={(e) => {
-                              e.currentTarget.src = convertR2UrlToCdn(item.img) || item.img || '/PNG1.png';
-                            }}
-                          />
                         ) : (item as any).video_path ? (
+                          // Video items - show hover-to-play video player
                           <VideoThumbnailPlayer
                             videoUrl={(item as any).video_path}
                             thumbnailUrl={(item as any).thumbnail_path || item.img || undefined}
                             title={item.name}
                             className="w-full h-full"
                           />
-                        ) : (item as any).video_path ? (
-                          <VideoThumbnailPlayer
-                            videoUrl={(item as any).video_path}
-                            thumbnailUrl={getThumbnail(item)}
-                            title={item.name}
-                            className="w-full h-full"
-                          />
                         ) : (
+                          // Static images with hover effect
                           <>
                             <img
                               src={getThumbnail(item)}

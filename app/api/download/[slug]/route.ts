@@ -107,8 +107,8 @@ export async function GET(
       // Import the signed URL function
       const { getSignedSourceUrl } = await import('../../../../lib/r2Client');
 
-      // Generate signed URL (expires in 1 hour)
-      signedUrl = await getSignedSourceUrl(sourcePath, 3600);
+      // Generate signed URL (expires in 5 minutes)
+      signedUrl = await getSignedSourceUrl(sourcePath, 300);
 
       console.log(`[Download] Signed URL generated successfully for ${slug}`);
 

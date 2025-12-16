@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Hero from '../components/Hero';
-import TemplateCarousel from '../components/TemplateCarousel';
+import TemplateCollageShowcase from '../components/TemplateCollageShowcase';
 import LatestTemplatesCarousel from '../components/LatestTemplatesCarousel';
 import WebsiteShowcaseCarousel from '../components/WebsiteShowcaseCarousel';
 import CategoriesSection from '../components/CategoriesSection';
@@ -26,7 +26,7 @@ export default function Home() {
       <LatestTemplatesCarousel />
       <CategoriesSection />
       <TrustSection />
-      <TemplateCarousel />
+      <TemplateCollageShowcase />
       <HomeCreatorsSection />
       <WebsiteShowcaseCarousel />
       <TestimonialsSection />
