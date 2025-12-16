@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import VideoThumbnailPlayer from './VideoThumbnailPlayer';
@@ -14,16 +14,25 @@ interface CollageTemplate {
     category?: { id: string; name: string; slug: string } | null;
 }
 
+// Shuffle array randomly
+function shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
 export default function TemplateCollageShowcase() {
     const [templates, setTemplates] = useState<CollageTemplate[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeIndex, setActiveIndex] = useState(0);
 
     useEffect(() => {
         const loadTemplates = async () => {
             const supabase = getSupabaseBrowserClient();
 
-            // Fetch featured templates with video for the collage
+            // Fetch templates with video
             const { data, error } = await supabase
                 .from('templates')
                 .select(`
@@ -33,7 +42,7 @@ export default function TemplateCollageShowcase() {
                 .eq('status', 'approved')
                 .not('video_path', 'is', null)
                 .order('updated_at', { ascending: false })
-                .limit(12);
+                .limit(50); // Load more to shuffle from
 
             if (error) {
                 console.error('Error loading collage templates:', error);
@@ -50,21 +59,14 @@ export default function TemplateCollageShowcase() {
                 category: r.categories ? (Array.isArray(r.categories) ? r.categories[0] : r.categories) : null,
             }));
 
-            setTemplates(mapped);
+            // Shuffle and take 9 random templates for display
+            const shuffled = shuffleArray(mapped);
+            setTemplates(shuffled.slice(0, 9));
             setLoading(false);
         };
 
         loadTemplates();
     }, []);
-
-    // Auto-rotate every 5 seconds
-    useEffect(() => {
-        if (templates.length === 0) return;
-        const interval = setInterval(() => {
-            setActiveIndex((prev) => (prev + 1) % Math.min(templates.length, 6));
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [templates.length]);
 
     if (loading) {
         return (
@@ -73,7 +75,7 @@ export default function TemplateCollageShowcase() {
                     <div className="animate-pulse">
                         <div className="h-10 bg-zinc-200 rounded w-1/3 mb-4"></div>
                         <div className="h-6 bg-zinc-200 rounded w-1/2 mb-10"></div>
-                        <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 h-[400px]">
+                        <div className="grid grid-cols-3 lg:grid-cols-4 gap-3 h-[400px]">
                             {[...Array(6)].map((_, i) => (
                                 <div key={i} className="bg-zinc-200 rounded-xl"></div>
                             ))}
@@ -85,9 +87,6 @@ export default function TemplateCollageShowcase() {
     }
 
     if (templates.length === 0) return null;
-
-    // Create collage layout - 6 templates in various sizes
-    const displayTemplates = templates.slice(0, 9);
 
     return (
         <section className="relative w-full py-16 bg-zinc-50 overflow-hidden">
@@ -116,8 +115,7 @@ export default function TemplateCollageShowcase() {
 
                 {/* Collage Grid - Responsive masonry style */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4 auto-rows-[180px] lg:auto-rows-[200px]">
-
-                    {displayTemplates.map((tpl, index) => {
+                    {templates.map((tpl, index) => {
                         // Determine size based on index for visual variety
                         const isLarge = index === 0 || index === 4;
                         const isMedium = index === 1 || index === 5;
@@ -156,41 +154,6 @@ export default function TemplateCollageShowcase() {
                             </div>
                         );
                     })}
-                </div>
-
-                {/* Template Indicators / Quick Nav */}
-                <div className="mt-8 flex items-center justify-center gap-2">
-                    {displayTemplates.slice(0, 6).map((tpl, index) => (
-                        <button
-                            key={tpl.slug}
-                            onClick={() => setActiveIndex(index)}
-                            className={`w-2 h-2 rounded-full transition-all duration-300 ${index === activeIndex
-                                    ? 'w-8 bg-violet-600'
-                                    : 'bg-zinc-300 hover:bg-zinc-400'
-                                }`}
-                            aria-label={`View template ${index + 1}`}
-                        />
-                    ))}
-                </div>
-
-                {/* Stats Bar */}
-                <div className="mt-10 flex flex-wrap items-center justify-center gap-8 md:gap-16 py-6 border-t border-zinc-200">
-                    <div className="text-center">
-                        <div className="text-2xl md:text-3xl font-bold text-zinc-900">1000+</div>
-                        <div className="text-sm text-zinc-500">Templates</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl md:text-3xl font-bold text-zinc-900">50+</div>
-                        <div className="text-sm text-zinc-500">Categories</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl md:text-3xl font-bold text-zinc-900">4K</div>
-                        <div className="text-sm text-zinc-500">Resolution</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl md:text-3xl font-bold text-zinc-900">24/7</div>
-                        <div className="text-sm text-zinc-500">Support</div>
-                    </div>
                 </div>
             </div>
         </section>
