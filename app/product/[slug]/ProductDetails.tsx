@@ -108,7 +108,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
       try {
         setLoadingMoreInStyle(true);
         const supabase = getSupabaseBrowserClient();
-        
+
         // Get keywords from current template
         const keywords: string[] = [
           ...(product.tags || []),
@@ -124,15 +124,15 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name,category_id')
             .neq('slug', product.slug)
             .eq('status', 'approved');
-          
+
           if (product.category_id) {
             query = query.eq('category_id', product.category_id);
           }
-          
+
           const { data } = await query
             .limit(8)
             .order('created_at', { ascending: false });
-          
+
           if (data) {
             setMoreInStyleTemplates(data.map((r: any) => ({
               slug: r.slug,
@@ -164,11 +164,11 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
           .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name')
           .neq('slug', product.slug)
           .eq('status', 'approved');
-        
+
         if (product.category_id) {
           query = query.eq('category_id', product.category_id);
         }
-        
+
         const { data: allTemplates } = await query.limit(50);
 
         if (!allTemplates) {
@@ -279,11 +279,11 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name,category_id')
             .neq('slug', product.slug)
             .eq('status', 'approved');
-          
+
           if (product.category_id) {
             query = query.eq('category_id', product.category_id);
           }
-          
+
           const { data: allTemplates } = await query.limit(50);
 
           if (!allTemplates) {
@@ -367,15 +367,15 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name,category_id')
             .neq('slug', product.slug)
             .eq('status', 'approved');
-          
+
           if (product.category_id) {
             query = query.eq('category_id', product.category_id);
           }
-          
+
           const { data } = await query
             .limit(8)
             .order('created_at', { ascending: false });
-          
+
           if (data) {
             setYouMayAlsoLikeTemplates(data.map((r: any) => ({
               slug: r.slug,
@@ -440,18 +440,18 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
       }
 
       const contentType = res.headers.get('content-type') || '';
-      
+
       // Check if response is JSON (error or redirect)
       if (contentType.includes('application/json')) {
         const json = await res.json();
-        
+
         // Handle redirect URL (for legacy external URLs)
         if (json.redirect && json.url) {
           window.open(json.url, '_blank');
           setDownloading(false);
           return;
         }
-        
+
         // Handle errors
         if (json.error) {
           if (json.error.includes('Access denied') || json.error.includes('subscribe')) {
@@ -465,7 +465,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
           setDownloading(false);
           return;
         }
-        
+
         // Unknown JSON response
         setFeedback('Download not available.');
         setDownloading(false);
@@ -549,59 +549,59 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               const categorySlug = (product as any).category_slug?.toLowerCase() || '';
               const categoryName = (product as any).category_name || '';
               const categoryId = (product as any).category_id;
-              
+
               // Determine category route and display name
               let categoryRoute = '/video-templates';
               let categoryDisplayName = 'Video Templates';
-              
+
               // Check for 3D Models
-              if (categorySlug === '3d-models' || 
-                  (categorySlug.includes('3d') && categorySlug.includes('model')) ||
-                  (categoryName?.toLowerCase().includes('3d') && categoryName?.toLowerCase().includes('model'))) {
+              if (categorySlug === '3d-models' ||
+                (categorySlug.includes('3d') && categorySlug.includes('model')) ||
+                (categoryName?.toLowerCase().includes('3d') && categoryName?.toLowerCase().includes('model'))) {
                 categoryRoute = '/3d-models';
                 categoryDisplayName = '3D Models';
               }
               // Check for Stock Photos
-              else if (categoryId === 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47' || 
-                  categorySlug === 'stock-images' || 
-                  categorySlug === 'stock-photos' ||
-                  (categorySlug.includes('stock') && (categorySlug.includes('photo') || categorySlug.includes('image'))) ||
-                  (categoryName?.toLowerCase().includes('stock') && (categoryName?.toLowerCase().includes('photo') || categoryName?.toLowerCase().includes('image')))) {
+              else if (categoryId === 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47' ||
+                categorySlug === 'stock-images' ||
+                categorySlug === 'stock-photos' ||
+                (categorySlug.includes('stock') && (categorySlug.includes('photo') || categorySlug.includes('image'))) ||
+                (categoryName?.toLowerCase().includes('stock') && (categoryName?.toLowerCase().includes('photo') || categoryName?.toLowerCase().includes('image')))) {
                 categoryRoute = '/stock-photos';
                 categoryDisplayName = 'Stock Photos';
-              } 
+              }
               // Check for Music & SFX
-              else if (categoryId === '45456b94-cb11-449b-ab99-f0633d6e8848' || 
-                         categorySlug === 'musics-and-sfx' || 
-                         categorySlug === 'music' ||
-                         categorySlug === 'audio' ||
-                         categorySlug === 'sound-effects' ||
-                         (categorySlug.includes('music') || categorySlug.includes('audio') || categorySlug.includes('sfx') || categorySlug.includes('sound')) ||
-                         (categoryName?.toLowerCase().includes('music') || categoryName?.toLowerCase().includes('audio') || categoryName?.toLowerCase().includes('sfx') || categoryName?.toLowerCase().includes('sound'))) {
+              else if (categoryId === '45456b94-cb11-449b-ab99-f0633d6e8848' ||
+                categorySlug === 'musics-and-sfx' ||
+                categorySlug === 'music' ||
+                categorySlug === 'audio' ||
+                categorySlug === 'sound-effects' ||
+                (categorySlug.includes('music') || categorySlug.includes('audio') || categorySlug.includes('sfx') || categorySlug.includes('sound')) ||
+                (categoryName?.toLowerCase().includes('music') || categoryName?.toLowerCase().includes('audio') || categoryName?.toLowerCase().includes('sfx') || categoryName?.toLowerCase().includes('sound'))) {
                 categoryRoute = '/music-sfx';
                 categoryDisplayName = 'Music & SFX';
-              } 
+              }
               // Check for Web Templates
-              else if (categorySlug === 'website-templates' || 
-                         categorySlug === 'web-templates' ||
-                         (categorySlug.includes('web') || categorySlug.includes('website')) ||
-                         (categoryName?.toLowerCase().includes('web') || categoryName?.toLowerCase().includes('website'))) {
+              else if (categorySlug === 'website-templates' ||
+                categorySlug === 'web-templates' ||
+                (categorySlug.includes('web') || categorySlug.includes('website')) ||
+                (categoryName?.toLowerCase().includes('web') || categoryName?.toLowerCase().includes('website'))) {
                 categoryRoute = '/web-templates';
                 categoryDisplayName = 'Web Templates';
-              } 
+              }
               // Check for Graphics
-              else if (categorySlug === 'psd-templates' || 
-                         categorySlug === 'graphics' ||
-                         (categorySlug.includes('graphic') || categorySlug.includes('psd')) ||
-                         (categoryName?.toLowerCase().includes('graphic') || categoryName?.toLowerCase().includes('psd'))) {
+              else if (categorySlug === 'psd-templates' ||
+                categorySlug === 'graphics' ||
+                (categorySlug.includes('graphic') || categorySlug.includes('psd')) ||
+                (categoryName?.toLowerCase().includes('graphic') || categoryName?.toLowerCase().includes('psd'))) {
                 categoryRoute = '/graphics';
                 categoryDisplayName = 'Graphics';
-              } 
+              }
               // Check for After Effects / Video Templates
-              else if (categorySlug === 'after-effects' || 
-                         categorySlug === 'video-templates' ||
-                         (categorySlug.includes('after-effects') || categorySlug.includes('video')) ||
-                         (categoryName?.toLowerCase().includes('after effects') || categoryName?.toLowerCase().includes('video'))) {
+              else if (categorySlug === 'after-effects' ||
+                categorySlug === 'video-templates' ||
+                (categorySlug.includes('after-effects') || categorySlug.includes('video')) ||
+                (categoryName?.toLowerCase().includes('after effects') || categoryName?.toLowerCase().includes('video'))) {
                 categoryRoute = '/video-templates';
                 categoryDisplayName = 'Video Templates';
               }
@@ -622,7 +622,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                   categoryRoute = '/graphics';
                 }
               }
-              
+
               return (
                 <>
                   <Link href={categoryRoute} className="hover:text-blue-600 transition-colors hidden sm:inline">
@@ -643,15 +643,15 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               if (!vendor) return null; // Don't show vendor section if no vendor name
               const initial = vendor.charAt(0).toUpperCase() || 'C';
               return (
-            <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">
                     {initial}
                   </div>
                   <span className="text-sm font-medium text-zinc-700">{vendor}</span>
-              <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-              </div>
-            </div>
+                  <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                  </div>
+                </div>
               );
             })()}
           </div>
@@ -667,16 +667,16 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               {(() => {
                 const categorySlug = (product as any).category_slug?.toLowerCase() || '';
                 const categoryId = (product as any).category_id;
-                const isStockPhoto = categoryId === 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47' || 
-                                     categorySlug === 'stock-images' || 
-                                     categorySlug === 'stock-photos' ||
-                                     (categorySlug.includes('stock') && (categorySlug.includes('photo') || categorySlug.includes('image')));
-                const isMusicSfx = categoryId === '45456b94-cb11-449b-ab99-f0633d6e8848' || 
-                                   categorySlug === 'musics-and-sfx' || 
-                                   categorySlug === 'music' ||
-                                   categorySlug === 'audio' ||
-                                   categorySlug === 'sound-effects' ||
-                                   (categorySlug.includes('music') || categorySlug.includes('audio') || categorySlug.includes('sfx') || categorySlug.includes('sound'));
+                const isStockPhoto = categoryId === 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47' ||
+                  categorySlug === 'stock-images' ||
+                  categorySlug === 'stock-photos' ||
+                  (categorySlug.includes('stock') && (categorySlug.includes('photo') || categorySlug.includes('image')));
+                const isMusicSfx = categoryId === '45456b94-cb11-449b-ab99-f0633d6e8848' ||
+                  categorySlug === 'musics-and-sfx' ||
+                  categorySlug === 'music' ||
+                  categorySlug === 'audio' ||
+                  categorySlug === 'sound-effects' ||
+                  (categorySlug.includes('music') || categorySlug.includes('audio') || categorySlug.includes('sfx') || categorySlug.includes('sound'));
 
                 if (isStockPhoto) {
                   const imageUrl = convertR2UrlToCdn((product as any).thumbnail_path) || (product as any).thumbnail_path || convertR2UrlToCdn(product.img) || product.img || '/PNG1.png';
@@ -1171,7 +1171,6 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   );
 }
 
-// Extracted Subscription Card to reuse for Mobile/Desktop layouts
 function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className }: {
   isSubActive: boolean;
   downloading: boolean;
@@ -1186,14 +1185,33 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
         <button
           onClick={handleDownload}
           disabled={downloading}
-          className="w-full py-3 rounded-lg bg-blue-600 text-white font-bold text-sm shadow-lg shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          className={cn(
+            "w-full py-3 rounded-lg font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2",
+            downloading
+              ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white cursor-wait"
+              : "bg-blue-600 text-white shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.98]"
+          )}
         >
-          {downloading ? 'Preparing...' : (
+          {downloading ? (
             <>
-              <Download className="w-4 h-4" /> Download Now
+              <div className="relative w-5 h-5">
+                <div className="absolute inset-0 rounded-full border-2 border-white/30"></div>
+                <div className="absolute inset-0 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+              </div>
+              <span className="animate-pulse">Downloading...</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4" />
+              Download Now
             </>
           )}
         </button>
+        {downloading && (
+          <p className="text-xs text-blue-600 text-center mt-2 animate-pulse">
+            Preparing your file for download...
+          </p>
+        )}
       </div>
     );
   }
@@ -1236,12 +1254,12 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
         ))}
       </ul>
 
-        <button
-          onClick={() => router.push('/pricing')}
-          className="w-full py-3 rounded-lg bg-blue-900 text-white font-bold text-sm shadow-xl shadow-blue-900/10 hover:bg-blue-800 active:scale-[0.98] transition-all"
-        >
-          Subscribe Monthly
-        </button>
+      <button
+        onClick={() => router.push('/pricing')}
+        className="w-full py-3 rounded-lg bg-blue-900 text-white font-bold text-sm shadow-xl shadow-blue-900/10 hover:bg-blue-800 active:scale-[0.98] transition-all"
+      >
+        Subscribe Monthly
+      </button>
     </div>
   );
 }
