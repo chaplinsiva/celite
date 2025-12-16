@@ -6,8 +6,7 @@ import type { Template } from '../data/templateData';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { useLoginModal } from '../context/LoginModalContext';
-import { getYouTubeEmbedUrl, convertR2UrlToCdn } from '../lib/utils';
-import YouTubeVideoPlayer from './YouTubeVideoPlayer';
+import { convertR2UrlToCdn } from '../lib/utils';
 import VideoThumbnailPlayer from './VideoThumbnailPlayer';
 import { cn } from '@/lib/utils';
 import { ArrowRight, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
@@ -47,7 +46,7 @@ export default function TemplateCarousel() {
       let { data, error: templateError } = await supabase
         .from('templates')
         .select(`
-          slug,name,subtitle,description,img,video,video_path,thumbnail_path,features,software,plugins,tags,created_at,feature,
+          slug,name,subtitle,description,img,video_path,thumbnail_path,features,software,plugins,tags,created_at,feature,
           category_id,subcategory_id,
           categories(id,name,slug),
           subcategories(id,name,slug)
@@ -59,7 +58,7 @@ export default function TemplateCarousel() {
         const fallback = await supabase
           .from('templates')
           .select(`
-            slug,name,subtitle,description,img,video,video_path,thumbnail_path,features,software,plugins,tags,created_at,feature,
+            slug,name,subtitle,description,img,video_path,thumbnail_path,features,software,plugins,tags,created_at,feature,
             category_id,subcategory_id,
             categories(id,name,slug),
             subcategories(id,name,slug)
@@ -87,7 +86,6 @@ export default function TemplateCarousel() {
           desc: r.description ?? '',
           price: 0,
           img: r.img,
-          video: r.video,
           video_path: r.video_path,
           thumbnail_path: r.thumbnail_path,
           features: r.features ?? [],
@@ -166,12 +164,6 @@ export default function TemplateCarousel() {
                   thumbnailUrl={tpl.thumbnail_path || tpl.img || undefined}
                   title={tpl.name}
                   className="w-full h-full"
-                />
-              ) : tpl.video ? (
-                <YouTubeVideoPlayer
-                  videoUrl={tpl.video}
-                  title={tpl.name}
-                  className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                 />
               ) : (
                 <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">

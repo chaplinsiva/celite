@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
-import { uploadToR2, generateSourceKey, generatePreviewKey, generateVideoKey, generateThumbnailKey, generateAudioPreviewKey, generateModel3DKey } from '../../../../lib/r2Client';
+import { uploadSourceToR2, uploadPreviewToR2, generateSourceKey, generateVideoKey, generateThumbnailKey, generateAudioPreviewKey, generateModel3DKey, generateTemplateFolder } from '../../../../lib/r2Client';
 
 function extFromName(name: string): string {
   const idx = name.lastIndexOf('.');
@@ -44,14 +44,16 @@ export async function POST(req: Request) {
 
     const form = await req.formData();
     const file = form.get('file') as File | null;
-    const kind = (form.get('kind') as string | null) || null; // 'source' | 'preview' | 'video' | 'thumbnail' | 'audio_preview' | 'model_3d'
+    const kind = (form.get('kind') as string | null) || null; // 'source' | 'video' | 'thumbnail' | 'audio_preview' | 'model_3d'
     const categoryId = (form.get('category_id') as string | null) || '';
     const subcategoryId = (form.get('subcategory_id') as string | null) || '';
     const subSubcategoryId = (form.get('sub_subcategory_id') as string | null) || '';
     const slug = (form.get('slug') as string | null) || '';
+    const templateName = (form.get('template_name') as string | null) || '';
 
     if (!file || !kind) return NextResponse.json({ ok: false, error: 'Missing file or kind' }, { status: 400 });
     if (!categoryId) return NextResponse.json({ ok: false, error: 'Missing category_id' }, { status: 400 });
+    if (!templateName) return NextResponse.json({ ok: false, error: 'Missing template_name' }, { status: 400 });
 
     // Fetch category and subcategory slugs
     const { data: category } = await admin
@@ -93,30 +95,39 @@ export async function POST(req: Request) {
     else if (kind === 'model_3d') defaultExt = '.glb';
     const ext = extFromName(file.name) || defaultExt;
     const filename = slug ? `${slug}${ext}` : file.name;
+    
+    // Generate template folder name from template name
+    const templateFolder = generateTemplateFolder(templateName);
 
     let r2Key: string;
+    let result;
+    
     if (kind === 'source') {
-      r2Key = generateSourceKey(category.slug, subcategorySlug, filename, subSubcategorySlug);
-    } else if (kind === 'preview') {
-      r2Key = generatePreviewKey(category.slug, subcategorySlug, filename, subSubcategorySlug);
+      // Source files go to private bucket
+      r2Key = generateSourceKey(category.slug, subcategorySlug, filename, subSubcategorySlug, templateFolder);
+      result = await uploadSourceToR2(file, r2Key, file.type || 'application/octet-stream');
     } else if (kind === 'video') {
-      r2Key = generateVideoKey(category.slug, subcategorySlug, filename, subSubcategorySlug);
+      // Preview files go to public bucket
+      r2Key = generateVideoKey(category.slug, subcategorySlug, filename, subSubcategorySlug, templateFolder);
+      result = await uploadPreviewToR2(file, r2Key, file.type || 'application/octet-stream');
     } else if (kind === 'thumbnail') {
-      r2Key = generateThumbnailKey(category.slug, subcategorySlug, filename, subSubcategorySlug);
+      r2Key = generateThumbnailKey(category.slug, subcategorySlug, filename, subSubcategorySlug, templateFolder);
+      result = await uploadPreviewToR2(file, r2Key, file.type || 'application/octet-stream');
     } else if (kind === 'audio_preview') {
-      r2Key = generateAudioPreviewKey(category.slug, subcategorySlug, filename, subSubcategorySlug);
+      r2Key = generateAudioPreviewKey(category.slug, subcategorySlug, filename, subSubcategorySlug, templateFolder);
+      result = await uploadPreviewToR2(file, r2Key, file.type || 'application/octet-stream');
     } else if (kind === 'model_3d') {
-      r2Key = generateModel3DKey(category.slug, subcategorySlug, filename, subSubcategorySlug);
+      r2Key = generateModel3DKey(category.slug, subcategorySlug, filename, subSubcategorySlug, templateFolder);
+      result = await uploadPreviewToR2(file, r2Key, file.type || 'application/octet-stream');
     } else {
-      return NextResponse.json({ ok: false, error: 'Invalid kind. Use "source", "preview", "video", "thumbnail", "audio_preview", or "model_3d"' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'Invalid kind. Use "source", "video", "thumbnail", "audio_preview", or "model_3d"' }, { status: 400 });
     }
 
-    // Upload to R2
-    const result = await uploadToR2(file, r2Key, file.type || 'application/octet-stream');
-
+    // For source files, return key only (no public URL)
+    // For preview files, return public URL
     return NextResponse.json({
       ok: true,
-      url: result.url,
+      url: kind === 'source' ? result.key : result.url, // Source files: return key, Preview files: return public URL
       key: result.key,
       kind
     });

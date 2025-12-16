@@ -6,9 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppContext } from '../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
-import { getYouTubeThumbnailUrl, cn, convertR2UrlToCdn } from '../../lib/utils';
+import { cn, convertR2UrlToCdn } from '../../lib/utils';
 import { Search, ChevronDown, ChevronRight, ChevronLeft, Check, PlayCircle, Download, Filter, ArrowRight } from 'lucide-react';
-import YouTubeVideoPlayer from '../../components/YouTubeVideoPlayer';
 import VideoThumbnailPlayer from '../../components/VideoThumbnailPlayer';
 
 type Template = {
@@ -63,11 +62,6 @@ const getThumbnail = (item: Template) => {
   if (item.thumbnail_path) return convertR2UrlToCdn(item.thumbnail_path) || item.thumbnail_path;
   // Fallback to img
   if (item.img) return convertR2UrlToCdn(item.img) || item.img;
-  // For YouTube videos, get thumbnail
-  if (item.video) {
-    const thumb = getYouTubeThumbnailUrl(item.video);
-    if (thumb) return thumb;
-  }
   return '/PNG1.png';
 };
 
@@ -511,14 +505,6 @@ export default function VideoTemplatesClient({
                           title={template.name}
                           className="w-full h-full"
                         />
-                      ) : template.video ? (
-                        <div className="w-full h-full">
-                          <YouTubeVideoPlayer
-                            videoUrl={template.video}
-                            title={template.name}
-                            className="w-full h-full"
-                          />
-                        </div>
                       ) : (
                         <>
                           <img

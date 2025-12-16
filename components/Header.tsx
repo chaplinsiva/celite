@@ -246,7 +246,7 @@ export default function Header() {
                                               key={subSubcat.id}
                                               href={`${categoryRoute}?subcategory=${subcategory.slug}&subsubcategory=${subSubcat.slug}`}
                                               className="block py-1.5 px-2 rounded hover:bg-zinc-50 text-xs"
-                                            >
+                >
                                               {subSubcat.name}
                                             </HoveredLink>
                                           ))}
@@ -389,15 +389,15 @@ export default function Header() {
                   {categorySubcategories.length > 0 && (
                     <div className="ml-4 mt-2 space-y-1">
                       {categorySubcategories.map((subcategory) => (
-                        <Link
+              <Link
                           key={subcategory.id}
                           href={`${navItem.route}?subcategory=${subcategory.slug}`}
                           className="text-sm text-zinc-600 py-1 block hover:text-zinc-900"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
                           {subcategory.name}
-                        </Link>
-                      ))}
+              </Link>
+            ))}
                     </div>
                   )}
                 </div>

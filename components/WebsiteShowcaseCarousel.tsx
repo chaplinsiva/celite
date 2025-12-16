@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import YouTubeVideoPlayer from './YouTubeVideoPlayer';
+import VideoThumbnailPlayer from './VideoThumbnailPlayer';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import type { Template } from '../data/templateData';
 import { cn } from '@/lib/utils';
@@ -170,9 +170,10 @@ export default function WebsiteShowcaseCarousel() {
                     'relative rounded-xl sm:rounded-2xl border border-zinc-200 overflow-hidden shadow-2xl shadow-blue-900/5 bg-white aspect-video',
                   )}
                 >
-                  {featuredWebsite.video ? (
-                    <YouTubeVideoPlayer
-                      videoUrl={featuredWebsite.video}
+                  {featuredWebsite.video_path ? (
+                    <VideoThumbnailPlayer
+                      videoUrl={featuredWebsite.video_path}
+                      thumbnailUrl={featuredWebsite.thumbnail_path || featuredWebsite.img || undefined}
                       title={featuredWebsite.name}
                       className="absolute inset-0 h-full w-full object-cover"
                     />

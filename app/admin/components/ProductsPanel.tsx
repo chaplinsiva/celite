@@ -2,31 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
-import YouTubeVideoPlayer from '../../../components/YouTubeVideoPlayer';
+import VideoThumbnailPlayer from '../../../components/VideoThumbnailPlayer';
 
-type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null };
-
-const extractYouTubeId = (url: string) => {
-  try {
-    if (!url) return null;
-    const parsed = new URL(url);
-    if (parsed.hostname.includes('youtube.com')) {
-      if (parsed.pathname === '/watch') return parsed.searchParams.get('v');
-      if (parsed.pathname.startsWith('/embed/')) return parsed.pathname.split('/embed/')[1];
-      const shortsMatch = parsed.pathname.match(/\/shorts\/([^/]+)/);
-      if (shortsMatch) return shortsMatch[1];
-    }
-    if (parsed.hostname === 'youtu.be') {
-      return parsed.pathname.slice(1);
-    }
-  } catch { }
-  return null;
-};
-
-const getYouTubeEmbedUrl = (url: string) => {
-  const id = extractYouTubeId(url);
-  return id ? `https://www.youtube.com/embed/${id}` : null;
-};
+type TemplateRow = { slug: string; name: string; img: string | null; video_path?: string | null; thumbnail_path?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null };
 
 export default function ProductsPanel({ templates, onDelete, onCreated }: {
   templates: TemplateRow[];
@@ -37,7 +15,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   const [creating, setCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [form, setForm] = useState({
-    slug: '', name: '', subtitle: '', description: '', img: '', video: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', meta_title: '', meta_description: '',
+    slug: '', name: '', subtitle: '', description: '', img: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', meta_title: '', meta_description: '',
   });
   const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [subcategories, setSubcategories] = useState<Array<{ id: string; category_id: string; name: string; slug: string }>>([]);
@@ -192,6 +170,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
       if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
       if (form.sub_subcategory_id) fd.append('sub_subcategory_id', form.sub_subcategory_id);
     if (form.slug) fd.append('slug', form.slug);
+    if (form.name) fd.append('template_name', form.name); // Required for folder structure
       
       const res = await fetch('/api/admin/upload-r2', { 
         method: 'POST', 
@@ -200,10 +179,12 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
       });
     const json = await res.json();
     if (json.ok) {
-        if (kind === 'source' && json.url) {
-          setForm((f) => ({ ...f, source_path: json.url }));
+        // For source files, json.url is the key (stored in source_path)
+        // For preview files, json.url is the public URL
+        if (kind === 'source' && json.key) {
+          setForm((f) => ({ ...f, source_path: json.key })); // Store key for source files
         } else if (kind === 'video' && json.url) {
-          setForm((f) => ({ ...f, video_path: json.url }));
+          setForm((f) => ({ ...f, video_path: json.url })); // Store public URL for previews
         } else if (kind === 'thumbnail' && json.url) {
           setForm((f) => ({ ...f, thumbnail_path: json.url }));
         } else if (kind === 'audio_preview' && json.url) {
@@ -263,8 +244,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                 return (t.name || '').toLowerCase().includes(q) || (t.slug || '').toLowerCase().includes(q);
               })
               .map((t) => {
-                const youtubeId = extractYouTubeId(t.video || '');
-                const thumbnail = t.img || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : null);
+                const thumbnail = t.thumbnail_path || t.img || null;
                 const isVendorTemplate = !!t.creator_shop_id || !!t.vendor_name;
                 const status = t.status || 'approved';
                 const statusLabel =
@@ -283,10 +263,11 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
 
                 return (
                   <li key={t.slug} className="rounded-2xl border border-zinc-200 bg-white p-4 flex flex-col shadow-sm hover:shadow-md transition-shadow">
-                    {t.video ? (
+                    {t.video_path ? (
                       <div className="aspect-video w-full overflow-hidden rounded-xl mb-4 bg-zinc-100 border border-zinc-100">
-                        <YouTubeVideoPlayer
-                          videoUrl={t.video || ''}
+                        <VideoThumbnailPlayer
+                          videoUrl={t.video_path}
+                          thumbnailUrl={thumbnail || undefined}
                           title={t.name}
                           className="w-full h-full"
                         />
@@ -319,7 +300,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                             const supabase = getSupabaseBrowserClient();
                             const { data } = await supabase
                               .from('templates')
-                              .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,model_3d_path,source_path,features,software,plugins,tags,category_id,subcategory_id,sub_subcategory_id,meta_title,meta_description')
+                              .select('slug,name,subtitle,description,img,video_path,thumbnail_path,audio_preview_path,model_3d_path,source_path,features,software,plugins,tags,category_id,subcategory_id,sub_subcategory_id,meta_title,meta_description')
                               .eq('slug', t.slug)
                               .maybeSingle();
                             if (!data) return;
@@ -329,7 +310,6 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                               subtitle: data.subtitle || '',
                               description: data.description || '',
                               img: data.img || '',
-                              video: data.video || '', // Keep for old templates
                               video_path: data.video_path || '',
                               thumbnail_path: data.thumbnail_path || '',
                               audio_preview_path: (data.audio_preview_path || '') as string,
@@ -428,7 +408,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                 templates: [
                   {
                     slug: newSlug, name: form.name.trim(), subtitle: form.subtitle.trim(), description: form.description.trim(),
-                    img: null, video: null, video_path: form.video_path.trim() || null, thumbnail_path: form.thumbnail_path.trim() || null, audio_preview_path: form.audio_preview_path.trim() || null, model_3d_path: form.model_3d_path.trim() || null, source_path: form.source_path.trim() || null,
+                    img: null, video_path: form.video_path.trim() || null, thumbnail_path: form.thumbnail_path.trim() || null, audio_preview_path: form.audio_preview_path.trim() || null, model_3d_path: form.model_3d_path.trim() || null, source_path: form.source_path.trim() || null,
                     features: form.features ? form.features.split(',').map(s => s.trim()).filter(Boolean) : [],
                     software: form.software ? form.software.split(',').map(s => s.trim()).filter(Boolean) : [],
                     plugins: form.plugins ? form.plugins.split(',').map(s => s.trim()).filter(Boolean) : [],
@@ -448,7 +428,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               }
               await onCreated();
               setTab('list');
-              setForm({ slug: '', name: '', subtitle: '', description: '', img: '', video: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', meta_title: '', meta_description: '' });
+              setForm({ slug: '', name: '', subtitle: '', description: '', img: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', meta_title: '', meta_description: '' });
               setIsEditing(false);
               setOriginalSlug(null);
               setSlugManuallyEdited(false);

@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     const blob = await file.arrayBuffer();
     const ext = filename ? extFromName(filename) : extFromName(file.name) || '.zip';
 
-    // Only support source file uploads - preview images/videos are replaced with YouTube links
+    // Only support source file uploads - preview images/videos are stored in R2
     if (kind === 'source') {
       const bucket = 'templatesource';
       const objectPath = `${filename || (slug ? `${slug}${ext || '.zip'}` : file.name)}`;
@@ -44,9 +44,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, path: objectPath, kind });
     }
 
-    // Thumbnail and video uploads are no longer supported - use YouTube links instead
+    // Thumbnail and video uploads should use R2 upload endpoint
     if (kind === 'thumbnail' || kind === 'video') {
-      return NextResponse.json({ ok: false, error: 'Preview uploads are no longer supported. Please use YouTube video links instead.' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'Please use the R2 upload endpoint for preview files.' }, { status: 400 });
     }
 
     return NextResponse.json({ ok: false, error: 'Unknown kind' }, { status: 400 });

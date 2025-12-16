@@ -172,6 +172,7 @@ export default function CreatorDashboardPage() {
       if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
       if (form.sub_subcategory_id) fd.append('sub_subcategory_id', form.sub_subcategory_id);
       if (form.slug) fd.append('slug', form.slug);
+      if (form.name) fd.append('template_name', form.name); // Required for folder structure
       
       // Use XMLHttpRequest for progress tracking
       return new Promise<void>((resolve, reject) => {
@@ -191,11 +192,13 @@ export default function CreatorDashboardPage() {
             try {
               const json = JSON.parse(xhr.responseText);
               if (json.ok && json.url) {
-                // Update the form field immediately with the uploaded URL
+                // Update the form field immediately with the uploaded URL/key
+                // For source files, json.url is the key (stored in source_path)
+                // For preview files, json.url is the public URL
                 if (kind === 'source') {
-                  setForm((f) => ({ ...f, source_path: json.url }));
+                  setForm((f) => ({ ...f, source_path: json.key })); // Store key for source files
                 } else if (kind === 'video') {
-                  setForm((f) => ({ ...f, video_path: json.url }));
+                  setForm((f) => ({ ...f, video_path: json.url })); // Store public URL for previews
                 } else if (kind === 'thumbnail') {
                   setForm((f) => ({ ...f, thumbnail_path: json.url }));
                 } else if (kind === 'audio_preview') {
@@ -419,7 +422,6 @@ export default function CreatorDashboardPage() {
           slug,
           subtitle: form.subtitle,
           description: form.description,
-          video: null, // New templates don't use YouTube
           video_path: form.video_path,
           thumbnail_path: form.thumbnail_path,
           audio_preview_path: form.audio_preview_path,
@@ -1072,7 +1074,7 @@ export default function CreatorDashboardPage() {
                                 <video src={form.video_path} controls className="h-full w-full" />
                               </div>
                             )}
-                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: category/subcategory/video/{'{filename}'}</p>
+                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: preview/video/category/subcategory/{'{templateFolder}'}/{'{filename}'}</p>
                           </div>
                           <div>
                             <label className="block text-xs font-semibold text-zinc-700 mb-1">
@@ -1112,7 +1114,7 @@ export default function CreatorDashboardPage() {
                                 <img src={form.thumbnail_path} alt="Thumbnail preview" className="w-full h-auto" />
                               </div>
                             )}
-                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: category/subcategory/thumbnail/{'{filename}'}</p>
+                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: preview/thumbnail/category/subcategory/{'{templateFolder}'}/{'{filename}'}</p>
                           </div>
                         </div>
 
@@ -1155,7 +1157,7 @@ export default function CreatorDashboardPage() {
                                 <audio src={form.audio_preview_path} controls className="w-full" />
                               </div>
                             )}
-                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: category/subcategory/audio/{'{filename}'}</p>
+                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: preview/audio/category/subcategory/{'{templateFolder}'}/{'{filename}'}</p>
                           </div>
 
                           <div>
@@ -1196,7 +1198,7 @@ export default function CreatorDashboardPage() {
                                 <p className="text-xs text-zinc-600">3D Model: {form.model_3d_path}</p>
                               </div>
                             )}
-                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: category/subcategory/model/{'{filename}'}</p>
+                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: preview/model/category/subcategory/{'{templateFolder}'}/{'{filename}'}</p>
                           </div>
                         </div>
 
@@ -1237,7 +1239,7 @@ export default function CreatorDashboardPage() {
                                 />
                               </div>
                             )}
-                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: category/subcategory/{'{filename}'}</p>
+                            <p className="text-[10px] text-zinc-400 mt-1">Stored at: category/subcategory/{'{templateFolder}'}/{'{filename}'} (Private bucket: celite-source-files)</p>
                           </div>
                         </div>
 

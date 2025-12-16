@@ -336,7 +336,6 @@ export async function POST(req: Request) {
       subtitle: (input.subtitle || '').toString().trim() || null,
       description: (input.description || '').toString().trim() || null,
       img: null,
-      video: null, // New templates don't use YouTube
       video_path: (input.video_path || '').toString().trim() || null,
       thumbnail_path: (input.thumbnail_path || '').toString().trim() || null,
       audio_preview_path: (input.audio_preview_path || '').toString().trim() || null,

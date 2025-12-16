@@ -6,9 +6,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppContext } from '../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
-import { getYouTubeThumbnailUrl, cn } from '../../lib/utils';
+import { cn } from '../../lib/utils';
 import { Search, ChevronDown, ChevronRight, ChevronLeft, Check, PlayCircle, Download, Filter, ArrowRight } from 'lucide-react';
-import YouTubeVideoPlayer from '../../components/YouTubeVideoPlayer';
+import VideoThumbnailPlayer from '../../components/VideoThumbnailPlayer';
 
 type Template = {
   slug: string;
@@ -52,11 +52,8 @@ type Subcategory = {
 // Helper for thumbnails
 const getThumbnail = (item: Template) => {
   // Show any image, even if low quality
+  if (item.thumbnail_path) return item.thumbnail_path;
   if (item.img) return item.img;
-  if (item.video) {
-    const thumb = getYouTubeThumbnailUrl(item.video);
-    if (thumb) return thumb;
-  }
   return '/PNG1.png';
 };
 
@@ -477,15 +474,13 @@ export default function VideoTemplatesClient({
                   <div key={template.slug} className="group flex flex-col bg-white rounded-xl overflow-hidden border border-zinc-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300">
                     {/* Thumbnail / Video Player */}
                     <div className="relative aspect-video overflow-hidden bg-zinc-100">
-                      {/* Using the YouTubeVideoPlayer for hover autoplay behavior */}
-                      {template.video ? (
-                        <div className="w-full h-full">
-                          <YouTubeVideoPlayer
-                            videoUrl={template.video}
-                            title={template.name}
-                            className="w-full h-full"
-                          />
-                        </div>
+                      {template.video_path ? (
+                        <VideoThumbnailPlayer
+                          videoUrl={template.video_path}
+                          thumbnailUrl={getThumbnail(template)}
+                          title={template.name}
+                          className="w-full h-full"
+                        />
                       ) : (
                         <Link href={`/product/${template.slug}`} className="block w-full h-full">
                           <img

@@ -8,13 +8,12 @@ import { useAppContext } from '../../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { useLoginModal } from '../../../context/LoginModalContext';
 import { trackViewItem } from '../../../lib/gtag';
-import YouTubeVideoPlayer from '../../../components/YouTubeVideoPlayer';
 import VideoThumbnailPlayer from '../../../components/VideoThumbnailPlayer';
 import Model3DViewerInteractive from '../../../components/Model3DViewerInteractive';
 import StockPhotoViewer from '../../../components/StockPhotoViewer';
 import MusicSfxPlayer from '../../../components/MusicSfxPlayer';
 import SimpleMusicPlayer from '../../../components/SimpleMusicPlayer';
-import { cn, getYouTubeEmbedUrl, getYouTubeThumbnailUrl, convertR2UrlToCdn } from '../../../lib/utils';
+import { cn, convertR2UrlToCdn } from '../../../lib/utils';
 import type { Template } from '../../../data/templateData';
 
 interface Review {
@@ -35,11 +34,6 @@ const getThumbnail = (item: Template | (Template & { source_path?: string | null
   if ((item as any).thumbnail_path) return convertR2UrlToCdn((item as any).thumbnail_path) || (item as any).thumbnail_path;
   // Fallback to img
   if (item.img) return convertR2UrlToCdn(item.img) || item.img;
-  // For YouTube videos, get thumbnail
-  if (item.video) {
-    const thumb = getYouTubeThumbnailUrl(item.video);
-    if (thumb) return thumb;
-  }
   return '/PNG1.png';
 };
 
@@ -718,16 +712,6 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                   );
                 }
 
-                if (product.video) {
-                  return (
-                    <YouTubeVideoPlayer
-                      videoUrl={product.video}
-                      title={product.name}
-                      className="w-full h-full"
-                      showFullscreen={true}
-                    />
-                  );
-                }
 
                 if ((product as any).thumbnail_path) {
                   return (
@@ -1037,9 +1021,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                             title={item.name}
                             className="w-full h-full"
                           />
-                        ) : item.video ? (
-                          <YouTubeVideoPlayer
-                            videoUrl={item.video}
+                        ) : (item as any).video_path ? (
+                          <VideoThumbnailPlayer
+                            videoUrl={(item as any).video_path}
+                            thumbnailUrl={getThumbnail(item)}
                             title={item.name}
                             className="w-full h-full"
                           />
@@ -1132,9 +1117,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                             title={item.name}
                             className="w-full h-full"
                           />
-                        ) : item.video ? (
-                          <YouTubeVideoPlayer
-                            videoUrl={item.video}
+                        ) : (item as any).video_path ? (
+                          <VideoThumbnailPlayer
+                            videoUrl={(item as any).video_path}
+                            thumbnailUrl={getThumbnail(item)}
                             title={item.name}
                             className="w-full h-full"
                           />

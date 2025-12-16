@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
-import { getYouTubeThumbnailUrl, convertR2UrlToCdn } from '../../lib/utils';
-import YouTubeVideoPlayer from '../../components/YouTubeVideoPlayer';
+import { convertR2UrlToCdn } from '../../lib/utils';
 import VideoThumbnailPlayer from '../../components/VideoThumbnailPlayer';
 import MusicSfxPlayer from '../../components/MusicSfxPlayer';
 import StockPhotoViewer from '../../components/StockPhotoViewer';
@@ -43,10 +42,6 @@ const getThumbnail = (template: Template): string => {
     }
     if (template.img) {
         return convertR2UrlToCdn(template.img) || template.img;
-    }
-    if (template.video) {
-        const thumb = getYouTubeThumbnailUrl(template.video);
-        if (thumb) return thumb;
     }
     return '/PNG1.png';
 };
@@ -279,15 +274,6 @@ export default function TemplatesClient() {
             );
         }
 
-        if (template.video) {
-            return (
-                <YouTubeVideoPlayer
-                    videoUrl={template.video}
-                    title={template.name}
-                    className="w-full h-full"
-                />
-            );
-        }
 
         // Default thumbnail
         return (

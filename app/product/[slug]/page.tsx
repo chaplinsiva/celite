@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import ProductDetails from './ProductDetails';
 import type { Template } from '../../../data/templateData';
 import { getSupabaseServerClient } from '../../../lib/supabaseServer';
-import { getYouTubeThumbnailUrl } from '../../../lib/utils';
+import { convertR2UrlToCdn } from '../../../lib/utils';
 
 const reviews = [
   {
@@ -30,7 +30,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,features,software,plugins,tags,meta_title,meta_description,vendor_name')
+    .select('slug,name,subtitle,description,img,thumbnail_path,video_path,features,software,plugins,tags,meta_title,meta_description,vendor_name')
     .eq('slug', params.slug)
     .maybeSingle();
   const prod = row ? ({
@@ -40,7 +40,6 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
     desc: row.description ?? '',
     price: 0,
     img: row.img,
-    video: row.video,
     features: row.features ?? [],
     software: row.software ?? [],
     plugins: row.plugins ?? [],
@@ -54,10 +53,8 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
     };
   }
 
-  // Get YouTube thumbnail if video exists, otherwise use img
-  const metaImage = prod.video 
-    ? getYouTubeThumbnailUrl(prod.video) 
-    : (prod.img || null);
+  // Use thumbnail_path, video_path thumbnail, or img
+  const metaImage = prod.img || null;
 
   // Fallback to default image if no image or video
   // For relative URLs, we need to make them absolute
@@ -115,7 +112,7 @@ export default async function ProductPage(props: PageProps) {
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,model_3d_path,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name,category_id,subcategory_id,categories(id,slug,name)')
+    .select('slug,name,subtitle,description,img,video_path,thumbnail_path,audio_preview_path,model_3d_path,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name,category_id,subcategory_id,categories(id,slug,name)')
     .eq('slug', params.slug)
     .maybeSingle();
   if (!row) return notFound();
@@ -130,7 +127,6 @@ export default async function ProductPage(props: PageProps) {
     desc: row.description ?? '',
     price: 0,
     img: row.img,
-    video: row.video,
     features: row.features ?? [],
     software: row.software ?? [],
     plugins: row.plugins ?? [],
@@ -153,7 +149,7 @@ export default async function ProductPage(props: PageProps) {
   // Fetch related templates from the same category
   let relatedQuery = supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,features,software,plugins,tags,status,vendor_name')
+    .select('slug,name,subtitle,description,img,video_path,thumbnail_path,features,software,plugins,tags,status,vendor_name')
     .neq('slug', prod.slug)
     .eq('status', 'approved');
   
@@ -170,7 +166,6 @@ export default async function ProductPage(props: PageProps) {
     desc: r.description ?? '',
     price: 0,
     img: r.img,
-    video: r.video,
     video_path: (r as any).video_path ?? null,
     thumbnail_path: (r as any).thumbnail_path ?? null,
     model_3d_path: (r as any).model_3d_path ?? null,

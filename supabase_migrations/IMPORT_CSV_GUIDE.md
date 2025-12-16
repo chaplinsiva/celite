@@ -176,15 +176,15 @@ Or copy-paste both scripts in order in SQL Editor.
 After successful import:
 
 1. ✅ Verify all templates imported correctly
-2. ✅ Add YouTube video links for templates missing videos
-3. ✅ Update source_path if needed (Google Drive links are fine)
+2. ✅ Upload preview files (video, thumbnail, audio, 3D model) to R2 storage
+3. ✅ Update source_path if needed
 4. ✅ Test the application - browse templates
 5. ✅ Check admin panel - templates should be visible
 
 ## Notes
 
 - **img column**: All values will be NULL (deprecated, not used)
-- **video column**: Old storage URLs are cleared. Add YouTube links manually
+- **video_path column**: Upload video previews to R2 storage via admin/creator panel
 - **JSONB fields**: Automatically fixed by the script
 - **Foreign keys**: Invalid category/subcategory IDs are set to NULL
 

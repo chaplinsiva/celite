@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { convertR2UrlToCdn, getYouTubeThumbnailUrl } from '@/lib/utils';
+import { convertR2UrlToCdn } from '@/lib/utils';
 import VideoThumbnailPlayer from '@/components/VideoThumbnailPlayer';
 import MusicSfxPlayer from '@/components/MusicSfxPlayer';
 import StockPhotoViewer from '@/components/StockPhotoViewer';
@@ -39,10 +39,6 @@ const STOCK_PHOTOS_CATEGORY_ID = 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47';
 function getThumbnail(t: CreatorTemplate) {
   if (t.thumbnail_path) return convertR2UrlToCdn(t.thumbnail_path) || t.thumbnail_path;
   if (t.img) return convertR2UrlToCdn(t.img) || t.img;
-  if (t.video) {
-    const thumb = getYouTubeThumbnailUrl(t.video);
-    if (thumb) return thumb;
-  }
   return '/PNG1.png';
 }
 
@@ -117,24 +113,6 @@ function TemplateCard({ template, category }: { template: CreatorTemplate; categ
       );
     }
 
-    if (template.video) {
-      // For YouTube videos, show thumbnail with play icon
-      const thumb = getYouTubeThumbnailUrl(template.video);
-      return (
-        <div className="relative w-full h-full">
-          <img
-            src={thumb || getThumbnail(template)}
-            alt={template.name}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-            <div className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
-              <Video className="w-6 h-6 fill-current" />
-            </div>
-          </div>
-        </div>
-      );
-    }
 
     // Default thumbnail
     return (

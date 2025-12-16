@@ -73,17 +73,17 @@ export const MenuItem = ({
         >
           {/* Invisible bridge to prevent gap - allows smooth mouse movement */}
           <div className="h-2 w-full" />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.85, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.85, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.85, y: 10 }}
-            transition={transition}
+          transition={transition}
             className="bg-white dark:bg-black backdrop-blur-sm rounded-lg overflow-hidden border border-zinc-200 dark:border-white/[0.2] shadow-xl"
-          >
+              >
             <div className="w-max h-full p-4">
-              {children}
+                  {children}
             </div>
-          </motion.div>
+        </motion.div>
         </div>
       )}
     </div>

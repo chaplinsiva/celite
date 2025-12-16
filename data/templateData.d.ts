@@ -5,7 +5,9 @@ export type Template = {
   desc: string;
   price: number;
   img: string;
-  video: string | null;
+  video?: string | null; // Deprecated: Use video_path instead
+  video_path?: string | null;
+  thumbnail_path?: string | null;
   features: string[];
   software: string[];
   plugins: string[];

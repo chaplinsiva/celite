@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
-import { convertR2UrlToCdn } from '../../../../lib/utils';
+import { getSignedSourceUrl } from '../../../../lib/r2Client';
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
@@ -55,49 +55,25 @@ export async function GET(
       return NextResponse.json({ error: 'Source file not available for this template' }, { status: 404 });
     }
 
-    // Check if source_path is a full URL (starts with http:// or https://)
+    // Check if source_path is a full URL (legacy support)
     const isFullUrl = sourcePath.startsWith('http://') || sourcePath.startsWith('https://');
-    
-    // Check if source_path is an R2 path (starts with category/ or is a relative path)
-    // R2 paths are stored as: category/subcategory/source/{filename}
-    // Supabase storage paths are stored as: templatesource/{filename} or just the filename
-    const isR2Path = !isFullUrl && sourcePath.includes('/') && !sourcePath.startsWith('templatesource/');
-    
-    console.log(`Download request for ${slug}: sourcePath=${sourcePath}, isFullUrl=${isFullUrl}, isR2Path=${isR2Path}`);
     
     let downloadUrl: string;
     
-    // If it's a full URL, convert it if it's an old R2 URL
     if (isFullUrl) {
-      downloadUrl = convertR2UrlToCdn(sourcePath) || sourcePath;
-    } else if (isR2Path) {
-      // For R2 paths, construct the public URL using CDN domain
-      // Use cdn.celite.in directly instead of R2_DIRECT_BASE_URL
-      downloadUrl = `https://cdn.celite.in/${sourcePath}`;
+      // Legacy: If it's a full URL, it might be from old system
+      // For security, we should migrate these to R2, but for now support them
+      downloadUrl = sourcePath;
     } else {
-      // Legacy Supabase storage path
-      // Remove 'templatesource/' prefix if present
-      const storagePath = sourcePath.startsWith('templatesource/') 
-        ? sourcePath.replace('templatesource/', '')
-        : sourcePath;
-      
-      // Create signed URL from private bucket 'templatesource'
-      const { data, error: signErr } = await admin
-        .storage
-        .from('templatesource')
-        .createSignedUrl(storagePath, 60 * 60); // 1 hour
-      
-      if (signErr) {
-        console.error('Supabase storage error:', signErr);
-        return NextResponse.json({ error: `Storage error: ${signErr.message}` }, { status: 500 });
+      // New R2 system: source_path is the R2 key in celite-source-files bucket
+      // Generate a signed URL with short expiry (15 minutes) for security
+      // This ensures the link is not shareable and expires quickly
+      try {
+        downloadUrl = await getSignedSourceUrl(sourcePath, 15 * 60); // 15 minutes expiry
+      } catch (r2Error: any) {
+        console.error('R2 signed URL generation error:', r2Error);
+        return NextResponse.json({ error: 'Failed to generate secure download link' }, { status: 500 });
       }
-
-      if (!data || !data.signedUrl) {
-        console.error('No signed URL returned from Supabase storage');
-        return NextResponse.json({ error: 'Failed to generate download link' }, { status: 500 });
-      }
-
-      downloadUrl = data.signedUrl;
     }
 
     // Record download - do this before returning the URL

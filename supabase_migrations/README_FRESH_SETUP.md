@@ -150,7 +150,7 @@ Expected output:
 
 ### Key Features
 
-- **YouTube Preview System**: Templates use YouTube video links instead of storage bucket images/videos
+- **R2 Storage System**: Templates use Cloudflare R2 for previews (video, thumbnail, audio, 3D models) and source files
 - **Row Level Security (RLS)**: Enabled on all tables with appropriate policies
 - **Indexes**: Optimized for common queries
 - **Foreign Keys**: Proper relationships between tables
@@ -165,7 +165,7 @@ Expected output:
 2. **Add Templates**:
    - Log in as admin
    - Go to Admin Panel → Products
-   - Add templates with YouTube video links
+   - Add templates with preview files uploaded to R2 storage
 
 3. **Test the Application**:
    - Create a test user account

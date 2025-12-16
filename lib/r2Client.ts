@@ -1,10 +1,12 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // Cloudflare R2 is S3-compatible, so we use AWS SDK
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || '';
 const R2_ENDPOINT = process.env.R2_ENDPOINT || (R2_ACCOUNT_ID ? `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com` : '');
-const BUCKET_NAME = process.env.R2_SOURCE_BUCKET || '';
-const R2_PUBLIC_URL = process.env.R2_DIRECT_BASE_URL || '';
+const R2_SOURCE_BUCKET = process.env.R2_SOURCE_BUCKET || 'celite-source-files';
+const R2_PREVIEWS_BUCKET = process.env.R2_PREVIEWS_BUCKET || 'celite-previews';
+const R2_PREVIEWS_DOMAIN = process.env.R2_PREVIEWS_DOMAIN || 'preview.celite.in';
 
 // Validate R2 configuration (only at runtime, not during build)
 function validateR2Config() {
@@ -15,12 +17,6 @@ function validateR2Config() {
       ? `\n\nSOLUTION: Either:\n1. Set R2_ENDPOINT=https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com\n2. Or remove R2_ENDPOINT and let it auto-generate from R2_ACCOUNT_ID`
       : '\n\nSOLUTION: Set R2_ENDPOINT to your actual endpoint URL (e.g., https://your-account-id.r2.cloudflarestorage.com) or set R2_ACCOUNT_ID to auto-generate it.';
     throw new Error('R2_ENDPOINT environment variable contains template string. Set it to the actual endpoint URL (e.g., https://your-account-id.r2.cloudflarestorage.com)' + suggestion);
-  }
-
-  // Validate that R2_PUBLIC_URL doesn't contain template strings
-  if (R2_PUBLIC_URL && (R2_PUBLIC_URL.includes('${') || R2_PUBLIC_URL.includes('${r2_account_id}'))) {
-    console.error('Invalid R2_DIRECT_BASE_URL: contains template string. Please set the actual public URL.');
-    throw new Error('R2_DIRECT_BASE_URL environment variable contains template string. Set it to the actual public URL (e.g., https://cdn.celite.in)');
   }
 }
 
@@ -39,18 +35,17 @@ export interface UploadResult {
 }
 
 /**
- * Upload a file to Cloudflare R2
+ * Upload a source file to private R2 bucket (celite-source-files)
  * @param file - The file to upload (File or Buffer)
- * @param key - The object key (path) in R2 (e.g., "category/subcategory/source.zip")
- * @param contentType - MIME type (e.g., 'application/zip', 'image/jpeg', 'video/mp4')
- * @returns The public URL and key of the uploaded file
+ * @param key - The object key (path) in R2
+ * @param contentType - MIME type (e.g., 'application/zip')
+ * @returns The key of the uploaded file (no public URL for private bucket)
  */
-export async function uploadToR2(
+export async function uploadSourceToR2(
   file: File | Buffer,
   key: string,
   contentType: string = 'application/octet-stream'
 ): Promise<UploadResult> {
-  // Validate configuration only when actually using R2
   validateR2Config();
   
   let body: Buffer;
@@ -62,7 +57,7 @@ export async function uploadToR2(
   }
   
   const command = new PutObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: R2_SOURCE_BUCKET,
     Key: key,
     Body: body,
     ContentType: contentType,
@@ -70,16 +65,46 @@ export async function uploadToR2(
 
   await r2Client.send(command);
 
-  // Construct public URL
-  let publicUrl: string;
-  if (R2_PUBLIC_URL) {
-    publicUrl = `${R2_PUBLIC_URL}/${key}`;
-  } else if (R2_ENDPOINT && BUCKET_NAME) {
-    // Construct URL from endpoint: replace https:// with https://bucket-name.
-    publicUrl = `${R2_ENDPOINT.replace('https://', `https://${BUCKET_NAME}.`)}/${key}`;
+  // Return key only (private bucket, no public URL)
+  return {
+    url: key, // Store key as URL for reference
+    key,
+  };
+}
+
+/**
+ * Upload a preview file to public R2 bucket (celite-previews)
+ * @param file - The file to upload (File or Buffer)
+ * @param key - The object key (path) in R2
+ * @param contentType - MIME type (e.g., 'image/jpeg', 'video/mp4')
+ * @returns The public URL and key of the uploaded file
+ */
+export async function uploadPreviewToR2(
+  file: File | Buffer,
+  key: string,
+  contentType: string = 'application/octet-stream'
+): Promise<UploadResult> {
+  validateR2Config();
+  
+  let body: Buffer;
+  if (file instanceof File) {
+    const arrayBuffer = await file.arrayBuffer();
+    body = Buffer.from(arrayBuffer);
   } else {
-    throw new Error('R2 configuration error: Either R2_DIRECT_BASE_URL or both R2_ENDPOINT and R2_SOURCE_BUCKET must be set');
+    body = file;
   }
+  
+  const command = new PutObjectCommand({
+    Bucket: R2_PREVIEWS_BUCKET,
+    Key: key,
+    Body: body,
+    ContentType: contentType,
+  });
+
+  await r2Client.send(command);
+
+  // Construct public URL using preview domain
+  const publicUrl = `https://${R2_PREVIEWS_DOMAIN}/${key}`;
 
   return {
     url: publicUrl,
@@ -88,15 +113,27 @@ export async function uploadToR2(
 }
 
 /**
- * Delete a file from Cloudflare R2
+ * @deprecated Use uploadSourceToR2 or uploadPreviewToR2 instead
+ * Upload a file to Cloudflare R2 (legacy function)
+ */
+export async function uploadToR2(
+  file: File | Buffer,
+  key: string,
+  contentType: string = 'application/octet-stream'
+): Promise<UploadResult> {
+  // Default to preview bucket for backward compatibility
+  return uploadPreviewToR2(file, key, contentType);
+}
+
+/**
+ * Delete a source file from private R2 bucket
  * @param key - The object key (path) in R2
  */
-export async function deleteFromR2(key: string): Promise<void> {
-  // Validate configuration only when actually using R2
+export async function deleteSourceFromR2(key: string): Promise<void> {
   validateR2Config();
   
   const command = new DeleteObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: R2_SOURCE_BUCKET,
     Key: key,
   });
 
@@ -104,16 +141,39 @@ export async function deleteFromR2(key: string): Promise<void> {
 }
 
 /**
- * Get a file from Cloudflare R2 (for secure source file downloads)
+ * Delete a preview file from public R2 bucket
+ * @param key - The object key (path) in R2
+ */
+export async function deletePreviewFromR2(key: string): Promise<void> {
+  validateR2Config();
+  
+  const command = new DeleteObjectCommand({
+    Bucket: R2_PREVIEWS_BUCKET,
+    Key: key,
+  });
+
+  await r2Client.send(command);
+}
+
+/**
+ * @deprecated Use deleteSourceFromR2 or deletePreviewFromR2 instead
+ * Delete a file from Cloudflare R2 (legacy function)
+ */
+export async function deleteFromR2(key: string): Promise<void> {
+  // Default to preview bucket for backward compatibility
+  return deletePreviewFromR2(key);
+}
+
+/**
+ * Get a source file from private R2 bucket (for secure downloads)
  * @param key - The object key (path) in R2
  * @returns The file buffer and content type
  */
-export async function getFileFromR2(key: string): Promise<{ body: Buffer; contentType: string }> {
-  // Validate configuration only when actually using R2
+export async function getSourceFileFromR2(key: string): Promise<{ body: Buffer; contentType: string }> {
   validateR2Config();
   
   const command = new GetObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: R2_SOURCE_BUCKET,
     Key: key,
   });
 
@@ -137,114 +197,189 @@ export async function getFileFromR2(key: string): Promise<{ body: Buffer; conten
 }
 
 /**
- * Extract R2 key from a public R2 URL
- * @param url - The public R2 URL
- * @returns The R2 key (path) or null if not a valid R2 URL
+ * Generate a signed URL for downloading a source file from private R2 bucket
+ * @param key - The object key (path) in R2
+ * @param expiresIn - Expiration time in seconds (default: 3600 = 1 hour)
+ * @returns The signed URL
  */
-export function extractR2KeyFromUrl(url: string): string | null {
+export async function getSignedSourceUrl(key: string, expiresIn: number = 3600): Promise<string> {
+  validateR2Config();
+  
+  const command = new GetObjectCommand({
+    Bucket: R2_SOURCE_BUCKET,
+    Key: key,
+  });
+
+  const signedUrl = await getSignedUrl(r2Client, command, { expiresIn });
+  return signedUrl;
+}
+
+/**
+ * @deprecated Use getSourceFileFromR2 instead
+ * Get a file from Cloudflare R2 (legacy function)
+ */
+export async function getFileFromR2(key: string): Promise<{ body: Buffer; contentType: string }> {
+  return getSourceFileFromR2(key);
+}
+
+/**
+ * Extract R2 key from a preview URL
+ * @param url - The preview URL
+ * @returns The R2 key (path) or null if not a valid preview URL
+ */
+export function extractR2KeyFromPreviewUrl(url: string): string | null {
   if (!url || typeof url !== 'string') return null;
   
-  // Check if it's a public R2 URL
-  if (R2_PUBLIC_URL && url.startsWith(R2_PUBLIC_URL)) {
-    return url.replace(R2_PUBLIC_URL + '/', '');
-  }
-  
-  // Check if it's the endpoint-based URL
-  const endpointUrl = `${R2_ENDPOINT?.replace('https://', `https://${BUCKET_NAME}.`)}/`;
-  if (url.startsWith(endpointUrl)) {
-    return url.replace(endpointUrl, '');
+  // Check if it's a preview domain URL
+  if (url.includes(R2_PREVIEWS_DOMAIN)) {
+    return url.replace(`https://${R2_PREVIEWS_DOMAIN}/`, '');
   }
   
   return null;
 }
 
 /**
- * Generate R2 key path for source files: category/subcategory/sub-subcategory/{filename}
+ * @deprecated Use extractR2KeyFromPreviewUrl instead
+ * Extract R2 key from a public R2 URL (legacy function)
+ */
+export function extractR2KeyFromUrl(url: string): string | null {
+  return extractR2KeyFromPreviewUrl(url);
+}
+
+/**
+ * Generate R2 key path for source files: category/subcategory/sub-subcategory/{templateFolder}/{filename}
  * @param categorySlug - Category slug
  * @param subcategorySlug - Subcategory slug (optional)
  * @param subSubcategorySlug - Sub-subcategory slug (optional)
+ * @param templateFolder - Template folder name (from template name)
  * @param filename - Filename with extension
  */
-export function generateSourceKey(categorySlug: string, subcategorySlug: string | null, filename: string, subSubcategorySlug?: string | null): string {
-  const parts = [categorySlug];
+export function generateSourceKey(
+  categorySlug: string, 
+  subcategorySlug: string | null, 
+  filename: string, 
+  subSubcategorySlug?: string | null,
+  templateFolder?: string | null
+): string {
+  const parts: string[] = [];
+  if (categorySlug) parts.push(categorySlug);
   if (subcategorySlug) parts.push(subcategorySlug);
   if (subSubcategorySlug) parts.push(subSubcategorySlug);
+  if (templateFolder) parts.push(templateFolder);
   parts.push(filename);
   return parts.join('/');
 }
 
 /**
- * Generate R2 key path for preview files: category/subcategory/sub-subcategory/preview/{filename}
+ * Generate R2 key path for preview files: preview/{previewType}/category/subcategory/sub-subcategory/{templateFolder}/{filename}
+ * @param previewType - Type of preview: 'thumbnail', 'video', 'audio', 'model'
  * @param categorySlug - Category slug
  * @param subcategorySlug - Subcategory slug (optional)
  * @param subSubcategorySlug - Sub-subcategory slug (optional)
+ * @param templateFolder - Template folder name (from template name)
  * @param filename - Filename with extension
  */
-export function generatePreviewKey(categorySlug: string, subcategorySlug: string | null, filename: string, subSubcategorySlug?: string | null): string {
-  const parts = [categorySlug];
+export function generatePreviewKey(
+  previewType: 'thumbnail' | 'video' | 'audio' | 'model',
+  categorySlug: string, 
+  subcategorySlug: string | null, 
+  filename: string, 
+  subSubcategorySlug?: string | null,
+  templateFolder?: string | null
+): string {
+  const parts = ['preview', previewType];
+  if (categorySlug) parts.push(categorySlug);
   if (subcategorySlug) parts.push(subcategorySlug);
   if (subSubcategorySlug) parts.push(subSubcategorySlug);
-  parts.push('preview', filename);
+  if (templateFolder) parts.push(templateFolder);
+  parts.push(filename);
   return parts.join('/');
 }
 
 /**
- * Generate R2 key path for video files: category/subcategory/sub-subcategory/video/{filename}
+ * Generate R2 key path for video files: preview/video/category/subcategory/sub-subcategory/{templateFolder}/{filename}
  * @param categorySlug - Category slug
  * @param subcategorySlug - Subcategory slug (optional)
  * @param subSubcategorySlug - Sub-subcategory slug (optional)
+ * @param templateFolder - Template folder name (from template name)
  * @param filename - Filename with extension
  */
-export function generateVideoKey(categorySlug: string, subcategorySlug: string | null, filename: string, subSubcategorySlug?: string | null): string {
-  const parts = [categorySlug];
-  if (subcategorySlug) parts.push(subcategorySlug);
-  if (subSubcategorySlug) parts.push(subSubcategorySlug);
-  parts.push('video', filename);
-  return parts.join('/');
+export function generateVideoKey(
+  categorySlug: string, 
+  subcategorySlug: string | null, 
+  filename: string, 
+  subSubcategorySlug?: string | null,
+  templateFolder?: string | null
+): string {
+  return generatePreviewKey('video', categorySlug, subcategorySlug, filename, subSubcategorySlug, templateFolder);
 }
 
 /**
- * Generate R2 key path for thumbnail files: category/subcategory/sub-subcategory/thumbnail/{filename}
+ * Generate R2 key path for thumbnail files: preview/thumbnail/category/subcategory/sub-subcategory/{templateFolder}/{filename}
  * @param categorySlug - Category slug
  * @param subcategorySlug - Subcategory slug (optional)
  * @param subSubcategorySlug - Sub-subcategory slug (optional)
+ * @param templateFolder - Template folder name (from template name)
  * @param filename - Filename with extension
  */
-export function generateThumbnailKey(categorySlug: string, subcategorySlug: string | null, filename: string, subSubcategorySlug?: string | null): string {
-  const parts = [categorySlug];
-  if (subcategorySlug) parts.push(subcategorySlug);
-  if (subSubcategorySlug) parts.push(subSubcategorySlug);
-  parts.push('thumbnail', filename);
-  return parts.join('/');
+export function generateThumbnailKey(
+  categorySlug: string, 
+  subcategorySlug: string | null, 
+  filename: string, 
+  subSubcategorySlug?: string | null,
+  templateFolder?: string | null
+): string {
+  return generatePreviewKey('thumbnail', categorySlug, subcategorySlug, filename, subSubcategorySlug, templateFolder);
 }
 
 /**
- * Generate R2 key path for audio preview files: category/subcategory/sub-subcategory/audio/{filename}
+ * Generate R2 key path for audio preview files: preview/audio/category/subcategory/sub-subcategory/{templateFolder}/{filename}
  * @param categorySlug - Category slug
  * @param subcategorySlug - Subcategory slug (optional)
  * @param subSubcategorySlug - Sub-subcategory slug (optional)
+ * @param templateFolder - Template folder name (from template name)
  * @param filename - Filename with extension
  */
-export function generateAudioPreviewKey(categorySlug: string, subcategorySlug: string | null, filename: string, subSubcategorySlug?: string | null): string {
-  const parts = [categorySlug];
-  if (subcategorySlug) parts.push(subcategorySlug);
-  if (subSubcategorySlug) parts.push(subSubcategorySlug);
-  parts.push('audio', filename);
-  return parts.join('/');
+export function generateAudioPreviewKey(
+  categorySlug: string, 
+  subcategorySlug: string | null, 
+  filename: string, 
+  subSubcategorySlug?: string | null,
+  templateFolder?: string | null
+): string {
+  return generatePreviewKey('audio', categorySlug, subcategorySlug, filename, subSubcategorySlug, templateFolder);
 }
 
 /**
- * Generate R2 key path for 3D model files: category/subcategory/sub-subcategory/model/{filename}
+ * Generate R2 key path for 3D model files: preview/model/category/subcategory/sub-subcategory/{templateFolder}/{filename}
  * @param categorySlug - Category slug
  * @param subcategorySlug - Subcategory slug (optional)
  * @param subSubcategorySlug - Sub-subcategory slug (optional)
+ * @param templateFolder - Template folder name (from template name)
  * @param filename - Filename with extension
  */
-export function generateModel3DKey(categorySlug: string, subcategorySlug: string | null, filename: string, subSubcategorySlug?: string | null): string {
-  const parts = [categorySlug];
-  if (subcategorySlug) parts.push(subcategorySlug);
-  if (subSubcategorySlug) parts.push(subSubcategorySlug);
-  parts.push('model', filename);
-  return parts.join('/');
+export function generateModel3DKey(
+  categorySlug: string, 
+  subcategorySlug: string | null, 
+  filename: string, 
+  subSubcategorySlug?: string | null,
+  templateFolder?: string | null
+): string {
+  return generatePreviewKey('model', categorySlug, subcategorySlug, filename, subSubcategorySlug, templateFolder);
+}
+
+/**
+ * Generate a folder name from template name (sanitized for use in file paths)
+ * @param templateName - Template name
+ * @returns Sanitized folder name
+ */
+export function generateTemplateFolder(templateName: string): string {
+  return templateName
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 

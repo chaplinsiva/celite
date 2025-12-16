@@ -70,7 +70,7 @@ Expected: `templates: 0, categories: 3, subcategories: 15, admins: 1+, settings:
 
 1. Log in as admin
 2. Go to Admin Panel
-3. Add your first template with YouTube video link
+3. Add your first template with preview files uploaded to R2 storage
 4. Test the application!
 
 ---

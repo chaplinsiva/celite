@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       .maybeSingle();
     if (readErr) return NextResponse.json({ ok: false, error: readErr.message }, { status: 500 });
 
-    // Only delete source files - preview images/videos are now YouTube links, not stored in storage
+    // Delete source files from storage - preview files are stored in R2 and managed separately
     const srcBucket = 'templatesource';
     const srcPath = (row?.source_path as string) || null;
 
