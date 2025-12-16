@@ -119,16 +119,16 @@ export async function GET(req: Request) {
       // Get subscription prices from settings
       let monthlyPrice = 799; // Default
       let yearlyPrice = 5499; // Default
-      
+
       try {
         const { data: settings } = await admin.from('settings').select('key,value');
         if (settings) {
           const settingsMap: Record<string, string> = {};
           settings.forEach((row: any) => { settingsMap[row.key] = row.value; });
-          
+
           const monthlyPaise = Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || 79900);
           const yearlyPaise = Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || 549900);
-          
+
           // Convert from paise to INR (if >= threshold, it's in paise)
           monthlyPrice = monthlyPaise >= 10000 ? monthlyPaise / 100 : monthlyPaise;
           yearlyPrice = yearlyPaise >= 100000 ? yearlyPaise / 100 : yearlyPaise;
@@ -147,11 +147,11 @@ export async function GET(req: Request) {
         // Calculate total revenue pool from active subscriptions
         let totalPool = 0;
         const now = Date.now();
-        
+
         allSubs.forEach((s: any) => {
           const validUntil = s.valid_until ? new Date(s.valid_until as any).getTime() : null;
           const isValid = !validUntil || validUntil > now;
-          
+
           if (isValid) {
             if (s.plan === 'monthly' || s.plan === 'weekly') {
               totalPool += monthlyPrice;
@@ -168,17 +168,17 @@ export async function GET(req: Request) {
 
         if (allShops && allShops.length > 0) {
           const creatorStats: Array<{ shopId: string; uniqueUsers: number }> = [];
-          
+
           for (const creatorShop of allShops) {
             // Get all templates for this creator
             const { data: creatorTemplates } = await admin
               .from('templates')
               .select('slug')
               .eq('creator_shop_id', creatorShop.id);
-            
+
             if (creatorTemplates && creatorTemplates.length > 0) {
               const creatorSlugs = creatorTemplates.map((t: any) => t.slug).filter(Boolean);
-              
+
               // Get downloads for this creator's templates
               const { data: creatorDownloads } = await admin
                 .from('downloads')
@@ -238,7 +238,7 @@ export async function GET(req: Request) {
             const creatorShare = uniqueUserPeriods / totalUniqueUsers;
             const creatorPool = totalPool * 0.4; // 40% of total pool
             creatorRevenue = creatorPool * creatorShare;
-            
+
             // Apply minimum payout of 800
             // If revenue is less than 800, it's not eligible for payout yet
             // But we still show the calculated revenue
@@ -323,7 +323,7 @@ export async function POST(req: Request) {
       // If slug exists and belongs to another creator, append a number
       finalSlug = `${rawSlug}-${attempt}`;
       attempt++;
-      
+
       // Safety check to prevent infinite loop
       if (attempt > 100) {
         return NextResponse.json({ ok: false, error: 'Unable to generate unique slug. Please try a different name.' }, { status: 500 });
@@ -348,6 +348,7 @@ export async function POST(req: Request) {
       tags: Array.isArray(input.tags) ? input.tags : [],
       category_id: input.category_id || null,
       subcategory_id: input.subcategory_id || null,
+      sub_subcategory_id: input.sub_subcategory_id || null,
       meta_title: (input.meta_title || '').toString().trim() || null,
       meta_description: (input.meta_description || '').toString().trim() || null,
       creator_shop_id: shop.id,
