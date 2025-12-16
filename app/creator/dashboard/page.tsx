@@ -149,6 +149,104 @@ export default function CreatorDashboardPage() {
     return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
   };
 
+  // Fallback to server-side upload when direct upload fails (e.g., CORS error)
+  const fallbackToServerUpload = async (
+    kind: 'source' | 'video' | 'thumbnail' | 'audio_preview' | 'model_3d',
+    file: File,
+    resolve: () => void,
+    reject: (error: Error) => void
+  ) => {
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        reject(new Error('Not authenticated'));
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('kind', kind);
+      fd.append('category_id', form.category_id);
+      if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
+      if (form.sub_subcategory_id) fd.append('sub_subcategory_id', form.sub_subcategory_id);
+      if (form.slug) fd.append('slug', form.slug);
+      if (form.name) fd.append('template_name', form.name);
+
+      const xhr = new XMLHttpRequest();
+      let lastLoaded = 0;
+      let lastTime = Date.now();
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = Math.round((e.loaded / e.total) * 100);
+          setUploadProgress((prev) => ({ ...prev, [kind]: percentComplete }));
+
+          const now = Date.now();
+          const timeDelta = (now - lastTime) / 1000;
+          if (timeDelta > 0.5) {
+            const bytesDelta = e.loaded - lastLoaded;
+            const speed = bytesDelta / timeDelta;
+            setUploadSpeed((prev) => ({ ...prev, [kind]: formatSpeed(speed) }));
+            lastLoaded = e.loaded;
+            lastTime = now;
+          }
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const json = JSON.parse(xhr.responseText);
+            if (json.ok && json.url) {
+              if (kind === 'source') {
+                setForm((f) => ({ ...f, source_path: json.key }));
+              } else if (kind === 'video') {
+                setForm((f) => ({ ...f, video_path: json.url }));
+              } else if (kind === 'thumbnail') {
+                setForm((f) => ({ ...f, thumbnail_path: json.url }));
+              } else if (kind === 'audio_preview') {
+                setForm((f) => ({ ...f, audio_preview_path: json.url }));
+              } else if (kind === 'model_3d') {
+                setForm((f) => ({ ...f, model_3d_path: json.url }));
+              }
+              setMessage('File uploaded successfully (via server)');
+              setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
+              setUploadSpeed((prev) => ({ ...prev, [kind]: '' }));
+              resolve();
+            } else {
+              setError(json.error || 'Upload failed');
+              reject(new Error(json.error || 'Upload failed'));
+            }
+          } catch (e) {
+            setError('Failed to parse response');
+            reject(e as Error);
+          }
+        } else {
+          try {
+            const json = JSON.parse(xhr.responseText);
+            setError(json.error || 'Upload failed');
+          } catch {
+            setError('Upload failed');
+          }
+          reject(new Error('Upload failed'));
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        setError('Upload failed');
+        reject(new Error('Upload failed'));
+      });
+
+      xhr.open('POST', '/api/creator/upload-r2');
+      xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+      xhr.send(fd);
+    } catch (e: any) {
+      setError(e?.message || 'Upload failed');
+      reject(e);
+    }
+  };
+
   const uploadFile = async (kind: 'source' | 'video' | 'thumbnail' | 'audio_preview' | 'model_3d', file: File) => {
     if (!form.category_id) {
       setError('Please select a category first');
@@ -269,15 +367,24 @@ export default function CreatorDashboardPage() {
               setUploadSpeed((prev) => ({ ...prev, [kind]: '' }));
               resolve();
             } else {
-              setError('Upload failed');
-              reject(new Error('Upload failed'));
+              // If status is not 2xx, it might be a CORS or other error
+              // Try to fallback to server-side upload
+              console.warn(`[Upload] Direct upload failed with status ${xhr.status}, falling back to server-side upload`);
+              fallbackToServerUpload(kind, fileToUpload, resolve, reject);
             }
           });
           
-          // Handle errors
+          // Handle errors (network errors, CORS errors, etc.)
           xhr.addEventListener('error', () => {
-            setError('Upload failed');
-            reject(new Error('Upload failed'));
+            // CORS errors typically result in status 0
+            console.warn('[Upload] Network/CORS error detected, falling back to server-side upload');
+            fallbackToServerUpload(kind, fileToUpload, resolve, reject);
+          });
+          
+          // Handle timeout
+          xhr.addEventListener('timeout', () => {
+            console.warn('[Upload] Upload timeout, falling back to server-side upload');
+            fallbackToServerUpload(kind, fileToUpload, resolve, reject);
           });
           
           xhr.addEventListener('abort', () => {
