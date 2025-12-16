@@ -14,6 +14,7 @@ type CreatorShop = {
   bank_account_number: string | null;
   bank_ifsc: string | null;
   bank_upi_id: string | null;
+  direct_upload_enabled?: boolean;
 };
 
 type CreatorTemplateRow = {
@@ -97,6 +98,19 @@ export default function CreatorDashboardPage() {
     audio_preview: 0,
     model_3d: 0,
   });
+  const [uploadSpeed, setUploadSpeed] = useState<{
+    source: string;
+    video: string;
+    thumbnail: string;
+    audio_preview: string;
+    model_3d: string;
+  }>({
+    source: '',
+    video: '',
+    thumbnail: '',
+    audio_preview: '',
+    model_3d: '',
+  });
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
@@ -129,6 +143,12 @@ export default function CreatorDashboardPage() {
     setSlugManuallyEdited(false);
   };
 
+  const formatSpeed = (bytesPerSecond: number): string => {
+    if (bytesPerSecond < 1024) return `${bytesPerSecond.toFixed(0)} B/s`;
+    if (bytesPerSecond < 1024 * 1024) return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`;
+    return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
+  };
+
   const uploadFile = async (kind: 'source' | 'video' | 'thumbnail' | 'audio_preview' | 'model_3d', file: File) => {
     if (!form.category_id) {
       setError('Please select a category first');
@@ -158,6 +178,7 @@ export default function CreatorDashboardPage() {
     
     // Reset progress and set uploading state
     setUploadProgress((prev) => ({ ...prev, [kind]: 0 }));
+    setUploadSpeed((prev) => ({ ...prev, [kind]: '' }));
     if (kind === 'source') setUploadingSource(true);
     else if (kind === 'video') setUploadingVideo(true);
     else if (kind === 'thumbnail') setUploadingThumbnail(true);
@@ -165,85 +186,202 @@ export default function CreatorDashboardPage() {
     else if (kind === 'model_3d') setUploadingModel3D(true);
     
     try {
-      const fd = new FormData();
-      fd.append('file', fileToUpload);
-      fd.append('kind', kind);
-      fd.append('category_id', form.category_id);
-      if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
-      if (form.sub_subcategory_id) fd.append('sub_subcategory_id', form.sub_subcategory_id);
-      if (form.slug) fd.append('slug', form.slug);
-      if (form.name) fd.append('template_name', form.name); // Required for folder structure
+      // Check if direct upload is enabled
+      const useDirectUpload = shop?.direct_upload_enabled === true;
       
-      // Use XMLHttpRequest for progress tracking
-      return new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        
-        // Track upload progress
-        xhr.upload.addEventListener('progress', (e) => {
-          if (e.lengthComputable) {
-            const percentComplete = Math.round((e.loaded / e.total) * 100);
-            setUploadProgress((prev) => ({ ...prev, [kind]: percentComplete }));
-          }
+      if (useDirectUpload) {
+        // Direct upload using presigned URL
+        // Step 1: Get presigned URL
+        const presignedRes = await fetch('/api/creator/presigned-upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            kind,
+            category_id: form.category_id,
+            subcategory_id: form.subcategory_id || null,
+            sub_subcategory_id: form.sub_subcategory_id || null,
+            slug: form.slug || null,
+            template_name: form.name,
+            filename: fileToUpload.name,
+            contentType: fileToUpload.type || 'application/octet-stream',
+          }),
         });
-        
-        // Handle completion
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const json = JSON.parse(xhr.responseText);
-              if (json.ok && json.url) {
-                // Update the form field immediately with the uploaded URL/key
-                // For source files, json.url is the key (stored in source_path)
-                // For preview files, json.url is the public URL
-                if (kind === 'source') {
-                  setForm((f) => ({ ...f, source_path: json.key })); // Store key for source files
-                } else if (kind === 'video') {
-                  setForm((f) => ({ ...f, video_path: json.url })); // Store public URL for previews
-                } else if (kind === 'thumbnail') {
-                  setForm((f) => ({ ...f, thumbnail_path: json.url }));
-                } else if (kind === 'audio_preview') {
-                  setForm((f) => ({ ...f, audio_preview_path: json.url }));
-                } else if (kind === 'model_3d') {
-                  setForm((f) => ({ ...f, model_3d_path: json.url }));
-                }
-                setMessage('File uploaded successfully');
-                setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
-                resolve();
-              } else {
-                setError(json.error || 'Upload failed');
-                reject(new Error(json.error || 'Upload failed'));
+
+        const presignedJson = await presignedRes.json();
+        if (!presignedRes.ok || !presignedJson.ok) {
+          throw new Error(presignedJson.error || 'Failed to get upload URL');
+        }
+
+        // Step 2: Upload directly to R2 using presigned URL
+        return new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          let lastLoaded = 0;
+          let lastTime = Date.now();
+          
+          // Track upload progress with speed calculation
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+              const percentComplete = Math.round((e.loaded / e.total) * 100);
+              setUploadProgress((prev) => ({ ...prev, [kind]: percentComplete }));
+              
+              // Calculate speed
+              const now = Date.now();
+              const timeDelta = (now - lastTime) / 1000; // seconds
+              if (timeDelta > 0.5) { // Update speed every 500ms
+                const bytesDelta = e.loaded - lastLoaded;
+                const speed = bytesDelta / timeDelta;
+                setUploadSpeed((prev) => ({ ...prev, [kind]: formatSpeed(speed) }));
+                lastLoaded = e.loaded;
+                lastTime = now;
               }
-            } catch (e) {
-              setError('Failed to parse response');
-              reject(e);
             }
-          } else {
-            try {
-              const json = JSON.parse(xhr.responseText);
-              setError(json.error || 'Upload failed');
-            } catch {
+          });
+          
+          // Handle completion
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              // For direct upload, we need to construct the URL based on bucket
+              const bucket = presignedJson.bucket;
+              const key = presignedJson.key;
+              
+              if (kind === 'source') {
+                setForm((f) => ({ ...f, source_path: key }));
+              } else {
+                // For preview files, construct public URL
+                const publicUrl = bucket === 'preview' 
+                  ? `https://preview.celite.in/${key}`
+                  : key;
+                if (kind === 'video') {
+                  setForm((f) => ({ ...f, video_path: publicUrl }));
+                } else if (kind === 'thumbnail') {
+                  setForm((f) => ({ ...f, thumbnail_path: publicUrl }));
+                } else if (kind === 'audio_preview') {
+                  setForm((f) => ({ ...f, audio_preview_path: publicUrl }));
+                } else if (kind === 'model_3d') {
+                  setForm((f) => ({ ...f, model_3d_path: publicUrl }));
+                }
+              }
+              setMessage('File uploaded successfully');
+              setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
+              setUploadSpeed((prev) => ({ ...prev, [kind]: '' }));
+              resolve();
+            } else {
               setError('Upload failed');
+              reject(new Error('Upload failed'));
             }
+          });
+          
+          // Handle errors
+          xhr.addEventListener('error', () => {
+            setError('Upload failed');
             reject(new Error('Upload failed'));
-          }
+          });
+          
+          xhr.addEventListener('abort', () => {
+            setError('Upload cancelled');
+            reject(new Error('Upload cancelled'));
+          });
+          
+          // Upload directly to R2
+          xhr.open('PUT', presignedJson.presignedUrl);
+          xhr.setRequestHeader('Content-Type', fileToUpload.type || 'application/octet-stream');
+          xhr.send(fileToUpload);
         });
+      } else {
+        // Server-side upload (existing method)
+        const fd = new FormData();
+        fd.append('file', fileToUpload);
+        fd.append('kind', kind);
+        fd.append('category_id', form.category_id);
+        if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
+        if (form.sub_subcategory_id) fd.append('sub_subcategory_id', form.sub_subcategory_id);
+        if (form.slug) fd.append('slug', form.slug);
+        if (form.name) fd.append('template_name', form.name);
         
-        // Handle errors
-        xhr.addEventListener('error', () => {
-          setError('Upload failed');
-          reject(new Error('Upload failed'));
+        return new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          let lastLoaded = 0;
+          let lastTime = Date.now();
+          
+          // Track upload progress with speed calculation
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+              const percentComplete = Math.round((e.loaded / e.total) * 100);
+              setUploadProgress((prev) => ({ ...prev, [kind]: percentComplete }));
+              
+              // Calculate speed
+              const now = Date.now();
+              const timeDelta = (now - lastTime) / 1000;
+              if (timeDelta > 0.5) {
+                const bytesDelta = e.loaded - lastLoaded;
+                const speed = bytesDelta / timeDelta;
+                setUploadSpeed((prev) => ({ ...prev, [kind]: formatSpeed(speed) }));
+                lastLoaded = e.loaded;
+                lastTime = now;
+              }
+            }
+          });
+          
+          // Handle completion
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const json = JSON.parse(xhr.responseText);
+                if (json.ok && json.url) {
+                  if (kind === 'source') {
+                    setForm((f) => ({ ...f, source_path: json.key }));
+                  } else if (kind === 'video') {
+                    setForm((f) => ({ ...f, video_path: json.url }));
+                  } else if (kind === 'thumbnail') {
+                    setForm((f) => ({ ...f, thumbnail_path: json.url }));
+                  } else if (kind === 'audio_preview') {
+                    setForm((f) => ({ ...f, audio_preview_path: json.url }));
+                  } else if (kind === 'model_3d') {
+                    setForm((f) => ({ ...f, model_3d_path: json.url }));
+                  }
+                  setMessage('File uploaded successfully');
+                  setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
+                  setUploadSpeed((prev) => ({ ...prev, [kind]: '' }));
+                  resolve();
+                } else {
+                  setError(json.error || 'Upload failed');
+                  reject(new Error(json.error || 'Upload failed'));
+                }
+              } catch (e) {
+                setError('Failed to parse response');
+                reject(e);
+              }
+            } else {
+              try {
+                const json = JSON.parse(xhr.responseText);
+                setError(json.error || 'Upload failed');
+              } catch {
+                setError('Upload failed');
+              }
+              reject(new Error('Upload failed'));
+            }
+          });
+          
+          // Handle errors
+          xhr.addEventListener('error', () => {
+            setError('Upload failed');
+            reject(new Error('Upload failed'));
+          });
+          
+          xhr.addEventListener('abort', () => {
+            setError('Upload cancelled');
+            reject(new Error('Upload cancelled'));
+          });
+          
+          // Open and send request
+          xhr.open('POST', '/api/creator/upload-r2');
+          xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+          xhr.send(fd);
         });
-        
-        xhr.addEventListener('abort', () => {
-          setError('Upload cancelled');
-          reject(new Error('Upload cancelled'));
-        });
-        
-        // Open and send request
-        xhr.open('POST', '/api/creator/upload-r2');
-        xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
-        xhr.send(fd);
-      });
+      }
     } catch (e: any) {
       setError(e?.message || 'Upload failed');
     } finally {
@@ -255,6 +393,7 @@ export default function CreatorDashboardPage() {
         else if (kind === 'audio_preview') setUploadingAudioPreview(false);
         else if (kind === 'model_3d') setUploadingModel3D(false);
         setUploadProgress((prev) => ({ ...prev, [kind]: 0 }));
+        setUploadSpeed((prev) => ({ ...prev, [kind]: '' }));
       }, 1000);
     }
   };
@@ -1057,16 +1196,21 @@ export default function CreatorDashboardPage() {
                                 disabled={uploadingVideo}
                                 className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                               >
-                                {uploadingVideo ? `Uploading ${uploadProgress.video}%` : 'Upload'}
+                                {uploadingVideo ? `Uploading ${uploadProgress.video}%${uploadSpeed.video ? ` • ${uploadSpeed.video}` : ''}` : 'Upload'}
                               </button>
                               <input ref={videoInputRef} type="file" accept="video/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('video', file); }} />
                             </div>
                             {uploadingVideo && (
-                              <div className="mt-2 w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
-                                <div
-                                  className="bg-blue-600 h-full transition-all duration-300 ease-out"
-                                  style={{ width: `${uploadProgress.video}%` }}
-                                />
+                              <div className="mt-2">
+                                <div className="w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                    style={{ width: `${uploadProgress.video}%` }}
+                                  />
+                                </div>
+                                {uploadSpeed.video && (
+                                  <p className="text-[10px] text-zinc-500 mt-1">{uploadSpeed.video}</p>
+                                )}
                               </div>
                             )}
                             {form.video_path && (
@@ -1097,16 +1241,21 @@ export default function CreatorDashboardPage() {
                                 disabled={uploadingThumbnail}
                                 className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                               >
-                                {uploadingThumbnail ? `Uploading ${uploadProgress.thumbnail}%` : 'Upload'}
+                                {uploadingThumbnail ? `Uploading ${uploadProgress.thumbnail}%${uploadSpeed.thumbnail ? ` • ${uploadSpeed.thumbnail}` : ''}` : 'Upload'}
                               </button>
                               <input ref={thumbnailInputRef} type="file" accept="image/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('thumbnail', file); }} />
                             </div>
                             {uploadingThumbnail && (
-                              <div className="mt-2 w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
-                                <div
-                                  className="bg-blue-600 h-full transition-all duration-300 ease-out"
-                                  style={{ width: `${uploadProgress.thumbnail}%` }}
-                                />
+                              <div className="mt-2">
+                                <div className="w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                    style={{ width: `${uploadProgress.thumbnail}%` }}
+                                  />
+                                </div>
+                                {uploadSpeed.thumbnail && (
+                                  <p className="text-[10px] text-zinc-500 mt-1">{uploadSpeed.thumbnail}</p>
+                                )}
                               </div>
                             )}
                             {form.thumbnail_path && (
@@ -1140,16 +1289,21 @@ export default function CreatorDashboardPage() {
                                 disabled={uploadingAudioPreview}
                                 className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                               >
-                                {uploadingAudioPreview ? `Uploading ${uploadProgress.audio_preview}%` : 'Upload'}
+                                {uploadingAudioPreview ? `Uploading ${uploadProgress.audio_preview}%${uploadSpeed.audio_preview ? ` • ${uploadSpeed.audio_preview}` : ''}` : 'Upload'}
                               </button>
                               <input ref={audioPreviewInputRef} type="file" accept="audio/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('audio_preview', file); }} />
                             </div>
                             {uploadingAudioPreview && (
-                              <div className="mt-2 w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
-                                <div
-                                  className="bg-blue-600 h-full transition-all duration-300 ease-out"
-                                  style={{ width: `${uploadProgress.audio_preview}%` }}
-                                />
+                              <div className="mt-2">
+                                <div className="w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                    style={{ width: `${uploadProgress.audio_preview}%` }}
+                                  />
+                                </div>
+                                {uploadSpeed.audio_preview && (
+                                  <p className="text-[10px] text-zinc-500 mt-1">{uploadSpeed.audio_preview}</p>
+                                )}
                               </div>
                             )}
                             {form.audio_preview_path && (
@@ -1181,16 +1335,21 @@ export default function CreatorDashboardPage() {
                                 disabled={uploadingModel3D}
                                 className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                               >
-                                {uploadingModel3D ? `Uploading ${uploadProgress.model_3d}%` : 'Upload'}
+                                {uploadingModel3D ? `Uploading ${uploadProgress.model_3d}%${uploadSpeed.model_3d ? ` • ${uploadSpeed.model_3d}` : ''}` : 'Upload'}
                               </button>
                               <input ref={model3DInputRef} type="file" accept=".glb,.gltf,.obj" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('model_3d', file); }} />
                             </div>
                             {uploadingModel3D && (
-                              <div className="mt-2 w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
-                                <div
-                                  className="bg-blue-600 h-full transition-all duration-300 ease-out"
-                                  style={{ width: `${uploadProgress.model_3d}%` }}
-                                />
+                              <div className="mt-2">
+                                <div className="w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                    style={{ width: `${uploadProgress.model_3d}%` }}
+                                  />
+                                </div>
+                                {uploadSpeed.model_3d && (
+                                  <p className="text-[10px] text-zinc-500 mt-1">{uploadSpeed.model_3d}</p>
+                                )}
                               </div>
                             )}
                             {form.model_3d_path && (
@@ -1227,16 +1386,21 @@ export default function CreatorDashboardPage() {
                                 disabled={uploadingSource}
                                 className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                               >
-                                {uploadingSource ? `Uploading ${uploadProgress.source}%` : 'Upload'}
+                                {uploadingSource ? `Uploading ${uploadProgress.source}%${uploadSpeed.source ? ` • ${uploadSpeed.source}` : ''}` : 'Upload'}
                               </button>
                               <input ref={sourceInputRef} type="file" accept="application/zip,application/x-rar-compressed,.zip,.rar" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('source', file); }} />
                             </div>
                             {uploadingSource && (
-                              <div className="mt-2 w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
-                                <div
-                                  className="bg-blue-600 h-full transition-all duration-300 ease-out"
-                                  style={{ width: `${uploadProgress.source}%` }}
-                                />
+                              <div className="mt-2">
+                                <div className="w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                    style={{ width: `${uploadProgress.source}%` }}
+                                  />
+                                </div>
+                                {uploadSpeed.source && (
+                                  <p className="text-[10px] text-zinc-500 mt-1">{uploadSpeed.source}</p>
+                                )}
                               </div>
                             )}
                             <p className="text-[10px] text-zinc-400 mt-1">Stored at: category/subcategory/{'{templateFolder}'}/{'{filename}'} (Private bucket: celite-source-files)</p>

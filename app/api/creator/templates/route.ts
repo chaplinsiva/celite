@@ -19,7 +19,7 @@ async function getCreatorContext(req: Request) {
 
   const { data: shop, error: shopErr } = await admin
     .from('creator_shops')
-    .select('id, slug, name, description, bank_account_name, bank_account_number, bank_ifsc, bank_upi_id')
+    .select('id, slug, name, description, bank_account_name, bank_account_number, bank_ifsc, bank_upi_id, direct_upload_enabled')
     .eq('user_id', userId)
     .maybeSingle();
 

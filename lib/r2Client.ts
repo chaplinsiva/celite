@@ -267,6 +267,42 @@ export async function getSignedSourceUrl(key: string, expiresIn: number = 3600):
 }
 
 /**
+ * Generate a presigned URL for direct upload to R2 (for creators with direct upload enabled)
+ * @param key - The object key (path) in R2
+ * @param contentType - MIME type of the file
+ * @param bucket - The bucket name ('source' or 'preview')
+ * @param expiresIn - Expiration time in seconds (default: 3600 = 1 hour)
+ * @returns The presigned URL for PUT request
+ */
+export async function getPresignedUploadUrl(
+  key: string,
+  contentType: string,
+  bucket: 'source' | 'preview',
+  expiresIn: number = 3600
+): Promise<string> {
+  validateR2Config();
+  
+  const bucketName = bucket === 'source' ? R2_SOURCE_BUCKET : R2_PREVIEWS_BUCKET;
+  
+  if (!bucketName || bucketName.trim() === '') {
+    throw new Error(`R2_${bucket.toUpperCase()}_BUCKET environment variable is not set`);
+  }
+  
+  if (!process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY) {
+    throw new Error('R2 credentials are missing');
+  }
+  
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+    ContentType: contentType,
+  });
+
+  const presignedUrl = await getSignedUrl(r2Client, command, { expiresIn });
+  return presignedUrl;
+}
+
+/**
  * @deprecated Use getSourceFileFromR2 instead
  * Get a file from Cloudflare R2 (legacy function)
  */
