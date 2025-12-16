@@ -168,13 +168,13 @@ export default function CreatorDashboardPage() {
     }
   };
 
-  // Chunked upload for large files
+  // Direct browser-to-R2 upload using presigned URLs (bypasses Vercel entirely)
   const uploadFileChunked = async (
     kind: 'source' | 'video' | 'thumbnail' | 'audio_preview' | 'model_3d',
     file: File,
     accessToken: string
   ): Promise<{ url: string; key: string }> => {
-    // Step 1: Initialize chunked upload
+    // Step 1: Initialize chunked upload and get presigned URLs
     const initRes = await fetch('/api/creator/chunked-upload/init', {
       method: 'POST',
       headers: {
@@ -199,40 +199,43 @@ export default function CreatorDashboardPage() {
       throw new Error(initData.error || 'Failed to initialize upload');
     }
 
-    const { uploadId, key, bucket, totalChunks } = initData;
+    const { uploadId, key, bucket, totalChunks, presignedUrls, publicUrl, chunkSize } = initData;
     const parts: { partNumber: number; eTag: string }[] = [];
     let uploadedBytes = 0;
     const startTime = Date.now();
 
+    // Use the chunk size from server (5MB for S3 minimum)
+    const serverChunkSize = chunkSize || CHUNK_SIZE;
+
     try {
-      // Step 2: Upload each chunk
-      for (let i = 0; i < totalChunks; i++) {
-        const partNumber = i + 1;
-        const start = i * CHUNK_SIZE;
-        const end = Math.min(start + CHUNK_SIZE, file.size);
+      // Step 2: Upload each chunk directly to R2 using presigned URLs
+      for (let i = 0; i < presignedUrls.length; i++) {
+        const { partNumber, presignedUrl } = presignedUrls[i];
+        const start = (partNumber - 1) * serverChunkSize;
+        const end = Math.min(start + serverChunkSize, file.size);
         const chunk = file.slice(start, end);
 
-        const partFormData = new FormData();
-        partFormData.append('uploadId', uploadId);
-        partFormData.append('key', key);
-        partFormData.append('bucket', bucket);
-        partFormData.append('partNumber', String(partNumber));
-        partFormData.append('chunk', chunk);
-
-        const partRes = await fetch('/api/creator/chunked-upload/part', {
-          method: 'POST',
+        // Upload directly to R2 using presigned URL (bypasses Vercel!)
+        const uploadRes = await fetch(presignedUrl, {
+          method: 'PUT',
+          body: chunk,
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': file.type || 'application/octet-stream',
           },
-          body: partFormData,
         });
 
-        const partData = await safeJsonParse(partRes);
-        if (!partRes.ok || !partData.ok) {
-          throw new Error(partData.error || `Failed to upload part ${partNumber}`);
+        if (!uploadRes.ok) {
+          const errorText = await uploadRes.text();
+          throw new Error(`Failed to upload part ${partNumber}: ${errorText || uploadRes.status}`);
         }
 
-        parts.push({ partNumber: partData.partNumber, eTag: partData.eTag });
+        // Get ETag from response headers (required for completing multipart upload)
+        const eTag = uploadRes.headers.get('ETag');
+        if (!eTag) {
+          throw new Error(`No ETag received for part ${partNumber}`);
+        }
+
+        parts.push({ partNumber, eTag: eTag.replace(/"/g, '') });
         uploadedBytes += (end - start);
 
         // Update progress
@@ -247,7 +250,7 @@ export default function CreatorDashboardPage() {
         }
       }
 
-      // Step 3: Complete the upload
+      // Step 3: Complete the upload (tell R2 to assemble all parts)
       const completeRes = await fetch('/api/creator/chunked-upload/complete', {
         method: 'POST',
         headers: {
@@ -268,7 +271,7 @@ export default function CreatorDashboardPage() {
         throw new Error(completeData.error || 'Failed to complete upload');
       }
 
-      return { url: completeData.url, key: completeData.key };
+      return { url: publicUrl || completeData.url, key: completeData.key };
     } catch (error) {
       // Abort the multipart upload on failure
       try {

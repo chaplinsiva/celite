@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../../lib/supabaseAdmin';
-import { initMultipartUpload, MAX_FILE_SIZE, CHUNK_SIZE } from '../../../../../lib/r2Multipart';
+import { initMultipartUpload, getPresignedPartUrls, MAX_FILE_SIZE, CHUNK_SIZE } from '../../../../../lib/r2Multipart';
 import { generateSourceKey, generateVideoKey, generateThumbnailKey, generateAudioPreviewKey, generateModel3DKey, generateTemplateFolder } from '../../../../../lib/r2Client';
 
-// No body size limit needed - this just initiates the upload
-export const maxDuration = 30;
+// No body size limit needed - this just initiates the upload and returns presigned URLs
+export const maxDuration = 60; // Allow more time to generate presigned URLs
 export const dynamic = 'force-dynamic';
+
+const R2_PREVIEWS_DOMAIN = process.env.R2_PREVIEWS_DOMAIN || 'preview.celite.in';
 
 async function getCreatorContext(req: Request) {
     const admin = getSupabaseAdminClient();
@@ -42,10 +44,10 @@ function extFromName(name: string): string {
 }
 
 /**
- * Initialize a chunked upload
+ * Initialize a chunked upload with presigned URLs for direct browser-to-R2 upload
  * POST /api/creator/chunked-upload/init
  * Body: { kind, category_id, subcategory_id?, sub_subcategory_id?, slug?, template_name, filename, contentType, fileSize }
- * Returns: { uploadId, key, bucket, chunkSize, totalChunks }
+ * Returns: { uploadId, key, bucket, chunkSize, totalChunks, presignedUrls, publicUrl }
  */
 export async function POST(req: Request) {
     try {
@@ -77,7 +79,7 @@ export async function POST(req: Request) {
         if (fileSize > MAX_FILE_SIZE) {
             return NextResponse.json({
                 ok: false,
-                error: `File too large. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024 / 1024)} GB`
+                error: `File too large. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024 * 1024)} GB`
             }, { status: 400 });
         }
 
@@ -158,6 +160,14 @@ export async function POST(req: Request) {
         // Calculate total chunks
         const totalChunks = Math.ceil(fileSize / CHUNK_SIZE);
 
+        // Generate presigned URLs for all parts (direct browser upload)
+        const presignedUrls = await getPresignedPartUrls(r2Key, result.uploadId, totalChunks, bucket);
+
+        // Calculate the final public URL (for preview bucket)
+        const publicUrl = bucket === 'preview'
+            ? `https://${R2_PREVIEWS_DOMAIN}/${r2Key}`
+            : r2Key;
+
         return NextResponse.json({
             ok: true,
             uploadId: result.uploadId,
@@ -166,6 +176,8 @@ export async function POST(req: Request) {
             chunkSize: CHUNK_SIZE,
             totalChunks,
             kind,
+            presignedUrls, // Array of { partNumber, presignedUrl } for direct browser upload
+            publicUrl, // The final URL after upload completes
         });
     } catch (e: any) {
         console.error('Chunked upload init error:', e);

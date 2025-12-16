@@ -107,6 +107,42 @@ export async function uploadPart(
 }
 
 /**
+ * Generate presigned URLs for all parts of a multipart upload
+ * This allows the browser to upload directly to R2, bypassing any server limits
+ * @param key - The object key (path) in R2
+ * @param uploadId - The upload ID from initMultipartUpload
+ * @param totalParts - Total number of parts to generate URLs for
+ * @param bucket - 'source' for private bucket, 'preview' for public bucket
+ * @param expiresIn - URL expiration time in seconds (default: 1 hour)
+ * @returns Array of presigned URLs with their part numbers
+ */
+export async function getPresignedPartUrls(
+    key: string,
+    uploadId: string,
+    totalParts: number,
+    bucket: 'source' | 'preview',
+    expiresIn: number = 3600
+): Promise<{ partNumber: number; presignedUrl: string }[]> {
+    const bucketName = bucket === 'source' ? R2_SOURCE_BUCKET : R2_PREVIEWS_BUCKET;
+
+    const presignedUrls: { partNumber: number; presignedUrl: string }[] = [];
+
+    for (let i = 1; i <= totalParts; i++) {
+        const command = new UploadPartCommand({
+            Bucket: bucketName,
+            Key: key,
+            UploadId: uploadId,
+            PartNumber: i,
+        });
+
+        const presignedUrl = await getSignedUrl(r2Client, command, { expiresIn });
+        presignedUrls.push({ partNumber: i, presignedUrl });
+    }
+
+    return presignedUrls;
+}
+
+/**
  * Complete a multipart upload
  * @param key - The object key (path) in R2
  * @param uploadId - The upload ID from initMultipartUpload
