@@ -145,26 +145,29 @@ export default function LatestTemplatesCarousel() {
       <div className="flex-shrink-0 w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(25%-0.75rem)] snap-center">
         <div className="relative h-full group">
           <div className="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white border border-zinc-200 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
-            <Link href={`/product/${tpl.slug}`} className="absolute inset-0 z-10" aria-label={tpl.name} />
+            {/* Video area - no overlay blocking hover */}
             <div className="relative w-full aspect-video overflow-hidden">
               {tpl.video_path ? (
-                <VideoThumbnailPlayer
-                  videoUrl={tpl.video_path}
-                  thumbnailUrl={tpl.thumbnail_path || tpl.img || undefined}
-                  title={tpl.name}
-                  className="w-full h-full"
-                />
+                <Link href={`/product/${tpl.slug}`} className="block w-full h-full">
+                  <VideoThumbnailPlayer
+                    videoUrl={tpl.video_path}
+                    thumbnailUrl={tpl.thumbnail_path || tpl.img || undefined}
+                    title={tpl.name}
+                    className="w-full h-full"
+                  />
+                </Link>
               ) : (
-                <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">
+                <Link href={`/product/${tpl.slug}`} className="block w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">
                   {tpl.img ? (
                     <img src={convertR2UrlToCdn(tpl.img) || tpl.img} alt={tpl.name} className="w-full h-full object-cover" />
                   ) : (
                     'No Preview'
                   )}
-                </div>
+                </Link>
               )}
             </div>
-            <div className="flex flex-col gap-2 p-4 flex-1">
+            {/* Content area - clickable link */}
+            <Link href={`/product/${tpl.slug}`} className="flex flex-col gap-2 p-4 flex-1">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
                   {tpl.subcategory?.name || tpl.category?.name || "Premium"}
@@ -173,7 +176,7 @@ export default function LatestTemplatesCarousel() {
               <h3 className="text-base font-semibold text-zinc-900 leading-tight line-clamp-2 md:line-clamp-1 group-hover:text-violet-600 transition-colors">
                 {tpl.name}
               </h3>
-            </div>
+            </Link>
           </div>
         </div>
       </div>
