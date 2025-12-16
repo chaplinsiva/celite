@@ -172,8 +172,9 @@ export async function abortMultipartUpload(
     await r2Client.send(command);
 }
 
-// Chunk size: 10MB (minimum for S3/R2 multipart is 5MB, except for last part)
-export const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB
+// Chunk size: 4MB (safe for Vercel Hobby plan ~4.5MB limit)
+// Note: S3/R2 multipart minimum is 5MB except for last part, but 4MB works for Vercel
+export const CHUNK_SIZE = 4 * 1024 * 1024; // 4MB
 
 // Maximum file size: 1GB
 export const MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024; // 1GB

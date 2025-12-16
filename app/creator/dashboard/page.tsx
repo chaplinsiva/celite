@@ -149,12 +149,23 @@ export default function CreatorDashboardPage() {
     return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
   };
 
-  // Chunk size: 10MB (matches server)
-  const CHUNK_SIZE = 10 * 1024 * 1024;
+  // Chunk size: 4MB (safe for Vercel - their limit is ~4.5MB for Hobby, 50MB for Pro)
+  const CHUNK_SIZE = 4 * 1024 * 1024;
   // Threshold for chunked upload: 4MB (below Vercel's limit)
   const CHUNKED_UPLOAD_THRESHOLD = 4 * 1024 * 1024;
   // Maximum file size: 1GB
   const MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024;
+
+  // Safe JSON parse helper
+  const safeJsonParse = async (response: Response): Promise<any> => {
+    const text = await response.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      // If not JSON, return error object with the text
+      return { ok: false, error: text || `HTTP ${response.status}` };
+    }
+  };
 
   // Chunked upload for large files
   const uploadFileChunked = async (
@@ -182,7 +193,7 @@ export default function CreatorDashboardPage() {
       }),
     });
 
-    const initData = await initRes.json();
+    const initData = await safeJsonParse(initRes);
     if (!initRes.ok || !initData.ok) {
       throw new Error(initData.error || 'Failed to initialize upload');
     }
@@ -215,7 +226,7 @@ export default function CreatorDashboardPage() {
           body: partFormData,
         });
 
-        const partData = await partRes.json();
+        const partData = await safeJsonParse(partRes);
         if (!partRes.ok || !partData.ok) {
           throw new Error(partData.error || `Failed to upload part ${partNumber}`);
         }
@@ -251,7 +262,7 @@ export default function CreatorDashboardPage() {
         }),
       });
 
-      const completeData = await completeRes.json();
+      const completeData = await safeJsonParse(completeRes);
       if (!completeRes.ok || !completeData.ok) {
         throw new Error(completeData.error || 'Failed to complete upload');
       }
