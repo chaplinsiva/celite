@@ -13,6 +13,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const { user } = useAppContext();
   const [maintenance, setMaintenance] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isCreator, setIsCreator] = useState<boolean>(false);
 
   // Removed hideLayout - header should show on all pages including login/signup
 
@@ -35,29 +36,41 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     load();
   }, []);
 
-  // Check if current user is admin (only if maintenance is enabled)
+  // Check if current user is admin or creator (only if maintenance is enabled)
   useEffect(() => {
-    const checkAdmin = async () => {
+    const checkAdminOrCreator = async () => {
       if (!maintenance || !user) {
         setIsAdmin(false);
+        setIsCreator(false);
         return;
       }
       try {
         const supabase = getSupabaseBrowserClient();
-        const { data } = await supabase
+
+        // Check admin status
+        const { data: adminData } = await supabase
           .from('admins')
           .select('user_id')
           .eq('user_id', user.id)
           .maybeSingle();
-        setIsAdmin(!!data);
+        setIsAdmin(!!adminData);
+
+        // Check creator/vendor status
+        const { data: creatorData } = await supabase
+          .from('creator_shops')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        setIsCreator(!!creatorData);
       } catch {
         setIsAdmin(false);
+        setIsCreator(false);
       }
     };
-    checkAdmin();
+    checkAdminOrCreator();
   }, [maintenance, user]);
 
-  // During maintenance, block the site for non-admin users (except auth routes)
+  // During maintenance, block the site for non-admin and non-creator users (except auth routes)
   const isAuthRoute =
     pathname === '/login' ||
     pathname === '/signup' ||
@@ -66,7 +79,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   // Check for admin / creator routes that use their own layout
   const isAdminPage = pathname.startsWith('/admin') || pathname.startsWith('/creator');
 
-  if (maintenance && !isAdmin && !isAuthRoute) {
+  // Allow access if user is admin OR creator during maintenance
+  if (maintenance && !isAdmin && !isCreator && !isAuthRoute) {
     return (
       <main className="bg-white min-h-screen flex items-center justify-center px-4">
         <div className="max-w-md mx-auto text-center">
