@@ -149,104 +149,6 @@ export default function CreatorDashboardPage() {
     return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
   };
 
-  // Fallback to server-side upload when direct upload fails (e.g., CORS error)
-  const fallbackToServerUpload = async (
-    kind: 'source' | 'video' | 'thumbnail' | 'audio_preview' | 'model_3d',
-    file: File,
-    resolve: () => void,
-    reject: (error: Error) => void
-  ) => {
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        reject(new Error('Not authenticated'));
-        return;
-      }
-
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('kind', kind);
-      fd.append('category_id', form.category_id);
-      if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
-      if (form.sub_subcategory_id) fd.append('sub_subcategory_id', form.sub_subcategory_id);
-      if (form.slug) fd.append('slug', form.slug);
-      if (form.name) fd.append('template_name', form.name);
-
-      const xhr = new XMLHttpRequest();
-      let lastLoaded = 0;
-      let lastTime = Date.now();
-
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          const percentComplete = Math.round((e.loaded / e.total) * 100);
-          setUploadProgress((prev) => ({ ...prev, [kind]: percentComplete }));
-
-          const now = Date.now();
-          const timeDelta = (now - lastTime) / 1000;
-          if (timeDelta > 0.5) {
-            const bytesDelta = e.loaded - lastLoaded;
-            const speed = bytesDelta / timeDelta;
-            setUploadSpeed((prev) => ({ ...prev, [kind]: formatSpeed(speed) }));
-            lastLoaded = e.loaded;
-            lastTime = now;
-          }
-        }
-      });
-
-      xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const json = JSON.parse(xhr.responseText);
-            if (json.ok && json.url) {
-              if (kind === 'source') {
-                setForm((f) => ({ ...f, source_path: json.key }));
-              } else if (kind === 'video') {
-                setForm((f) => ({ ...f, video_path: json.url }));
-              } else if (kind === 'thumbnail') {
-                setForm((f) => ({ ...f, thumbnail_path: json.url }));
-              } else if (kind === 'audio_preview') {
-                setForm((f) => ({ ...f, audio_preview_path: json.url }));
-              } else if (kind === 'model_3d') {
-                setForm((f) => ({ ...f, model_3d_path: json.url }));
-              }
-              setMessage('File uploaded successfully (via server)');
-              setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
-              setUploadSpeed((prev) => ({ ...prev, [kind]: '' }));
-              resolve();
-            } else {
-              setError(json.error || 'Upload failed');
-              reject(new Error(json.error || 'Upload failed'));
-            }
-          } catch (e) {
-            setError('Failed to parse response');
-            reject(e as Error);
-          }
-        } else {
-          try {
-            const json = JSON.parse(xhr.responseText);
-            setError(json.error || 'Upload failed');
-          } catch {
-            setError('Upload failed');
-          }
-          reject(new Error('Upload failed'));
-        }
-      });
-
-      xhr.addEventListener('error', () => {
-        setError('Upload failed');
-        reject(new Error('Upload failed'));
-      });
-
-      xhr.open('POST', '/api/creator/upload-r2');
-      xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
-      xhr.send(fd);
-    } catch (e: any) {
-      setError(e?.message || 'Upload failed');
-      reject(e);
-    }
-  };
-
   const uploadFile = async (kind: 'source' | 'video' | 'thumbnail' | 'audio_preview' | 'model_3d', file: File) => {
     if (!form.category_id) {
       setError('Please select a category first');
@@ -284,214 +186,99 @@ export default function CreatorDashboardPage() {
     else if (kind === 'model_3d') setUploadingModel3D(true);
 
     try {
-      // Direct upload to R2 is DISABLED because R2 doesn't support CORS.
-      // Until a Cloudflare Worker is set up to proxy uploads with CORS headers,
-      // we must use server-side uploads which work reliably.
-      // See R2_CORS_SETUP.md for instructions on enabling direct uploads.
-      const useDirectUpload = false; // shop?.direct_upload_enabled === true;
+      // Server-side upload to R2
+      const fd = new FormData();
+      fd.append('file', fileToUpload);
+      fd.append('kind', kind);
+      fd.append('category_id', form.category_id);
+      if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
+      if (form.sub_subcategory_id) fd.append('sub_subcategory_id', form.sub_subcategory_id);
+      if (form.slug) fd.append('slug', form.slug);
+      if (form.name) fd.append('template_name', form.name);
 
-      if (useDirectUpload) {
-        // Direct upload using presigned URL
-        // Step 1: Get presigned URL
-        const presignedRes = await fetch('/api/creator/presigned-upload', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            kind,
-            category_id: form.category_id,
-            subcategory_id: form.subcategory_id || null,
-            sub_subcategory_id: form.sub_subcategory_id || null,
-            slug: form.slug || null,
-            template_name: form.name,
-            filename: fileToUpload.name,
-            contentType: fileToUpload.type || 'application/octet-stream',
-          }),
+      return new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        let lastLoaded = 0;
+        let lastTime = Date.now();
+
+        // Track upload progress with speed calculation
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const percentComplete = Math.round((e.loaded / e.total) * 100);
+            setUploadProgress((prev) => ({ ...prev, [kind]: percentComplete }));
+
+            // Calculate speed
+            const now = Date.now();
+            const timeDelta = (now - lastTime) / 1000;
+            if (timeDelta > 0.5) {
+              const bytesDelta = e.loaded - lastLoaded;
+              const speed = bytesDelta / timeDelta;
+              setUploadSpeed((prev) => ({ ...prev, [kind]: formatSpeed(speed) }));
+              lastLoaded = e.loaded;
+              lastTime = now;
+            }
+          }
         });
 
-        const presignedJson = await presignedRes.json();
-        if (!presignedRes.ok || !presignedJson.ok) {
-          throw new Error(presignedJson.error || 'Failed to get upload URL');
-        }
-
-        // Step 2: Upload directly to R2 using presigned URL
-        return new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          let lastLoaded = 0;
-          let lastTime = Date.now();
-
-          // Track upload progress with speed calculation
-          xhr.upload.addEventListener('progress', (e) => {
-            if (e.lengthComputable) {
-              const percentComplete = Math.round((e.loaded / e.total) * 100);
-              setUploadProgress((prev) => ({ ...prev, [kind]: percentComplete }));
-
-              // Calculate speed
-              const now = Date.now();
-              const timeDelta = (now - lastTime) / 1000; // seconds
-              if (timeDelta > 0.5) { // Update speed every 500ms
-                const bytesDelta = e.loaded - lastLoaded;
-                const speed = bytesDelta / timeDelta;
-                setUploadSpeed((prev) => ({ ...prev, [kind]: formatSpeed(speed) }));
-                lastLoaded = e.loaded;
-                lastTime = now;
-              }
-            }
-          });
-
-          // Handle completion
-          xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              // For direct upload, we need to construct the URL based on bucket
-              const bucket = presignedJson.bucket;
-              const key = presignedJson.key;
-
-              if (kind === 'source') {
-                setForm((f) => ({ ...f, source_path: key }));
-              } else {
-                // For preview files, construct public URL
-                const publicUrl = bucket === 'preview'
-                  ? `https://preview.celite.in/${key}`
-                  : key;
-                if (kind === 'video') {
-                  setForm((f) => ({ ...f, video_path: publicUrl }));
+        // Handle completion
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const json = JSON.parse(xhr.responseText);
+              if (json.ok && json.url) {
+                if (kind === 'source') {
+                  setForm((f) => ({ ...f, source_path: json.key }));
+                } else if (kind === 'video') {
+                  setForm((f) => ({ ...f, video_path: json.url }));
                 } else if (kind === 'thumbnail') {
-                  setForm((f) => ({ ...f, thumbnail_path: publicUrl }));
+                  setForm((f) => ({ ...f, thumbnail_path: json.url }));
                 } else if (kind === 'audio_preview') {
-                  setForm((f) => ({ ...f, audio_preview_path: publicUrl }));
+                  setForm((f) => ({ ...f, audio_preview_path: json.url }));
                 } else if (kind === 'model_3d') {
-                  setForm((f) => ({ ...f, model_3d_path: publicUrl }));
+                  setForm((f) => ({ ...f, model_3d_path: json.url }));
                 }
-              }
-              setMessage('File uploaded successfully');
-              setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
-              setUploadSpeed((prev) => ({ ...prev, [kind]: '' }));
-              resolve();
-            } else {
-              // If status is not 2xx, it might be a CORS or other error
-              // Try to fallback to server-side upload
-              console.warn(`[Upload] Direct upload failed with status ${xhr.status}, falling back to server-side upload`);
-              fallbackToServerUpload(kind, fileToUpload, resolve, reject);
-            }
-          });
-
-          // Handle errors (network errors, CORS errors, etc.)
-          xhr.addEventListener('error', () => {
-            // CORS errors typically result in status 0
-            console.warn('[Upload] Network/CORS error detected, falling back to server-side upload');
-            fallbackToServerUpload(kind, fileToUpload, resolve, reject);
-          });
-
-          // Handle timeout
-          xhr.addEventListener('timeout', () => {
-            console.warn('[Upload] Upload timeout, falling back to server-side upload');
-            fallbackToServerUpload(kind, fileToUpload, resolve, reject);
-          });
-
-          xhr.addEventListener('abort', () => {
-            setError('Upload cancelled');
-            reject(new Error('Upload cancelled'));
-          });
-
-          // Upload directly to R2
-          xhr.open('PUT', presignedJson.presignedUrl);
-          xhr.setRequestHeader('Content-Type', fileToUpload.type || 'application/octet-stream');
-          xhr.send(fileToUpload);
-        });
-      } else {
-        // Server-side upload (existing method)
-        const fd = new FormData();
-        fd.append('file', fileToUpload);
-        fd.append('kind', kind);
-        fd.append('category_id', form.category_id);
-        if (form.subcategory_id) fd.append('subcategory_id', form.subcategory_id);
-        if (form.sub_subcategory_id) fd.append('sub_subcategory_id', form.sub_subcategory_id);
-        if (form.slug) fd.append('slug', form.slug);
-        if (form.name) fd.append('template_name', form.name);
-
-        return new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          let lastLoaded = 0;
-          let lastTime = Date.now();
-
-          // Track upload progress with speed calculation
-          xhr.upload.addEventListener('progress', (e) => {
-            if (e.lengthComputable) {
-              const percentComplete = Math.round((e.loaded / e.total) * 100);
-              setUploadProgress((prev) => ({ ...prev, [kind]: percentComplete }));
-
-              // Calculate speed
-              const now = Date.now();
-              const timeDelta = (now - lastTime) / 1000;
-              if (timeDelta > 0.5) {
-                const bytesDelta = e.loaded - lastLoaded;
-                const speed = bytesDelta / timeDelta;
-                setUploadSpeed((prev) => ({ ...prev, [kind]: formatSpeed(speed) }));
-                lastLoaded = e.loaded;
-                lastTime = now;
-              }
-            }
-          });
-
-          // Handle completion
-          xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                const json = JSON.parse(xhr.responseText);
-                if (json.ok && json.url) {
-                  if (kind === 'source') {
-                    setForm((f) => ({ ...f, source_path: json.key }));
-                  } else if (kind === 'video') {
-                    setForm((f) => ({ ...f, video_path: json.url }));
-                  } else if (kind === 'thumbnail') {
-                    setForm((f) => ({ ...f, thumbnail_path: json.url }));
-                  } else if (kind === 'audio_preview') {
-                    setForm((f) => ({ ...f, audio_preview_path: json.url }));
-                  } else if (kind === 'model_3d') {
-                    setForm((f) => ({ ...f, model_3d_path: json.url }));
-                  }
-                  setMessage('File uploaded successfully');
-                  setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
-                  setUploadSpeed((prev) => ({ ...prev, [kind]: '' }));
-                  resolve();
-                } else {
-                  setError(json.error || 'Upload failed');
-                  reject(new Error(json.error || 'Upload failed'));
-                }
-              } catch (e) {
-                setError('Failed to parse response');
-                reject(e);
-              }
-            } else {
-              try {
-                const json = JSON.parse(xhr.responseText);
+                setMessage('File uploaded successfully');
+                setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
+                setUploadSpeed((prev) => ({ ...prev, [kind]: '' }));
+                resolve();
+              } else {
                 setError(json.error || 'Upload failed');
-              } catch {
-                setError('Upload failed');
+                reject(new Error(json.error || 'Upload failed'));
               }
-              reject(new Error('Upload failed'));
+            } catch (e) {
+              setError('Failed to parse response');
+              reject(e);
             }
-          });
-
-          // Handle errors
-          xhr.addEventListener('error', () => {
-            setError('Upload failed');
+          } else if (xhr.status === 413) {
+            setError('File too large. Please upload a smaller file or contact support.');
+            reject(new Error('File too large'));
+          } else {
+            try {
+              const json = JSON.parse(xhr.responseText);
+              setError(json.error || 'Upload failed');
+            } catch {
+              setError('Upload failed');
+            }
             reject(new Error('Upload failed'));
-          });
-
-          xhr.addEventListener('abort', () => {
-            setError('Upload cancelled');
-            reject(new Error('Upload cancelled'));
-          });
-
-          // Open and send request
-          xhr.open('POST', '/api/creator/upload-r2');
-          xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
-          xhr.send(fd);
+          }
         });
-      }
+
+        // Handle errors
+        xhr.addEventListener('error', () => {
+          setError('Upload failed - network error');
+          reject(new Error('Upload failed'));
+        });
+
+        xhr.addEventListener('abort', () => {
+          setError('Upload cancelled');
+          reject(new Error('Upload cancelled'));
+        });
+
+        // Open and send request
+        xhr.open('POST', '/api/creator/upload-r2');
+        xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+        xhr.send(fd);
+      });
     } catch (e: any) {
       setError(e?.message || 'Upload failed');
     } finally {
@@ -837,8 +624,8 @@ export default function CreatorDashboardPage() {
               type="button"
               onClick={() => setActive("overview")}
               className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${active === "overview"
-                  ? "bg-zinc-900 text-white"
-                  : "text-zinc-600 hover:bg-zinc-100"
+                ? "bg-zinc-900 text-white"
+                : "text-zinc-600 hover:bg-zinc-100"
                 }`}
             >
               Overview
@@ -847,8 +634,8 @@ export default function CreatorDashboardPage() {
               type="button"
               onClick={() => setActive("templates")}
               className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${active === "templates"
-                  ? "bg-zinc-900 text-white"
-                  : "text-zinc-600 hover:bg-zinc-100"
+                ? "bg-zinc-900 text-white"
+                : "text-zinc-600 hover:bg-zinc-100"
                 }`}
             >
               My Templates
@@ -857,8 +644,8 @@ export default function CreatorDashboardPage() {
               type="button"
               onClick={() => setActive("settings")}
               className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${active === "settings"
-                  ? "bg-zinc-900 text-white"
-                  : "text-zinc-600 hover:bg-zinc-100"
+                ? "bg-zinc-900 text-white"
+                : "text-zinc-600 hover:bg-zinc-100"
                 }`}
             >
               Settings

@@ -2,6 +2,17 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
 import { uploadSourceToR2, uploadPreviewToR2, generateSourceKey, generateVideoKey, generateThumbnailKey, generateAudioPreviewKey, generateModel3DKey, generateTemplateFolder } from '../../../../lib/r2Client';
 
+// Configure route to accept large file uploads (up to 500MB)
+export const config = {
+  api: {
+    bodyParser: false, // Disable default body parser for FormData
+  },
+};
+
+// Next.js 13+ App Router: Set max body size
+export const maxDuration = 300; // 5 minutes max for large uploads
+export const dynamic = 'force-dynamic';
+
 function extFromName(name: string): string {
   const idx = name.lastIndexOf('.');
   return idx >= 0 ? name.slice(idx).toLowerCase() : '';
@@ -95,13 +106,13 @@ export async function POST(req: Request) {
     else if (kind === 'model_3d') defaultExt = '.glb';
     const ext = extFromName(file.name) || defaultExt;
     const filename = slug ? `${slug}${ext}` : file.name;
-    
+
     // Generate template folder name from template name
     const templateFolder = generateTemplateFolder(templateName);
 
     let r2Key: string;
     let result;
-    
+
     if (kind === 'source') {
       // Source files go to private bucket
       r2Key = generateSourceKey(category.slug, subcategorySlug, subSubcategorySlug, templateFolder, filename);
