@@ -149,9 +149,10 @@ export default function CreatorDashboardPage() {
     return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
   };
 
-  // Chunk size: 4MB (safe for Vercel - their limit is ~4.5MB for Hobby, 50MB for Pro)
-  const CHUNK_SIZE = 4 * 1024 * 1024;
-  // Threshold for chunked upload: 4MB (below Vercel's limit)
+  // Chunk size: 5MB (S3/R2 multipart minimum is 5MB except for last part)
+  // NOTE: Requires Vercel Pro plan (50MB body limit). Hobby plan (4.5MB) is too small.
+  const CHUNK_SIZE = 5 * 1024 * 1024;
+  // Threshold for chunked upload: 4MB (files larger than this use chunked upload)
   const CHUNKED_UPLOAD_THRESHOLD = 4 * 1024 * 1024;
   // Maximum file size: 1GB
   const MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024;
