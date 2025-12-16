@@ -23,16 +23,28 @@ export default function PurchaseDownloadButton({ slug }: { slug: string }) {
         return; // If it's JSON but no redirect, return early
       }
       
-      // Otherwise, download as blob (Supabase storage file)
+      // Direct file download - get filename from header
+      const contentDisposition = res.headers.get('content-disposition') || '';
+      let filename = `${slug}.zip`;
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (filenameMatch && filenameMatch[1]) {
+        filename = filenameMatch[1].replace(/['"]/g, '');
+      }
+
+      // Create blob and download without exposing URL
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${slug}.rar`;
+      link.download = filename;
+      link.style.display = 'none'; // Hide the link
       document.body.appendChild(link);
       link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      // Clean up immediately to hide the blob URL
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
     } catch {}
   };
 

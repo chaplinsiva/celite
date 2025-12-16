@@ -104,7 +104,7 @@ export async function POST(req: Request) {
     
     if (kind === 'source') {
       // Source files go to private bucket
-      r2Key = generateSourceKey(category.slug, subcategorySlug, filename, subSubcategorySlug, templateFolder);
+      r2Key = generateSourceKey(category.slug, subcategorySlug, subSubcategorySlug, templateFolder, filename);
       result = await uploadSourceToR2(file, r2Key, file.type || 'application/octet-stream');
     } else if (kind === 'video') {
       // Preview files go to public bucket
@@ -133,7 +133,14 @@ export async function POST(req: Request) {
     });
   } catch (e: any) {
     console.error('R2 upload error:', e);
-    return NextResponse.json({ ok: false, error: e?.message || 'Unknown error' }, { status: 500 });
+    // Provide more helpful error messages
+    let errorMessage = e?.message || 'Unknown error';
+    if (errorMessage.includes('bucket') || errorMessage.includes('Bucket')) {
+      errorMessage = `R2 bucket error: ${errorMessage}. Please verify R2_SOURCE_BUCKET and R2_PREVIEWS_BUCKET are set correctly and the buckets exist in Cloudflare R2.`;
+    } else if (errorMessage.includes('credentials') || errorMessage.includes('Access')) {
+      errorMessage = `R2 credentials error: ${errorMessage}. Please check R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY in your environment variables.`;
+    }
+    return NextResponse.json({ ok: false, error: errorMessage }, { status: 500 });
   }
 }
 

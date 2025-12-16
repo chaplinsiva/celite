@@ -48,6 +48,16 @@ export async function uploadSourceToR2(
 ): Promise<UploadResult> {
   validateR2Config();
   
+  // Validate bucket name
+  if (!R2_SOURCE_BUCKET || R2_SOURCE_BUCKET.trim() === '') {
+    throw new Error('R2_SOURCE_BUCKET environment variable is not set. Please configure it in your .env.local file.');
+  }
+  
+  // Validate credentials
+  if (!process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY) {
+    throw new Error('R2 credentials are missing. Please set R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY in your .env.local file.');
+  }
+  
   let body: Buffer;
   if (file instanceof File) {
     const arrayBuffer = await file.arrayBuffer();
@@ -63,7 +73,22 @@ export async function uploadSourceToR2(
     ContentType: contentType,
   });
 
-  await r2Client.send(command);
+  try {
+    await r2Client.send(command);
+    console.log(`[R2] Successfully uploaded source file to ${R2_SOURCE_BUCKET}/${key}`);
+  } catch (error: any) {
+    console.error(`[R2] Failed to upload source file to ${R2_SOURCE_BUCKET}/${key}:`, error);
+    // Provide more helpful error messages
+    if (error.name === 'NoSuchBucket') {
+      throw new Error(`R2 bucket "${R2_SOURCE_BUCKET}" does not exist. Please create it in your Cloudflare R2 dashboard.`);
+    } else if (error.name === 'InvalidAccessKeyId' || error.name === 'SignatureDoesNotMatch') {
+      throw new Error('Invalid R2 credentials. Please check your R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY.');
+    } else if (error.message) {
+      throw new Error(`R2 upload failed: ${error.message}`);
+    } else {
+      throw new Error(`R2 upload failed: ${error}`);
+    }
+  }
 
   // Return key only (private bucket, no public URL)
   return {
@@ -257,9 +282,9 @@ export function extractR2KeyFromUrl(url: string): string | null {
 export function generateSourceKey(
   categorySlug: string, 
   subcategorySlug: string | null, 
-  filename: string, 
-  subSubcategorySlug?: string | null,
-  templateFolder?: string | null
+  subSubcategorySlug: string | null | undefined,
+  templateFolder: string | null | undefined,
+  filename: string
 ): string {
   const parts: string[] = [];
   if (categorySlug) parts.push(categorySlug);

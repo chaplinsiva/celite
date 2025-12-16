@@ -1,9 +1,26 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
-import { getSignedSourceUrl } from '../../../../lib/r2Client';
+import { getSourceFileFromR2 } from '../../../../lib/r2Client';
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
+}
+
+/**
+ * Extract file extension from a path or filename
+ */
+function getFileExtension(path: string): string {
+  const lastDot = path.lastIndexOf('.');
+  if (lastDot === -1) return '.zip'; // Default to .zip if no extension
+  return path.substring(lastDot);
+}
+
+/**
+ * Get filename from R2 key path (last part after /)
+ */
+function getFilenameFromKey(key: string): string {
+  const parts = key.split('/');
+  return parts[parts.length - 1] || 'file.zip';
 }
 
 export async function GET(
@@ -55,32 +72,51 @@ export async function GET(
       return NextResponse.json({ error: 'Source file not available for this template' }, { status: 404 });
     }
 
-    // Check if source_path is a full URL (legacy support)
+    // Check if source_path is a full URL (legacy support - redirect to external URL)
     const isFullUrl = sourcePath.startsWith('http://') || sourcePath.startsWith('https://');
     
-    let downloadUrl: string;
-    
     if (isFullUrl) {
-      // Legacy: If it's a full URL, it might be from old system
-      // For security, we should migrate these to R2, but for now support them
-      downloadUrl = sourcePath;
-    } else {
-      // New R2 system: source_path is the R2 key in celite-source-files bucket
-      // Generate a signed URL with short expiry (15 minutes) for security
-      // This ensures the link is not shareable and expires quickly
+      // Legacy: For external URLs, redirect (but record download first)
       try {
-        downloadUrl = await getSignedSourceUrl(sourcePath, 15 * 60); // 15 minutes expiry
-      } catch (r2Error: any) {
-        console.error('R2 signed URL generation error:', r2Error);
-        return NextResponse.json({ error: 'Failed to generate secure download link' }, { status: 500 });
+        const subscriptionId = sub?.id || null;
+        await admin.from('downloads').insert({
+          user_id: userId,
+          template_slug: slug,
+          downloaded_at: new Date().toISOString(),
+          ...(subscriptionId && { subscription_id: subscriptionId }),
+        });
+      } catch (err) {
+        console.error('Failed to record download:', err);
       }
+      
+      // Return redirect for legacy URLs
+      return NextResponse.json({ redirect: true, url: sourcePath });
     }
 
-    // Record download - do this before returning the URL
+    // New R2 system: Fetch file directly from private bucket
+    // This ensures the R2 URL is never exposed to the client
+    let fileData: { body: Buffer; contentType: string };
+    let filename: string;
+    
     try {
-      // Get subscription_id if available
-      const subscriptionId = sub?.id || null;
+      // Fetch file from R2 (source_path is the R2 key)
+      fileData = await getSourceFileFromR2(sourcePath);
       
+      // Extract filename from R2 key or use slug with detected extension
+      const keyFilename = getFilenameFromKey(sourcePath);
+      const ext = getFileExtension(keyFilename);
+      filename = `${slug}${ext}`;
+    } catch (r2Error: any) {
+      console.error('R2 file fetch error:', r2Error);
+      if (r2Error.message?.includes('not found') || r2Error.message?.includes('NoSuchKey')) {
+        return NextResponse.json({ error: 'Source file not found in storage' }, { status: 404 });
+      }
+      return NextResponse.json({ error: 'Failed to retrieve file. Please try again later.' }, { status: 500 });
+    }
+
+    // Record download BEFORE streaming the file
+    try {
+      const subscriptionId = sub?.id || null;
       const { error: downloadErr } = await admin.from('downloads').insert({
         user_id: userId,
         template_slug: slug,
@@ -90,17 +126,34 @@ export async function GET(
       
       if (downloadErr) {
         console.error('Failed to record download:', downloadErr);
-        // Don't fail the download, but log the error for debugging
+        // Don't fail the download, but log the error
       } else {
         console.log(`Download recorded successfully for user ${userId}, template ${slug}`);
       }
     } catch (downloadErr: any) {
-      // Log but don't fail the download if recording fails
       console.error('Failed to record download (exception):', downloadErr);
+      // Continue with download even if recording fails
     }
 
-    // Return redirect URL
-    return NextResponse.json({ redirect: true, url: downloadUrl });
+    // Stream the file directly to the client
+    // This hides the R2 URL completely - the client never sees it
+    // Convert Buffer to Uint8Array for NextResponse
+    const fileBytes = new Uint8Array(fileData.body);
+    
+    return new NextResponse(fileBytes, {
+      status: 200,
+      headers: {
+        'Content-Type': fileData.contentType || 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+        'Content-Length': fileData.body.length.toString(),
+        // Security headers
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        // Prevent exposing the R2 URL
+        'X-Content-Type-Options': 'nosniff',
+      },
+    });
   } catch (e: any) {
     console.error('Download error:', e);
     return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 });
