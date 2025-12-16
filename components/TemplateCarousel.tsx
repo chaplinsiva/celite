@@ -9,13 +9,22 @@ import { useLoginModal } from '../context/LoginModalContext';
 import { convertR2UrlToCdn } from '../lib/utils';
 import VideoThumbnailPlayer from './VideoThumbnailPlayer';
 import { cn } from '@/lib/utils';
-import { ArrowRight, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Zap, PlayCircle, Check, Download } from 'lucide-react';
 
 type FeaturedTemplate = Template & {
   category?: { id: string; name: string; slug: string } | null;
   subcategory?: { id: string; name: string; slug: string } | null;
   video_path?: string | null;
   thumbnail_path?: string | null;
+  vendor_name?: string | null;
+};
+
+// Helper for thumbnails
+const getThumbnail = (item: FeaturedTemplate) => {
+  // Show any image, even if low quality
+  if (item.thumbnail_path) return item.thumbnail_path;
+  if (item.img) return item.img;
+  return '/PNG1.png';
 };
 
 export default function TemplateCarousel() {
@@ -49,7 +58,8 @@ export default function TemplateCarousel() {
           slug,name,subtitle,description,img,video_path,thumbnail_path,features,software,plugins,tags,created_at,feature,
           category_id,subcategory_id,
           categories(id,name,slug),
-          subcategories(id,name,slug)
+          subcategories(id,name,slug),
+          creator_shops(vendor_name)
         `)
         .eq('feature', true)
         .order('updated_at', { ascending: false });
@@ -61,7 +71,8 @@ export default function TemplateCarousel() {
             slug,name,subtitle,description,img,video_path,thumbnail_path,features,software,plugins,tags,created_at,feature,
             category_id,subcategory_id,
             categories(id,name,slug),
-            subcategories(id,name,slug)
+            subcategories(id,name,slug),
+            creator_shops(vendor_name)
           `)
           .order('created_at', { ascending: false })
           .limit(12);
@@ -78,6 +89,8 @@ export default function TemplateCarousel() {
         const category = r.categories ? (Array.isArray(r.categories) ? r.categories[0] : r.categories) : null;
         const subcategory = r.subcategories ? (Array.isArray(r.subcategories) ? r.subcategories[0] : r.subcategories) : null;
         const isFeaturedFlag = Boolean(r.feature ?? r.is_featured ?? r.isFeatured);
+        const creatorShop = r.creator_shops ? (Array.isArray(r.creator_shops) ? r.creator_shops[0] : r.creator_shops) : null;
+        const vendorName = creatorShop?.vendor_name || null;
 
         const template: FeaturedTemplate = {
           slug: r.slug,
@@ -97,6 +110,7 @@ export default function TemplateCarousel() {
           is_featured: isFeaturedFlag,
           category: category ? { id: category.id, name: category.name, slug: category.slug } : null,
           subcategory: subcategory ? { id: subcategory.id, name: subcategory.name, slug: subcategory.slug } : null,
+          vendor_name: vendorName,
         };
 
         return template;
@@ -174,36 +188,81 @@ export default function TemplateCarousel() {
   const TemplateCardComponent = ({ tpl, isSubscribed, handleDownload }: { tpl: FeaturedTemplate; isSubscribed: boolean; handleDownload: (slug: string) => void }) => {
     return (
       <div className="flex-shrink-0 w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(25%-0.75rem)] snap-center">
-        <div className="relative h-full group">
-          <div className="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white border border-zinc-200 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
-            <Link href={`/product/${tpl.slug}`} className="absolute inset-0 z-10" aria-label={tpl.name} />
-            <div className="relative w-full aspect-video overflow-hidden">
-              {tpl.video_path ? (
-                <VideoThumbnailPlayer
-                  videoUrl={tpl.video_path}
-                  thumbnailUrl={tpl.thumbnail_path || tpl.img || undefined}
-                  title={tpl.name}
-                  className="w-full h-full"
+        <div className="group flex flex-col bg-white rounded-xl overflow-hidden border border-zinc-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300">
+          {/* Thumbnail / Video Player */}
+          <div className="relative aspect-video overflow-hidden bg-zinc-100">
+            {tpl.video_path ? (
+              <VideoThumbnailPlayer
+                videoUrl={tpl.video_path}
+                thumbnailUrl={getThumbnail(tpl)}
+                title={tpl.name}
+                className="w-full h-full"
+              />
+            ) : (
+              <Link href={`/product/${tpl.slug}`} className="block w-full h-full">
+                <img
+                  src={convertR2UrlToCdn(getThumbnail(tpl)) || getThumbnail(tpl)}
+                  alt={tpl.name}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
-              ) : (
-                <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">
-                  {tpl.img ? (
-                    <img src={convertR2UrlToCdn(tpl.img) || tpl.img} alt={tpl.name} className="w-full h-full object-cover" />
-                  ) : (
-                    'No Preview'
-                  )}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  <div className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
+                    <PlayCircle className="w-6 h-6 fill-current" />
+                  </div>
                 </div>
+              </Link>
+            )}
+
+            {/* Badges */}
+            <div className="absolute top-3 left-3 flex items-center gap-2 pointer-events-none z-30">
+              {tpl.software && tpl.software.includes('After Effects') && (
+                <span className="px-2 py-1 rounded bg-black/60 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider">Ae</span>
               )}
             </div>
-            <div className="flex flex-col gap-2 p-4 flex-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                  {tpl.subcategory?.name || tpl.category?.name || "Featured"}
-                </span>
-              </div>
-              <h3 className="text-base font-semibold text-zinc-900 leading-tight line-clamp-2 md:line-clamp-1 group-hover:text-blue-600 transition-colors">
+          </div>
+
+          {/* Content */}
+          <div className="p-4 flex flex-col flex-1 relative z-30 bg-white">
+            <Link href={`/product/${tpl.slug}`} className="block">
+              <h3 className="font-bold text-zinc-900 text-lg leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
                 {tpl.name}
               </h3>
+            </Link>
+
+            <div className="mt-auto flex items-center justify-between pt-4 border-t border-zinc-100">
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const vendor = tpl.vendor_name || "Celite Studios";
+                  const initial = vendor.charAt(0).toUpperCase() || "C";
+                  return (
+                    <>
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600">
+                        {initial}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-medium text-zinc-500">
+                          By {vendor}
+                        </span>
+                        <div className="w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
+                          <Check className="w-2 h-2 text-white" strokeWidth={3} />
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+              <div className="flex items-center gap-3 text-zinc-400">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDownload(tpl.slug);
+                  }}
+                  className="hover:text-blue-600 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

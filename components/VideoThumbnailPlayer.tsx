@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { PlayCircle } from 'lucide-react';
 import { convertR2UrlToCdn } from '../lib/utils';
 
 interface VideoThumbnailPlayerProps {
@@ -27,15 +26,14 @@ export default function VideoThumbnailPlayer({
   useEffect(() => {
     if (videoRef.current && convertedVideoUrl) {
       if (isHovered) {
+        // Play video on hover
         videoRef.current.play().catch((e) => {
           console.error('Error playing video:', e);
         });
       } else {
+        // Pause and reset video when hover out
         videoRef.current.pause();
-        // Reset to start when not hovered
-        if (videoRef.current.currentTime > 0) {
-          videoRef.current.currentTime = 0;
-        }
+        videoRef.current.currentTime = 0;
       }
     }
   }, [isHovered, convertedVideoUrl]);
@@ -104,15 +102,6 @@ export default function VideoThumbnailPlayer({
           }
         }}
       />
-      
-      {/* Play icon overlay - shown on thumbnail when not hovered */}
-      {!isHovered && (
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
-          <div className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
-            <PlayCircle className="w-6 h-6 fill-current" />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

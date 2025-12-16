@@ -252,7 +252,7 @@ export default function CreatorDashboardPage() {
       setError('Please select a category first');
       return;
     }
-    
+
     // Compress thumbnail images before uploading
     let fileToUpload = file;
     if (kind === 'thumbnail' && file.type.startsWith('image/')) {
@@ -269,11 +269,11 @@ export default function CreatorDashboardPage() {
         // Continue with original file if compression fails
       }
     }
-    
+
     const supabase = getSupabaseBrowserClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    
+
     // Reset progress and set uploading state
     setUploadProgress((prev) => ({ ...prev, [kind]: 0 }));
     setUploadSpeed((prev) => ({ ...prev, [kind]: '' }));
@@ -282,11 +282,14 @@ export default function CreatorDashboardPage() {
     else if (kind === 'thumbnail') setUploadingThumbnail(true);
     else if (kind === 'audio_preview') setUploadingAudioPreview(true);
     else if (kind === 'model_3d') setUploadingModel3D(true);
-    
+
     try {
-      // Check if direct upload is enabled
-      const useDirectUpload = shop?.direct_upload_enabled === true;
-      
+      // Direct upload to R2 is DISABLED because R2 doesn't support CORS.
+      // Until a Cloudflare Worker is set up to proxy uploads with CORS headers,
+      // we must use server-side uploads which work reliably.
+      // See R2_CORS_SETUP.md for instructions on enabling direct uploads.
+      const useDirectUpload = false; // shop?.direct_upload_enabled === true;
+
       if (useDirectUpload) {
         // Direct upload using presigned URL
         // Step 1: Get presigned URL
@@ -318,13 +321,13 @@ export default function CreatorDashboardPage() {
           const xhr = new XMLHttpRequest();
           let lastLoaded = 0;
           let lastTime = Date.now();
-          
+
           // Track upload progress with speed calculation
           xhr.upload.addEventListener('progress', (e) => {
             if (e.lengthComputable) {
               const percentComplete = Math.round((e.loaded / e.total) * 100);
               setUploadProgress((prev) => ({ ...prev, [kind]: percentComplete }));
-              
+
               // Calculate speed
               const now = Date.now();
               const timeDelta = (now - lastTime) / 1000; // seconds
@@ -337,19 +340,19 @@ export default function CreatorDashboardPage() {
               }
             }
           });
-          
+
           // Handle completion
           xhr.addEventListener('load', () => {
             if (xhr.status >= 200 && xhr.status < 300) {
               // For direct upload, we need to construct the URL based on bucket
               const bucket = presignedJson.bucket;
               const key = presignedJson.key;
-              
+
               if (kind === 'source') {
                 setForm((f) => ({ ...f, source_path: key }));
               } else {
                 // For preview files, construct public URL
-                const publicUrl = bucket === 'preview' 
+                const publicUrl = bucket === 'preview'
                   ? `https://preview.celite.in/${key}`
                   : key;
                 if (kind === 'video') {
@@ -373,25 +376,25 @@ export default function CreatorDashboardPage() {
               fallbackToServerUpload(kind, fileToUpload, resolve, reject);
             }
           });
-          
+
           // Handle errors (network errors, CORS errors, etc.)
           xhr.addEventListener('error', () => {
             // CORS errors typically result in status 0
             console.warn('[Upload] Network/CORS error detected, falling back to server-side upload');
             fallbackToServerUpload(kind, fileToUpload, resolve, reject);
           });
-          
+
           // Handle timeout
           xhr.addEventListener('timeout', () => {
             console.warn('[Upload] Upload timeout, falling back to server-side upload');
             fallbackToServerUpload(kind, fileToUpload, resolve, reject);
           });
-          
+
           xhr.addEventListener('abort', () => {
             setError('Upload cancelled');
             reject(new Error('Upload cancelled'));
           });
-          
+
           // Upload directly to R2
           xhr.open('PUT', presignedJson.presignedUrl);
           xhr.setRequestHeader('Content-Type', fileToUpload.type || 'application/octet-stream');
@@ -407,18 +410,18 @@ export default function CreatorDashboardPage() {
         if (form.sub_subcategory_id) fd.append('sub_subcategory_id', form.sub_subcategory_id);
         if (form.slug) fd.append('slug', form.slug);
         if (form.name) fd.append('template_name', form.name);
-        
+
         return new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           let lastLoaded = 0;
           let lastTime = Date.now();
-          
+
           // Track upload progress with speed calculation
           xhr.upload.addEventListener('progress', (e) => {
             if (e.lengthComputable) {
               const percentComplete = Math.round((e.loaded / e.total) * 100);
               setUploadProgress((prev) => ({ ...prev, [kind]: percentComplete }));
-              
+
               // Calculate speed
               const now = Date.now();
               const timeDelta = (now - lastTime) / 1000;
@@ -431,7 +434,7 @@ export default function CreatorDashboardPage() {
               }
             }
           });
-          
+
           // Handle completion
           xhr.addEventListener('load', () => {
             if (xhr.status >= 200 && xhr.status < 300) {
@@ -471,18 +474,18 @@ export default function CreatorDashboardPage() {
               reject(new Error('Upload failed'));
             }
           });
-          
+
           // Handle errors
           xhr.addEventListener('error', () => {
             setError('Upload failed');
             reject(new Error('Upload failed'));
           });
-          
+
           xhr.addEventListener('abort', () => {
             setError('Upload cancelled');
             reject(new Error('Upload cancelled'));
           });
-          
+
           // Open and send request
           xhr.open('POST', '/api/creator/upload-r2');
           xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
@@ -675,27 +678,27 @@ export default function CreatorDashboardPage() {
           source_path: form.source_path,
           features: form.features
             ? form.features
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean)
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
             : [],
           software: form.software
             ? form.software
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean)
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
             : [],
           plugins: form.plugins
             ? form.plugins
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean)
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
             : [],
           tags: form.tags
             ? form.tags
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean)
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
             : [],
           category_id: form.category_id || null,
           subcategory_id: form.subcategory_id || null,
@@ -833,33 +836,30 @@ export default function CreatorDashboardPage() {
             <button
               type="button"
               onClick={() => setActive("overview")}
-              className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${
-                active === "overview"
+              className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${active === "overview"
                   ? "bg-zinc-900 text-white"
                   : "text-zinc-600 hover:bg-zinc-100"
-              }`}
+                }`}
             >
               Overview
             </button>
             <button
               type="button"
               onClick={() => setActive("templates")}
-              className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${
-                active === "templates"
+              className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${active === "templates"
                   ? "bg-zinc-900 text-white"
                   : "text-zinc-600 hover:bg-zinc-100"
-              }`}
+                }`}
             >
               My Templates
             </button>
             <button
               type="button"
               onClick={() => setActive("settings")}
-              className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${
-                active === "settings"
+              className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors ${active === "settings"
                   ? "bg-zinc-900 text-white"
                   : "text-zinc-600 hover:bg-zinc-100"
-              }`}
+                }`}
             >
               Settings
             </button>
@@ -1007,8 +1007,8 @@ export default function CreatorDashboardPage() {
                             tpl.status === "pending"
                               ? "bg-amber-50 text-amber-700 border-amber-100"
                               : tpl.status === "rejected"
-                              ? "bg-red-50 text-red-700 border-red-100"
-                              : "bg-emerald-50 text-emerald-700 border-emerald-100";
+                                ? "bg-red-50 text-red-700 border-red-100"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-100";
 
                           return (
                             <li
@@ -1641,8 +1641,8 @@ export default function CreatorDashboardPage() {
                             tpl.status === "pending"
                               ? "bg-amber-50 text-amber-700 border-amber-100"
                               : tpl.status === "rejected"
-                              ? "bg-red-50 text-red-700 border-red-100"
-                              : "bg-emerald-50 text-emerald-700 border-emerald-100";
+                                ? "bg-red-50 text-red-700 border-red-100"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-100";
 
                           return (
                             <li
