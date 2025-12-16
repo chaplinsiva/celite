@@ -1249,16 +1249,23 @@ export default function CreatorDashboardPage() {
                               <input ref={videoInputRef} type="file" accept="video/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('video', file); }} />
                             </div>
                             {uploadingVideo && (
-                              <div className="mt-2">
-                                <div className="w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                              <div className="mt-3 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="relative w-8 h-8">
+                                    <div className="absolute inset-0 rounded-full border-2 border-blue-200"></div>
+                                    <div className="absolute inset-0 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-blue-900">Uploading video...</p>
+                                    <p className="text-xs text-blue-600">{uploadProgress.video}% complete {uploadSpeed.video && `• ${uploadSpeed.video}`}</p>
+                                  </div>
+                                </div>
+                                <div className="w-full bg-blue-100 rounded-full h-2.5 overflow-hidden">
                                   <div
-                                    className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                    className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full transition-all duration-300 ease-out rounded-full"
                                     style={{ width: `${uploadProgress.video}%` }}
                                   />
                                 </div>
-                                {uploadSpeed.video && (
-                                  <p className="text-[10px] text-zinc-500 mt-1">{uploadSpeed.video}</p>
-                                )}
                               </div>
                             )}
                             {form.video_path && (
@@ -1294,16 +1301,23 @@ export default function CreatorDashboardPage() {
                               <input ref={thumbnailInputRef} type="file" accept="image/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('thumbnail', file); }} />
                             </div>
                             {uploadingThumbnail && (
-                              <div className="mt-2">
-                                <div className="w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                              <div className="mt-3 p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="relative w-8 h-8">
+                                    <div className="absolute inset-0 rounded-full border-2 border-emerald-200"></div>
+                                    <div className="absolute inset-0 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin"></div>
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-emerald-900">Uploading thumbnail...</p>
+                                    <p className="text-xs text-emerald-600">{uploadProgress.thumbnail}% complete {uploadSpeed.thumbnail && `• ${uploadSpeed.thumbnail}`}</p>
+                                  </div>
+                                </div>
+                                <div className="w-full bg-emerald-100 rounded-full h-2.5 overflow-hidden">
                                   <div
-                                    className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                    className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full transition-all duration-300 ease-out rounded-full"
                                     style={{ width: `${uploadProgress.thumbnail}%` }}
                                   />
                                 </div>
-                                {uploadSpeed.thumbnail && (
-                                  <p className="text-[10px] text-zinc-500 mt-1">{uploadSpeed.thumbnail}</p>
-                                )}
                               </div>
                             )}
                             {form.thumbnail_path && (
@@ -1342,16 +1356,23 @@ export default function CreatorDashboardPage() {
                               <input ref={audioPreviewInputRef} type="file" accept="audio/*" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('audio_preview', file); }} />
                             </div>
                             {uploadingAudioPreview && (
-                              <div className="mt-2">
-                                <div className="w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                              <div className="mt-3 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-fuchsia-50 border border-purple-100">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="relative w-8 h-8">
+                                    <div className="absolute inset-0 rounded-full border-2 border-purple-200"></div>
+                                    <div className="absolute inset-0 rounded-full border-2 border-purple-600 border-t-transparent animate-spin"></div>
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-purple-900">Uploading audio...</p>
+                                    <p className="text-xs text-purple-600">{uploadProgress.audio_preview}% complete {uploadSpeed.audio_preview && `• ${uploadSpeed.audio_preview}`}</p>
+                                  </div>
+                                </div>
+                                <div className="w-full bg-purple-100 rounded-full h-2.5 overflow-hidden">
                                   <div
-                                    className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                    className="bg-gradient-to-r from-purple-500 to-fuchsia-500 h-full transition-all duration-300 ease-out rounded-full"
                                     style={{ width: `${uploadProgress.audio_preview}%` }}
                                   />
                                 </div>
-                                {uploadSpeed.audio_preview && (
-                                  <p className="text-[10px] text-zinc-500 mt-1">{uploadSpeed.audio_preview}</p>
-                                )}
                               </div>
                             )}
                             {form.audio_preview_path && (
@@ -1388,16 +1409,23 @@ export default function CreatorDashboardPage() {
                               <input ref={model3DInputRef} type="file" accept=".glb,.gltf,.obj" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('model_3d', file); }} />
                             </div>
                             {uploadingModel3D && (
-                              <div className="mt-2">
-                                <div className="w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                              <div className="mt-3 p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="relative w-8 h-8">
+                                    <div className="absolute inset-0 rounded-full border-2 border-amber-200"></div>
+                                    <div className="absolute inset-0 rounded-full border-2 border-amber-600 border-t-transparent animate-spin"></div>
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-amber-900">Uploading 3D model...</p>
+                                    <p className="text-xs text-amber-600">{uploadProgress.model_3d}% complete {uploadSpeed.model_3d && `• ${uploadSpeed.model_3d}`}</p>
+                                  </div>
+                                </div>
+                                <div className="w-full bg-amber-100 rounded-full h-2.5 overflow-hidden">
                                   <div
-                                    className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                    className="bg-gradient-to-r from-amber-500 to-orange-500 h-full transition-all duration-300 ease-out rounded-full"
                                     style={{ width: `${uploadProgress.model_3d}%` }}
                                   />
                                 </div>
-                                {uploadSpeed.model_3d && (
-                                  <p className="text-[10px] text-zinc-500 mt-1">{uploadSpeed.model_3d}</p>
-                                )}
                               </div>
                             )}
                             {form.model_3d_path && (
@@ -1439,16 +1467,23 @@ export default function CreatorDashboardPage() {
                               <input ref={sourceInputRef} type="file" accept="application/zip,application/x-rar-compressed,.zip,.rar" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFile('source', file); }} />
                             </div>
                             {uploadingSource && (
-                              <div className="mt-2">
-                                <div className="w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                              <div className="mt-3 p-4 rounded-xl bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-100">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="relative w-8 h-8">
+                                    <div className="absolute inset-0 rounded-full border-2 border-rose-200"></div>
+                                    <div className="absolute inset-0 rounded-full border-2 border-rose-600 border-t-transparent animate-spin"></div>
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-rose-900">Uploading source file...</p>
+                                    <p className="text-xs text-rose-600">{uploadProgress.source}% complete {uploadSpeed.source && `• ${uploadSpeed.source}`}</p>
+                                  </div>
+                                </div>
+                                <div className="w-full bg-rose-100 rounded-full h-2.5 overflow-hidden">
                                   <div
-                                    className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                    className="bg-gradient-to-r from-rose-500 to-pink-500 h-full transition-all duration-300 ease-out rounded-full"
                                     style={{ width: `${uploadProgress.source}%` }}
                                   />
                                 </div>
-                                {uploadSpeed.source && (
-                                  <p className="text-[10px] text-zinc-500 mt-1">{uploadSpeed.source}</p>
-                                )}
                               </div>
                             )}
                             <p className="text-[10px] text-zinc-400 mt-1">Stored at: category/subcategory/{'{templateFolder}'}/{'{filename}'} (Private bucket: celite-source-files)</p>
