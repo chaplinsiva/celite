@@ -61,13 +61,13 @@ const ITEMS_PER_PAGE = 30;
 const MUSIC_SFX_CATEGORY_ID = '45456b94-cb11-449b-ab99-f0633d6e8848';
 const STOCK_PHOTOS_CATEGORY_ID = 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47';
 
-export default function VideoTemplatesClient({ 
+export default function VideoTemplatesClient({
   initialTemplates,
   pageTitle = 'Video Templates',
   pageSubtitle = 'Discover professional, ready-to-edit video templates for openers, promos, logos, and more.',
   breadcrumbLabel = 'Video Templates',
   basePath = '/templates'
-}: { 
+}: {
   initialTemplates: Template[];
   pageTitle?: string;
   pageSubtitle?: string;
@@ -117,8 +117,8 @@ export default function VideoTemplatesClient({
       const { data: subcats } = await supabase.from('subcategories').select('id,category_id,name,slug').order('name');
 
       // Filter categories based on page type
-      let filteredCats = (cats || []).filter(cat => 
-        cat.id !== MUSIC_SFX_CATEGORY_ID && 
+      let filteredCats = (cats || []).filter(cat =>
+        cat.id !== MUSIC_SFX_CATEGORY_ID &&
         cat.id !== STOCK_PHOTOS_CATEGORY_ID &&
         cat.slug !== 'musics-and-sfx' &&
         cat.slug !== 'stock-images' &&
@@ -140,7 +140,7 @@ export default function VideoTemplatesClient({
 
       setCategories([{ id: 'featured', name: 'Featured Templates', slug: 'featured' }, ...filteredCats]);
       setSubcategories(subcats || []);
-      
+
       // Auto-select the category if there's only one (like After Effects page)
       if (filteredCats.length === 1) {
         setSelectedCategory(filteredCats[0].id);
@@ -196,8 +196,8 @@ export default function VideoTemplatesClient({
   // Filter Logic
   const filteredTemplates = useMemo(() => {
     // Exclude Music & SFX and Stock Photos from regular templates
-    let filtered = [...initialTemplates].filter(t => 
-      t.category_id !== MUSIC_SFX_CATEGORY_ID && 
+    let filtered = [...initialTemplates].filter(t =>
+      t.category_id !== MUSIC_SFX_CATEGORY_ID &&
       t.category_id !== STOCK_PHOTOS_CATEGORY_ID
     );
 
@@ -294,22 +294,20 @@ export default function VideoTemplatesClient({
                     <button
                       type="button"
                       onClick={() => setViewMode("discover")}
-                      className={`px-4 py-1.5 rounded-full font-medium transition-colors ${
-                        viewMode === "discover"
+                      className={`px-4 py-1.5 rounded-full font-medium transition-colors ${viewMode === "discover"
                           ? "bg-white text-zinc-900 shadow-sm"
                           : "text-zinc-500 hover:text-zinc-900"
-                      }`}
+                        }`}
                     >
                       Discover
                     </button>
                     <button
                       type="button"
                       onClick={() => setViewMode("following")}
-                      className={`px-4 py-1.5 rounded-full font-medium transition-colors ${
-                        viewMode === "following"
+                      className={`px-4 py-1.5 rounded-full font-medium transition-colors ${viewMode === "following"
                           ? "bg-white text-zinc-900 shadow-sm"
                           : "text-zinc-500 hover:text-zinc-900"
-                      }`}
+                        }`}
                     >
                       Following
                     </button>
@@ -449,7 +447,7 @@ export default function VideoTemplatesClient({
 
           </aside>
 
-            {/* 3. Main Content Grid (75%) */}
+          {/* 3. Main Content Grid (75%) */}
           <div className="flex-1">
 
             {/* Mobile Filters Toggle */}

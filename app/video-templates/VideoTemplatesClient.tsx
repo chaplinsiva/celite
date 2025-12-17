@@ -7,7 +7,7 @@ import { useAppContext } from '../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
 import { cn, convertR2UrlToCdn } from '../../lib/utils';
-import { Search, ChevronDown, ChevronRight, ChevronLeft, Check, PlayCircle, Download, Filter, ArrowRight } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, ChevronLeft, Download, ArrowRight } from 'lucide-react';
 import VideoThumbnailPlayer from '../../components/VideoThumbnailPlayer';
 
 type Template = {
@@ -69,13 +69,13 @@ const ITEMS_PER_PAGE = 30;
 const MUSIC_SFX_CATEGORY_ID = '45456b94-cb11-449b-ab99-f0633d6e8848';
 const STOCK_PHOTOS_CATEGORY_ID = 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47';
 
-export default function VideoTemplatesClient({ 
+export default function VideoTemplatesClient({
   initialTemplates,
   pageTitle = 'Video Templates',
   pageSubtitle = 'Discover professional, ready-to-edit video templates for openers, promos, logos, and more.',
   breadcrumbLabel = 'Video Templates',
   basePath = '/video-templates'
-}: { 
+}: {
   initialTemplates: Template[];
   pageTitle?: string;
   pageSubtitle?: string;
@@ -98,7 +98,7 @@ export default function VideoTemplatesClient({
   const [viewMode, setViewMode] = useState<'discover' | 'following'>('discover');
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedSections, setExpandedSections] = useState({ categories: true, filters: false });
-  
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [subSubcategories, setSubSubcategories] = useState<SubSubcategory[]>([]);
@@ -108,19 +108,19 @@ export default function VideoTemplatesClient({
   useEffect(() => {
     const fetchData = async () => {
       const supabase = getSupabaseBrowserClient();
-      
+
       const [catsResult, subcatsResult, subSubcatsResult] = await Promise.all([
         supabase.from('categories').select('id,name,slug').order('name'),
         supabase.from('subcategories').select('id,category_id,name,slug').order('name'),
         supabase.from('sub_subcategories').select('id,subcategory_id,name,slug').order('name')
       ]);
 
-      let filteredCats = (catsResult.data || []).filter(cat => 
+      let filteredCats = (catsResult.data || []).filter(cat =>
         cat.id !== MUSIC_SFX_CATEGORY_ID && cat.id !== STOCK_PHOTOS_CATEGORY_ID
       );
 
       if (basePath === '/video-templates') {
-        filteredCats = filteredCats.filter(cat => 
+        filteredCats = filteredCats.filter(cat =>
           cat.slug === 'video-templates' ||
           (cat.name.toLowerCase().includes('video') && cat.name.toLowerCase().includes('template'))
         );
@@ -132,8 +132,8 @@ export default function VideoTemplatesClient({
 
       // Auto-select Video Templates category
       if (basePath === '/video-templates') {
-        const videoTemplatesCat = filteredCats.find(cat => 
-          cat.slug === 'video-templates' || 
+        const videoTemplatesCat = filteredCats.find(cat =>
+          cat.slug === 'video-templates' ||
           (cat.name.toLowerCase().includes('video') && cat.name.toLowerCase().includes('template'))
         );
         if (videoTemplatesCat) {
@@ -170,7 +170,7 @@ export default function VideoTemplatesClient({
         .from('follows')
         .select('creator_shop_id')
         .eq('follower_id', user.id);
-      
+
       if (data) {
         setFollowingCreatorIds(data.map(f => f.creator_shop_id).filter(Boolean));
       }
@@ -196,8 +196,8 @@ export default function VideoTemplatesClient({
 
   // Filter templates
   const filteredTemplates = useMemo(() => {
-    let filtered = [...initialTemplates].filter(t => 
-      t.category_id !== MUSIC_SFX_CATEGORY_ID && 
+    let filtered = [...initialTemplates].filter(t =>
+      t.category_id !== MUSIC_SFX_CATEGORY_ID &&
       t.category_id !== STOCK_PHOTOS_CATEGORY_ID
     );
 
@@ -360,10 +360,10 @@ export default function VideoTemplatesClient({
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex gap-8">
+      <div className="w-full">
+        <div className="flex">
           {/* Sidebar */}
-          <aside className="w-64 flex-shrink-0 hidden lg:block">
+          <aside className="w-64 flex-shrink-0 hidden lg:block pl-4">
             <div className="bg-white rounded-2xl border border-zinc-200 p-4 sticky top-24">
               <button
                 onClick={() => setExpandedSections(prev => ({ ...prev, categories: !prev.categories }))}
@@ -494,73 +494,68 @@ export default function VideoTemplatesClient({
             )}
 
             {viewTemplates.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-zinc-200">
                 {paginatedTemplates.map((template) => (
-                  <div key={template.slug} className="group flex flex-col bg-white rounded-xl overflow-hidden border border-zinc-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300">
-                    <Link href={`/product/${template.slug}`} className="block relative aspect-video overflow-hidden bg-zinc-100">
-                      {template.video_path ? (
-                        <VideoThumbnailPlayer
-                          videoUrl={template.video_path}
-                          thumbnailUrl={template.thumbnail_path || template.img || undefined}
-                          title={template.name}
-                          className="w-full h-full"
-                        />
-                      ) : (
-                        <>
-                          <img
-                            src={getThumbnail(template)}
-                            alt={template.name}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                            <div className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
-                              <PlayCircle className="w-6 h-6 fill-current" />
-                            </div>
-                          </div>
-                        </>
+                  <Link
+                    key={template.slug}
+                    href={`/product/${template.slug}`}
+                    className="group relative aspect-video overflow-hidden bg-zinc-900 transition-all duration-300"
+                  >
+                    {/* Video/Image */}
+                    {template.video_path ? (
+                      <VideoThumbnailPlayer
+                        videoUrl={template.video_path}
+                        thumbnailUrl={template.thumbnail_path || template.img || undefined}
+                        title={template.name}
+                        className="w-full h-full"
+                      />
+                    ) : (
+                      <img
+                        src={getThumbnail(template)}
+                        alt={template.name}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    )}
+
+                    {/* Hover Overlay with Info */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+                    {/* Bottom Info - Shows on Hover (pointer-events-none to not block audio button) */}
+                    <div className="absolute bottom-0 left-0 right-12 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none z-20">
+                      {/* Template Name */}
+                      <h3 className="text-white text-xs sm:text-sm font-semibold line-clamp-1 mb-1 drop-shadow-lg">
+                        {template.name}
+                      </h3>
+                      {/* Vendor Name */}
+                      {template.vendor_name && (
+                        <p className="text-white/70 text-[10px] sm:text-xs truncate drop-shadow">
+                          by {template.vendor_name}
+                        </p>
                       )}
-
-                      <div className="absolute top-3 left-3 flex items-center gap-2 pointer-events-none z-30">
-                        {template.software?.includes('After Effects') && (
-                          <span className="px-2 py-1 rounded bg-black/60 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider">Ae</span>
-                        )}
-                      </div>
-                    </Link>
-
-                    <div className="p-4 flex flex-col flex-1 relative z-30 bg-white">
-                      <Link href={`/product/${template.slug}`} className="block">
-                        <h3 className="font-bold text-zinc-900 text-lg leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
-                          {template.name}
-                        </h3>
-                      </Link>
-
-                      <div className="mt-auto flex items-center justify-between pt-4 border-t border-zinc-100">
-                        {template.vendor_name ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600">
-                              {template.vendor_name.charAt(0).toUpperCase() || "C"}
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-medium text-zinc-500">
-                                By {template.vendor_name}
-                              </span>
-                              <div className="w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
-                                <Check className="w-2 h-2 text-white" />
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-zinc-400">Celite</span>
-                        )}
-                        <button
-                          onClick={() => handleDownload(template.slug)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                      </div>
                     </div>
-                  </div>
+
+                    {/* Top Right Icons - Shows on Hover */}
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDownload(template.slug);
+                        }}
+                        className="p-1.5 sm:p-2 bg-black/60 backdrop-blur-sm rounded-full text-white hover:bg-blue-600 transition-colors"
+                        title="Download"
+                      >
+                        <Download className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </button>
+                    </div>
+
+                    {/* Software Badge - Always visible */}
+                    {template.software?.includes('After Effects') && (
+                      <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-sm rounded text-[9px] font-bold text-white uppercase tracking-wider">
+                        Ae
+                      </div>
+                    )}
+                  </Link>
                 ))}
               </div>
             ) : (
@@ -569,7 +564,7 @@ export default function VideoTemplatesClient({
                   <div className="text-6xl mb-4">🔍</div>
                   <h3 className="text-xl font-bold text-zinc-900 mb-2">No templates found</h3>
                   <p className="text-zinc-500 mb-6">
-                    {searchQuery.trim() 
+                    {searchQuery.trim()
                       ? `No templates match your search "${searchQuery}"`
                       : selectedSubcategory !== 'all' && selectedSubcategory !== ''
                         ? "No templates in this subcategory"

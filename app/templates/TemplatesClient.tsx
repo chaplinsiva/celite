@@ -49,7 +49,7 @@ const getThumbnail = (template: Template): string => {
 // Helper function to get the correct route for a category
 const getCategoryRoute = (categorySlug: string): string => {
     const normalizedSlug = categorySlug.toLowerCase().trim();
-    
+
     const routeMap: Record<string, string> = {
         'after-effects': '/video-templates',
         'website-templates': '/web-templates',
@@ -66,11 +66,11 @@ const getCategoryRoute = (categorySlug: string): string => {
         'ui-templates': '/web-templates',
         '3d-models': '/3d-models',
     };
-    
+
     if (routeMap[normalizedSlug]) {
         return routeMap[normalizedSlug];
     }
-    
+
     // Check for partial matches
     if (normalizedSlug.includes('music') || normalizedSlug.includes('audio') || normalizedSlug.includes('sfx') || normalizedSlug.includes('sound')) {
         return '/music-sfx';
@@ -90,7 +90,7 @@ const getCategoryRoute = (categorySlug: string): string => {
     if (normalizedSlug.includes('3d') || normalizedSlug.includes('model')) {
         return '/3d-models';
     }
-    
+
     return `/video-templates?category=${categorySlug}`;
 };
 
@@ -124,7 +124,7 @@ export default function TemplatesClient() {
         const loadTemplates = async () => {
             try {
                 const supabase = getSupabaseBrowserClient();
-                
+
                 // Fetch all categories from the database
                 const { data: dbCategories, error: categoryError } = await supabase
                     .from('categories')
@@ -161,7 +161,7 @@ export default function TemplatesClient() {
                     // Group templates by category
                     const groupsByCategory = new Map<string, Template[]>();
                     const categoryCounts = new Map<string, number>();
-                    
+
                     // Filter templates by search query if provided
                     let filteredTemplates = templates;
                     if (searchQuery.trim()) {
@@ -174,7 +174,7 @@ export default function TemplatesClient() {
 
                     filteredTemplates.forEach((t: any) => {
                         let categoryId = t.category_id;
-                        
+
                         if (categoryId && categoryMap.has(categoryId)) {
                             if (!groupsByCategory.has(categoryId)) {
                                 groupsByCategory.set(categoryId, []);
@@ -200,7 +200,7 @@ export default function TemplatesClient() {
                         .map(([categoryId, templates]) => {
                             const category = categoryMap.get(categoryId);
                             if (!category) return null;
-                            
+
                             return {
                                 category,
                                 displayName: category.name,
@@ -236,13 +236,13 @@ export default function TemplatesClient() {
         if (isMusicItem(template) && template.audio_preview_path) {
             return (
                 <div className="relative w-full h-full bg-gradient-to-br from-purple-500 via-blue-500 to-pink-500">
-                        {template.thumbnail_path || template.img ? (
-                            <img
-                                src={convertR2UrlToCdn(template.thumbnail_path) || template.thumbnail_path || convertR2UrlToCdn(template.img) || template.img || '/PNG1.png'}
-                                alt={template.name}
-                                className="w-full h-full object-cover"
-                            />
-                        ) : null}
+                    {template.thumbnail_path || template.img ? (
+                        <img
+                            src={convertR2UrlToCdn(template.thumbnail_path) || template.thumbnail_path || convertR2UrlToCdn(template.img) || template.img || '/PNG1.png'}
+                            alt={template.name}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : null}
                     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/60 via-black/20 to-transparent">
                         <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-2xl border border-white/30">
                             <Music2 className="w-6 h-6 text-white" />
@@ -323,7 +323,7 @@ export default function TemplatesClient() {
                         </span>
                     </h1>
                     <p className="text-zinc-600 text-lg md:text-xl max-w-3xl mx-auto">
-                        {searchQuery 
+                        {searchQuery
                             ? `Found templates matching your search query.`
                             : 'Discover a vast collection of creative assets across multiple categories. From video templates to graphics, fonts to music - find everything you need for your creative projects.'
                         }

@@ -15,6 +15,7 @@ export type TemplateCartItem = Pick<Template, 'slug' | 'name' | 'price'> & {
 
 type AppContextValue = {
   user: User | null;
+  isAuthLoading: boolean;  // NEW: Track if auth state is still loading
   cartCount: number;
   cartItems: TemplateCartItem[];
   login: (email: string, password: string) => Promise<boolean>;
@@ -29,18 +30,26 @@ const AppContext = createContext<AppContextValue | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);  // NEW: Start as loading
   const [cartCount, setCartCount] = useState<number>(0);
   const [cartItems, setCartItems] = useState<TemplateCartItem[]>([]);
 
   // Initialize Supabase auth state and subscribe to changes
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
+
+    // Get initial session
     supabase.auth.getSession().then(({ data }) => {
       const s = data.session;
       if (s?.user) {
         setUser({ id: s.user.id, email: s.user.email ?? '' });
       }
+      setIsAuthLoading(false);  // Done loading
+    }).catch(() => {
+      setIsAuthLoading(false);  // Done loading even on error
     });
+
+    // Subscribe to auth changes
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser({ id: session.user.id, email: session.user.email ?? '' });
@@ -50,6 +59,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setCartItems([]);
       }
     });
+
     return () => { sub.subscription.unsubscribe(); };
   }, []);
 
@@ -120,8 +130,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const value = useMemo(
-    () => ({ user, cartCount, cartItems, login, signUp, logout, addToCart, resetCart, removeFromCart }),
-    [user, cartCount, cartItems]
+    () => ({ user, isAuthLoading, cartCount, cartItems, login, signUp, logout, addToCart, resetCart, removeFromCart }),
+    [user, isAuthLoading, cartCount, cartItems]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -134,4 +144,3 @@ export function useAppContext() {
   }
   return context;
 }
-

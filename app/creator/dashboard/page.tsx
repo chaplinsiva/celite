@@ -486,14 +486,21 @@ export default function CreatorDashboardPage() {
         return;
       }
 
-      const res = await fetch("/api/creator/templates", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      const json = await res.json();
+      // Fetch API and categories in parallel for faster loading
+      const [apiResponse, catsResult, subsResult, subSubsResult] = await Promise.all([
+        fetch("/api/creator/templates", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }),
+        supabase.from("categories").select("id,name,slug").order("name"),
+        supabase.from("subcategories").select("id,category_id,name,slug").order("name"),
+        supabase.from("sub_subcategories").select("id,subcategory_id,name,slug").order("name"),
+      ]);
 
-      if (!res.ok || !json.ok) {
+      const json = await apiResponse.json();
+
+      if (!apiResponse.ok || !json.ok) {
         setError(json.error || "Failed to load creator data.");
         setLoading(false);
         return;
@@ -520,28 +527,13 @@ export default function CreatorDashboardPage() {
         router.replace("/start-selling");
         return;
       }
-      // Load categories / subcategories for template form
-      try {
-        const { data: cats } = await supabase
-          .from("categories")
-          .select("id,name,slug")
-          .order("name");
-        const { data: subs } = await supabase
-          .from("subcategories")
-          .select("id,category_id,name,slug")
-          .order("name");
-        const { data: subSubs } = await supabase
-          .from("sub_subcategories")
-          .select("id,subcategory_id,name,slug")
-          .order("name");
-        setCategories((cats as any) || []);
-        setSubcategories((subs as any) || []);
-        setFilteredSubcategories((subs as any) || []);
-        setSubSubcategories((subSubs as any) || []);
-        setFilteredSubSubcategories((subSubs as any) || []);
-      } catch (e) {
-        console.error("Failed to load categories/subcategories for creator", e);
-      }
+
+      // Set categories data (already fetched in parallel)
+      setCategories((catsResult.data as any) || []);
+      setSubcategories((subsResult.data as any) || []);
+      setFilteredSubcategories((subsResult.data as any) || []);
+      setSubSubcategories((subSubsResult.data as any) || []);
+      setFilteredSubSubcategories((subSubsResult.data as any) || []);
     } catch (e: any) {
       console.error("Failed to load creator dashboard:", e);
       setError(e?.message || "Failed to load creator dashboard.");

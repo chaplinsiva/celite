@@ -33,7 +33,7 @@ type SubSubcategory = {
 // Helper function to get the correct route for a category
 const getCategoryRoute = (categorySlug: string): string => {
   const normalizedSlug = categorySlug.toLowerCase().trim();
-  
+
   const routeMap: Record<string, string> = {
     'after-effects': '/video-templates',
     'website-templates': '/web-templates',
@@ -50,11 +50,11 @@ const getCategoryRoute = (categorySlug: string): string => {
     'ui-templates': '/web-templates',
     '3d-models': '/3d-models',
   };
-  
+
   if (routeMap[normalizedSlug]) {
     return routeMap[normalizedSlug];
   }
-  
+
   // Check for partial matches
   if (normalizedSlug.includes('music') || normalizedSlug.includes('audio') || normalizedSlug.includes('sfx') || normalizedSlug.includes('sound')) {
     return '/music-sfx';
@@ -74,13 +74,13 @@ const getCategoryRoute = (categorySlug: string): string => {
   if (normalizedSlug.includes('3d') || normalizedSlug.includes('model')) {
     return '/3d-models';
   }
-  
+
   return `/video-templates?category=${categorySlug}`;
 };
 
 export default function Header() {
   const router = useRouter();
-  const { user, logout } = useAppContext();
+  const { user, isAuthLoading, logout } = useAppContext();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -139,13 +139,13 @@ export default function Header() {
         setIsSubscribed(false);
         setIsExpired(false);
       } else {
-      const now = Date.now();
-      const validUntil = sub.valid_until ? new Date(sub.valid_until).getTime() : null;
-      const actuallyActive = !!sub.is_active && (!validUntil || validUntil > now);
-      const expired: boolean = !!(sub.is_active && validUntil && validUntil <= now);
+        const now = Date.now();
+        const validUntil = sub.valid_until ? new Date(sub.valid_until).getTime() : null;
+        const actuallyActive = !!sub.is_active && (!validUntil || validUntil > now);
+        const expired: boolean = !!(sub.is_active && validUntil && validUntil <= now);
 
-      setIsSubscribed(actuallyActive);
-      setIsExpired(expired);
+        setIsSubscribed(actuallyActive);
+        setIsExpired(expired);
       }
 
       // Check if user has a creator shop
@@ -189,18 +189,18 @@ export default function Header() {
                     { name: '3D Models', route: '/3d-models', slug: '3d-models' },
                   ].map((navItem) => {
                     // Find the category
-                    const category = categories.find(cat => 
-                      cat.slug === navItem.slug || 
+                    const category = categories.find(cat =>
+                      cat.slug === navItem.slug ||
                       cat.name.toLowerCase() === navItem.name.toLowerCase()
                     );
-                    
+
                     if (!category) return null;
-                    
+
                     const categorySubcategories = subcategories.filter(
                       sub => sub.category_id === category.id
                     );
                     const categoryRoute = getCategoryRoute(category.slug);
-                    
+
                     return (
                       <MenuItem
                         key={category.id}
@@ -216,7 +216,7 @@ export default function Header() {
                               const subSubcats = subSubcategories.filter(
                                 ss => ss.subcategory_id === subcategory.id
                               );
-                              
+
                               return (
                                 <div
                                   key={subcategory.id}
@@ -246,7 +246,7 @@ export default function Header() {
                                               key={subSubcat.id}
                                               href={`${categoryRoute}?subcategory=${subcategory.slug}&subsubcategory=${subSubcat.slug}`}
                                               className="block py-1.5 px-2 rounded hover:bg-zinc-50 text-xs"
-                >
+                                            >
                                               {subSubcat.name}
                                             </HoveredLink>
                                           ))}
@@ -276,15 +276,15 @@ export default function Header() {
           {/* Right: Actions */}
           <div className="flex items-center gap-4">
             {/* Creator link (Desktop) - show Start Selling until shop exists, then Creator Dashboard */}
-            {user && !hasCreatorShop && (
+            {!isAuthLoading && user && !hasCreatorShop && (
               <Link
                 href="/start-selling"
                 className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors mr-2"
               >
-              Start Selling
-            </Link>
+                Start Selling
+              </Link>
             )}
-            {user && hasCreatorShop && (
+            {!isAuthLoading && user && hasCreatorShop && (
               <Link
                 href="/creator/dashboard"
                 className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors mr-2"
@@ -295,7 +295,13 @@ export default function Header() {
 
             {/* Auth Buttons */}
             <div className="flex items-center gap-3">
-              {!user ? (
+              {isAuthLoading ? (
+                /* Skeleton loader while auth is loading */
+                <div className="flex items-center gap-3">
+                  <div className="hidden sm:block w-20 h-9 bg-zinc-100 rounded-full animate-pulse" />
+                  <div className="w-8 h-8 sm:w-28 sm:h-10 bg-zinc-100 rounded-lg animate-pulse" />
+                </div>
+              ) : !user ? (
                 <>
                   <Link href="/login" className="hidden sm:block text-[14px] font-medium text-zinc-900 px-4 py-2 hover:bg-zinc-100 rounded-full transition-colors">
                     Log in
@@ -366,17 +372,17 @@ export default function Header() {
               { name: 'Graphics', route: '/graphics', slug: 'psd-templates' },
               { name: '3D Models', route: '/3d-models', slug: '3d-models' },
             ].map((navItem) => {
-              const category = categories.find(cat => 
-                cat.slug === navItem.slug || 
+              const category = categories.find(cat =>
+                cat.slug === navItem.slug ||
                 cat.name.toLowerCase() === navItem.name.toLowerCase()
               );
-              
+
               if (!category) return null;
-              
+
               const categorySubcategories = subcategories.filter(
                 sub => sub.category_id === category.id
               );
-              
+
               return (
                 <div key={navItem.slug} className="border-b border-zinc-50 pb-2">
                   <Link
@@ -389,30 +395,30 @@ export default function Header() {
                   {categorySubcategories.length > 0 && (
                     <div className="ml-4 mt-2 space-y-1">
                       {categorySubcategories.map((subcategory) => (
-              <Link
+                        <Link
                           key={subcategory.id}
                           href={`${navItem.route}?subcategory=${subcategory.slug}`}
                           className="text-sm text-zinc-600 py-1 block hover:text-zinc-900"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
                           {subcategory.name}
-              </Link>
-            ))}
+                        </Link>
+                      ))}
                     </div>
                   )}
                 </div>
               );
             })}
-            {user && !hasCreatorShop && (
-            <Link
-              href="/start-selling"
-              className="text-lg font-medium text-zinc-500 py-2"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Start Selling
-            </Link>
+            {!isAuthLoading && user && !hasCreatorShop && (
+              <Link
+                href="/start-selling"
+                className="text-lg font-medium text-zinc-500 py-2"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Start Selling
+              </Link>
             )}
-            {user && hasCreatorShop && (
+            {!isAuthLoading && user && hasCreatorShop && (
               <Link
                 href="/creator/dashboard"
                 className="text-lg font-medium text-zinc-500 py-2"
@@ -428,7 +434,7 @@ export default function Header() {
             >
               Search Templates
             </Link>
-            {!user && (
+            {!isAuthLoading && !user && (
               <Link
                 href="/login"
                 className="text-lg font-medium text-zinc-800 py-2"
