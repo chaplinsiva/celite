@@ -143,42 +143,49 @@ export default function LatestTemplatesCarousel() {
   const TemplateCardComponent = ({ tpl, isSubscribed, handleDownload }: { tpl: LatestTemplate; isSubscribed: boolean; handleDownload: (slug: string) => void }) => {
     return (
       <div className="flex-shrink-0 w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(25%-0.75rem)] snap-center">
-        <div className="relative h-full group">
-          <div className="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white border border-zinc-200 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
-            {/* Video area - no overlay blocking hover */}
-            <div className="relative w-full aspect-video overflow-hidden">
-              {tpl.video_path ? (
-                <Link href={`/product/${tpl.slug}`} className="block w-full h-full">
-                  <VideoThumbnailPlayer
-                    videoUrl={tpl.video_path}
-                    thumbnailUrl={tpl.thumbnail_path || tpl.img || undefined}
-                    title={tpl.name}
-                    className="w-full h-full"
-                  />
-                </Link>
-              ) : (
-                <Link href={`/product/${tpl.slug}`} className="block w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">
-                  {tpl.img ? (
-                    <img src={convertR2UrlToCdn(tpl.img) || tpl.img} alt={tpl.name} className="w-full h-full object-cover" />
-                  ) : (
-                    'No Preview'
-                  )}
-                </Link>
-              )}
-            </div>
-            {/* Content area - clickable link */}
-            <Link href={`/product/${tpl.slug}`} className="flex flex-col gap-2 p-4 flex-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
-                  {tpl.subcategory?.name || tpl.category?.name || "Premium"}
-                </span>
+        <Link href={`/product/${tpl.slug}`} className="block relative group">
+          <div className="relative aspect-video overflow-hidden rounded-xl bg-zinc-900">
+            {/* Video/Image */}
+            {tpl.video_path ? (
+              <VideoThumbnailPlayer
+                videoUrl={tpl.video_path}
+                thumbnailUrl={tpl.thumbnail_path || tpl.img || undefined}
+                title={tpl.name}
+                className="w-full h-full"
+              />
+            ) : (
+              <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">
+                {tpl.img ? (
+                  <img src={convertR2UrlToCdn(tpl.img) || tpl.img} alt={tpl.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                ) : (
+                  'No Preview'
+                )}
               </div>
-              <h3 className="text-base font-semibold text-zinc-900 leading-tight line-clamp-2 md:line-clamp-1 group-hover:text-violet-600 transition-colors">
+            )}
+
+            {/* Hover Overlay with Info */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+            {/* Bottom Info - Shows on Hover */}
+            <div className="absolute bottom-0 left-0 right-12 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none z-20">
+              {/* Category Badge */}
+              <span className="inline-block text-[10px] font-medium text-white/80 bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full mb-1.5">
+                {tpl.subcategory?.name || tpl.category?.name || "Premium"}
+              </span>
+              {/* Template Name */}
+              <h3 className="text-white text-sm font-semibold line-clamp-1 drop-shadow-lg">
                 {tpl.name}
               </h3>
-            </Link>
+            </div>
+
+            {/* Software Badge - Always visible */}
+            {tpl.software?.includes('After Effects') && (
+              <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-sm rounded text-[9px] font-bold text-white uppercase tracking-wider">
+                Ae
+              </div>
+            )}
           </div>
-        </div>
+        </Link>
       </div>
     );
   };
