@@ -95,7 +95,7 @@ export default function VideoThumbnailPlayer({
       <img
         src={displayThumbnail}
         alt={title || 'Video thumbnail'}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovered ? 'opacity-0' : 'opacity-100'
+        className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${isHovered ? 'opacity-0' : 'opacity-100'
           }`}
       />
 
@@ -103,7 +103,7 @@ export default function VideoThumbnailPlayer({
       <video
         ref={videoRef}
         src={convertedVideoUrl}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'
+        className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'
           }`}
         muted={isMuted}
         loop

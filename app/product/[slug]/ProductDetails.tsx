@@ -621,7 +621,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
           <div className="w-full lg:w-2/3">
 
             {/* Video Player / 3D Model / Stock Photo / Music Preview */}
-            <div className="w-full aspect-video rounded-xl overflow-hidden bg-black shadow-lg mb-8 relative group">
+            <div className="w-full h-[500px] rounded-xl overflow-hidden bg-black shadow-lg mb-8 relative group flex items-center justify-center">
               {(() => {
                 const categorySlug = (product as any).category_slug?.toLowerCase() || '';
                 const categoryId = (product as any).category_id;
@@ -687,7 +687,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 if ((product as any).thumbnail_path) {
                   return (
                     <div className="w-full h-full flex items-center justify-center bg-zinc-100">
-                      <img src={convertR2UrlToCdn((product as any).thumbnail_path) || (product as any).thumbnail_path} alt={product.name} className="w-full h-full object-cover" />
+                      <img src={convertR2UrlToCdn((product as any).thumbnail_path) || (product as any).thumbnail_path} alt={product.name} className="max-w-full max-h-full object-contain" />
                       {(product as any).audio_preview_path && (
                         <div className="absolute bottom-4 left-4 right-4">
                           <audio src={convertR2UrlToCdn((product as any).audio_preview_path) || (product as any).audio_preview_path} controls className="w-full" />
@@ -699,7 +699,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
 
                 return (
                   <div className="w-full h-full flex items-center justify-center bg-zinc-100">
-                    <img src={getThumbnail(product)} alt={product.name} className="w-full h-full object-cover" />
+                    <img src={getThumbnail(product)} alt={product.name} className="max-w-full max-h-full object-contain" />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
                       <PlayCircle className="w-16 h-16 text-white opacity-90 drop-shadow-lg" />
                     </div>

@@ -144,19 +144,19 @@ export default function LatestTemplatesCarousel() {
     return (
       <div className="flex-shrink-0 w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(25%-0.75rem)] snap-center">
         <Link href={`/product/${tpl.slug}`} className="block relative group">
-          <div className="relative aspect-video overflow-hidden rounded-xl bg-zinc-900">
+          <div className="relative min-h-[200px] max-h-[350px] h-auto overflow-hidden rounded-xl bg-zinc-900 flex items-center justify-center">
             {/* Video/Image */}
             {tpl.video_path ? (
               <VideoThumbnailPlayer
                 videoUrl={tpl.video_path}
                 thumbnailUrl={tpl.thumbnail_path || tpl.img || undefined}
                 title={tpl.name}
-                className="w-full h-full"
+                className="w-full h-full min-h-[200px]"
               />
             ) : (
-              <div className="w-full h-full bg-zinc-100 flex items-center justify-center text-zinc-400">
+              <div className="w-full h-full min-h-[200px] bg-zinc-100 flex items-center justify-center text-zinc-400">
                 {tpl.img ? (
-                  <img src={convertR2UrlToCdn(tpl.img) || tpl.img} alt={tpl.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <img src={convertR2UrlToCdn(tpl.img) || tpl.img} alt={tpl.name} className="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-105" />
                 ) : (
                   'No Preview'
                 )}

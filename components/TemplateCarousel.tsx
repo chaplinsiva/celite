@@ -160,20 +160,20 @@ export default function TemplateCarousel() {
       <div className="flex-shrink-0 w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(25%-0.75rem)] snap-center">
         <div className="group flex flex-col bg-white rounded-xl overflow-hidden border border-zinc-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300">
           {/* Thumbnail / Video Player */}
-          <div className="relative aspect-video overflow-hidden bg-zinc-100">
+          <div className="relative min-h-[180px] max-h-[300px] h-auto overflow-hidden bg-zinc-100 flex items-center justify-center">
             {tpl.video_path ? (
               <VideoThumbnailPlayer
                 videoUrl={tpl.video_path}
                 thumbnailUrl={getThumbnail(tpl)}
                 title={tpl.name}
-                className="w-full h-full"
+                className="w-full h-full min-h-[180px]"
               />
             ) : (
-              <Link href={`/product/${tpl.slug}`} className="block w-full h-full">
+              <Link href={`/product/${tpl.slug}`} className="block w-full h-full min-h-[180px] flex items-center justify-center">
                 <img
                   src={convertR2UrlToCdn(getThumbnail(tpl)) || getThumbnail(tpl)}
                   alt={tpl.name}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="max-w-full max-h-full object-contain transition-transform duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                   <div className="w-12 h-12 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-blue-600 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all">
