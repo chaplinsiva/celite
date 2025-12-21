@@ -85,6 +85,11 @@ export default function CreatorDashboardPage() {
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
   const [uploadingAudioPreview, setUploadingAudioPreview] = useState(false);
   const [uploadingModel3D, setUploadingModel3D] = useState(false);
+
+  // Autofill with AI state
+  const [autofillOpen, setAutofillOpen] = useState(false);
+  const [autofillLoading, setAutofillLoading] = useState(false);
+  const [autofillTemplateType, setAutofillTemplateType] = useState("");
   const [uploadProgress, setUploadProgress] = useState<{
     source: number;
     video: number;
@@ -472,6 +477,65 @@ export default function CreatorDashboardPage() {
       .replace(/\s+/g, "-")
       .replace(/-+/g, "-")
       .replace(/^-+|-+$/g, "");
+
+  // Autofill handler - uses Gemini to generate template metadata
+  const handleAutofill = async () => {
+    if (!autofillTemplateType.trim()) {
+      setError("Please enter what kind of template this is");
+      return;
+    }
+
+    setAutofillLoading(true);
+    setError(null);
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError("Session expired. Please log in again.");
+        return;
+      }
+
+      const res = await fetch("/api/creator/autofill", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ templateType: autofillTemplateType.trim() }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        setError(json.error || "Failed to generate content");
+        return;
+      }
+
+      const result = json.result;
+
+      // Apply generated content to form (but NOT file paths)
+      setForm((f) => ({
+        ...f,
+        name: result.name || f.name,
+        slug: result.name && !slugManuallyEdited ? generateSlug(result.name) : f.slug,
+        subtitle: result.subtitle || f.subtitle,
+        description: result.description || f.description,
+        tags: Array.isArray(result.tags) ? result.tags.join(", ") : f.tags,
+        features: Array.isArray(result.features) ? result.features.join(", ") : f.features,
+        software: Array.isArray(result.software) ? result.software.join(", ") : f.software,
+        plugins: Array.isArray(result.plugins) ? result.plugins.join(", ") : f.plugins,
+      }));
+
+      setMessage("Content generated successfully!");
+      setAutofillOpen(false);
+      setAutofillTemplateType("");
+    } catch (e: any) {
+      console.error("Autofill error:", e);
+      setError(e?.message || "Failed to generate content");
+    } finally {
+      setAutofillLoading(false);
+    }
+  };
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -1113,6 +1177,67 @@ export default function CreatorDashboardPage() {
                       </button>
                     </div>
 
+                    {/* Autofill Modal */}
+                    {autofillOpen && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/50 backdrop-blur-sm" onClick={() => { setAutofillOpen(false); setAutofillTemplateType(""); }}>
+                        <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-zinc-100" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <h2 className="text-lg font-bold text-zinc-900">Autofill with AI</h2>
+                              <p className="text-xs text-zinc-500">Generate title, description, tags & more</p>
+                            </div>
+                          </div>
+                          <div className="mb-4">
+                            <label className="block text-sm font-semibold text-zinc-700 mb-2">What kind of template is this?</label>
+                            <input
+                              type="text"
+                              value={autofillTemplateType}
+                              onChange={(e) => setAutofillTemplateType(e.target.value)}
+                              placeholder="e.g., Cinematic logo reveal, Wedding invitation, YouTube intro"
+                              className="w-full px-4 py-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all"
+                              autoFocus
+                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAutofill(); } }}
+                            />
+                            <p className="text-xs text-zinc-400 mt-2">Be specific for better results. Example: "Dark minimal logo reveal with particles"</p>
+                          </div>
+                          <div className="flex gap-3">
+                            <button
+                              type="button"
+                              onClick={() => { setAutofillOpen(false); setAutofillTemplateType(""); }}
+                              className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-200 text-zinc-700 text-sm font-semibold hover:bg-zinc-50 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleAutofill}
+                              disabled={autofillLoading || !autofillTemplateType.trim()}
+                              className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold hover:from-violet-700 hover:to-purple-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                              {autofillLoading ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                  </svg>
+                                  Generate
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {formOpen && (
                       <form
                         onSubmit={handleCreateTemplate}
@@ -1590,6 +1715,16 @@ export default function CreatorDashboardPage() {
                         </div>
 
                         <div className="flex justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setAutofillOpen(true)}
+                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 text-xs font-semibold text-violet-700 hover:from-violet-100 hover:to-purple-100 transition-all flex items-center gap-1.5"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            Autofill with AI
+                          </button>
                           <button
                             type="button"
                             onClick={() => {
