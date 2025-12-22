@@ -91,6 +91,9 @@ export default function Header() {
   const [activeNavItem, setActiveNavItem] = useState<string | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
 
+  // Christmas theme: Show festive logo in December
+  const isDecember = new Date().getMonth() === 11;
+
 
   // Fetch categories, subcategories, and sub-subcategories
   useEffect(() => {
@@ -171,7 +174,7 @@ export default function Header() {
           {/* Left: Logo & Nav */}
           <div className="flex items-center gap-10">
             <Link href="/" className="flex items-center gap-2 focus:outline-none hover:opacity-80 transition-opacity">
-              <img src="/logo/logo.png" alt="Celite Logo" className="h-9 w-auto object-contain" />
+              <img src={isDecember ? "/chirtsmaslogo.png" : "/logo/logo.png"} alt="Celite Logo" className="h-9 w-auto object-contain" />
               <span className="text-xl font-bold text-zinc-900">Celite</span>
             </Link>
 

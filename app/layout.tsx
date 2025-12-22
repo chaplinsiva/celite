@@ -8,6 +8,7 @@ import { AppProvider } from "../context/AppContext";
 import { LoginModalProvider } from "../context/LoginModalContext";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
+import SnowEffect from "../components/SnowEffect";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -67,6 +68,7 @@ export default function RootLayout({
             <GoogleAnalytics />
             <SpeedInsights />
             <Analytics />
+            <SnowEffect />
             <LayoutWrapper>
               {children}
             </LayoutWrapper>
