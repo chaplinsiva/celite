@@ -22,6 +22,8 @@ export default function LatestTemplatesCarousel() {
   const latestListRef = useRef<HTMLDivElement>(null);
   const [latest, setLatest] = useState<LatestTemplate[]>([]);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
   useEffect(() => {
     const load = async () => {
@@ -40,6 +42,11 @@ export default function LatestTemplatesCarousel() {
         setIsSubscribed(false);
       }
 
+      // Exclude Music & SFX, Stock Photos, and 3D Models categories
+      const musicSfxCategoryId = '45456b94-cb11-449b-ab99-f0633d6e8848';
+      const stockPhotoCategoryId = 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47';
+      const model3dCategoryId = '949b35e2-6588-4e84-a65d-99bd7d3c5a4c';
+
       const { data, error: templateError } = await supabase
         .from('templates')
         .select(`
@@ -48,31 +55,18 @@ export default function LatestTemplatesCarousel() {
           categories(id,name,slug),
           subcategories(id,name,slug)
         `)
+        .eq('status', 'approved')
+        .neq('category_id', musicSfxCategoryId)
+        .neq('category_id', stockPhotoCategoryId)
+        .neq('category_id', model3dCategoryId)
         .order('created_at', { ascending: false })
         .limit(16);
 
-      // Exclude Music & SFX, Stock Photos, and 3D Models categories
-      const musicSfxCategoryId = '45456b94-cb11-449b-ab99-f0633d6e8848';
-      const stockPhotoCategoryId = 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47';
-      const filteredData = (data ?? []).filter((t: any) => {
-        const category = t.categories ? (Array.isArray(t.categories) ? t.categories[0] : t.categories) : null;
-        if (!category) return true;
-        // Exclude Music & SFX
-        if (category.id === musicSfxCategoryId || category.slug === 'musics-and-sfx') return false;
-        // Exclude Stock Photos
-        if (category.id === stockPhotoCategoryId || category.slug === 'stock-images' || category.slug === 'stock-photos' || category.name?.toLowerCase().includes('stock photo') || category.name?.toLowerCase().includes('stock image')) return false;
-        // Exclude 3D Models
-        if (category.slug === '3d-models' || category.slug === '3d-models' || (category.name?.toLowerCase().includes('3d') && category.name?.toLowerCase().includes('model'))) return false;
-        return true;
-      });
-
       if (templateError) {
         console.error('Error loading latest templates:', templateError);
-      } else {
-        console.log(`[LatestTemplatesCarousel] Loaded ${data?.length || 0} templates`);
       }
 
-      const mapped: LatestTemplate[] = filteredData.map((r: any) => {
+      const mapped: LatestTemplate[] = (data ?? []).map((r: any) => {
         const category = r.categories ? (Array.isArray(r.categories) ? r.categories[0] : r.categories) : null;
         const subcategory = r.subcategories ? (Array.isArray(r.subcategories) ? r.subcategories[0] : r.subcategories) : null;
         const isFeaturedFlag = Boolean(r.feature ?? r.is_featured ?? r.isFeatured);
@@ -110,6 +104,23 @@ export default function LatestTemplatesCarousel() {
       latestListRef.current.scrollBy({ left: offset, behavior: 'smooth' });
     }
   };
+
+  const handleScroll = () => {
+    if (latestListRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = latestListRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    const el = latestListRef.current;
+    if (el) {
+      handleScroll();
+      el.addEventListener('scroll', handleScroll);
+      return () => el.removeEventListener('scroll', handleScroll);
+    }
+  }, [latest]);
 
   const handleDownload = async (slug: string) => {
     try {
@@ -211,7 +222,7 @@ export default function LatestTemplatesCarousel() {
               Latest Arrivals
             </h2>
             <p className="text-zinc-500 text-lg">
-              Fresh templates added this week
+              Our most recent template additions
             </p>
           </div>
           <Link
@@ -224,20 +235,24 @@ export default function LatestTemplatesCarousel() {
 
         <div className="relative">
           {/* Navigation Controls */}
-          <button
-            aria-label="Scroll left"
-            onClick={() => scrollLatest(-360)}
-            className="hidden lg:flex absolute -left-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white text-zinc-700 shadow-md border border-zinc-100 hover:bg-zinc-50 items-center justify-center focus:outline-none transition-all opacity-0 group-hover:opacity-100"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            aria-label="Scroll right"
-            onClick={() => scrollLatest(360)}
-            className="hidden lg:flex absolute -right-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white text-zinc-700 shadow-md border border-zinc-100 hover:bg-zinc-50 items-center justify-center focus:outline-none transition-all opacity-0 group-hover:opacity-100"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+          {canScrollLeft && (
+            <button
+              aria-label="Scroll left"
+              onClick={() => scrollLatest(-360)}
+              className="hidden lg:flex absolute -left-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white text-zinc-700 shadow-lg border border-zinc-200 hover:bg-zinc-50 hover:shadow-xl items-center justify-center focus:outline-none transition-all"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
+          {canScrollRight && (
+            <button
+              aria-label="Scroll right"
+              onClick={() => scrollLatest(360)}
+              className="hidden lg:flex absolute -right-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white text-zinc-700 shadow-lg border border-zinc-200 hover:bg-zinc-50 hover:shadow-xl items-center justify-center focus:outline-none transition-all"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          )}
 
           <div
             ref={latestListRef}
