@@ -42,12 +42,20 @@ export default function LatestTemplatesCarousel() {
         setIsSubscribed(false);
       }
 
-      // Exclude Music & SFX, Stock Photos, and 3D Models categories
+      // Exclude Music & SFX, Stock Photos, 3D Models, and Graphics categories
       const musicSfxCategoryId = '45456b94-cb11-449b-ab99-f0633d6e8848';
       const stockPhotoCategoryId = 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47';
       const model3dCategoryId = '949b35e2-6588-4e84-a65d-99bd7d3c5a4c';
 
-      const { data, error: templateError } = await supabase
+      // Fetch Graphics (psd-templates) category ID dynamically
+      const { data: graphicsCategory } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('slug', 'psd-templates')
+        .single();
+      const graphicsCategoryId = graphicsCategory?.id;
+
+      let query = supabase
         .from('templates')
         .select(`
           slug,name,subtitle,description,img,video_path,thumbnail_path,features,software,plugins,tags,created_at,feature,
@@ -58,7 +66,14 @@ export default function LatestTemplatesCarousel() {
         .eq('status', 'approved')
         .neq('category_id', musicSfxCategoryId)
         .neq('category_id', stockPhotoCategoryId)
-        .neq('category_id', model3dCategoryId)
+        .neq('category_id', model3dCategoryId);
+
+      // Exclude Graphics category if found
+      if (graphicsCategoryId) {
+        query = query.neq('category_id', graphicsCategoryId);
+      }
+
+      const { data, error: templateError } = await query
         .order('created_at', { ascending: false })
         .limit(16);
 
