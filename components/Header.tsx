@@ -49,6 +49,7 @@ const getCategoryRoute = (categorySlug: string): string => {
     'video-templates': '/video-templates',
     'ui-templates': '/web-templates',
     '3d-models': '/3d-models',
+    'prompts': '/prompts',
   };
 
   if (routeMap[normalizedSlug]) {
@@ -190,6 +191,7 @@ export default function Header() {
                     { name: 'Web Templates', route: '/web-templates', slug: 'website-templates' },
                     { name: 'Graphics', route: '/graphics', slug: 'psd-templates' },
                     { name: '3D Models', route: '/3d-models', slug: '3d-models' },
+                    { name: 'Prompts', route: '/prompts', slug: 'prompts' },
                   ].map((navItem) => {
                     // Find the category
                     const category = categories.find(cat =>
@@ -374,6 +376,7 @@ export default function Header() {
               { name: 'Web Templates', route: '/web-templates', slug: 'website-templates' },
               { name: 'Graphics', route: '/graphics', slug: 'psd-templates' },
               { name: '3D Models', route: '/3d-models', slug: '3d-models' },
+              { name: 'Prompts', route: '/prompts', slug: 'prompts' },
             ].map((navItem) => {
               const category = categories.find(cat =>
                 cat.slug === navItem.slug ||

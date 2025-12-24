@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Share2, Check, Download, AlertCircle, PlayCircle, Star, Shield, Clock, Layers, Zap, HardDrive, Music2 } from 'lucide-react';
+import { Share2, Check, Download, AlertCircle, PlayCircle, Star, Shield, Clock, Layers, Zap, HardDrive, Music2, Copy } from 'lucide-react';
 import { useAppContext } from '../../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { useLoginModal } from '../../../context/LoginModalContext';
@@ -57,6 +57,29 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   const [youMayAlsoLikeTemplates, setYouMayAlsoLikeTemplates] = useState<Template[]>([]);
   const [loadingMoreInStyle, setLoadingMoreInStyle] = useState(true);
   const [loadingYouMayAlsoLike, setLoadingYouMayAlsoLike] = useState(true);
+  const [promptCopied, setPromptCopied] = useState(false);
+
+  // Check if this is a prompt product (only requires login, not subscription)
+  const isPromptProduct = (product as any).category_slug === 'prompts' ||
+    (product as any).category_name?.toLowerCase() === 'prompts' ||
+    (product as any).category_slug?.includes('prompt');
+
+  // Handle copy prompt (for prompts category - no login required)
+  const handleCopyPrompt = async () => {
+    const promptText = product.desc || product.subtitle || product.name;
+    try {
+      await navigator.clipboard.writeText(promptText);
+      setPromptCopied(true);
+      setFeedback('Prompt copied to clipboard!');
+      setTimeout(() => {
+        setPromptCopied(false);
+        setFeedback(null);
+      }, 3000);
+    } catch (err) {
+      setFeedback('Failed to copy prompt');
+      setTimeout(() => setFeedback(null), 3000);
+    }
+  };
 
   // Track view_item event when product page loads
   useEffect(() => {
@@ -715,15 +738,41 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               handleDownload={handleDownload}
               router={router}
               className="mb-8 lg:hidden"
+              isPrompt={isPromptProduct}
+              handleCopyPrompt={handleCopyPrompt}
+              promptCopied={promptCopied}
+              user={user}
             />
 
-            {/* Description */}
+            {/* Description / Prompt */}
             <div className="mb-10">
-              <h2 className="text-2xl font-bold text-zinc-900 mb-4">Description</h2>
-              <div className="prose prose-zinc max-w-none text-zinc-600 leading-relaxed">
-                <p className="text-lg mb-4 font-medium text-zinc-800">{product.subtitle}</p>
-                <div className="whitespace-pre-line">{product.desc}</div>
-              </div>
+              <h2 className="text-2xl font-bold text-zinc-900 mb-4">
+                {isPromptProduct ? 'Prompt' : 'Description'}
+              </h2>
+
+              {isPromptProduct ? (
+                /* Prompt Text - Selectable and Copyable */
+                <div className="relative">
+                  <div
+                    className="bg-violet-50 border border-violet-200 rounded-xl p-4 text-zinc-800 leading-relaxed select-all cursor-text"
+                    style={{ userSelect: 'text' }}
+                  >
+                    {product.subtitle && (
+                      <p className="text-lg mb-3 font-medium text-violet-900">{product.subtitle}</p>
+                    )}
+                    <div className="whitespace-pre-line font-mono text-sm">{product.desc}</div>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-2 italic">
+                    💡 Tip: Select the text above to copy, or use the Copy Prompt button
+                  </p>
+                </div>
+              ) : (
+                /* Regular Description */
+                <div className="prose prose-zinc max-w-none text-zinc-600 leading-relaxed">
+                  <p className="text-lg mb-4 font-medium text-zinc-800">{product.subtitle}</p>
+                  <div className="whitespace-pre-line">{product.desc}</div>
+                </div>
+              )}
 
               {/* Features List */}
               {product.features.length > 0 && (
@@ -769,125 +818,131 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 handleDownload={handleDownload}
                 router={router}
                 className="hidden lg:block"
+                isPrompt={isPromptProduct}
+                handleCopyPrompt={handleCopyPrompt}
+                promptCopied={promptCopied}
+                user={user}
               />
 
-              {/* Features Table / Tech Specs */}
-              <div className="bg-white p-2">
-                <h3 className="text-xl font-bold text-zinc-900 mb-4">Features</h3>
+              {/* Features Table / Tech Specs - Hidden for Prompts */}
+              {!isPromptProduct && (
+                <div className="bg-white p-2">
+                  <h3 className="text-xl font-bold text-zinc-900 mb-4">Features</h3>
 
-                {/* Helper function to extract values from tags, features, and description */}
-                {(() => {
-                  const allText = [
-                    ...(product.tags || []).map(t => String(t).toLowerCase()),
-                    ...(product.features || []).map(f => String(f).toLowerCase()),
-                    product.desc?.toLowerCase() || '',
-                    product.subtitle?.toLowerCase() || '',
-                    product.name?.toLowerCase() || ''
-                  ].join(' ');
+                  {/* Helper function to extract values from tags, features, and description */}
+                  {(() => {
+                    const allText = [
+                      ...(product.tags || []).map(t => String(t).toLowerCase()),
+                      ...(product.features || []).map(f => String(f).toLowerCase()),
+                      product.desc?.toLowerCase() || '',
+                      product.subtitle?.toLowerCase() || '',
+                      product.name?.toLowerCase() || ''
+                    ].join(' ');
 
-                  // Extract resolution (check more specific first)
-                  const getResolution = () => {
-                    // Check for 4K first (most specific)
-                    if (allText.includes('4k') || allText.includes('3840') || allText.includes('2160')) return '4K';
-                    // Check for 1080p (more specific than just "1080")
-                    if (allText.includes('1080p') || allText.includes('full hd') || allText.includes('fullhd')) return '1080p (Full HD)';
-                    // Check for 720p (more specific than just "720")
-                    if (allText.includes('720p')) return '720p';
-                    // Check for vertical/portrait
-                    if (allText.includes('vertical') || allText.includes('9:16') || allText.includes('portrait') || allText.includes('9x16')) return 'Vertical (9:16)';
-                    // Fallback to generic HD if found
-                    if (allText.includes('1080') && !allText.includes('1080p')) return '1080p (Full HD)';
-                    if (allText.includes('720') && !allText.includes('720p')) return '720p';
-                    return null;
-                  };
+                    // Extract resolution (check more specific first)
+                    const getResolution = () => {
+                      // Check for 4K first (most specific)
+                      if (allText.includes('4k') || allText.includes('3840') || allText.includes('2160')) return '4K';
+                      // Check for 1080p (more specific than just "1080")
+                      if (allText.includes('1080p') || allText.includes('full hd') || allText.includes('fullhd')) return '1080p (Full HD)';
+                      // Check for 720p (more specific than just "720")
+                      if (allText.includes('720p')) return '720p';
+                      // Check for vertical/portrait
+                      if (allText.includes('vertical') || allText.includes('9:16') || allText.includes('portrait') || allText.includes('9x16')) return 'Vertical (9:16)';
+                      // Fallback to generic HD if found
+                      if (allText.includes('1080') && !allText.includes('1080p')) return '1080p (Full HD)';
+                      if (allText.includes('720') && !allText.includes('720p')) return '720p';
+                      return null;
+                    };
 
-                  // Extract length/duration
-                  const getLength = () => {
-                    const lengthMatch = allText.match(/(\d+(?:\.\d+)?)\s*(?:second|sec|minute|min|s|m)/i);
-                    if (lengthMatch) {
-                      const value = lengthMatch[1];
-                      const unit = lengthMatch[0].toLowerCase().includes('min') ? 'Minutes' : 'Seconds';
-                      return `${value} ${unit}`;
-                    }
-                    return null;
-                  };
+                    // Extract length/duration
+                    const getLength = () => {
+                      const lengthMatch = allText.match(/(\d+(?:\.\d+)?)\s*(?:second|sec|minute|min|s|m)/i);
+                      if (lengthMatch) {
+                        const value = lengthMatch[1];
+                        const unit = lengthMatch[0].toLowerCase().includes('min') ? 'Minutes' : 'Seconds';
+                        return `${value} ${unit}`;
+                      }
+                      return null;
+                    };
 
-                  // Extract file size
-                  const getFileSize = () => {
-                    const sizeMatch = allText.match(/(\d+(?:\.\d+)?)\s*(mb|gb|kb)/i);
-                    if (sizeMatch) {
-                      return `${sizeMatch[1]} ${sizeMatch[2].toUpperCase()}`;
-                    }
-                    return null;
-                  };
+                    // Extract file size
+                    const getFileSize = () => {
+                      const sizeMatch = allText.match(/(\d+(?:\.\d+)?)\s*(mb|gb|kb)/i);
+                      if (sizeMatch) {
+                        return `${sizeMatch[1]} ${sizeMatch[2].toUpperCase()}`;
+                      }
+                      return null;
+                    };
 
-                  // Extract software version
-                  const getSoftwareVersion = () => {
-                    const versions: string[] = [];
-                    if (allText.includes('cc') || allText.includes('creative cloud')) versions.push('CC');
-                    if (allText.includes('cs6')) versions.push('CS6');
-                    if (allText.includes('cs5')) versions.push('CS5');
-                    if (allText.includes('cs4')) versions.push('CS4');
-                    if (allText.includes('2024')) versions.push('2024');
-                    if (allText.includes('2023')) versions.push('2023');
-                    if (allText.includes('2022')) versions.push('2022');
-                    if (allText.includes('2021')) versions.push('2021');
-                    if (allText.includes('2020')) versions.push('2020');
-                    if (allText.includes('2019')) versions.push('2019');
-                    if (allText.includes('2018')) versions.push('2018');
-                    return versions.length > 0 ? versions.join(', ') : null;
-                  };
+                    // Extract software version
+                    const getSoftwareVersion = () => {
+                      const versions: string[] = [];
+                      if (allText.includes('cc') || allText.includes('creative cloud')) versions.push('CC');
+                      if (allText.includes('cs6')) versions.push('CS6');
+                      if (allText.includes('cs5')) versions.push('CS5');
+                      if (allText.includes('cs4')) versions.push('CS4');
+                      if (allText.includes('2024')) versions.push('2024');
+                      if (allText.includes('2023')) versions.push('2023');
+                      if (allText.includes('2022')) versions.push('2022');
+                      if (allText.includes('2021')) versions.push('2021');
+                      if (allText.includes('2020')) versions.push('2020');
+                      if (allText.includes('2019')) versions.push('2019');
+                      if (allText.includes('2018')) versions.push('2018');
+                      return versions.length > 0 ? versions.join(', ') : null;
+                    };
 
-                  // Get software list
-                  const getSoftware = () => {
-                    if (product.software && product.software.length > 0) {
-                      return product.software.join(', ');
-                    }
-                    return null;
-                  };
+                    // Get software list
+                    const getSoftware = () => {
+                      if (product.software && product.software.length > 0) {
+                        return product.software.join(', ');
+                      }
+                      return null;
+                    };
 
-                  // Get plugins
-                  const getPlugins = () => {
-                    if (product.plugins && product.plugins.length > 0) {
-                      const pluginList = product.plugins.filter(p => {
-                        const pLower = String(p).toLowerCase();
-                        return !pLower.includes('no plugin') && !pLower.includes('none') && pLower.trim() !== '';
-                      });
-                      return pluginList.length > 0 ? pluginList.join(', ') : 'No Plugin Required';
-                    }
-                    return 'No Plugin Required';
-                  };
+                    // Get plugins
+                    const getPlugins = () => {
+                      if (product.plugins && product.plugins.length > 0) {
+                        const pluginList = product.plugins.filter(p => {
+                          const pLower = String(p).toLowerCase();
+                          return !pLower.includes('no plugin') && !pLower.includes('none') && pLower.trim() !== '';
+                        });
+                        return pluginList.length > 0 ? pluginList.join(', ') : 'No Plugin Required';
+                      }
+                      return 'No Plugin Required';
+                    };
 
-                  const resolution = getResolution();
-                  const length = getLength();
-                  const fileSize = getFileSize();
-                  const softwareVersion = getSoftwareVersion();
-                  const software = getSoftware();
-                  const plugins = getPlugins();
+                    const resolution = getResolution();
+                    const length = getLength();
+                    const fileSize = getFileSize();
+                    const softwareVersion = getSoftwareVersion();
+                    const software = getSoftware();
+                    const plugins = getPlugins();
 
-                  const features = [
-                    { label: 'Software', value: software },
-                    { label: 'Software Version', value: softwareVersion },
-                    { label: 'Resolution', value: resolution },
-                    { label: 'Required Plugin', value: plugins },
-                    { label: 'Length', value: length },
-                    { label: 'File Size', value: fileSize },
-                  ].filter(f => f.value !== null && f.value !== undefined && f.value !== '');
+                    const features = [
+                      { label: 'Software', value: software },
+                      { label: 'Software Version', value: softwareVersion },
+                      { label: 'Resolution', value: resolution },
+                      { label: 'Required Plugin', value: plugins },
+                      { label: 'Length', value: length },
+                      { label: 'File Size', value: fileSize },
+                    ].filter(f => f.value !== null && f.value !== undefined && f.value !== '');
 
-                  if (features.length === 0) return null;
+                    if (features.length === 0) return null;
 
-                  return (
-                    <div className="grid grid-cols-[110px_1fr] gap-y-4 text-sm">
-                      {features.map((feature, idx) => (
-                        <div key={idx}>
-                          <div className="text-zinc-500 font-medium">{feature.label}</div>
-                          <div className="text-zinc-900 font-medium">{feature.value}</div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
+                    return (
+                      <div className="grid grid-cols-[110px_1fr] gap-y-4 text-sm">
+                        {features.map((feature, idx) => (
+                          <div key={idx}>
+                            <div className="text-zinc-500 font-medium">{feature.label}</div>
+                            <div className="text-zinc-900 font-medium">{feature.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
 
               {/* Share Button Block */}
               <div className="flex justify-end pt-4 border-t border-zinc-100">
@@ -1101,13 +1156,50 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   );
 }
 
-function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className }: {
+function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className, isPrompt, handleCopyPrompt, promptCopied, user }: {
   isSubActive: boolean;
   downloading: boolean;
   handleDownload: () => void;
   router: any;
   className?: string;
+  isPrompt?: boolean;
+  handleCopyPrompt?: () => void;
+  promptCopied?: boolean;
+  user?: any;
 }) {
+  // For prompts: show Copy Prompt button (no login required)
+  if (isPrompt) {
+    return (
+      <div className={cn("bg-violet-50/50 rounded-2xl p-6 border border-violet-100", className)}>
+        <div className="text-center mb-4">
+          <h3 className="text-lg font-bold text-violet-900 mb-1">AI Prompt</h3>
+          <p className="text-sm text-violet-600">Copy this prompt to use in your AI tools</p>
+        </div>
+        <button
+          onClick={handleCopyPrompt}
+          className={cn(
+            "w-full py-3 rounded-lg font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2",
+            promptCopied
+              ? "bg-green-500 text-white"
+              : "bg-violet-600 text-white shadow-violet-600/20 hover:bg-violet-700 active:scale-[0.98]"
+          )}
+        >
+          {promptCopied ? (
+            <>
+              <Check className="w-4 h-4" />
+              Copied!
+            </>
+          ) : (
+            <>
+              <Copy className="w-4 h-4" />
+              Copy Prompt
+            </>
+          )}
+        </button>
+      </div>
+    );
+  }
+
   // For subscribed users, show only the download button
   if (isSubActive) {
     return (
@@ -1193,3 +1285,4 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
     </div>
   );
 }
+

@@ -42,7 +42,7 @@ export default function LatestTemplatesCarousel() {
         setIsSubscribed(false);
       }
 
-      // Exclude Music & SFX, Stock Photos, 3D Models, and Graphics categories
+      // Exclude Music & SFX, Stock Photos, 3D Models, Graphics, and Prompts categories
       const musicSfxCategoryId = '45456b94-cb11-449b-ab99-f0633d6e8848';
       const stockPhotoCategoryId = 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47';
       const model3dCategoryId = '949b35e2-6588-4e84-a65d-99bd7d3c5a4c';
@@ -54,6 +54,14 @@ export default function LatestTemplatesCarousel() {
         .eq('slug', 'psd-templates')
         .single();
       const graphicsCategoryId = graphicsCategory?.id;
+
+      // Fetch Prompts category ID dynamically
+      const { data: promptsCategory } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('slug', 'prompts')
+        .single();
+      const promptsCategoryId = promptsCategory?.id;
 
       let query = supabase
         .from('templates')
@@ -71,6 +79,11 @@ export default function LatestTemplatesCarousel() {
       // Exclude Graphics category if found
       if (graphicsCategoryId) {
         query = query.neq('category_id', graphicsCategoryId);
+      }
+
+      // Exclude Prompts category if found
+      if (promptsCategoryId) {
+        query = query.neq('category_id', promptsCategoryId);
       }
 
       const { data, error: templateError } = await query
