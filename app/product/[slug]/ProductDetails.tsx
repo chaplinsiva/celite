@@ -500,19 +500,52 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
 
   const handleShare = async () => {
     const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+    const thumbnailUrl = convertR2UrlToCdn((product as any).thumbnail_path) || (product as any).thumbnail_path || convertR2UrlToCdn(product.img) || product.img;
+
+    // Create detailed share text
+    const shareText = product.subtitle
+      ? `${product.subtitle} - Check out this template on Celite!`
+      : 'Check out this amazing template on Celite!';
+
     try {
       if (navigator.share) {
-        await navigator.share({
+        const shareData: ShareData = {
           title: product.name,
-          text: product.subtitle ?? 'Check out this template on Celite',
+          text: shareText,
           url: shareUrl,
-        });
+        };
+
+        // Try to include thumbnail for platforms that support file sharing (Web Share API Level 2)
+        if (thumbnailUrl && navigator.canShare) {
+          try {
+            const response = await fetch(thumbnailUrl);
+            const blob = await response.blob();
+            const file = new File([blob], 'template-preview.jpg', { type: blob.type || 'image/jpeg' });
+            const shareDataWithFile = { ...shareData, files: [file] };
+            if (navigator.canShare(shareDataWithFile)) {
+              await navigator.share(shareDataWithFile);
+              setShareFeedback('Shared!');
+              return;
+            }
+          } catch {
+            // Fall through to regular share without file
+          }
+        }
+
+        await navigator.share(shareData);
+        setShareFeedback('Shared!');
       } else {
         await navigator.clipboard.writeText(shareUrl);
         setShareFeedback('Link copied!');
       }
     } catch (err) {
-      // Ignore share errors
+      // User cancelled or share failed - copy link as fallback
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareFeedback('Link copied!');
+      } catch {
+        // Ignore clipboard errors
+      }
     } finally {
       setTimeout(() => setShareFeedback(null), 2000);
     }

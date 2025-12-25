@@ -19,14 +19,58 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Celite - Professional After Effects Templates",
-  description: "Discover premium After Effects templates for logo reveals, slideshows, and more",
+  metadataBase: new URL('https://celite.in'),
+  title: {
+    default: 'Celite - Premium Digital Assets & Creative Templates',
+    template: '%s | Celite',
+  },
+  description: 'Discover premium digital assets: After Effects templates, 3D models, stock photos, music & SFX, AI prompts, and more. Download high-quality creative resources for your projects.',
+  keywords: ['After Effects templates', 'video templates', '3D models', 'stock photos', 'music', 'SFX', 'AI prompts', 'digital assets', 'creative templates', 'motion graphics'],
+  authors: [{ name: 'Celite' }],
+  creator: 'Celite',
+  publisher: 'Celite',
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://celite.in',
+    siteName: 'Celite',
+    title: 'Celite - Premium Digital Assets & Creative Templates',
+    description: 'Discover premium digital assets: After Effects templates, 3D models, stock photos, music & SFX, AI prompts, and more.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Celite - Premium Digital Assets',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Celite - Premium Digital Assets & Creative Templates',
+    description: 'Discover premium digital assets: After Effects templates, 3D models, stock photos, music & SFX, and more.',
+    images: ['/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   icons: {
     icon: [
       { url: '/favicon/fav.png', type: 'image/png' },
     ],
     shortcut: '/favicon/fav.png',
     apple: '/favicon/fav.png',
+  },
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION,
   },
 };
 
@@ -43,6 +87,117 @@ export default function RootLayout({
         <link rel="icon" href="/favicon/fav.png" type="image/png" />
         <link rel="shortcut icon" href="/favicon/fav.png" type="image/png" />
         <link rel="apple-touch-icon" href="/favicon/fav.png" />
+
+        {/* Structured Data for Sitelinks */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "name": "Celite",
+              "alternateName": ["Celite Digital Assets", "Celite Templates"],
+              "url": "https://celite.in",
+              "description": "Premium digital assets marketplace for After Effects templates, 3D models, stock photos, music & SFX, and AI prompts.",
+              "potentialAction": [
+                {
+                  "@type": "SearchAction",
+                  "target": {
+                    "@type": "EntryPoint",
+                    "urlTemplate": "https://celite.in/templates?search={search_term_string}"
+                  },
+                  "query-input": "required name=search_term_string"
+                }
+              ],
+              "publisher": {
+                "@type": "Organization",
+                "name": "Celite",
+                "url": "https://celite.in",
+                "logo": {
+                  "@type": "ImageObject",
+                  "url": "https://celite.in/logo.png"
+                }
+              }
+            })
+          }}
+        />
+
+        {/* Organization Schema */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "Celite",
+              "url": "https://celite.in",
+              "logo": "https://celite.in/logo.png",
+              "description": "Premium digital assets marketplace offering After Effects templates, 3D models, stock photos, music, SFX, and AI prompts.",
+              "sameAs": [
+                "https://twitter.com/celite",
+                "https://facebook.com/celite",
+                "https://instagram.com/celite"
+              ],
+              "contactPoint": {
+                "@type": "ContactPoint",
+                "contactType": "customer service",
+                "url": "https://celite.in/contact"
+              }
+            })
+          }}
+        />
+
+        {/* SiteNavigationElement for Sitelinks */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "SiteNavigationElement",
+                  "name": "Video Templates",
+                  "url": "https://celite.in/video-templates"
+                },
+                {
+                  "@type": "SiteNavigationElement",
+                  "name": "3D Models",
+                  "url": "https://celite.in/3d-models"
+                },
+                {
+                  "@type": "SiteNavigationElement",
+                  "name": "Stock Photos",
+                  "url": "https://celite.in/stock-photos"
+                },
+                {
+                  "@type": "SiteNavigationElement",
+                  "name": "Music & SFX",
+                  "url": "https://celite.in/music-sfx"
+                },
+                {
+                  "@type": "SiteNavigationElement",
+                  "name": "AI Prompts",
+                  "url": "https://celite.in/prompts"
+                },
+                {
+                  "@type": "SiteNavigationElement",
+                  "name": "Graphics",
+                  "url": "https://celite.in/graphics"
+                },
+                {
+                  "@type": "SiteNavigationElement",
+                  "name": "Pricing",
+                  "url": "https://celite.in/pricing"
+                },
+                {
+                  "@type": "SiteNavigationElement",
+                  "name": "Start Selling",
+                  "url": "https://celite.in/start-selling"
+                }
+              ]
+            })
+          }}
+        />
       </head>
       <body className={`${inter.variable} antialiased bg-white text-zinc-900 group/body`} style={{ fontStyle: 'normal', fontSynthesis: 'none' }}>
         <Script
