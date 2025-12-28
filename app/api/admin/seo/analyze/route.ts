@@ -57,13 +57,13 @@ export async function POST(req: Request) {
     try {
       const { data } = await admin.from('settings').select('value').eq('key', 'GEMINI_FLASH_API_KEY').maybeSingle();
       if (data?.value) apiKey = data.value;
-    } catch {}
+    } catch { }
     if (!apiKey) return NextResponse.json({ ok: false, error: 'Missing Gemini API key' }, { status: 500 });
 
     const prompt = buildPrompt({ name, subtitle, description, tags, features, slug });
 
-    // Gemini 2.0 Flash API call
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+    // Gemini 2.5 Flash API call
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
       // Try to extract JSON block
       const match = candidates.match(/\{[\s\S]*\}/);
       if (match) {
-        try { parsed = JSON.parse(match[0]); } catch {}
+        try { parsed = JSON.parse(match[0]); } catch { }
       }
     }
     if (!parsed || typeof parsed !== 'object') {
