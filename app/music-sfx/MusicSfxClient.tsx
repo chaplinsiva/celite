@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
-import { Download, Search, Play, Volume2, Music } from 'lucide-react';
+import { Download, Search, Play, Volume2, Music, Filter, X, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { cn, convertR2UrlToCdn } from '../../lib/utils';
 
@@ -26,6 +26,7 @@ type Template = {
   created_at?: string | null;
   category_id?: string | null;
   subcategory_id?: string | null;
+  sub_subcategory_id?: string | null;
   creator_shop_id?: string | null;
   feature?: boolean | null;
   is_featured?: boolean | null;
@@ -33,6 +34,20 @@ type Template = {
   meta_title?: string | null;
   meta_description?: string | null;
   vendor_name?: string | null;
+};
+
+type Subcategory = {
+  id: string;
+  name: string;
+  slug: string;
+  category_id: string;
+};
+
+type SubSubcategory = {
+  id: string;
+  name: string;
+  slug: string;
+  subcategory_id: string;
 };
 
 // Gradient colors for variety
@@ -47,15 +62,21 @@ const gradients = [
   'from-teal-500 via-emerald-500 to-green-500',
 ];
 
+const ITEMS_PER_PAGE = 20;
+
 export default function MusicSfxClient({ initialTemplates }: { initialTemplates: Template[] }) {
   const router = useRouter();
   const { user } = useAppContext();
   const { openLoginModal } = useLoginModal();
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredTemplates, setFilteredTemplates] = useState<Template[]>(initialTemplates);
-  const [subcategories, setSubcategories] = useState<Array<{ id: string; name: string; slug: string; category_id: string }>>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [subSubcategories, setSubSubcategories] = useState<SubSubcategory[]>([]);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
-  const musicSfxCategoryId = '45456b94-cb11-449b-ab99-f0633d6e8848';
+  const [selectedSubSubcategory, setSelectedSubSubcategory] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const musicSfxCategoryId = '143d45f1-a55b-42be-9f51-aab507a20fac';
 
   // Audio playback state - single audio instance for the entire component
   const [playingSlug, setPlayingSlug] = useState<string | null>(null);
@@ -103,43 +124,101 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
     };
   }, []);
 
-  // Fetch subcategories
+  // Fetch subcategories and sub-subcategories
   useEffect(() => {
-    const fetchSubcategories = async () => {
+    const fetchCategories = async () => {
       const supabase = getSupabaseBrowserClient();
-      const { data } = await supabase
-        .from('subcategories')
-        .select('id,name,slug,category_id')
-        .eq('category_id', musicSfxCategoryId)
-        .order('name');
-      setSubcategories(data || []);
+      const [subcatsRes, subSubcatsRes] = await Promise.all([
+        supabase
+          .from('subcategories')
+          .select('id,name,slug,category_id')
+          .eq('category_id', musicSfxCategoryId)
+          .order('name'),
+        supabase
+          .from('sub_subcategories')
+          .select('id,name,slug,subcategory_id')
+          .order('name'),
+      ]);
+
+      if (subcatsRes.data) {
+        setSubcategories(subcatsRes.data);
+      }
+      if (subSubcatsRes.data) {
+        setSubSubcategories(subSubcatsRes.data);
+      }
     };
-    fetchSubcategories();
+    fetchCategories();
   }, []);
 
-  // Filter templates based on search and subcategory
+  // Get available sub-subcategories for selected subcategory
+  const availableSubSubcategories = subSubcategories.filter(
+    (subSub) => selectedSubcategory === 'all' || subSub.subcategory_id === selectedSubcategory
+  );
+
+  // Get sub-subcategories grouped by subcategory
+  const getSubSubcategoriesBySubcategory = (subcatId: string) => {
+    return subSubcategories.filter((subSub) => subSub.subcategory_id === subcatId);
+  };
+
+  // Toggle category expansion
+  const toggleCategory = (subcatId: string) => {
+    setExpandedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(subcatId)) {
+        newSet.delete(subcatId);
+      } else {
+        newSet.add(subcatId);
+      }
+      return newSet;
+    });
+  };
+
+  // Filter templates based on search, subcategory, and sub-subcategory
   useEffect(() => {
     let filtered = [...initialTemplates];
 
+    // Filter by subcategory
     if (selectedSubcategory !== 'all') {
-      filtered = filtered.filter(t => t.subcategory_id === selectedSubcategory);
+      filtered = filtered.filter((t) => t.subcategory_id === selectedSubcategory);
     }
 
+    // Filter by sub-subcategory
+    if (selectedSubSubcategory !== 'all') {
+      filtered = filtered.filter((t) => t.sub_subcategory_id === selectedSubSubcategory);
+    }
+
+    // Filter by search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(t => {
+      filtered = filtered.filter((t) => {
         const nameMatch = t.name?.toLowerCase().includes(q);
         const subtitleMatch = t.subtitle?.toLowerCase().includes(q);
         const descriptionMatch = t.description?.toLowerCase().includes(q);
-        const tagMatch = t.tags?.some(tag => tag?.toLowerCase().includes(q));
-        const featureMatch = t.features?.some(feat => feat?.toLowerCase().includes(q));
+        const tagMatch = t.tags?.some((tag) => tag?.toLowerCase().includes(q));
+        const featureMatch = t.features?.some((feat) => feat?.toLowerCase().includes(q));
 
         return nameMatch || subtitleMatch || descriptionMatch || tagMatch || featureMatch;
       });
     }
 
     setFilteredTemplates(filtered);
-  }, [searchQuery, initialTemplates, selectedSubcategory]);
+  }, [searchQuery, initialTemplates, selectedSubcategory, selectedSubSubcategory]);
+
+  // Reset sub-subcategory when subcategory changes
+  useEffect(() => {
+    setSelectedSubSubcategory('all');
+  }, [selectedSubcategory]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedSubcategory, selectedSubSubcategory, searchQuery]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredTemplates.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedTemplates = filteredTemplates.slice(startIndex, endIndex);
 
   // Play audio function
   const playAudio = (slug: string, audioUrl: string) => {
@@ -323,79 +402,228 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
     }
   };
 
+  // Get counts for filters
+  const getSubcategoryCount = (subcatId: string) => {
+    return initialTemplates.filter((t) => t.subcategory_id === subcatId).length;
+  };
+
+  const getSubSubcategoryCount = (subSubcatId: string) => {
+    return initialTemplates.filter((t) => t.sub_subcategory_id === subSubcatId).length;
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSelectedSubcategory('all');
+    setSelectedSubSubcategory('all');
+    setSearchQuery('');
+  };
+
+  const hasActiveFilters = selectedSubcategory !== 'all' || selectedSubSubcategory !== 'all' || searchQuery.trim() !== '';
+
   return (
     <main className="bg-zinc-50 min-h-screen pt-20 pb-20">
       {/* Header Section */}
-      <div className="bg-white border-b border-zinc-200 pb-6 sm:pb-8 mb-6 sm:mb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
-          <div className="flex flex-col gap-4 mb-6 sm:mb-8">
+      <div className="bg-white border-b border-zinc-200 pb-4 mb-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-3">
+          <div className="flex flex-col gap-3 mb-4">
             <div>
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-2">
+              <div className="flex items-center gap-2 text-xs text-zinc-500 mb-1">
                 <Link href="/" className="hover:text-blue-600 transition-colors">Home</Link>
                 <span>/</span>
                 <span className="text-zinc-900">Music & SFX</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-zinc-900">
+              <h1 className="text-xl sm:text-2xl font-bold text-zinc-900">
                 <span className="text-blue-600">Music & SFX</span> Library
               </h1>
-              <p className="text-sm sm:text-base text-zinc-500 mt-2 max-w-2xl">
+              <p className="text-xs sm:text-sm text-zinc-500 mt-1 max-w-2xl">
                 Hover over any track to preview. Download high-quality royalty-free audio for your projects.
               </p>
             </div>
           </div>
 
-          {/* Search Bar and Subcategory Filter */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 max-w-2xl">
+          {/* Search Bar */}
+          <div className="max-w-2xl">
             <div className="relative flex-1 group">
-              <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 sm:h-5 sm:w-5 text-zinc-400 group-focus-within:text-blue-600 transition-colors" />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-zinc-400 group-focus-within:text-blue-600 transition-colors" />
               </div>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-9 sm:pl-11 pr-4 py-3 sm:py-4 bg-zinc-50 border border-zinc-200 rounded-xl sm:rounded-2xl text-sm sm:text-base text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                className="block w-full pl-9 pr-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
                 placeholder="Search music and sound effects..."
               />
             </div>
-            {subcategories.length > 0 && (
-              <select
-                value={selectedSubcategory}
-                onChange={(e) => setSelectedSubcategory(e.target.value)}
-                className="px-3 sm:px-4 py-3 sm:py-4 bg-zinc-50 border border-zinc-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm font-medium cursor-pointer"
-              >
-                <option value="all">All Categories</option>
-                {subcategories.map(subcat => {
-                  const count = initialTemplates.filter(t => t.subcategory_id === subcat.id).length;
-                  return (
-                    <option key={subcat.id} value={subcat.id}>
-                      {subcat.name} ({count})
-                    </option>
-                  );
-                })}
-              </select>
-            )}
           </div>
         </div>
       </div>
 
+      {/* Main Content with Sidebar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+          {/* Sidebar Filters */}
+          <aside className="w-full lg:w-56 xl:w-64 flex-shrink-0">
+            <div className="bg-white border border-zinc-200 rounded-lg lg:rounded-xl p-3 sm:p-4 lg:sticky lg:top-24">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-zinc-900 flex items-center gap-2">
+                  <Filter className="w-5 h-5" />
+                  Filters
+                </h3>
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                    title="Clear all filters"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Categories with Nested Sub-Categories */}
+              <div className="mb-4">
+                <label className="block text-xs sm:text-sm font-medium text-zinc-700 mb-2">
+                  Categories
+                </label>
+                <div className="flex flex-col gap-1">
+                  {/* All Option */}
+                  <button
+                    onClick={() => {
+                      setSelectedSubcategory('all');
+                      setSelectedSubSubcategory('all');
+                    }}
+                    className={cn(
+                      "w-full px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-left",
+                      selectedSubcategory === 'all'
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-zinc-50 border border-zinc-200 text-zinc-700 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50"
+                    )}
+                  >
+                    <span className="flex items-center justify-between">
+                      <span>All</span>
+                      <span className="text-xs opacity-80">({initialTemplates.length})</span>
+                    </span>
+                  </button>
+
+                  {/* Category with Nested Sub-Categories */}
+                  {subcategories.map((subcat) => {
+                    const count = getSubcategoryCount(subcat.id);
+                    if (count === 0) return null;
+                    const isExpanded = expandedCategories.has(subcat.id);
+                    const isSelected = selectedSubcategory === subcat.id;
+                    const subSubcats = getSubSubcategoriesBySubcategory(subcat.id);
+                    const hasSubSubcats = subSubcats.length > 0;
+
+                    return (
+                      <div key={subcat.id} className="flex flex-col">
+                        {/* Category Button */}
+                        <button
+                          onClick={() => {
+                            if (hasSubSubcats) {
+                              toggleCategory(subcat.id);
+                            }
+                            setSelectedSubcategory(subcat.id);
+                            setSelectedSubSubcategory('all');
+                          }}
+                          className={cn(
+                            "w-full px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-left flex items-center justify-between",
+                            isSelected
+                              ? "bg-blue-600 text-white shadow-md"
+                              : "bg-zinc-50 border border-zinc-200 text-zinc-700 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50"
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5 sm:gap-2">
+                            {hasSubSubcats && (
+                              <ChevronDown
+                                className={cn(
+                                  "w-3 h-3 sm:w-4 sm:h-4 transition-transform duration-200 flex-shrink-0",
+                                  isExpanded ? "rotate-180" : ""
+                                )}
+                              />
+                            )}
+                            <span className="truncate">{subcat.name}</span>
+                          </span>
+                          <span className="text-xs opacity-80 flex-shrink-0 ml-2">({count})</span>
+                        </button>
+
+                        {/* Nested Sub-Categories */}
+                        {hasSubSubcats && isExpanded && (
+                          <div className="ml-3 sm:ml-4 mt-1 flex flex-col gap-1 border-l-2 border-zinc-200 pl-2 sm:pl-3">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedSubcategory(subcat.id);
+                                setSelectedSubSubcategory('all');
+                              }}
+                              className={cn(
+                                "w-full px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-medium transition-all text-left",
+                                isSelected && selectedSubSubcategory === 'all'
+                                  ? "bg-blue-100 text-blue-700 border border-blue-300"
+                                  : "bg-zinc-50 border border-zinc-200 text-zinc-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50"
+                              )}
+                            >
+                              All {subcat.name}
+                            </button>
+                            {subSubcats.map((subSubcat) => {
+                              const subCount = getSubSubcategoryCount(subSubcat.id);
+                              if (subCount === 0) return null;
+                              const isSubSelected = selectedSubcategory === subcat.id && selectedSubSubcategory === subSubcat.id;
+                              return (
+                                <button
+                                  key={subSubcat.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedSubcategory(subcat.id);
+                                    setSelectedSubSubcategory(subSubcat.id);
+                                  }}
+                                  className={cn(
+                                    "w-full px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-medium transition-all text-left flex items-center justify-between",
+                                    isSubSelected
+                                      ? "bg-blue-100 text-blue-700 border border-blue-300"
+                                      : "bg-zinc-50 border border-zinc-200 text-zinc-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50"
+                                  )}
+                                >
+                                  <span className="truncate">{subSubcat.name}</span>
+                                  <span className="text-xs opacity-70 flex-shrink-0 ml-2">({subCount})</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Content Area */}
+          <div className="flex-1 min-w-0">
         {/* Collage Grid */}
         {filteredTemplates.length > 0 ? (
           <div>
             <div className="mb-4 sm:mb-6 flex items-center justify-between">
-              <h2 className="text-xl sm:text-2xl font-bold text-zinc-900">
-                {filteredTemplates.length} {filteredTemplates.length === 1 ? 'Track' : 'Tracks'}
-              </h2>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-zinc-900">
+                  {filteredTemplates.length} {filteredTemplates.length === 1 ? 'Track' : 'Tracks'}
+                </h2>
+                {filteredTemplates.length > ITEMS_PER_PAGE && (
+                  <p className="text-sm text-zinc-500 mt-1">
+                    Page {currentPage} of {totalPages}
+                  </p>
+                )}
+              </div>
               <div className="flex items-center gap-2 text-sm text-zinc-500">
                 <Volume2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Hover to preview</span>
               </div>
             </div>
 
-            {/* Collage Grid Layout */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-              {filteredTemplates.map((template, index) => {
+            {/* Tile Layout */}
+            <div className="space-y-3">
+              {paginatedTemplates.map((template, index) => {
                 const rawAudioUrl = template.audio_preview_path || template.video_path;
                 const audioUrl = rawAudioUrl ? convertR2UrlToCdn(rawAudioUrl) || rawAudioUrl : null;
                 const gradient = gradients[index % gradients.length];
@@ -406,133 +634,158 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
                   <div
                     key={template.slug}
                     className={cn(
-                      "group relative aspect-square rounded-2xl overflow-hidden cursor-pointer transition-all duration-300",
-                      isPlaying && "ring-4 ring-blue-500 ring-offset-2 scale-[1.02] shadow-xl shadow-blue-500/25",
-                      !isPlaying && "hover:scale-[1.02] hover:shadow-lg"
+                      "group relative bg-white rounded-xl border border-zinc-200 overflow-hidden transition-all duration-300",
+                      isPlaying && "ring-2 ring-blue-500 shadow-lg shadow-blue-500/20",
+                      !isPlaying && "hover:shadow-md hover:border-zinc-300"
                     )}
                     onMouseEnter={() => handleMouseEnter(template.slug, audioUrl)}
                     onMouseLeave={handleMouseLeave}
-                    onClick={(e) => handleTap(template.slug, audioUrl, e)}
                   >
-                    {/* Gradient Background */}
-                    <div className={cn(
-                      "absolute inset-0 bg-gradient-to-br transition-opacity duration-300",
-                      gradient,
-                      isPlaying ? "opacity-100" : "opacity-90 group-hover:opacity-100"
-                    )} />
-
-                    {/* Pattern Overlay */}
-                    <div className="absolute inset-0 opacity-10">
-                      <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <defs>
-                          <pattern id={`pattern-${template.slug}`} x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                            <circle cx="10" cy="10" r="1.5" fill="white" />
-                          </pattern>
-                        </defs>
-                        <rect width="100" height="100" fill={`url(#pattern-${template.slug})`} />
-                      </svg>
-                    </div>
-
-                    {/* Content */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-white">
-                      {/* Play/Pause Icon */}
-                      <div className={cn(
-                        "w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3 transition-all duration-300",
-                        isPlaying && "bg-white/30 scale-110",
-                        isLoadingThis && "animate-pulse"
-                      )}>
+                    <div className="flex items-center gap-4 p-4">
+                      {/* Play Button */}
+                      <button
+                        onClick={(e) => handleTap(template.slug, audioUrl, e)}
+                        className={cn(
+                          "flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300",
+                          isPlaying 
+                            ? "bg-blue-600 text-white shadow-lg scale-105" 
+                            : "bg-zinc-100 text-zinc-700 hover:bg-blue-600 hover:text-white hover:scale-105",
+                          isLoadingThis && "animate-pulse"
+                        )}
+                      >
                         {isLoadingThis ? (
-                          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
                         ) : isPlaying ? (
                           /* Equalizer Animation */
-                          <div className="flex items-end gap-1 h-6">
-                            <div className="w-1 bg-white rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '60%', animationDelay: '0ms' }} />
-                            <div className="w-1 bg-white rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '100%', animationDelay: '100ms' }} />
-                            <div className="w-1 bg-white rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '40%', animationDelay: '200ms' }} />
-                            <div className="w-1 bg-white rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '80%', animationDelay: '300ms' }} />
-                            <div className="w-1 bg-white rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '50%', animationDelay: '400ms' }} />
+                          <div className="flex items-end gap-0.5 h-5">
+                            <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '60%', animationDelay: '0ms' }} />
+                            <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '100%', animationDelay: '100ms' }} />
+                            <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '40%', animationDelay: '200ms' }} />
+                            <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '80%', animationDelay: '300ms' }} />
+                            <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '50%', animationDelay: '400ms' }} />
                           </div>
                         ) : (
-                          <Play className="w-6 h-6 sm:w-7 sm:h-7 text-white ml-1" fill="white" />
+                          <Play className="w-5 h-5 ml-0.5" fill="currentColor" />
+                        )}
+                      </button>
+
+                      {/* Track Info */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold text-zinc-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                          {template.name}
+                        </h3>
+                        {template.subtitle && (
+                          <p className="text-sm text-zinc-500 line-clamp-1 mt-0.5">
+                            {template.subtitle}
+                          </p>
+                        )}
+                        {template.vendor_name && (
+                          <p className="text-xs text-zinc-400 mt-1">
+                            by {template.vendor_name}
+                          </p>
                         )}
                       </div>
 
-                      {/* Track Name */}
-                      <h3 className="text-sm sm:text-base font-bold text-center line-clamp-2 drop-shadow-lg px-2">
-                        {template.name}
-                      </h3>
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Playing Indicator */}
+                        {isPlaying && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-medium">
+                            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse" />
+                            Playing
+                          </div>
+                        )}
 
-                      {template.vendor_name && (
-                        <p className="text-xs text-white/80 mt-1 truncate max-w-full px-2">
-                          {template.vendor_name}
-                        </p>
-                      )}
+                        {/* Download Button */}
+                        <button
+                          onClick={(e) => handleDownload(template.slug, e)}
+                          className="p-2 text-zinc-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                          title="Download"
+                        >
+                          <Download className="w-5 h-5" />
+                        </button>
+
+                        {/* View Details Link */}
+                        <Link
+                          href={`/product/${template.slug}`}
+                          className="px-4 py-2 text-sm font-medium text-zinc-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          View
+                        </Link>
+                      </div>
                     </div>
 
-                    {/* Download Button - Shows on Hover */}
-                    <button
-                      onClick={(e) => handleDownload(template.slug, e)}
-                      className={cn(
-                        "absolute bottom-3 right-3 p-2.5 bg-white/20 backdrop-blur-sm rounded-full text-white transition-all duration-300",
-                        "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0",
-                        "hover:bg-white hover:text-zinc-900",
-                        isPlaying && "bottom-5"
-                      )}
-                      title="Download"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
-
-                    {/* View Details Link */}
-                    <Link
-                      href={`/product/${template.slug}`}
-                      className={cn(
-                        "absolute bottom-3 left-3 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs font-medium transition-all duration-300",
-                        "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0",
-                        "hover:bg-white hover:text-zinc-900",
-                        isPlaying && "bottom-5"
-                      )}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Details
-                    </Link>
-
-                    {/* Playing Indicator */}
+                    {/* Progress Bar - Shows when playing */}
                     {isPlaying && (
-                      <div className="absolute top-3 right-3 px-2 py-1 bg-white/20 backdrop-blur-sm rounded-full flex items-center gap-1.5">
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                        <span className="text-white text-xs font-medium">Playing</span>
+                      <div
+                        className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-100 cursor-pointer"
+                        onClick={(e) => handleSeek(e, template.slug)}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        <div
+                          className="h-full bg-blue-600 transition-all duration-75 pointer-events-none"
+                          style={{ width: `${progress}%` }}
+                        />
                       </div>
                     )}
-
-                    {/* Progress Bar - Slim timeline at bottom (clickable to seek) */}
-                    <div
-                      className={cn(
-                        "absolute bottom-0 left-0 right-0 h-2 bg-black/20 cursor-pointer transition-all",
-                        isPlaying && "hover:h-3"
-                      )}
-                      onClick={(e) => handleSeek(e, template.slug)}
-                      onMouseDown={(e) => e.stopPropagation()}
-                    >
-                      <div
-                        className={cn(
-                          "h-full bg-white transition-all duration-75 pointer-events-none",
-                          isPlaying ? "opacity-100" : "opacity-0"
-                        )}
-                        style={{ width: isPlaying ? `${progress}%` : '0%' }}
-                      />
-                      {/* Seek handle */}
-                      {isPlaying && (
-                        <div
-                          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                          style={{ left: `calc(${progress}% - 6px)` }}
-                        />
-                      )}
-                    </div>
                   </div>
                 );
               })}
             </div>
+
+            {/* Pagination */}
+            {filteredTemplates.length > ITEMS_PER_PAGE && (
+              <div className="flex justify-center items-center gap-4 mt-12">
+                <button
+                  onClick={() => {
+                    setCurrentPage(p => Math.max(1, p - 1));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  disabled={currentPage === 1}
+                  className="w-8 h-8 flex items-center justify-center text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-zinc-900 transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => {
+                        setCurrentPage(page);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-200",
+                        currentPage === page
+                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20 scale-100"
+                          : "bg-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 scale-95 hover:scale-100"
+                      )}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                <button
+                  onClick={() => {
+                    setCurrentPage(p => Math.min(totalPages, p + 1));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  disabled={currentPage === totalPages}
+                  className="w-8 h-8 flex items-center justify-center text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-zinc-900 transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+
+            {/* Page Info */}
+            {filteredTemplates.length > ITEMS_PER_PAGE && (
+              <div className="text-center mt-4 text-sm text-zinc-500">
+                Showing {startIndex + 1}-{Math.min(endIndex, filteredTemplates.length)} of {filteredTemplates.length} tracks
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-20 bg-white rounded-2xl border border-zinc-200 border-dashed">
@@ -541,14 +794,18 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
             </div>
             <h3 className="text-xl font-bold text-zinc-900 mb-2">No tracks found</h3>
             <p className="text-zinc-500 mb-6">We couldn't find any music or sound effects matching your search.</p>
-            <button
-              onClick={() => setSearchQuery('')}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-            >
-              Clear Search
-            </button>
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         )}
+          </div>
+        </div>
       </div>
 
       {/* Inline CSS for equalizer animation */}

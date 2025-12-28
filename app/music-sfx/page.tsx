@@ -16,11 +16,11 @@ export const revalidate = 0;
 export default async function MusicSfxPage() {
   const supabase = getSupabaseServerClient();
   
-  // Fetch only Music & SFX templates
-  const musicSfxCategoryId = '45456b94-cb11-449b-ab99-f0633d6e8848';
+  // Fetch only Music & SFX templates with new category ID
+  const musicSfxCategoryId = '143d45f1-a55b-42be-9f51-aab507a20fac';
   const { data: templates, error } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,feature,vendor_name,status,creator_shop_id')
+    .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id')
     .eq('status', 'approved')
     .eq('category_id', musicSfxCategoryId)
     .order('created_at', { ascending: false });
