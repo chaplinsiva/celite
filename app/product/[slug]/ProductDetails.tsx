@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
@@ -37,7 +38,7 @@ const getThumbnail = (item: Template | (Template & { source_path?: string | null
   return '/PNG1.png';
 };
 
-const MUSIC_SFX_CATEGORY_ID = '45456b94-cb11-449b-ab99-f0633d6e8848';
+const MUSIC_SFX_CATEGORY_ID = '143d45f1-a55b-42be-9f51-aab507a20fac';
 
 const isMusicItem = (item: any) => {
   const categoryId = item.category_id;
@@ -585,7 +586,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 categoryDisplayName = 'Stock Photos';
               }
               // Check for Music & SFX
-              else if (categoryId === '45456b94-cb11-449b-ab99-f0633d6e8848' ||
+              else if (categoryId === '143d45f1-a55b-42be-9f51-aab507a20fac' ||
                 categorySlug === 'musics-and-sfx' ||
                 categorySlug === 'music' ||
                 categorySlug === 'audio' ||
@@ -685,7 +686,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                   categorySlug === 'stock-images' ||
                   categorySlug === 'stock-photos' ||
                   (categorySlug.includes('stock') && (categorySlug.includes('photo') || categorySlug.includes('image')));
-                const isMusicSfx = categoryId === '45456b94-cb11-449b-ab99-f0633d6e8848' ||
+                const isMusicSfx = categoryId === '143d45f1-a55b-42be-9f51-aab507a20fac' ||
                   categorySlug === 'musics-and-sfx' ||
                   categorySlug === 'music' ||
                   categorySlug === 'audio' ||

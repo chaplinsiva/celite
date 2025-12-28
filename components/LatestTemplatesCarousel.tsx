@@ -43,7 +43,7 @@ export default function LatestTemplatesCarousel() {
       }
 
       // Exclude Music & SFX, Stock Photos, 3D Models, Graphics, and Prompts categories
-      const musicSfxCategoryId = '45456b94-cb11-449b-ab99-f0633d6e8848';
+      const musicSfxCategoryId = '143d45f1-a55b-42be-9f51-aab507a20fac';
       const stockPhotoCategoryId = 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47';
       const model3dCategoryId = '949b35e2-6588-4e84-a65d-99bd7d3c5a4c';
 

@@ -33,7 +33,7 @@ type GroupedSection = {
   items: CreatorTemplate[];
 };
 
-const MUSIC_SFX_CATEGORY_ID = '45456b94-cb11-449b-ab99-f0633d6e8848';
+const MUSIC_SFX_CATEGORY_ID = '143d45f1-a55b-42be-9f51-aab507a20fac';
 const STOCK_PHOTOS_CATEGORY_ID = 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47';
 
 function getThumbnail(t: CreatorTemplate) {
@@ -45,18 +45,18 @@ function getThumbnail(t: CreatorTemplate) {
 function TemplateCard({ template, category }: { template: CreatorTemplate; category: Category | null }) {
   const categoryId = category?.id || template.category_id;
   const categorySlug = category?.slug || '';
-  
-  const isStockPhoto = categoryId === STOCK_PHOTOS_CATEGORY_ID || 
-                       categorySlug === 'stock-images' || 
-                       categorySlug === 'stock-photos' ||
-                       (categorySlug.includes('stock') && (categorySlug.includes('photo') || categorySlug.includes('image')));
-  
-  const isMusicSfx = categoryId === MUSIC_SFX_CATEGORY_ID || 
-                     categorySlug === 'musics-and-sfx' || 
-                     categorySlug === 'music' ||
-                     categorySlug === 'audio' ||
-                     categorySlug === 'sound-effects' ||
-                     (categorySlug.includes('music') || categorySlug.includes('audio') || categorySlug.includes('sfx') || categorySlug.includes('sound'));
+
+  const isStockPhoto = categoryId === STOCK_PHOTOS_CATEGORY_ID ||
+    categorySlug === 'stock-images' ||
+    categorySlug === 'stock-photos' ||
+    (categorySlug.includes('stock') && (categorySlug.includes('photo') || categorySlug.includes('image')));
+
+  const isMusicSfx = categoryId === MUSIC_SFX_CATEGORY_ID ||
+    categorySlug === 'musics-and-sfx' ||
+    categorySlug === 'music' ||
+    categorySlug === 'audio' ||
+    categorySlug === 'sound-effects' ||
+    (categorySlug.includes('music') || categorySlug.includes('audio') || categorySlug.includes('sfx') || categorySlug.includes('sound'));
 
   const is3DModel = categorySlug === '3d-models' || categorySlug.includes('3d');
 
@@ -171,9 +171,9 @@ function TemplateCard({ template, category }: { template: CreatorTemplate; categ
   );
 }
 
-export default function CreatorShopClient({ 
-  groupedSections 
-}: { 
+export default function CreatorShopClient({
+  groupedSections
+}: {
   groupedSections: GroupedSection[];
 }) {
   return (

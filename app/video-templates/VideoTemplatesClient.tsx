@@ -66,7 +66,7 @@ const getThumbnail = (item: Template) => {
 };
 
 const ITEMS_PER_PAGE = 30;
-const MUSIC_SFX_CATEGORY_ID = '45456b94-cb11-449b-ab99-f0633d6e8848';
+const MUSIC_SFX_CATEGORY_ID = '143d45f1-a55b-42be-9f51-aab507a20fac';
 const STOCK_PHOTOS_CATEGORY_ID = 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47';
 
 export default function VideoTemplatesClient({

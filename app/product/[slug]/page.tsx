@@ -82,7 +82,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
     categorySuffix = '3D Model';
   } else if (categoryId === 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47' || categorySlug === 'stock-images' || categorySlug === 'stock-photos' || categoryName?.toLowerCase().includes('stock')) {
     categorySuffix = 'Stock Photo';
-  } else if (categoryId === '45456b94-cb11-449b-ab99-f0633d6e8848' || categorySlug.includes('music') || categorySlug.includes('audio') || categorySlug.includes('sfx') || categoryName?.toLowerCase().includes('music') || categoryName?.toLowerCase().includes('sfx')) {
+  } else if (categoryId === '143d45f1-a55b-42be-9f51-aab507a20fac' || categorySlug.includes('music') || categorySlug.includes('audio') || categorySlug.includes('sfx') || categoryName?.toLowerCase().includes('music') || categoryName?.toLowerCase().includes('sfx')) {
     categorySuffix = 'Music & SFX';
   } else if (categorySlug.includes('web') || categorySlug.includes('website') || categoryName?.toLowerCase().includes('web')) {
     categorySuffix = 'Web Template';
