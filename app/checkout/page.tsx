@@ -9,6 +9,7 @@ import { formatPriceWithDecimal } from "../../lib/currency";
 import { trackBeginCheckout, trackPurchase, trackSubscribe } from "../../lib/gtag";
 import LoadingSpinner from "../../components/ui/loading-spinner";
 import { GlowingEffect } from "../../components/ui/glowing-effect";
+import { CountryCodeSelect } from "../../components/ui/CountryCodeSelect";
 import { cn } from "../../lib/utils";
 
 type BillingDetails = {
@@ -36,6 +37,7 @@ function CheckoutContent() {
 
   const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'yearly' | null>(null);
   const [subscriptionPrice, setSubscriptionPrice] = useState<number | null>(null);
+  const [countryCode, setCountryCode] = useState("+91"); // Default to India
 
   // Handle subscription checkout (from Pricing page)
   useEffect(() => {
@@ -183,13 +185,15 @@ function CheckoutContent() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    // Validate mobile number (Indian format: 10 digits, optionally with +91)
-    const mobileRegex = /^(\+91)?[6-9]\d{9}$/;
-    const cleanMobile = billing.mobile.replace(/\s+/g, '').replace(/\+91/g, '');
+    // Validate mobile number (digits only, 6-15 digits since country code is separate)
+    const cleanMobile = billing.mobile.replace(/\s+/g, '').replace(/-/g, '');
+    const mobileRegex = /^\d{6,15}$/;
     if (!mobileRegex.test(cleanMobile)) {
-      setPaymentError('Please enter a valid 10-digit mobile number');
+      setPaymentError('Please enter a valid mobile number (6-15 digits)');
       return;
     }
+    // Combine country code with mobile number for Razorpay
+    const fullMobile = `${countryCode}${cleanMobile}`;
 
     setProcessing(true);
     setPaymentError(null);
@@ -216,7 +220,7 @@ function CheckoutContent() {
             checkout_type: subscriptionPlan ? 'subscription' : 'product',
             billing_name: billing.name,
             billing_email: billing.email,
-            billing_mobile: cleanMobile,
+            billing_mobile: fullMobile,
             billing_company: billing.company || null,
             subscription_plan: subscriptionPlan || null,
             cart_items: subscriptionPlan ? [] : cartItems.map(item => ({
@@ -256,7 +260,7 @@ function CheckoutContent() {
             billing: {
               name: billing.name,
               email: billing.email,
-              mobile: cleanMobile,
+              mobile: fullMobile,
               company: billing.company || null,
             },
           }),
@@ -277,7 +281,7 @@ function CheckoutContent() {
           prefill: {
             name: billing.name,
             email: billing.email,
-            contact: `+91${cleanMobile}`,
+            contact: fullMobile,
           },
           handler: async (resp: any) => {
             try {
@@ -406,7 +410,7 @@ function CheckoutContent() {
             billing: {
               name: billing.name,
               email: billing.email,
-              mobile: cleanMobile,
+              mobile: fullMobile,
               company: billing.company || null,
             },
           }),
@@ -468,7 +472,7 @@ function CheckoutContent() {
           prefill: {
             name: billing.name,
             email: billing.email,
-            contact: `+91${cleanMobile}`,
+            contact: fullMobile,
           },
           handler: async (resp: any) => {
             try {
@@ -486,7 +490,7 @@ function CheckoutContent() {
                   billing: {
                     name: billing.name,
                     email: billing.email,
-                    mobile: cleanMobile,
+                    mobile: fullMobile,
                     company: billing.company || null,
                   },
                   cartItems: cartItems,
@@ -684,21 +688,28 @@ function CheckoutContent() {
                     <label className="block text-sm font-semibold text-zinc-700 mb-2">
                       Mobile Number
                     </label>
-                    <input
-                      type="tel"
-                      value={billing.mobile}
-                      onChange={(evt) => {
-                        const value = evt.target.value.replace(/\D/g, '');
-                        if (value.length <= 10) {
-                          setBilling((prev) => ({ ...prev, mobile: value }));
-                        }
-                      }}
-                      className="w-full px-4 py-3 border-2 border-zinc-200 rounded-lg focus:border-blue-500 focus:ring-0 outline-none transition-colors"
-                      placeholder="9876543210"
-                      maxLength={10}
-                      required
-                    />
-                    <p className="text-xs text-zinc-500 mt-1">10-digit mobile number</p>
+                    <div className="flex">
+                      <CountryCodeSelect
+                        value={countryCode}
+                        onChange={setCountryCode}
+                      />
+                      <input
+                        type="tel"
+                        value={billing.mobile}
+                        onChange={(evt) => {
+                          // Only allow digits for phone number (country code is separate)
+                          const value = evt.target.value.replace(/\D/g, '');
+                          if (value.length <= 15) {
+                            setBilling((prev) => ({ ...prev, mobile: value }));
+                          }
+                        }}
+                        className="flex-1 px-4 py-3 border-2 border-zinc-200 border-l-0 rounded-r-lg focus:border-blue-500 focus:ring-0 outline-none transition-colors"
+                        placeholder="9876543210"
+                        maxLength={15}
+                        required
+                      />
+                    </div>
+                    <p className="text-xs text-zinc-500 mt-1">Select your country code from the dropdown</p>
                   </div>
 
                   <div className="sm:col-span-2">
