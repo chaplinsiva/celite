@@ -27,15 +27,15 @@ export async function GET(req: Request) {
     let items: any[] = [];
     try {
       ordersRes = await admin.from('orders')
-      .select('id,user_id,created_at,total,status')
-      .order('created_at', { ascending: false })
-      .limit(200);
+        .select('id,user_id,created_at,total,status')
+        .order('created_at', { ascending: false })
+        .limit(200);
       if (!ordersRes.error && ordersRes.data) {
-    const orderIds = (ordersRes.data ?? []).map((o: any) => o.id);
-    if (orderIds.length) {
-      const itemsRes = await admin.from('order_items')
-        .select('order_id,name,quantity,price')
-        .in('order_id', orderIds);
+        const orderIds = (ordersRes.data ?? []).map((o: any) => o.id);
+        if (orderIds.length) {
+          const itemsRes = await admin.from('order_items')
+            .select('order_id,name,quantity,price')
+            .in('order_id', orderIds);
           if (!itemsRes.error) items = itemsRes.data ?? [];
         }
       }
@@ -126,16 +126,16 @@ export async function GET(req: Request) {
     // Get actual subscription prices from settings
     let monthlyPrice = 799; // Default
     let yearlyPrice = 5499; // Default
-    
+
     try {
       const { data: settings } = await admin.from('settings').select('key,value');
       if (settings) {
         const settingsMap: Record<string, string> = {};
         settings.forEach((row: any) => { settingsMap[row.key] = row.value; });
-        
+
         const monthlyPaise = Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || 79900);
         const yearlyPaise = Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || 549900);
-        
+
         // Convert from paise to INR (if >= threshold, it's in paise)
         monthlyPrice = monthlyPaise >= 10000 ? monthlyPaise / 100 : monthlyPaise;
         yearlyPrice = yearlyPaise >= 100000 ? yearlyPaise / 100 : yearlyPaise;
@@ -143,14 +143,14 @@ export async function GET(req: Request) {
     } catch (e) {
       console.log('Could not fetch prices from settings, using defaults');
     }
-    
+
     // Calculate MRR (Monthly Recurring Revenue)
     // Monthly: direct monthly price (includes legacy weekly subscriptions)
     const monthlyMRR = activeMonthly * monthlyPrice;
     // Yearly: convert to monthly (yearly price / 12)
     const yearlyMRR = activeYearly * (yearlyPrice / 12);
     const subscriptionMRR = monthlyMRR + yearlyMRR;
-    
+
     // Also calculate total revenue if all subscriptions were paid for their full period
     const monthlyTotalRevenue = activeMonthly * monthlyPrice;
     const yearlyTotalRevenue = activeYearly * yearlyPrice;
@@ -164,25 +164,51 @@ export async function GET(req: Request) {
     const totalOrderRevenue = (ordersRes.data ?? []).reduce((s: number, o: any) => s + Number(o.total || 0), 0);
     const totalOrders = (ordersRes.data ?? []).length;
 
-    // Get recent downloads for analytics
+    // Get recent downloads for analytics (Combine both paid and free)
     let downloads: any[] = [];
     let totalDownloads = 0;
     let uniqueDownloadUsers = 0;
     let uniqueDownloadedTemplates = 0;
     try {
-      const downloadsRes = await admin
-        .from('downloads')
-        .select('id,user_id,template_slug,subscription_id,downloaded_at')
-        .order('downloaded_at', { ascending: false })
-        .limit(500);
-      if (!downloadsRes.error && downloadsRes.data) {
-        downloads = downloadsRes.data;
-        totalDownloads = downloads.length;
-        uniqueDownloadUsers = new Set(downloads.map((d: any) => d.user_id)).size;
-        uniqueDownloadedTemplates = new Set(downloads.map((d: any) => d.template_slug)).size;
+      // 1. Fetch paid downloads
+      let paidDownloads: any[] = [];
+      try {
+        const pdRes = await admin
+          .from('downloads')
+          .select('id,user_id,template_slug,subscription_id,downloaded_at')
+          .order('downloaded_at', { ascending: false })
+          .limit(500);
+        if (!pdRes.error && pdRes.data) paidDownloads = pdRes.data;
+      } catch (e) {
+        console.log('Paid downloads table not available');
       }
+
+      // 2. Fetch free downloads
+      let freeDownloads: any[] = [];
+      try {
+        const fdRes = await admin
+          .from('free_downloads')
+          .select('id,user_id,template_slug,downloaded_at')
+          .order('downloaded_at', { ascending: false })
+          .limit(500);
+        if (!fdRes.error && fdRes.data) {
+          // Add a flag or null subscription_id for free downloads
+          freeDownloads = fdRes.data.map((d: any) => ({ ...d, subscription_id: null, is_free: true }));
+        }
+      } catch (e) {
+        console.log('Free downloads table not available');
+      }
+
+      // Merge and sort
+      downloads = [...paidDownloads, ...freeDownloads]
+        .sort((a, b) => new Date(b.downloaded_at).getTime() - new Date(a.downloaded_at).getTime())
+        .slice(0, 500);
+
+      totalDownloads = downloads.length;
+      uniqueDownloadUsers = new Set(downloads.map((d: any) => d.user_id)).size;
+      uniqueDownloadedTemplates = new Set(downloads.map((d: any) => d.template_slug)).size;
     } catch (e) {
-      console.log('Downloads table not available, skipping downloads analytics');
+      console.log('Error merging downloads analytics:', e);
     }
 
     // Get user emails for subscriptions and downloads (optional, for better display)
@@ -241,8 +267,9 @@ export async function GET(req: Request) {
         template_slug: d.template_slug,
         template_name: templateNames[d.template_slug] || null,
         subscription_id: d.subscription_id,
-        subscription_plan: sub?.plan ?? null,
+        subscription_plan: d.is_free ? 'FREE' : (sub?.plan ?? null),
         downloaded_at: d.downloaded_at,
+        is_free: d.is_free || false
       };
     });
 

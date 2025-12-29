@@ -47,7 +47,7 @@ export default function FreeGiftsPanel() {
 
                 // 2. Fetch ALL downloads for these slugs (no filtering)
                 const { data: downloads, error: dlError } = await supabase
-                    .from('downloads')
+                    .from('free_downloads')
                     .select('user_id, template_slug, downloaded_at')
                     .in('template_slug', freeSlugs)
                     .order('downloaded_at', { ascending: false });
