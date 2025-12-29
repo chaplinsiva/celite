@@ -270,6 +270,272 @@ function getSoundEffectPrompts(soundType: string): string[] {
       'Dripping blood, liquid dripping eerie',
       'Haunted breathing, ghostly inhale exhale',
     ],
+    // Additional UI/Creative SFX
+    'glitch': [
+      'Digital glitch sound, electronic distortion static',
+      'Glitch stutter effect, broken signal interference',
+      'Data corruption sound, digital malfunction noise',
+      'VHS glitch, retro tape distortion artifact',
+      'Computer glitch, system error crash sound',
+      'Glitch transition, distorted digital switch',
+      'Signal interference, radio static glitch',
+      'Pixel glitch, digital artifact scramble',
+      'Buffer glitch, audio stutter lag effect',
+      'Matrix glitch, cyberpunk digital distortion',
+    ],
+    'keyboard': [
+      'Mechanical keyboard typing, cherry mx switch clicks',
+      'Keyboard key press, single keystroke click',
+      'Keyboard typing fast, rapid typing sound',
+      'Spacebar press, large key thump sound',
+      'Enter key press, return key confirmation',
+      'Backspace key, delete key rapid press',
+      'Keyboard typing slow, deliberate keystroke',
+      'Laptop keyboard, membrane key soft press',
+      'Gaming keyboard, RGB mechanical typing',
+      'Typewriter key, vintage mechanical keyboard',
+    ],
+    'typing': [
+      'Typing on keyboard, office work ambient',
+      'Fast typing, professional typist speed',
+      'Slow typing, one finger hunt and peck',
+      'Typing with mouse clicks, computer work',
+      'Typing and thinking, pause between keys',
+      'Aggressive typing, angry keyboard smashing',
+      'Gentle typing, soft touch keyboard',
+      'Typing notification, message being composed',
+      'Touch screen typing, smartphone keyboard',
+      'Tablet typing, touch keyboard tapping',
+    ],
+    'pop': [
+      'Bubble pop sound, soap bubble burst',
+      'Pop sound effect, cartoon pop noise',
+      'Balloon pop, party balloon burst',
+      'Cork pop, champagne bottle opening',
+      'Bubblewrap pop, plastic bubble burst',
+      'UI pop sound, notification popup appear',
+      'Lip pop, mouth pop sound effect',
+      'Pop up sound, element appearing animation',
+      'Popcorn pop, kernel popping sound',
+      'Snap pop, finger snap with pop',
+    ],
+    'paper': [
+      'Paper rustling, document shuffling sound',
+      'Paper tear, ripping paper apart',
+      'Paper crumple, crushing paper ball',
+      'Page turn, book page flip sound',
+      'Paper fold, origami folding crease',
+      'Paper stack, dropping pile of papers',
+      'Paper slide, document sliding on desk',
+      'Paper cut, scissors cutting paper',
+      'Paper unfolding, opening letter document',
+      'Newspaper flip, reading newspaper pages',
+    ],
+    'highlighter': [
+      'Highlighter marker, squeaky marker on paper',
+      'Marker writing, felt tip pen drawing',
+      'Highlighter stroke, marking text sound',
+      'Dry erase marker, whiteboard writing',
+      'Permanent marker, thick marker drawing',
+      'Marker cap off, uncapping marker pop',
+      'Marker cap on, capping marker click',
+      'Marker squeak, marker on glossy paper',
+      'Coloring with marker, continuous coloring',
+      'Marker on cardboard, textured surface marking',
+    ],
+    'notification': [
+      'Phone notification ding, message alert',
+      'Email notification, inbox alert sound',
+      'App notification, push alert chime',
+      'Success notification, positive confirmation ding',
+      'Error notification, warning alert sound',
+      'Social media notification, like comment alert',
+      'Calendar reminder, event notification',
+      'Download complete, finished notification',
+      'Achievement notification, reward unlock sound',
+      'Chat notification, messaging app alert',
+    ],
+    'ui-click': [
+      'Button click, UI button press sound',
+      'Toggle switch, on off switch click',
+      'Checkbox tick, selection confirmation',
+      'Dropdown menu, select menu opening',
+      'Slider move, volume slider adjustment',
+      'Tab switch, navigation tab change',
+      'Menu hover, cursor hover feedback',
+      'Submit button, form submission click',
+      'Close button, window close click',
+      'Refresh button, reload icon click',
+    ],
+    'writing': [
+      'Pen writing, ballpoint pen on paper',
+      'Pencil writing, graphite pencil scratch',
+      'Fountain pen, elegant pen on paper',
+      'Pencil erasing, rubber eraser on paper',
+      'Pen clicking, retractable pen click',
+      'Chalk writing, blackboard chalk scratch',
+      'Crayon coloring, wax crayon on paper',
+      'Quill pen, feather pen dipping ink',
+      'Brush stroke, calligraphy brush on paper',
+      'Stylus on tablet, digital pen drawing',
+    ],
+    'coins': [
+      'Coin drop, single coin falling clink',
+      'Coins jingling, pocket change rattling',
+      'Coin flip, flipping coin spinning',
+      'Coin insert, vending machine coin slot',
+      'Coin pile, dumping coins on table',
+      'Coin spin, spinning coin on surface',
+      'Arcade coin, game token insert',
+      'Cash register coins, drawer opening',
+      'Piggy bank coins, saving money clink',
+      'Coin collect, video game coin pickup',
+    ],
+    'swoosh': [
+      'Fast swoosh, quick movement air sound',
+      'Sword swoosh, blade cutting through air',
+      'Cape swoosh, fabric flowing movement',
+      'Magic swoosh, spell casting movement',
+      'Sports swoosh, athletic movement speed',
+      'Wind swoosh, fast wind passing by',
+      'Arrow swoosh, projectile flying past',
+      'Punch swoosh, fist moving fast',
+      'Kick swoosh, leg swinging movement',
+      'Dance swoosh, choreography movement sound',
+    ],
+    // Additional Realistic SFX
+    'gun-shots': [
+      'Gun shot, pistol firing loud bang',
+      'Rifle shot, military assault rifle',
+      'Shotgun blast, close range boom',
+      'Sniper shot, long distance precision',
+      'Revolver firing, six shooter bang',
+      'Machine gun, rapid fire burst',
+      'Gun cocking, weapon readying',
+      'Gun reload, magazine change',
+      'Silenced gun, muffled pistol shot',
+      'Gunfire echo, mountain canyon',
+    ],
+    'human-sounds': [
+      'Scream loud, terror fear scream',
+      'Fart sound, embarrassing flatulence',
+      'Burp loud, stomach gas release',
+      'Coughing, throat irritation',
+      'Sneezing, sudden nose expulsion',
+      'Laughing, hearty belly laugh',
+      'Crying, emotional sobbing',
+      'Yawning, tired mouth stretch',
+      'Snoring, sleeping deep',
+      'Hiccup, involuntary throat spasm',
+    ],
+    'glass-breaking': [
+      'Glass shatter, window breaking crash',
+      'Glass bottle smash, liquid spill',
+      'Windshield crack, car accident',
+      'Glass cup breaking, kitchen accident',
+      'Glass door shatter, safety hazard',
+      'Window breaking, intrusion',
+      'Mirror crack, silver coating',
+      'Glass jar smash, food container',
+      'Glass ornament break, holiday',
+      'Car window smash, emergency',
+    ],
+    'fire': [
+      'Fire crackling, campfire burning',
+      'Fire roar, intense flame',
+      'Fire extinguisher, foam spray',
+      'Candle flame, small burning',
+      'Bonfire large, outdoor fire',
+      'Fireworks, explosive display',
+      'Torch flame, medieval lighting',
+      'Fireplace crackle, cozy warmth',
+      'Forest fire, wild burning',
+      'Lighter click, flame ignition',
+    ],
+    'thunder': [
+      'Thunder clap, lightning strike',
+      'Thunder rumble, distant storm',
+      'Thunder crack, electrical discharge',
+      'Thunder boom, loud storm',
+      'Thunder roll, continuous storm',
+      'Thunder crash, building shaking',
+      'Lightning strike, electrical',
+      'Storm thunder, heavy weather',
+      'Thunder echo, canyon',
+      'Thunder crackle, static electricity',
+    ],
+    'train': [
+      'Train whistle, locomotive warning',
+      'Train horn, railway crossing',
+      'Train chugging, steam engine',
+      'Train wheels, steel track',
+      'Train brake, metal screech',
+      'Train station, arrival',
+      'Train departure, journey',
+      'Train crossing, bell',
+      'Train tunnel, echo',
+      'High speed train, modern',
+    ],
+    'beats': [
+      'Drum beat, bass drum loud',
+      'Percussion beat, rhythmic pattern',
+      'Electronic beat, synth rhythm',
+      'Hip hop beat, urban rhythm',
+      'Rock beat, guitar drums',
+      'Bass drop, electronic bass',
+      'Beat drop, music climax',
+      'Rhythm beat, steady pattern',
+      'Pulse beat, heartbeat rhythm',
+      'Dance beat, club rhythm',
+    ],
+    'impacts': [
+      'Impact crash, loud collision',
+      'Punch impact, fist hitting',
+      'Metal impact, heavy crash',
+      'Explosion impact, boom crash',
+      'Wood impact, hammer hitting',
+      'Concrete impact, heavy hit',
+      'Body impact, physical hit',
+      'Car crash, vehicle impact',
+      'Sword impact, blade strike',
+      'Bullet impact, gunshot hit',
+    ],
+    'home-things': [
+      'Clock ticking, steady timekeeping rhythm',
+      'Chair creaking, wooden office chair movement',
+      'Chair squeaking, metal chair adjustment',
+      'Plastic crinkling, wrapper paper rustling',
+      'Plastic clicking, hard plastic tap',
+      'Wooden floor creak, old house settling',
+      'Door hinge squeak, rusty door movement',
+      'Cup clinking, ceramic mug on table',
+      'Faucet dripping, water drop sound',
+      'Fan spinning, ceiling fan motor hum',
+    ],
+    'mouse-clicks': [
+      'Mouse click, computer mouse button press',
+      'Mouse double click, rapid button press',
+      'Mouse right click, context menu button',
+      'Mouse scroll, wheel scrolling sound',
+      'Mouse drag, cursor movement sound',
+      'Mouse hover, cursor hover feedback',
+      'Mouse wheel click, middle button press',
+      'Optical mouse, laser sensor movement',
+      'Gaming mouse, RGB mechanical click',
+      'Laptop trackpad, touchpad tap sound',
+    ],
+    'water-sounds': [
+      'Water dripping, steady drop sound',
+      'Water flowing, gentle stream sound',
+      'Water splashing, liquid impact',
+      'Ocean waves, surf crashing',
+      'Rain falling, precipitation sound',
+      'Water pouring, liquid transfer',
+      'Toilet flush, bathroom sound',
+      'Shower running, water spray',
+      'Sink faucet, water tap',
+      'Water bubbling, liquid boil',
+    ],
   };
 
   return promptLibrary[soundType] || [
@@ -300,6 +566,30 @@ function getSoundEffectTags(soundType: string): string[] {
     'transitions': ['transition', 'swoosh', 'whoosh', 'cinematic', 'scene change', 'video editing', 'youtube', 'short film', 'sfx', 'premiere pro'],
     'vehicles': ['vehicle', 'car', 'motorcycle', 'engine', 'traffic', 'transportation', 'driving', 'short film', 'sfx', 'foley', 'sound effect'],
     'horror': ['horror', 'scary', 'monster', 'scream', 'ghost', 'creepy', 'thriller', 'halloween', 'short film', 'sfx', 'cinematic', 'fear'],
+    // Additional UI/Creative SFX Tags
+    'glitch': ['glitch', 'digital', 'distortion', 'static', 'error', 'vhs', 'retro', 'cyberpunk', 'transition', 'sfx', 'video editing', 'youtube'],
+    'keyboard': ['keyboard', 'typing', 'mechanical', 'keys', 'computer', 'office', 'work', 'asmr', 'sfx', 'foley', 'sound effect'],
+    'typing': ['typing', 'keyboard', 'computer', 'office', 'work', 'writing', 'ambient', 'asmr', 'sfx', 'foley', 'productivity'],
+    'pop': ['pop', 'bubble', 'burst', 'cartoon', 'ui', 'notification', 'animation', 'fun', 'sfx', 'sound effect', 'motion graphics'],
+    'paper': ['paper', 'page', 'document', 'rustling', 'tear', 'crumple', 'office', 'foley', 'sfx', 'asmr', 'book'],
+    'highlighter': ['highlighter', 'marker', 'writing', 'drawing', 'pen', 'office', 'school', 'asmr', 'sfx', 'foley', 'stationery'],
+    'notification': ['notification', 'alert', 'ding', 'phone', 'app', 'message', 'ui', 'ux', 'sfx', 'mobile', 'sound effect'],
+    'ui-click': ['ui', 'click', 'button', 'interface', 'app', 'web', 'mobile', 'ux', 'sfx', 'interaction', 'sound effect'],
+    'writing': ['writing', 'pen', 'pencil', 'paper', 'drawing', 'office', 'school', 'asmr', 'sfx', 'foley', 'calligraphy'],
+    'coins': ['coins', 'money', 'cash', 'clink', 'jingle', 'game', 'arcade', 'collect', 'sfx', 'reward', 'sound effect'],
+    'swoosh': ['swoosh', 'swish', 'movement', 'fast', 'air', 'action', 'sport', 'transition', 'sfx', 'cinematic', 'sound effect'],
+    // Additional Realistic SFX Tags
+    'gun-shots': ['gun', 'shot', 'firearms', 'weapon', 'pistol', 'rifle', 'explosion', 'action', 'war', 'sfx', 'sound effect', 'cinematic'],
+    'human-sounds': ['human', 'scream', 'fart', 'burp', 'cough', 'sneeze', 'laugh', 'cry', 'voice', 'sfx', 'foley', 'comedy'],
+    'glass-breaking': ['glass', 'breaking', 'shatter', 'crash', 'smash', 'accident', 'impact', 'sfx', 'foley', 'sound effect', 'realistic'],
+    'fire': ['fire', 'flame', 'crackling', 'burning', 'campfire', 'torch', 'flames', 'sfx', 'atmosphere', 'ambient', 'sound effect'],
+    'thunder': ['thunder', 'storm', 'lightning', 'weather', 'rain', 'stormy', 'nature', 'sfx', 'atmosphere', 'ambient', 'sound effect'],
+    'train': ['train', 'railway', 'whistle', 'horn', 'locomotive', 'transportation', 'travel', 'sfx', 'ambience', 'sound effect', 'transport'],
+    'beats': ['beat', 'drum', 'rhythm', 'percussion', 'music', 'bass', 'drop', 'electronic', 'hip hop', 'sfx', 'sound effect', 'dance'],
+    'impacts': ['impact', 'crash', 'hit', 'punch', 'explosion', 'collision', 'strike', 'crash', 'sfx', 'sound effect', 'action'],
+    'home-things': ['home', 'household', 'clock', 'chair', 'plastic', 'office', 'ambient', 'everyday', 'sfx', 'foley', 'domestic', 'sound effect'],
+    'mouse-clicks': ['mouse', 'click', 'computer', 'button', 'ui', 'interface', 'office', 'sfx', 'foley', 'technology', 'sound effect'],
+    'water-sounds': ['water', 'drip', 'flow', 'splash', 'ocean', 'rain', 'liquid', 'nature', 'ambient', 'sfx', 'sound effect', 'environmental'],
   };
 
   return tagLibrary[soundType] || [soundType, 'sound effect', 'sfx', 'audio', 'short film', 'cinematic', 'professional', 'royalty free'];
@@ -324,6 +614,30 @@ function getSoundEffectDescription(soundType: string): string {
     'transitions': 'professional transition sounds for video editing, YouTube videos, and cinematic scene changes',
     'vehicles': 'realistic vehicle sounds for car chases, travel scenes, and transportation sequences in short films',
     'horror': 'terrifying horror sounds for scary movies, Halloween content, and thriller short films',
+    // Additional UI/Creative SFX Descriptions
+    'glitch': 'digital glitch and distortion effects for modern videos, transitions, and cyberpunk content',
+    'keyboard': 'mechanical and membrane keyboard sounds for office scenes, ASMR, and tech content',
+    'typing': 'realistic typing sounds for computer work scenes, productivity videos, and ambient audio',
+    'pop': 'fun pop sounds for animations, UI feedback, cartoons, and notification effects',
+    'paper': 'paper foley sounds for document handling, book scenes, and office environments',
+    'highlighter': 'marker and highlighter sounds for study content, whiteboard videos, and ASMR',
+    'notification': 'alert and notification sounds for apps, UI design, and mobile interfaces',
+    'ui-click': 'UI click and interaction sounds for app design, web interfaces, and software demos',
+    'writing': 'pen and pencil writing sounds for study scenes, calligraphy, and ASMR content',
+    'coins': 'coin and money sounds for games, reward systems, and financial content',
+    'swoosh': 'fast swoosh and movement sounds for action scenes, sports, and dynamic content',
+    // Additional Realistic SFX Descriptions
+    'gun-shots': 'realistic gun shot and firearm sounds for action scenes, war movies, and dramatic content',
+    'human-sounds': 'human vocal sounds including screams, laughs, coughs, and other natural body sounds',
+    'glass-breaking': 'realistic glass breaking and shattering sounds for accidents, action, and dramatic scenes',
+    'fire': 'fire and flame sounds for campfires, burning scenes, and atmospheric ambient audio',
+    'thunder': 'thunder and storm sounds for weather effects, dramatic scenes, and atmospheric ambience',
+    'train': 'train and railway sounds for transportation scenes, travel content, and ambient background',
+    'beats': 'rhythmic beats and percussion sounds for music, transitions, and background rhythms',
+    'impacts': 'impact and crash sounds for action scenes, collisions, and dramatic effects',
+    'home-things': 'everyday household sounds for domestic scenes, office environments, and ambient background',
+    'mouse-clicks': 'computer mouse sounds for office scenes, UI design, and technology content',
+    'water-sounds': 'water and liquid sounds for nature scenes, environmental audio, and atmospheric ambience',
   };
 
   return descLibrary[soundType] || 'perfect for short films, video production, and multimedia projects. Royalty-free for commercial use';
@@ -340,6 +654,56 @@ function generateSlug(name: string): string {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Extract descriptive name from prompt
+ * e.g., "Paper tear, ripping paper apart" -> "Paper Tear"
+ */
+function getDescriptiveNameFromPrompt(prompt: string): string {
+  // Get the first part before the comma (main description)
+  const mainPart = prompt.split(',')[0].trim();
+  
+  // Capitalize each word
+  const formatted = mainPart
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+  
+  return formatted;
+}
+
+/**
+ * Find the next available number for a descriptive slug
+ */
+async function getNextAvailableNumberForSlug(admin: any, baseSlug: string): Promise<number> {
+  // Get all existing templates with this base slug prefix
+  const { data: existingTemplates } = await admin
+    .from('templates')
+    .select('slug')
+    .like('slug', `${baseSlug}-%`);
+
+  if (!existingTemplates || existingTemplates.length === 0) {
+    // Also check if baseSlug-1 exists
+    const { data: firstOne } = await admin
+      .from('templates')
+      .select('slug')
+      .eq('slug', `${baseSlug}-1`)
+      .maybeSingle();
+    
+    return firstOne ? 2 : 1;
+  }
+
+  // Extract numbers from slugs and find the max
+  const numbers = existingTemplates
+    .map((t: any) => {
+      const match = t.slug.match(new RegExp(`${baseSlug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-(\\d+)$`));
+      return match ? parseInt(match[1], 10) : 0;
+    })
+    .filter((n: number) => !isNaN(n) && n > 0);
+
+  const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
+  return maxNumber + 1;
 }
 
 export async function POST(req: Request) {
@@ -386,18 +750,26 @@ export async function POST(req: Request) {
     const results = [];
 
     // Generate sound effects
-    for (let i = 1; i <= count; i++) {
+    for (let i = 0; i < count; i++) {
       try {
-        const name = `${soundType.charAt(0).toUpperCase() + soundType.slice(1)} Sound Effect ${i}`;
-        const slug = `${soundType}-sound-effect-${i}`;
-        
         // Generate sound effect using ElevenLabs
         // Get prompts based on sound type
         const prompts = getSoundEffectPrompts(soundType);
-        const prompt = prompts[(i - 1) % prompts.length] || `${soundType} sound effect, variation ${i}`;
-        const duration = 2 + (i * 0.5); // Vary duration from 2-4.5 seconds
+        const promptIndex = i % prompts.length;
+        const prompt = prompts[promptIndex] || `${soundType} sound effect, variation ${i + 1}`;
         
-        console.log(`Generating sound effect ${i}/${count}: ${name}`);
+        // Extract descriptive name from the prompt
+        const descriptiveName = getDescriptiveNameFromPrompt(prompt);
+        const baseSlug = generateSlug(descriptiveName);
+        
+        // Find next available number for this specific descriptive slug
+        const effectNumber = await getNextAvailableNumberForSlug(admin, baseSlug);
+        const name = `${descriptiveName} ${effectNumber}`;
+        const slug = `${baseSlug}-${effectNumber}`;
+        
+        const duration = Math.min(2 + ((i % 10) * 0.3), 5); // Vary duration from 2-5 seconds
+        
+        console.log(`Generating sound effect ${i + 1}/${count}: ${name} (slug: ${slug})`);
         const audioBuffer = await generateSoundEffect(prompt, i, duration);
 
         // Generate template folder
@@ -467,7 +839,7 @@ export async function POST(req: Request) {
         }
 
         // Add delay between generations to avoid rate limiting
-        if (i < count) {
+        if (i < count - 1) {
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
       } catch (error: any) {

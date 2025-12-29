@@ -178,8 +178,8 @@ export default function Model3DClient({
         const nameMatch = t.name?.toLowerCase().includes(q);
         const subtitleMatch = t.subtitle?.toLowerCase().includes(q);
         const descriptionMatch = t.description?.toLowerCase().includes(q);
-        const tagMatch = t.tags?.some(tag => tag?.toLowerCase().includes(q));
-        const featureMatch = t.features?.some(feat => feat?.toLowerCase().includes(q));
+        const tagMatch = (Array.isArray(t.tags) ? t.tags : (typeof t.tags === 'string' ? JSON.parse(t.tags) : [])).some((tag: any) => tag?.toLowerCase().includes(q));
+        const featureMatch = (Array.isArray(t.features) ? t.features : (typeof t.features === 'string' ? JSON.parse(t.features) : [])).some((feat: any) => feat?.toLowerCase().includes(q));
         const softwareMatch = t.software?.some(sw => (sw?.toLowerCase() || '').includes(q));
 
         return nameMatch || subtitleMatch || descriptionMatch || tagMatch || featureMatch || softwareMatch;

@@ -588,12 +588,13 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               // Check for Music & SFX
               else if (categoryId === '143d45f1-a55b-42be-9f51-aab507a20fac' ||
                 categorySlug === 'musics-and-sfx' ||
+                categorySlug === 'stock-musics' ||
                 categorySlug === 'music' ||
                 categorySlug === 'audio' ||
                 (categorySlug.includes('music') || categorySlug.includes('audio')) ||
                 (categoryName?.toLowerCase().includes('music') || categoryName?.toLowerCase().includes('audio'))) {
-                categoryRoute = '/music-sfx';
-                categoryDisplayName = 'Music & SFX';
+                categoryRoute = '/stock-musics';
+                categoryDisplayName = 'Stock Musics';
               }
               // Check for Sound Effects (separate from Music)
               else if (categorySlug === 'sound-effects' ||
@@ -633,8 +634,8 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 const nameLower = categoryName.toLowerCase();
                 if (nameLower.includes('sound effect') || nameLower.includes('sfx')) {
                   categoryRoute = '/sound-effects';
-                } else if (nameLower.includes('music') || nameLower.includes('audio')) {
-                  categoryRoute = '/music-sfx';
+                } else if (nameLower.includes('music') || nameLower.includes('audio') || nameLower.includes('stock musics')) {
+                  categoryRoute = '/stock-musics';
                 } else if (nameLower.includes('stock') && (nameLower.includes('photo') || nameLower.includes('image'))) {
                   categoryRoute = '/stock-photos';
                 } else if (nameLower.includes('3d') && nameLower.includes('model')) {
@@ -696,6 +697,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                   (categorySlug.includes('stock') && (categorySlug.includes('photo') || categorySlug.includes('image')));
                 const isMusicSfx = categoryId === '143d45f1-a55b-42be-9f51-aab507a20fac' ||
                   categorySlug === 'musics-and-sfx' ||
+                  categorySlug === 'stock-musics' ||
                   categorySlug === 'music' ||
                   categorySlug === 'audio' ||
                   (categorySlug.includes('music') || categorySlug.includes('audio'));
@@ -819,30 +821,44 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               )}
 
               {/* Features List */}
-              {product.features.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold text-zinc-900 mb-3">Key Features</h3>
-                  <ul className="grid sm:grid-cols-2 gap-2">
-                    {product.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2 text-zinc-600 text-sm">
-                        <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {(() => {
+                const features = product.features && typeof product.features === 'string' 
+                  ? JSON.parse(product.features) 
+                  : Array.isArray(product.features) 
+                    ? product.features 
+                    : [];
+                return features.length > 0 ? (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold text-zinc-900 mb-3">Key Features</h3>
+                    <ul className="grid sm:grid-cols-2 gap-2">
+                      {features.map((feature: any, i: number) => (
+                        <li key={i} className="flex items-start gap-2 text-zinc-600 text-sm">
+                          <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null;
+              })()}
             </div>
 
             {/* Tags */}
             <div className="mb-12">
               <h2 className="text-xl font-bold text-zinc-900 mb-4">Product Tags</h2>
               <div className="flex flex-wrap gap-2">
-                {(product.tags || []).map((tag, i) => (
-                  <Link key={i} href={`/video-templates?search=${tag}`} className="px-4 py-2 rounded-lg bg-zinc-100 text-zinc-600 text-sm font-medium hover:bg-zinc-200 transition-colors">
-                    {tag}
-                  </Link>
-                ))}
+                {(() => {
+                  const tags = product.tags && typeof product.tags === 'string' 
+                    ? JSON.parse(product.tags) 
+                    : Array.isArray(product.tags) 
+                      ? product.tags 
+                      : [];
+                  return tags.length > 0 ? tags.map((tag: any, i: number) => (
+                    <Link key={i} href={`/video-templates?search=${tag}`} className="px-4 py-2 rounded-lg bg-zinc-100 text-zinc-600 text-sm font-medium hover:bg-zinc-200 transition-colors">
+                      {tag}
+                    </Link>
+                  )) : null;
+                })()}
               </div>
             </div>
 
@@ -875,9 +891,19 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
 
                   {/* Helper function to extract values from tags, features, and description */}
                   {(() => {
+                    const parsedTags = product.tags && typeof product.tags === 'string' 
+                      ? JSON.parse(product.tags) 
+                      : Array.isArray(product.tags) 
+                        ? product.tags 
+                        : [];
+                    const parsedFeatures = product.features && typeof product.features === 'string' 
+                      ? JSON.parse(product.features) 
+                      : Array.isArray(product.features) 
+                        ? product.features 
+                        : [];
                     const allText = [
-                      ...(product.tags || []).map(t => String(t).toLowerCase()),
-                      ...(product.features || []).map(f => String(f).toLowerCase()),
+                      ...parsedTags.map((t: any) => String(t).toLowerCase()),
+                      ...parsedFeatures.map((f: any) => String(f).toLowerCase()),
                       product.desc?.toLowerCase() || '',
                       product.subtitle?.toLowerCase() || '',
                       product.name?.toLowerCase() || ''
@@ -938,16 +964,26 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
 
                     // Get software list
                     const getSoftware = () => {
-                      if (product.software && product.software.length > 0) {
-                        return product.software.join(', ');
+                      const software = product.software && typeof product.software === 'string' 
+                        ? JSON.parse(product.software) 
+                        : Array.isArray(product.software) 
+                          ? product.software 
+                          : [];
+                      if (software.length > 0) {
+                        return software.join(', ');
                       }
                       return null;
                     };
 
                     // Get plugins
                     const getPlugins = () => {
-                      if (product.plugins && product.plugins.length > 0) {
-                        const pluginList = product.plugins.filter(p => {
+                      const plugins = product.plugins && typeof product.plugins === 'string' 
+                        ? JSON.parse(product.plugins) 
+                        : Array.isArray(product.plugins) 
+                          ? product.plugins 
+                          : [];
+                      if (plugins.length > 0) {
+                        const pluginList = plugins.filter((p: any) => {
                           const pLower = String(p).toLowerCase();
                           return !pLower.includes('no plugin') && !pLower.includes('none') && pLower.trim() !== '';
                         });

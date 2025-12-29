@@ -6,8 +6,14 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '../context/AppContext';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import { Menu, X } from 'lucide-react';
-import { Menu as NavMenu, MenuItem, HoveredLink } from './ui/navbar-menu';
-import { motion } from 'framer-motion';
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from '@/components/ui/navigation-menu';
 import { cn } from '../lib/utils';
 
 type Category = {
@@ -38,13 +44,13 @@ const getCategoryRoute = (categorySlug: string): string => {
     'after-effects': '/video-templates',
     'website-templates': '/web-templates',
     'psd-templates': '/graphics',
-    'musics-and-sfx': '/music-sfx',
+    'stock-musics': '/stock-musics',
     'stock-images': '/stock-photos',
     'web-templates': '/web-templates',
     'graphics': '/graphics',
-    'music': '/music-sfx',
-    'audio': '/music-sfx',
-    'sound-effects': '/music-sfx',
+    'music': '/stock-musics',
+    'audio': '/stock-musics',
+    'sound-effects': '/sound-effects',
     'stock-photos': '/stock-photos',
     'video-templates': '/video-templates',
     'ui-templates': '/web-templates',
@@ -57,8 +63,11 @@ const getCategoryRoute = (categorySlug: string): string => {
   }
 
   // Check for partial matches
-  if (normalizedSlug.includes('music') || normalizedSlug.includes('audio') || normalizedSlug.includes('sfx') || normalizedSlug.includes('sound')) {
-    return '/music-sfx';
+  if (normalizedSlug.includes('music') || normalizedSlug.includes('audio')) {
+    return '/stock-musics';
+  }
+  if (normalizedSlug.includes('sfx') || normalizedSlug.includes('sound')) {
+    return '/sound-effects';
   }
   if (normalizedSlug.includes('stock') && (normalizedSlug.includes('photo') || normalizedSlug.includes('image'))) {
     return '/stock-photos';
@@ -180,17 +189,18 @@ export default function Header() {
             </Link>
 
             {/* Desktop Nav */}
-            <div className="hidden lg:flex items-center gap-6">
-              {categories.length > 0 ? (
-                <NavMenu setActive={setActiveNavItem} className="relative flex items-center gap-6">
+            <div className="hidden lg:flex items-center gap-4">
+              <NavigationMenu>
+                <NavigationMenuList className="gap-1">
                   {/* Define the order for main categories */}
                   {[
                     { name: 'Video Templates', route: '/video-templates', slug: 'video-templates' },
-                    { name: 'Stock Images', route: '/stock-photos', slug: 'stock-images' },
-                    { name: 'Music & SFX', route: '/music-sfx', slug: 'musics-and-sfx' },
-                    { name: 'Web Templates', route: '/web-templates', slug: 'website-templates' },
+                    { name: 'Photos', route: '/stock-photos', slug: 'stock-images' },
+                    { name: 'Music', route: '/stock-musics', slug: 'stock-musics' },
+                    { name: 'SFX', route: '/sound-effects', slug: 'sound-effects' },
+                    { name: 'Web', route: '/web-templates', slug: 'website-templates' },
                     { name: 'Graphics', route: '/graphics', slug: 'psd-templates' },
-                    { name: '3D Models', route: '/3d-models', slug: '3d-models' },
+                    { name: '3D', route: '/3d-models', slug: '3d-models' },
                     { name: 'Prompts', route: '/prompts', slug: 'prompts' },
                   ].map((navItem) => {
                     // Find the category
@@ -207,74 +217,160 @@ export default function Header() {
                     const categoryRoute = getCategoryRoute(category.slug);
 
                     return (
-                      <MenuItem
-                        key={category.id}
-                        setActive={setActiveNavItem}
-                        active={activeNavItem}
-                        item={navItem.name}
-                        className="relative"
-                      >
+                      <NavigationMenuItem key={category.id}>
                         {categorySubcategories.length > 0 ? (
-                          <div className="flex flex-col space-y-1 text-sm min-w-[200px]">
-                            {/* Show subcategories with nested sub-subcategories on hover */}
-                            {categorySubcategories.map((subcategory) => {
-                              const subSubcats = subSubcategories.filter(
-                                ss => ss.subcategory_id === subcategory.id
-                              );
-
-                              return (
-                                <div
-                                  key={subcategory.id}
-                                  className="relative group/subcat"
-                                  onMouseEnter={() => setActiveSubcategory(subcategory.id)}
-                                  onMouseLeave={() => setActiveSubcategory(null)}
-                                >
-                                  <HoveredLink
-                                    href={`${categoryRoute}?subcategory=${subcategory.slug}`}
-                                    className="block py-1.5 px-2 rounded hover:bg-zinc-50"
-                                  >
-                                    {subcategory.name}
-                                  </HoveredLink>
-                                  {/* Show sub-subcategories on hover - positioned to the right */}
-                                  {subSubcats.length > 0 && activeSubcategory === subcategory.id && (
-                                    <div className="absolute left-full top-0 ml-2 z-50">
-                                      <motion.div
-                                        initial={{ opacity: 0, scale: 0.9, x: -10 }}
-                                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                                        exit={{ opacity: 0, scale: 0.9, x: -10 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="bg-white dark:bg-black backdrop-blur-sm rounded-lg border border-zinc-200 dark:border-white/[0.2] shadow-xl p-3 min-w-[180px]"
-                                      >
-                                        <div className="flex flex-col space-y-1">
-                                          {subSubcats.map((subSubcat) => (
-                                            <HoveredLink
-                                              key={subSubcat.id}
-                                              href={`${categoryRoute}?subcategory=${subcategory.slug}&subsubcategory=${subSubcat.slug}`}
-                                              className="block py-1.5 px-2 rounded hover:bg-zinc-50 text-xs"
-                                            >
-                                              {subSubcat.name}
-                                            </HoveredLink>
-                                          ))}
+                          <>
+                            <NavigationMenuTrigger className="text-sm font-medium">
+                              {navItem.name}
+                            </NavigationMenuTrigger>
+                            <NavigationMenuContent>
+                              <div className="grid gap-3 p-4 md:w-[500px] lg:w-[600px] lg:grid-cols-[.75fr_1fr]">
+                                <div className="row-span-3">
+                                  <NavigationMenuLink asChild>
+                                    <a
+                                      className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md"
+                                      href={categoryRoute}
+                                    >
+                                      <div className="mb-2 mt-4 text-lg font-medium">
+                                        {navItem.name}
+                                      </div>
+                                      <p className="text-sm leading-tight text-muted-foreground">
+                                        Browse our collection
+                                      </p>
+                                      <div className="mt-4 aspect-video rounded-md overflow-hidden relative">
+                                        <img 
+                                          src={
+                                            navItem.name === 'Video Templates' ? 'https://images.unsplash.com/photo-1547891654-e66ed7ebb968?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
+                                            navItem.name === 'Photos' ? 'https://images.unsplash.com/photo-1501084817091-a4f3d1d19e07?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
+                                            navItem.name === 'Music' ? 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
+                                            navItem.name === 'SFX' ? 'https://images.unsplash.com/photo-1575058544150-6b1d813f06d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
+                                            navItem.name === 'Web' ? 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
+                                            navItem.name === 'Graphics' ? 'https://images.unsplash.com/photo-1517202481630-03041b761b6a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
+                                            navItem.name === '3D' ? 'https://images.unsplash.com/photo-1560268043-2e4a3e626f4f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
+                                            'https://images.unsplash.com/photo-1581291518633-83b4ebbf27b0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80'
+                                          }
+                                          alt="Stock {navItem.name}"
+                                          className="w-full h-full object-cover"
+                                          onError={(e) => {
+                                            (e.target as HTMLImageElement).style.display = 'none';
+                                            const parent = e.currentTarget.parentElement;
+                                            if (parent) {
+                                              const fallbackIcon = parent.querySelector('.fallback-icon');
+                                              if (fallbackIcon) {
+                                                (fallbackIcon as HTMLElement).style.display = 'flex';
+                                              }
+                                            }
+                                          }}
+                                        />
+                                        <div className="fallback-icon absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-200 to-zinc-300 hidden">
+                                          {navItem.name === 'Video Templates' ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
+                                              <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                                            </svg>
+                                          ) : navItem.name === 'Photos' ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
+                                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                              <path d="M21 15l-5-5L5 21"></path>
+                                            </svg>
+                                          ) : navItem.name === 'Music' ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
+                                              <path d="M9 18V5l12-2v13"></path>
+                                              <circle cx="6" cy="18" r="3"></circle>
+                                              <circle cx="18" cy="16" r="3"></circle>
+                                            </svg>
+                                          ) : navItem.name === 'SFX' ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
+                                              <path d="M3 15v-6h4l5 5v-5h2m0 0v6m0-6v6m0-6h4l1 1v4m-1 0h-4"></path>
+                                              <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0"></path>
+                                            </svg>
+                                          ) : navItem.name === 'Web' ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
+                                              <circle cx="12" cy="12" r="10"></circle>
+                                              <line x1="2" y1="12" x2="22" y2="12"></line>
+                                              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                                            </svg>
+                                          ) : navItem.name === 'Graphics' ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
+                                              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                              <line x1="8" y1="21" x2="16" y2="21"></line>
+                                              <line x1="12" y1="17" x2="12" y2="21"></line>
+                                            </svg>
+                                          ) : navItem.name === '3D' ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
+                                              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                                            </svg>
+                                          ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
+                                              <path d="M12 8a5 5 0 0 1 5 5c0 2.76-2.5 5.24-5 5.8V22h-2v-3.2c-2.5-.6-5-3.08-5-5.8a5 5 0 0 1 5-5z"></path>
+                                              <path d="M8.5 11.5 12 8l3.5 3.5"></path>
+                                            </svg>
+                                          )}
                                         </div>
-                                      </motion.div>
+                                      </div>
+                                    </a>
+                                  </NavigationMenuLink>
+                                </div>
+                                <div className="space-y-3">
+                                  <div className="space-y-1">
+                                    {categorySubcategories.slice(0, 4).map((subcategory) => {
+                                      const subSubcats = subSubcategories.filter(
+                                        ss => ss.subcategory_id === subcategory.id
+                                      );
+
+                                      return (
+                                        <div key={subcategory.id} className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                                          <NavigationMenuLink
+                                            href={`${categoryRoute}?subcategory=${subcategory.slug}`}
+                                            className="text-sm font-medium leading-none peer-data-[state=active]:text-accent-foreground"
+                                          >
+                                            {subcategory.name}
+                                          </NavigationMenuLink>
+                                          {subSubcats.length > 0 && (
+                                            <ul className="mt-2 space-y-1 ml-2 border-l border-zinc-200 pl-2">
+                                              {subSubcats.slice(0, 3).map((subSubcat) => (
+                                                <li key={subSubcat.id}>
+                                                  <NavigationMenuLink
+                                                    href={`${categoryRoute}?subcategory=${subcategory.slug}&subsubcategory=${subSubcat.slug}`}
+                                                    className="block select-none space-y-1 rounded-md p-1 no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground text-xs"
+                                                  >
+                                                    {subSubcat.name}
+                                                  </NavigationMenuLink>
+                                                </li>
+                                              ))}
+                                            </ul>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                  {categorySubcategories.length > 4 && (
+                                    <div className="pt-2 border-t border-zinc-200">
+                                      <NavigationMenuLink
+                                        href={categoryRoute}
+                                        className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                                      >
+                                        + {categorySubcategories.length - 4} more categories →
+                                      </NavigationMenuLink>
                                     </div>
                                   )}
                                 </div>
-                              );
-                            })}
-                          </div>
+                              </div>
+                            </NavigationMenuContent>
+                          </>
                         ) : (
-                          <div className="text-sm">
-                            <HoveredLink href={categoryRoute}>
-                              View {category.name}
-                            </HoveredLink>
-                          </div>
+                          <NavigationMenuLink href={categoryRoute} className="text-sm font-medium">
+                            {navItem.name}
+                          </NavigationMenuLink>
                         )}
-                      </MenuItem>
+                      </NavigationMenuItem>
                     );
                   })}
-                </NavMenu>
-              ) : null}
+                </NavigationMenuList>
+              </NavigationMenu>
             </div>
           </div>
 
@@ -371,11 +467,12 @@ export default function Header() {
             {/* Mobile nav in specific order */}
             {[
               { name: 'Video Templates', route: '/video-templates', slug: 'video-templates' },
-              { name: 'Stock Images', route: '/stock-photos', slug: 'stock-images' },
-              { name: 'Music & SFX', route: '/music-sfx', slug: 'musics-and-sfx' },
-              { name: 'Web Templates', route: '/web-templates', slug: 'website-templates' },
+              { name: 'Photos', route: '/stock-photos', slug: 'stock-images' },
+              { name: 'Music', route: '/stock-musics', slug: 'stock-musics' },
+              { name: 'SFX', route: '/sound-effects', slug: 'sound-effects' },
+              { name: 'Web', route: '/web-templates', slug: 'website-templates' },
               { name: 'Graphics', route: '/graphics', slug: 'psd-templates' },
-              { name: '3D Models', route: '/3d-models', slug: '3d-models' },
+              { name: '3D', route: '/3d-models', slug: '3d-models' },
               { name: 'Prompts', route: '/prompts', slug: 'prompts' },
             ].map((navItem) => {
               const category = categories.find(cat =>
@@ -404,7 +501,7 @@ export default function Header() {
                         <Link
                           key={subcategory.id}
                           href={`${navItem.route}?subcategory=${subcategory.slug}`}
-                          className="text-sm text-zinc-600 py-1 block hover:text-zinc-900"
+                          className="text-xs text-zinc-600 py-0.5 block hover:text-zinc-900"
                           onClick={() => setIsMobileMenuOpen(false)}
                         >
                           {subcategory.name}
