@@ -101,3 +101,4 @@ After generation, visit: `/sound-effects`
 - `app/sound-effects/page.tsx` - Page component
 - `supabase_migrations/29_create_sound_effects_category.sql` - Migration
 - `scripts/generate-whoosh-sfx.ts` - Helper script
+

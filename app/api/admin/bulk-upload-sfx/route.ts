@@ -183,10 +183,8 @@ export async function POST(req: Request) {
           templateFolder
         );
 
-        // Convert Buffer to Uint8Array for File compatibility
-        const audioUint8Array = new Uint8Array(audioBuffer.buffer, audioBuffer.byteOffset, audioBuffer.byteLength);
-        const audioFile = new File([audioUint8Array], `${slug}.mp3`, { type: 'audio/mpeg' });
-        const audioResult = await uploadPreviewToR2(audioFile, audioKey, 'audio/mpeg');
+        // Upload audio preview directly using Buffer (uploadPreviewToR2 accepts Buffer)
+        const audioResult = await uploadPreviewToR2(audioBuffer, audioKey, 'audio/mpeg');
 
         // Upload source file to R2 (same audio file as source)
         const sourceKey = generateSourceKey(
@@ -274,3 +272,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: e?.message || 'Unknown error' }, { status: 500 });
   }
 }
+
