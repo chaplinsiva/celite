@@ -55,9 +55,9 @@ export default function FreeGiftsPanel() {
             // 3. Fetch downloads for these slugs
             const { data: downloads, error: dlError } = await supabase
                 .from('downloads')
-                .select('user_id, template_slug, created_at')
+                .select('user_id, template_slug, downloaded_at')
                 .in('template_slug', freeSlugs)
-                .order('created_at', { ascending: false });
+                .order('downloaded_at', { ascending: false });
 
             if (dlError) {
                 console.error('Error fetching downloads:', dlError);
@@ -94,7 +94,7 @@ export default function FreeGiftsPanel() {
                     email: userData?.email || 'Unknown User',
                     name: [userData?.first_name, userData?.last_name].filter(Boolean).join(' ') || 'Anonymous',
                     templateName: template?.name || dl.template_slug,
-                    date: dl.created_at,
+                    date: dl.downloaded_at,
                     isConverted: uniqueSubscribedIds.has(dl.user_id)
                 };
             });
