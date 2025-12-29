@@ -590,11 +590,17 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 categorySlug === 'musics-and-sfx' ||
                 categorySlug === 'music' ||
                 categorySlug === 'audio' ||
-                categorySlug === 'sound-effects' ||
-                (categorySlug.includes('music') || categorySlug.includes('audio') || categorySlug.includes('sfx') || categorySlug.includes('sound')) ||
-                (categoryName?.toLowerCase().includes('music') || categoryName?.toLowerCase().includes('audio') || categoryName?.toLowerCase().includes('sfx') || categoryName?.toLowerCase().includes('sound'))) {
+                (categorySlug.includes('music') || categorySlug.includes('audio')) ||
+                (categoryName?.toLowerCase().includes('music') || categoryName?.toLowerCase().includes('audio'))) {
                 categoryRoute = '/music-sfx';
                 categoryDisplayName = 'Music & SFX';
+              }
+              // Check for Sound Effects (separate from Music)
+              else if (categorySlug === 'sound-effects' ||
+                (categorySlug.includes('sfx') || categorySlug.includes('sound')) ||
+                (categoryName?.toLowerCase().includes('sfx') || categoryName?.toLowerCase().includes('sound effect'))) {
+                categoryRoute = '/sound-effects';
+                categoryDisplayName = 'Sound Effects';
               }
               // Check for Web Templates
               else if (categorySlug === 'website-templates' ||
@@ -625,7 +631,9 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 categoryDisplayName = categoryName;
                 // Try to determine route from name
                 const nameLower = categoryName.toLowerCase();
-                if (nameLower.includes('music') || nameLower.includes('audio') || nameLower.includes('sfx')) {
+                if (nameLower.includes('sound effect') || nameLower.includes('sfx')) {
+                  categoryRoute = '/sound-effects';
+                } else if (nameLower.includes('music') || nameLower.includes('audio')) {
                   categoryRoute = '/music-sfx';
                 } else if (nameLower.includes('stock') && (nameLower.includes('photo') || nameLower.includes('image'))) {
                   categoryRoute = '/stock-photos';
@@ -690,8 +698,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                   categorySlug === 'musics-and-sfx' ||
                   categorySlug === 'music' ||
                   categorySlug === 'audio' ||
-                  categorySlug === 'sound-effects' ||
-                  (categorySlug.includes('music') || categorySlug.includes('audio') || categorySlug.includes('sfx') || categorySlug.includes('sound'));
+                  (categorySlug.includes('music') || categorySlug.includes('audio'));
+                const isSoundEffects = categorySlug === 'sound-effects' ||
+                  (categorySlug.includes('sfx') || categorySlug.includes('sound'));
+                const isAudioProduct = isMusicSfx || isSoundEffects;
 
                 if (isStockPhoto) {
                   const imageUrl = convertR2UrlToCdn((product as any).thumbnail_path) || (product as any).thumbnail_path || convertR2UrlToCdn(product.img) || product.img || '/PNG1.png';
@@ -705,7 +715,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                   );
                 }
 
-                if (isMusicSfx && (product as any).audio_preview_path) {
+                if (isAudioProduct && (product as any).audio_preview_path) {
                   return (
                     <div className="w-full h-full flex items-center justify-center p-4">
                       <SimpleMusicPlayer

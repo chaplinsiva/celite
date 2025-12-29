@@ -63,6 +63,14 @@ export default function LatestTemplatesCarousel() {
         .single();
       const promptsCategoryId = promptsCategory?.id;
 
+      // Fetch Sound Effects category ID dynamically
+      const { data: soundEffectsCategory } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('slug', 'sound-effects')
+        .single();
+      const soundEffectsCategoryId = soundEffectsCategory?.id;
+
       let query = supabase
         .from('templates')
         .select(`
@@ -84,6 +92,11 @@ export default function LatestTemplatesCarousel() {
       // Exclude Prompts category if found
       if (promptsCategoryId) {
         query = query.neq('category_id', promptsCategoryId);
+      }
+
+      // Exclude Sound Effects category if found
+      if (soundEffectsCategoryId) {
+        query = query.neq('category_id', soundEffectsCategoryId);
       }
 
       const { data, error: templateError } = await query
