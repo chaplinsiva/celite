@@ -240,16 +240,18 @@ export default function Header() {
                                       <div className="mt-4 aspect-video rounded-md overflow-hidden relative">
                                         <img
                                           src={
-                                            navItem.name === 'Video Templates' ? 'https://images.unsplash.com/photo-1547891654-e66ed7ebb968?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
-                                              navItem.name === 'Photos' ? 'https://images.unsplash.com/photo-1501084817091-a4f3d1d19e07?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
-                                                navItem.name === 'Music' ? 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
-                                                  navItem.name === 'SFX' ? 'https://images.unsplash.com/photo-1575058544150-6b1d813f06d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
-                                                    navItem.name === 'Web' ? 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
-                                                      navItem.name === 'Graphics' ? 'https://images.unsplash.com/photo-1517202481630-03041b761b6a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
-                                                        navItem.name === '3D' ? 'https://images.unsplash.com/photo-1560268043-2e4a3e626f4f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
-                                                          'https://images.unsplash.com/photo-1581291518633-83b4ebbf27b0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80'
+                                            {
+                                              'Video Templates': 'https://images.unsplash.com/photo-1536240478700-b869070f9279?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80',
+                                              'Photos': 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80',
+                                              'Music': 'https://images.unsplash.com/photo-1514888891-18e7d9652a92?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80',
+                                              'SFX': 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80',
+                                              'Web': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80',
+                                              'Graphics': 'https://images.unsplash.com/photo-1626785774573-4b799315345d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80',
+                                              '3D': 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80',
+                                              'Prompts': 'https://images.unsplash.com/photo-1677442136019-21780ecad995?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80'
+                                            }[navItem.name] || 'https://images.unsplash.com/photo-1581291518633-83b4ebbf27b0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80'
                                           }
-                                          alt="Stock {navItem.name}"
+                                          alt={`Stock ${navItem.name}`}
                                           className="w-full h-full object-cover"
                                           onError={(e) => {
                                             (e.target as HTMLImageElement).style.display = 'none';
