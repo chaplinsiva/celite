@@ -102,3 +102,4 @@ After generation, visit: `/sound-effects`
 - `supabase_migrations/29_create_sound_effects_category.sql` - Migration
 - `scripts/generate-whoosh-sfx.ts` - Helper script
 
+

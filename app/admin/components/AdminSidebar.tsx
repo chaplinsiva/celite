@@ -8,7 +8,8 @@ type TabKey =
   | 'analytics'
   | 'users'
   | 'settings'
-  | 'marketing';
+  | 'marketing'
+  | 'bulkSfx';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'overview', label: 'Overview' },
@@ -18,6 +19,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'analytics', label: 'Analytics' },
   { key: 'users', label: 'Users' },
   { key: 'marketing', label: 'Marketing' },
+  { key: 'bulkSfx', label: 'Bulk SFX Generator' },
   { key: 'settings', label: 'Settings' },
 ];
 

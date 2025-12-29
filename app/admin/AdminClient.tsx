@@ -13,6 +13,7 @@ import UsersPanel from './components/UsersPanel';
 import SettingsPanel from './components/SettingsPanel';
 import MarketingPanel from './components/MarketingPanel';
 import VendorApprovalPanel from './components/VendorApprovalPanel';
+import BulkSfxPanel from './components/BulkSfxPanel';
 
 type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null };
 
@@ -30,7 +31,7 @@ export default function AdminClient() {
     celiteAmount?: number;
   } | null>(null);
   const [active, setActive] = useState<
-    'overview' | 'products' | 'vendorApproval' | 'categories' | 'analytics' | 'users' | 'settings' | 'marketing'
+    'overview' | 'products' | 'vendorApproval' | 'categories' | 'analytics' | 'users' | 'settings' | 'marketing' | 'bulkSfx'
   >('overview');
 
 
@@ -116,6 +117,7 @@ export default function AdminClient() {
 
             {active === 'users' && (<UsersPanel />)}
             {active === 'marketing' && (<MarketingPanel />)}
+            {active === 'bulkSfx' && (<BulkSfxPanel />)}
             {active === 'settings' && (<SettingsPanel />)}
           </section>
 
