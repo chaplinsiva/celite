@@ -238,16 +238,16 @@ export default function Header() {
                                         Browse our collection
                                       </p>
                                       <div className="mt-4 aspect-video rounded-md overflow-hidden relative">
-                                        <img 
+                                        <img
                                           src={
                                             navItem.name === 'Video Templates' ? 'https://images.unsplash.com/photo-1547891654-e66ed7ebb968?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
-                                            navItem.name === 'Photos' ? 'https://images.unsplash.com/photo-1501084817091-a4f3d1d19e07?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
-                                            navItem.name === 'Music' ? 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
-                                            navItem.name === 'SFX' ? 'https://images.unsplash.com/photo-1575058544150-6b1d813f06d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
-                                            navItem.name === 'Web' ? 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
-                                            navItem.name === 'Graphics' ? 'https://images.unsplash.com/photo-1517202481630-03041b761b6a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
-                                            navItem.name === '3D' ? 'https://images.unsplash.com/photo-1560268043-2e4a3e626f4f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
-                                            'https://images.unsplash.com/photo-1581291518633-83b4ebbf27b0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80'
+                                              navItem.name === 'Photos' ? 'https://images.unsplash.com/photo-1501084817091-a4f3d1d19e07?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
+                                                navItem.name === 'Music' ? 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
+                                                  navItem.name === 'SFX' ? 'https://images.unsplash.com/photo-1575058544150-6b1d813f06d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
+                                                    navItem.name === 'Web' ? 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
+                                                      navItem.name === 'Graphics' ? 'https://images.unsplash.com/photo-1517202481630-03041b761b6a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
+                                                        navItem.name === '3D' ? 'https://images.unsplash.com/photo-1560268043-2e4a3e626f4f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80' :
+                                                          'https://images.unsplash.com/photo-1581291518633-83b4ebbf27b0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=225&q=80'
                                           }
                                           alt="Stock {navItem.name}"
                                           className="w-full h-full object-cover"
@@ -380,7 +380,7 @@ export default function Header() {
             {!isAuthLoading && user && !hasCreatorShop && (
               <Link
                 href="/start-selling"
-                className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors mr-2"
+                className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors"
               >
                 Start Selling
               </Link>
@@ -388,7 +388,7 @@ export default function Header() {
             {!isAuthLoading && user && hasCreatorShop && (
               <Link
                 href="/creator/dashboard"
-                className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors mr-2"
+                className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors"
               >
                 Creator Dashboard
               </Link>
@@ -428,8 +428,8 @@ export default function Header() {
 
                   {/* User Profile */}
                   <Link href="/dashboard" className="relative group">
-                    <div className="flex items-center gap-3 pl-2 pr-1 py-1 rounded-full border border-zinc-200 hover:shadow-md transition-all bg-white">
-                      <span className="text-xs font-semibold text-zinc-700 pl-2 hidden sm:block">
+                    <div className="flex items-center gap-3 pl-3 pr-1 py-1 rounded-full border border-zinc-200 hover:shadow-md transition-all bg-white">
+                      <span className="text-xs font-semibold text-zinc-700 hidden sm:block">
                         My Account
                       </span>
                       {isSubscribed ? (

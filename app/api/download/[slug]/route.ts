@@ -45,26 +45,29 @@ export async function GET(
     }
     const userId = userRes.user.id;
 
-    // Check subscription
-    const { data: sub } = await admin
-      .from('subscriptions')
-      .select('id, is_active, valid_until')
-      .eq('user_id', userId)
-      .maybeSingle();
-    const active = !!sub?.is_active && (!sub?.valid_until || new Date(sub.valid_until as any).getTime() > Date.now());
-    if (!active) {
-      return NextResponse.json({ error: 'Access denied. Please subscribe to download.' }, { status: 403 });
-    }
-
     // Get template from database
     const { data: template, error: templateErr } = await admin
       .from('templates')
-      .select('slug, name, source_path')
+      .select('slug, name, source_path, is_free')
       .eq('slug', slug)
       .maybeSingle();
 
     if (templateErr || !template) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
+    }
+
+    // Check subscription (skip for free templates)
+    const { data: sub } = await admin
+      .from('subscriptions')
+      .select('id, is_active, valid_until')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const active = !!sub?.is_active && (!sub?.valid_until || new Date(sub.valid_until as any).getTime() > Date.now());
+    const isFreeTemplate = template?.is_free === true;
+
+    if (!active && !isFreeTemplate) {
+      return NextResponse.json({ error: 'Access denied. Please subscribe to download.' }, { status: 403 });
     }
 
     const sourcePath = template.source_path;

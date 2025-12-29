@@ -17,6 +17,7 @@ export type Template = {
   is_featured?: boolean;
   meta_title?: string | null;
   meta_description?: string | null;
+  is_free?: boolean;
 };
 
 export declare const templates: Template[];

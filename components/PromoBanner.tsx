@@ -5,7 +5,7 @@ import { ArrowRight } from 'lucide-react';
 
 export default function PromoBanner() {
     return (
-        <div className="w-full bg-blue-600 text-white py-2 sm:py-4 px-3 sm:px-4">
+        <div className="w-full bg-blue-600 text-white py-2 sm:py-4 px-6 sm:px-8">
             <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm font-medium">
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center">
                     <span className="whitespace-nowrap">Limited offer</span>

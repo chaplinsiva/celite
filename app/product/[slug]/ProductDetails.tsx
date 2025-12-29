@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Share2, Check, Download, AlertCircle, PlayCircle, Star, Shield, Clock, Layers, Zap, HardDrive, Music2, Copy } from 'lucide-react';
+import { Share2, Check, Download, AlertCircle, PlayCircle, Star, Shield, Clock, Layers, Zap, HardDrive, Music2, Copy, Gift } from 'lucide-react';
 import { useAppContext } from '../../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { useLoginModal } from '../../../context/LoginModalContext';
@@ -788,6 +788,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               handleCopyPrompt={handleCopyPrompt}
               promptCopied={promptCopied}
               user={user}
+              isFree={!!product.is_free}
             />
 
             {/* Description / Prompt */}
@@ -822,10 +823,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
 
               {/* Features List */}
               {(() => {
-                const features = product.features && typeof product.features === 'string' 
-                  ? JSON.parse(product.features) 
-                  : Array.isArray(product.features) 
-                    ? product.features 
+                const features = product.features && typeof product.features === 'string'
+                  ? JSON.parse(product.features)
+                  : Array.isArray(product.features)
+                    ? product.features
                     : [];
                 return features.length > 0 ? (
                   <div className="mt-6">
@@ -848,10 +849,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               <h2 className="text-xl font-bold text-zinc-900 mb-4">Product Tags</h2>
               <div className="flex flex-wrap gap-2">
                 {(() => {
-                  const tags = product.tags && typeof product.tags === 'string' 
-                    ? JSON.parse(product.tags) 
-                    : Array.isArray(product.tags) 
-                      ? product.tags 
+                  const tags = product.tags && typeof product.tags === 'string'
+                    ? JSON.parse(product.tags)
+                    : Array.isArray(product.tags)
+                      ? product.tags
                       : [];
                   return tags.length > 0 ? tags.map((tag: any, i: number) => (
                     <Link key={i} href={`/video-templates?search=${tag}`} className="px-4 py-2 rounded-lg bg-zinc-100 text-zinc-600 text-sm font-medium hover:bg-zinc-200 transition-colors">
@@ -882,6 +883,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 handleCopyPrompt={handleCopyPrompt}
                 promptCopied={promptCopied}
                 user={user}
+                isFree={!!product.is_free}
               />
 
               {/* Features Table / Tech Specs - Hidden for Prompts */}
@@ -891,15 +893,15 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
 
                   {/* Helper function to extract values from tags, features, and description */}
                   {(() => {
-                    const parsedTags = product.tags && typeof product.tags === 'string' 
-                      ? JSON.parse(product.tags) 
-                      : Array.isArray(product.tags) 
-                        ? product.tags 
+                    const parsedTags = product.tags && typeof product.tags === 'string'
+                      ? JSON.parse(product.tags)
+                      : Array.isArray(product.tags)
+                        ? product.tags
                         : [];
-                    const parsedFeatures = product.features && typeof product.features === 'string' 
-                      ? JSON.parse(product.features) 
-                      : Array.isArray(product.features) 
-                        ? product.features 
+                    const parsedFeatures = product.features && typeof product.features === 'string'
+                      ? JSON.parse(product.features)
+                      : Array.isArray(product.features)
+                        ? product.features
                         : [];
                     const allText = [
                       ...parsedTags.map((t: any) => String(t).toLowerCase()),
@@ -964,10 +966,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
 
                     // Get software list
                     const getSoftware = () => {
-                      const software = product.software && typeof product.software === 'string' 
-                        ? JSON.parse(product.software) 
-                        : Array.isArray(product.software) 
-                          ? product.software 
+                      const software = product.software && typeof product.software === 'string'
+                        ? JSON.parse(product.software)
+                        : Array.isArray(product.software)
+                          ? product.software
                           : [];
                       if (software.length > 0) {
                         return software.join(', ');
@@ -977,10 +979,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
 
                     // Get plugins
                     const getPlugins = () => {
-                      const plugins = product.plugins && typeof product.plugins === 'string' 
-                        ? JSON.parse(product.plugins) 
-                        : Array.isArray(product.plugins) 
-                          ? product.plugins 
+                      const plugins = product.plugins && typeof product.plugins === 'string'
+                        ? JSON.parse(product.plugins)
+                        : Array.isArray(product.plugins)
+                          ? product.plugins
                           : [];
                       if (plugins.length > 0) {
                         const pluginList = plugins.filter((p: any) => {
@@ -1236,7 +1238,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   );
 }
 
-function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className, isPrompt, handleCopyPrompt, promptCopied, user }: {
+function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className, isPrompt, handleCopyPrompt, promptCopied, user, isFree }: {
   isSubActive: boolean;
   downloading: boolean;
   handleDownload: () => void;
@@ -1246,9 +1248,11 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
   handleCopyPrompt?: () => void;
   promptCopied?: boolean;
   user?: any;
+  isFree?: boolean;
 }) {
   // For prompts: show Copy Prompt button (no login required)
   if (isPrompt) {
+    // ... existing prompt logic ...
     return (
       <div className={cn("bg-violet-50/50 rounded-2xl p-6 border border-violet-100", className)}>
         <div className="text-center mb-4">
@@ -1280,9 +1284,56 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
     );
   }
 
+  // For free templates: show download button regardless of subscription
+  if (isFree) {
+    return (
+      <div className={cn("bg-green-50/50 rounded-2xl p-6 border border-green-100", className)}>
+        <div className="text-center mb-4">
+          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wider mb-2">
+            <Gift className="w-3 h-3" />
+            Free New Year Gift
+          </div>
+          <h3 className="text-lg font-bold text-green-900">Download for Free</h3>
+          <p className="text-xs text-green-600 mt-1">Sign in required to download</p>
+        </div>
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          className={cn(
+            "w-full py-3 rounded-lg font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2",
+            downloading
+              ? "bg-green-500 text-white cursor-wait"
+              : "bg-green-600 text-white shadow-green-600/20 hover:bg-green-700 active:scale-[0.98]"
+          )}
+        >
+          {downloading ? (
+            <>
+              <div className="relative w-5 h-5">
+                <div className="absolute inset-0 rounded-full border-2 border-white/30"></div>
+                <div className="absolute inset-0 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+              </div>
+              <span className="animate-pulse">Downloading...</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4" />
+              Download Now
+            </>
+          )}
+        </button>
+        {downloading && (
+          <p className="text-xs text-green-600 text-center mt-2 animate-pulse">
+            Preparing your file for download...
+          </p>
+        )}
+      </div>
+    );
+  }
+
   // For subscribed users, show only the download button
   if (isSubActive) {
     return (
+      // ... existing active sub logic ...
       <div className={cn("bg-blue-50/50 rounded-2xl p-6 border border-blue-100", className)}>
         <button
           onClick={handleDownload}

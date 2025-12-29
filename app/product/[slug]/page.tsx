@@ -30,7 +30,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,thumbnail_path,video_path,features,software,plugins,tags,meta_title,meta_description,vendor_name,category_id,categories(id,slug,name)')
+    .select('slug,name,subtitle,description,img,thumbnail_path,video_path,features,software,plugins,tags,meta_title,meta_description,vendor_name,category_id,is_free,categories(id,slug,name)')
     .eq('slug', params.slug)
     .maybeSingle();
   const prod = row ? ({
@@ -45,6 +45,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
     plugins: row.plugins ?? [],
     tags: row.tags ?? [],
     isFeatured: false,
+    is_free: !!row.is_free,
   } as Template) : null;
   if (!prod) {
     return {
@@ -140,7 +141,7 @@ export default async function ProductPage(props: PageProps) {
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video_path,thumbnail_path,audio_preview_path,model_3d_path,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name,category_id,subcategory_id,categories(id,slug,name)')
+    .select('slug,name,subtitle,description,img,video_path,thumbnail_path,audio_preview_path,model_3d_path,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name,category_id,subcategory_id,is_free,categories(id,slug,name)')
     .eq('slug', params.slug)
     .maybeSingle();
   if (!row) return notFound();
@@ -172,6 +173,7 @@ export default async function ProductPage(props: PageProps) {
     subcategory_id: (row as any).subcategory_id ?? null,
     category_slug: categorySlug,
     category_name: categoryName,
+    is_free: !!row.is_free,
   };
 
   // Fetch related templates from the same category
