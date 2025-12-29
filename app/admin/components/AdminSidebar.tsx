@@ -6,6 +6,7 @@ type TabKey =
   | 'vendorApproval'
   | 'categories'
   | 'analytics'
+  | 'freeGifts'
   | 'users'
   | 'settings'
   | 'marketing'
@@ -17,6 +18,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'vendorApproval', label: 'Vendor Approval' },
   { key: 'categories', label: 'Categories' },
   { key: 'analytics', label: 'Analytics' },
+  { key: 'freeGifts', label: 'Free Gift Analytics' },
   { key: 'users', label: 'Users' },
   { key: 'marketing', label: 'Marketing' },
   { key: 'bulkSfx', label: 'Bulk SFX Generator' },
@@ -40,8 +42,7 @@ export default function AdminSidebar({
           <button
             key={tab.key}
             onClick={() => onChange(tab.key)}
-            className={`text-left rounded-lg px-3 py-2.5 transition-all outline-none ${
-              active === tab.key
+            className={`text-left rounded-lg px-3 py-2.5 transition-all outline-none ${active === tab.key
                 ? 'bg-blue-50 text-blue-600'
                 : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
               }`}

@@ -1,53 +1,14 @@
 ﻿"use client";
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Search, Sparkles, Gift, ArrowRight, Download } from 'lucide-react';
-import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
-import { useAppContext } from '@/context/AppContext';
+import { Search, Gift, ArrowRight, Download, Sparkles } from 'lucide-react';
 
 export default function Hero() {
-  const { user } = useAppContext();
   const [searchQuery, setSearchQuery] = useState('');
-  const [downloadCount, setDownloadCount] = useState<number>(0);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const router = useRouter();
-
-  useEffect(() => {
-    const fetchDownloadCount = async () => {
-      try {
-        const supabase = getSupabaseBrowserClient();
-
-        // Check admin status
-        if (user) {
-          const { data: adminData } = await supabase
-            .from('admins')
-            .select('user_id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-          setIsAdmin(!!adminData);
-        } else {
-          setIsAdmin(false);
-        }
-        const { count, error } = await supabase
-          .from('downloads')
-          .select('*', { count: 'exact', head: true })
-          .in('template_slug', [
-            'remo-inspired-wedding-invitation-template',
-            'celite-remo-inspired-wedding-invitation-template'
-          ]);
-
-        if (!error && count !== null) {
-          setDownloadCount(count);
-        }
-      } catch (err) {
-        console.error('Error fetching count:', err);
-      }
-    };
-    fetchDownloadCount();
-  }, [user]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,138 +27,180 @@ export default function Hero() {
   ];
 
   return (
-    <section className="relative w-full pt-16 pb-24 md:pt-24 md:pb-36 px-6 overflow-hidden bg-white">
+    <section className="relative w-full pt-16 pb-24 md:pt-24 md:pb-36 px-6 overflow-hidden bg-zinc-950">
 
       {/* Background Video (Remo After Effects) */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-80">
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-100">
         <video
           autoPlay
           loop
           muted
           playsInline
-          className="w-full h-full object-cover scale-125 origin-center"
+          className="w-full h-full object-cover scale-150 origin-center blur-[2px]"
         >
           <source src="https://preview.celite.in/preview/video/video-templates/after-effects/movie-templates/remo-inspired-wedding-invitation-template/remo-inspired-wedding-invitation-template.mp4" type="video/mp4" />
         </video>
-        {/* Lighter overlays to keep the video clear but text readable */}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/40 to-white/90"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-transparent to-white/90"></div>
+        {/* Dark overlay for "black shaded" look */}
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/80 via-zinc-950/20 to-zinc-950/90"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/90 via-transparent to-zinc-950/90"></div>
       </div>
 
-      <div className="max-w-[1440px] mx-auto px-6 sm:px-8 text-center space-y-10 relative z-10">
+      <div className="max-w-[1440px] mx-auto px-6 sm:px-8 relative z-10">
 
-        {/* New Year 2026 Gift Badge */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-sm font-bold shadow-sm"
-        >
-          <Gift className="w-4 h-4 animate-bounce" />
-          <span>New Year 2026 Gift - Free Remo Template</span>
-          {isAdmin && (
-            <>
-              <div className="w-1 h-1 rounded-full bg-blue-200"></div>
-              <span className="text-blue-400 font-medium">{downloadCount.toLocaleString()}+ Downloaded</span>
-            </>
-          )}
-        </motion.div>
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-12 text-left">
+          {/* Left Side: Headline */}
+          <div className="flex-1 space-y-8 text-center lg:text-left">
+            {/* New Year 2026 Gift Badge - Moved to Left */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 backdrop-blur-md border border-blue-500/20 text-blue-400 text-sm font-bold shadow-2xl"
+            >
+              <Gift className="w-4 h-4 animate-bounce" />
+              <span>New Year 2026 Gift - Free Remo Template</span>
+            </motion.div>
 
-        {/* Headline */}
-        <div className="space-y-6">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter text-zinc-950 leading-[0.95]"
-          >
-            Start 2026 with <br className="hidden md:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
-              Unlimited Creativity
-            </span>
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-lg sm:text-xl text-zinc-600 max-w-2xl mx-auto font-medium"
-          >
-            Get our premium Remo-inspired wedding invitation template for free as a 2026 gift.
-            Download, sign in, and create something amazing.
-          </motion.p>
-        </div>
-
-        {/* Hero Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
-        >
-          <Link
-            href="/product/remo-inspired-wedding-invitation-template"
-            className="group w-full sm:w-auto flex items-center justify-center gap-2 bg-zinc-950 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-blue-600 transition-all shadow-xl shadow-zinc-950/20 active:scale-95"
-          >
-            <Download className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
-            Download Free Template
-          </Link>
-
-          <Link
-            href="/pricing"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white text-zinc-900 border-2 border-zinc-100 px-8 py-4 rounded-2xl font-bold text-lg hover:border-blue-200 transition-all active:scale-95"
-          >
-            View Pricing
-            <ArrowRight className="w-5 h-5" />
-          </Link>
-        </motion.div>
-
-        {/* Search Bar */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="max-w-3xl mx-auto pt-8"
-        >
-          <form onSubmit={handleSearch} className="relative group">
-            <div className="relative flex items-center bg-white/80 backdrop-blur-xl shadow-2xl shadow-indigo-100/30 rounded-3xl border border-zinc-200 group-hover:border-blue-400 group-focus-within:border-blue-500 transition-all p-2">
-              <div className="pl-4 pr-3 text-zinc-400">
-                <Search className="w-5 h-5" />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search templates, 3D, music..."
-                className="flex-1 bg-transparent text-zinc-900 placeholder:text-zinc-400 text-lg focus:outline-none py-3 min-w-0"
-              />
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-8 py-3 rounded-2xl text-lg font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 active:scale-95"
-              >
-                Find
-              </button>
-            </div>
-          </form>
-
-          {/* Popular Searches */}
-          <div className="mt-8 flex flex-wrap justify-center items-center gap-3">
-            <span className="text-sm font-semibold text-zinc-400">Popular:</span>
-            {popularSearches.map((tag) => (
+            <motion.h1
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-5xl sm:text-6xl md:text-8xl font-black tracking-tighter text-white drop-shadow-2xl leading-[0.95]"
+            >
+              Start 2026 with <br className="hidden md:block" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 drop-shadow-sm">
+                Unlimited Creativity
+              </span>
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-lg sm:text-xl text-white/90 drop-shadow-md max-w-2xl font-medium"
+            >
+              Get our premium Remo-inspired wedding invitation template for free as a 2026 gift.
+              Download, sign in, and create something amazing.
+            </motion.p>
+            {/* Hero Actions */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4"
+            >
               <Link
-                key={tag.label}
-                href={tag.href}
-                className="text-sm text-zinc-600 bg-white border border-zinc-100 px-4 py-1.5 rounded-full hover:border-blue-300 hover:text-blue-600 transition-all shadow-sm hover:shadow-md"
+                href="/product/remo-inspired-wedding-invitation-template"
+                className="group w-full sm:w-auto flex items-center justify-center gap-2 bg-white text-zinc-950 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-blue-500 hover:text-white transition-all shadow-xl shadow-white/10 active:scale-95"
               >
-                {tag.label}
+                <Download className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
+                Download Free Template
               </Link>
-            ))}
+
+              <Link
+                href="/pricing"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 text-white border-2 border-white/10 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-white/10 hover:border-white/20 transition-all active:scale-95 backdrop-blur-sm"
+              >
+                View Pricing
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </motion.div>
+
+            {/* Search Bar */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="max-w-xl pt-8"
+            >
+              <form onSubmit={handleSearch} className="relative group">
+                <div className="relative flex items-center bg-white/5 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/10 group-hover:border-blue-500/50 group-focus-within:border-blue-500 transition-all p-2">
+                  <div className="pl-4 pr-3 text-zinc-500">
+                    <Search className="w-5 h-5" />
+                  </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search templates, 3D, music..."
+                    className="flex-1 bg-transparent text-white placeholder:text-zinc-500 text-lg focus:outline-none py-3 min-w-0"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-blue-600 text-white px-8 py-3 rounded-2xl text-lg font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 active:scale-95"
+                  >
+                    Find
+                  </button>
+                </div>
+              </form>
+
+              {/* Popular Searches */}
+              <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 justify-center lg:justify-start">
+                <span className="text-sm font-bold text-zinc-500 uppercase tracking-wider">Popular</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {popularSearches.map((tag) => (
+                    <Link
+                      key={tag.label}
+                      href={tag.href}
+                      className="text-xs font-semibold text-zinc-300 bg-white/5 border border-white/10 px-4 py-1.5 rounded-xl hover:bg-blue-600/20 hover:border-blue-500/50 hover:text-blue-400 transition-all shadow-sm"
+                    >
+                      {tag.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
           </div>
-        </motion.div>
+
+          {/* Right Side: Pricing Card */}
+          <motion.div
+            initial={{ opacity: 0, x: 20, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            transition={{ delay: 0.3 }}
+            className="w-full max-w-[320px] bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[32px] p-6 shadow-2xl relative overflow-hidden group"
+          >
+            <div className="absolute top-0 right-0 p-4">
+              <span className="bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">
+                Best Value
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                <Sparkles className="w-4 h-4" />
+                <span>Limited New Year Offer</span>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-white/50 line-through text-lg font-bold">₹899</span>
+                  <span className="text-white text-5xl font-black">₹599</span>
+                </div>
+                <p className="text-white/70 text-sm font-medium">per month, billed monthly</p>
+              </div>
+
+              <ul className="space-y-3 pt-2">
+                {['Unlimited Downloads', 'Commercial License', 'New Daily Templates'].map((feat) => (
+                  <li key={feat} className="flex items-center gap-2 text-white/90 text-sm font-medium">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    {feat}
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                href="/pricing"
+                className="block w-full text-center bg-white text-zinc-950 py-4 rounded-2xl font-bold text-base hover:bg-emerald-400 hover:text-white transition-all active:scale-95 shadow-lg"
+              >
+                Get Access Now
+              </Link>
+            </div>
+          </motion.div>
+        </div>
 
       </div>
 
       {/* Modern Decor Elements */}
-      <div className="absolute top-1/4 -left-20 w-80 h-80 bg-blue-200/20 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-purple-200/20 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-1/4 -left-20 w-80 h-80 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-purple-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
     </section>
   );

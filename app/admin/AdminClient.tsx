@@ -14,6 +14,7 @@ import SettingsPanel from './components/SettingsPanel';
 import MarketingPanel from './components/MarketingPanel';
 import VendorApprovalPanel from './components/VendorApprovalPanel';
 import BulkSfxPanel from './components/BulkSfxPanel';
+import FreeGiftsPanel from './components/FreeGiftsPanel';
 
 type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null };
 
@@ -22,16 +23,16 @@ export default function AdminClient() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [templates, setTemplates] = useState<TemplateRow[]>([]);
-  const [stats, setStats] = useState<{ 
-    templates: number; 
-    orders: number; 
+  const [stats, setStats] = useState<{
+    templates: number;
+    orders: number;
     revenue: number;
     totalSubscriptionRevenue?: number;
     vendorPoolAmount?: number;
     celiteAmount?: number;
   } | null>(null);
   const [active, setActive] = useState<
-    'overview' | 'products' | 'vendorApproval' | 'categories' | 'analytics' | 'users' | 'settings' | 'marketing' | 'bulkSfx'
+    'overview' | 'products' | 'vendorApproval' | 'categories' | 'analytics' | 'freeGifts' | 'users' | 'settings' | 'marketing' | 'bulkSfx'
   >('overview');
 
 
@@ -114,6 +115,7 @@ export default function AdminClient() {
             {active === 'categories' && (<CategoriesPanel />)}
 
             {active === 'analytics' && (<AnalyticsPanel />)}
+            {active === 'freeGifts' && (<FreeGiftsPanel />)}
 
             {active === 'users' && (<UsersPanel />)}
             {active === 'marketing' && (<MarketingPanel />)}

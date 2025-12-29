@@ -1411,7 +1411,7 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
         onClick={() => router.push('/pricing')}
         className="w-full py-3 rounded-lg bg-blue-900 text-white font-bold text-sm shadow-xl shadow-blue-900/10 hover:bg-blue-800 active:scale-[0.98] transition-all"
       >
-        Subscribe Monthly
+        Subscribe to Download
       </button>
     </div>
   );
