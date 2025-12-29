@@ -17,112 +17,142 @@ export default function FreeGiftsPanel() {
 
     useEffect(() => {
         const fetchStats = async () => {
-            setLoading(true);
-            const supabase = getSupabaseBrowserClient();
+            try {
+                setLoading(true);
+                const supabase = getSupabaseBrowserClient();
 
-            // 1. Get all users to match IDs with emails
-            const { data: { session } } = await supabase.auth.getSession();
-            let userMap: Record<string, any> = {};
-            if (session) {
-                try {
-                    const res = await fetch('/api/admin/users', {
-                        headers: { Authorization: `Bearer ${session.access_token}` }
-                    });
-                    const json = await res.json();
-                    if (json.ok) {
-                        json.users.forEach((u: any) => {
-                            userMap[u.id] = u;
+                console.log('[FreeGifts] Starting to fetch analytics...');
+
+                // 1. Get all free templates
+                const { data: freeTemplates, error: templatesError } = await supabase
+                    .from('templates')
+                    .select('slug, name')
+                    .eq('is_free', true);
+
+                if (templatesError) {
+                    console.error('[FreeGifts] Error fetching free templates:', templatesError);
+                    setLoading(false);
+                    return;
+                }
+
+                console.log('[FreeGifts] Found free templates:', freeTemplates);
+
+                const freeSlugs = freeTemplates?.map(t => t.slug) || [];
+
+                if (freeSlugs.length === 0) {
+                    console.log('[FreeGifts] No free templates found');
+                    setLoading(false);
+                    return;
+                }
+
+                // 2. Fetch ALL downloads for these slugs (no filtering)
+                const { data: downloads, error: dlError } = await supabase
+                    .from('downloads')
+                    .select('user_id, template_slug, downloaded_at')
+                    .in('template_slug', freeSlugs)
+                    .order('downloaded_at', { ascending: false });
+
+                if (dlError) {
+                    console.error('[FreeGifts] Error fetching downloads:', dlError);
+                    setLoading(false);
+                    return;
+                }
+
+                console.log('[FreeGifts] Total downloads found:', downloads?.length || 0);
+
+                const totalDownloads = downloads?.length || 0;
+
+                // 3. Get unique user IDs
+                const uniqueUserIds = Array.from(new Set((downloads || []).map(d => d.user_id).filter(Boolean)));
+                const uniqueUsersCount = uniqueUserIds.length;
+
+                console.log('[FreeGifts] Unique users:', uniqueUsersCount);
+
+                // 4. Check subscriptions
+                let uniqueSubscribedIds = new Set<string>();
+                if (uniqueUsersCount > 0) {
+                    const { data: subscriptions } = await supabase
+                        .from('subscriptions')
+                        .select('user_id')
+                        .eq('is_active', true)
+                        .in('user_id', uniqueUserIds);
+
+                    uniqueSubscribedIds = new Set((subscriptions || []).map(s => s.user_id));
+                    console.log('[FreeGifts] Converted users:', uniqueSubscribedIds.size);
+                }
+
+                const conversionRate = uniqueUsersCount > 0 ? (uniqueSubscribedIds.size / uniqueUsersCount) * 100 : 0;
+
+                // 5. Get user details for display
+                const { data: { session } } = await supabase.auth.getSession();
+                let userMap: Record<string, any> = {};
+
+                if (session) {
+                    try {
+                        const res = await fetch('/api/admin/users', {
+                            headers: { Authorization: `Bearer ${session.access_token}` }
                         });
+                        const json = await res.json();
+                        if (json.ok && json.users) {
+                            json.users.forEach((u: any) => {
+                                userMap[u.id] = u;
+                            });
+                            console.log('[FreeGifts] Loaded user details for', Object.keys(userMap).length, 'users');
+                        }
+                    } catch (e) {
+                        console.error('[FreeGifts] Failed to load user details:', e);
                     }
-                } catch (e) {
-                    console.error('Failed to load users for mapping', e);
                 }
-            }
 
-            // 2. Get all free templates
-            const { data: freeTemplates } = await supabase
-                .from('templates')
-                .select('slug, name')
-                .eq('is_free', true);
+                // 6. Process user downloads
+                const processedUserDownloads = (downloads || []).map(dl => {
+                    const userData = userMap[dl.user_id];
+                    const template = freeTemplates?.find(t => t.slug === dl.template_slug);
+                    return {
+                        id: dl.user_id,
+                        email: userData?.email || 'Unknown User',
+                        name: [userData?.first_name, userData?.last_name].filter(Boolean).join(' ') || 'Anonymous',
+                        templateName: template?.name || dl.template_slug,
+                        date: dl.downloaded_at,
+                        isConverted: uniqueSubscribedIds.has(dl.user_id)
+                    };
+                });
 
-            const freeSlugs = freeTemplates?.map(t => t.slug) || [];
+                // 7. Group by template
+                const giftStatsMap: Record<string, { name: string, count: number }> = {};
+                freeTemplates?.forEach(t => {
+                    giftStatsMap[t.slug] = { name: t.name, count: 0 };
+                });
+                (downloads || []).forEach(d => {
+                    if (giftStatsMap[d.template_slug]) {
+                        giftStatsMap[d.template_slug].count++;
+                    }
+                });
 
-            if (freeSlugs.length === 0) {
+                const sortedGifts = Object.entries(giftStatsMap)
+                    .map(([slug, data]) => ({ slug, ...data }))
+                    .sort((a, b) => b.count - a.count);
+
+                console.log('[FreeGifts] Setting stats:', {
+                    totalDownloads,
+                    uniqueUsers: uniqueUsersCount,
+                    convertedUsers: uniqueSubscribedIds.size,
+                    conversionRate
+                });
+
+                setStats({
+                    totalDownloads,
+                    uniqueUsers: uniqueUsersCount,
+                    convertedUsers: uniqueSubscribedIds.size,
+                    conversionRate,
+                });
+                setTopGifts(sortedGifts);
+                setUserDownloads(processedUserDownloads);
+            } catch (error) {
+                console.error('[FreeGifts] Unexpected error:', error);
+            } finally {
                 setLoading(false);
-                return;
             }
-
-            // 3. Fetch downloads for these slugs
-            const { data: downloads, error: dlError } = await supabase
-                .from('downloads')
-                .select('user_id, template_slug, downloaded_at')
-                .in('template_slug', freeSlugs)
-                .order('downloaded_at', { ascending: false });
-
-            if (dlError) {
-                console.error('Error fetching downloads:', dlError);
-                setLoading(false);
-                return;
-            }
-
-            const totalDownloads = downloads.length;
-
-            // 4. Unique users who downloaded free gifts
-            const uniqueUserIds = Array.from(new Set(downloads.map(d => d.user_id).filter(Boolean)));
-            const uniqueUsersCount = uniqueUserIds.length;
-
-            // 5. Check how many of these unique users are currently subscribed
-            let uniqueSubscribedIds = new Set<string>();
-            if (uniqueUsersCount > 0) {
-                const { data: subscriptions } = await supabase
-                    .from('subscriptions')
-                    .select('user_id')
-                    .eq('is_active', true)
-                    .in('user_id', uniqueUserIds);
-
-                uniqueSubscribedIds = new Set(subscriptions?.map(s => s.user_id));
-            }
-
-            const conversionRate = uniqueUsersCount > 0 ? (uniqueSubscribedIds.size / uniqueUsersCount) * 100 : 0;
-
-            // 6. Process User Downloads List
-            const processedUserDownloads = downloads.map(dl => {
-                const userData = userMap[dl.user_id];
-                const template = freeTemplates?.find(t => t.slug === dl.template_slug);
-                return {
-                    id: dl.user_id,
-                    email: userData?.email || 'Unknown User',
-                    name: [userData?.first_name, userData?.last_name].filter(Boolean).join(' ') || 'Anonymous',
-                    templateName: template?.name || dl.template_slug,
-                    date: dl.downloaded_at,
-                    isConverted: uniqueSubscribedIds.has(dl.user_id)
-                };
-            });
-
-            // 7. Group by template for stats
-            const giftStatsMap: Record<string, { name: string, count: number }> = {};
-            freeTemplates?.forEach(t => {
-                giftStatsMap[t.slug] = { name: t.name, count: 0 };
-            });
-            downloads.forEach(d => {
-                if (giftStatsMap[d.template_slug]) {
-                    giftStatsMap[d.template_slug].count++;
-                }
-            });
-
-            const sortedGifts = Object.entries(giftStatsMap)
-                .map(([slug, data]) => ({ slug, ...data }))
-                .sort((a, b) => b.count - a.count);
-
-            setStats({
-                totalDownloads,
-                uniqueUsers: uniqueUsersCount,
-                convertedUsers: uniqueSubscribedIds.size,
-                conversionRate,
-            });
-            setTopGifts(sortedGifts);
-            setUserDownloads(processedUserDownloads);
-            setLoading(false);
         };
 
         fetchStats();

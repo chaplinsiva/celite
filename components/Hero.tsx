@@ -54,17 +54,17 @@ export default function Hero() {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 backdrop-blur-md border border-blue-500/20 text-blue-400 text-sm font-bold shadow-2xl"
+              className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-blue-500/10 backdrop-blur-md border border-blue-500/20 text-blue-400 text-xs sm:text-sm font-bold shadow-2xl"
             >
-              <Gift className="w-4 h-4 animate-bounce" />
-              <span>New Year 2026 Gift - Free Remo Template</span>
+              <Gift className="w-3 h-3 sm:w-4 sm:h-4 animate-bounce" />
+              <span className="truncate">New Year 2026 Gift - Free Remo Template</span>
             </motion.div>
 
             <motion.h1
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-5xl sm:text-6xl md:text-8xl font-black tracking-tighter text-white drop-shadow-2xl leading-[0.95]"
+              className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tighter text-white drop-shadow-2xl leading-[0.95]"
             >
               Start 2026 with <br className="hidden md:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 drop-shadow-sm">
@@ -75,7 +75,7 @@ export default function Hero() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-lg sm:text-xl text-white/90 drop-shadow-md max-w-2xl font-medium"
+              className="text-sm sm:text-base md:text-lg lg:text-xl text-white/90 drop-shadow-md max-w-2xl font-medium"
             >
               Get our premium Remo-inspired wedding invitation template for free as a 2026 gift.
               Download, sign in, and create something amazing.
@@ -150,12 +150,12 @@ export default function Hero() {
             </motion.div>
           </div>
 
-          {/* Right Side: Pricing Card */}
+          {/* Right Side: Pricing Card - Hidden on mobile/tablet */}
           <motion.div
             initial={{ opacity: 0, x: 20, scale: 0.9 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             transition={{ delay: 0.3 }}
-            className="w-full max-w-[320px] bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[32px] p-6 shadow-2xl relative overflow-hidden group"
+            className="hidden lg:block w-full max-w-[320px] bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[32px] p-6 shadow-2xl relative overflow-hidden group"
           >
             <div className="absolute top-0 right-0 p-4">
               <span className="bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">

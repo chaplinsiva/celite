@@ -150,21 +150,34 @@ export async function GET(
     // Record download BEFORE returning the signed URL
     try {
       const subscriptionId = sub?.id || null;
-      const { error: downloadErr } = await admin.from('downloads').insert({
+      console.log(`[Download] Recording download for template: ${slug}, user: ${userId}`);
+
+      const downloadRecord: any = {
         user_id: userId,
         template_slug: slug,
-        downloaded_at: new Date().toISOString(),
-        ...(subscriptionId && { subscription_id: subscriptionId }),
-      });
+      };
+
+      // Add timestamp - try both field names for compatibility
+      const timestamp = new Date().toISOString();
+      downloadRecord.downloaded_at = timestamp;
+      downloadRecord.created_at = timestamp;
+
+      // Add subscription ID if available
+      if (subscriptionId) {
+        downloadRecord.subscription_id = subscriptionId;
+      }
+
+      const { error: downloadErr } = await admin.from('downloads').insert(downloadRecord);
 
       if (downloadErr) {
-        console.error('Failed to record download:', downloadErr);
+        console.error('[Download] Failed to record download:', downloadErr);
+        console.error('[Download] Download record was:', downloadRecord);
         // Don't fail the download, but log the error
       } else {
-        console.log(`Download recorded successfully for user ${userId}, template ${slug}`);
+        console.log(`[Download] ✅ Download recorded successfully for user ${userId}, template ${slug}`);
       }
     } catch (downloadErr: any) {
-      console.error('Failed to record download (exception):', downloadErr);
+      console.error('[Download] Failed to record download (exception):', downloadErr);
       // Continue with download even if recording fails
     }
 
