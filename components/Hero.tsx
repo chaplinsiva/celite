@@ -27,7 +27,7 @@ export default function Hero() {
   ];
 
   return (
-    <section className="relative w-full pt-16 pb-24 md:pt-24 md:pb-36 px-6 overflow-hidden bg-zinc-950">
+    <section className="relative w-full pt-16 pb-24 md:pt-24 md:pb-36 px-4 sm:px-6 overflow-hidden bg-zinc-950">
 
       {/* Background Video (Remo After Effects) */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-100">
@@ -45,7 +45,7 @@ export default function Hero() {
         <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/90 via-transparent to-zinc-950/90"></div>
       </div>
 
-      <div className="max-w-[1440px] mx-auto px-6 sm:px-8 relative z-10">
+      <div className="max-w-[1440px] mx-auto px-0 sm:px-8 relative z-10">
 
         <div className="flex flex-col lg:flex-row items-center justify-between gap-12 text-left">
           {/* Left Side: Headline */}
@@ -54,19 +54,19 @@ export default function Hero() {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-blue-500/10 backdrop-blur-md border border-blue-500/20 text-blue-400 text-xs sm:text-sm font-bold shadow-2xl"
+              className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-blue-500/10 backdrop-blur-md border border-blue-500/20 text-blue-400 text-[10px] sm:text-xs md:text-sm font-bold shadow-2xl"
             >
-              <Gift className="w-3 h-3 sm:w-4 sm:h-4 animate-bounce" />
-              <span className="truncate">New Year 2026 Gift - Free Remo Template</span>
+              <Gift className="w-3 h-3 sm:w-4 sm:h-4 animate-bounce flex-shrink-0" />
+              <span>New Year 2026 Gift - Free Remo Template</span>
             </motion.div>
 
             <motion.h1
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tighter text-white drop-shadow-2xl leading-[0.95]"
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tighter text-white drop-shadow-2xl leading-[1.1] sm:leading-[0.95]"
             >
-              Start 2026 with <br className="hidden md:block" />
+              Start 2026 with <br className="hidden sm:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 drop-shadow-sm">
                 Unlimited Creativity
               </span>
@@ -75,7 +75,7 @@ export default function Hero() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-sm sm:text-base md:text-lg lg:text-xl text-white/90 drop-shadow-md max-w-2xl font-medium"
+              className="text-sm sm:text-base md:text-lg lg:text-xl text-white/90 drop-shadow-md max-w-2xl font-medium px-4 sm:px-0"
             >
               Get our premium Remo-inspired wedding invitation template for free as a 2026 gift.
               Download, sign in, and create something amazing.
@@ -85,11 +85,11 @@ export default function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4"
+              className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4 px-4 sm:px-0"
             >
               <Link
                 href="/product/remo-inspired-wedding-invitation-template"
-                className="group w-full sm:w-auto flex items-center justify-center gap-2 bg-white text-zinc-950 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-blue-500 hover:text-white transition-all shadow-xl shadow-white/10 active:scale-95"
+                className="group w-full sm:w-auto flex items-center justify-center gap-2 bg-white text-zinc-950 px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg hover:bg-blue-500 hover:text-white transition-all shadow-xl shadow-white/10 active:scale-95"
               >
                 <Download className="w-5 h-5 group-hover:translate-y-1 transition-transform" />
                 Download Free Template
@@ -97,7 +97,7 @@ export default function Hero() {
 
               <Link
                 href="/pricing"
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 text-white border-2 border-white/10 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-white/10 hover:border-white/20 transition-all active:scale-95 backdrop-blur-sm"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 text-white border-2 border-white/10 px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg hover:bg-white/10 hover:border-white/20 transition-all active:scale-95 backdrop-blur-sm"
               >
                 View Pricing
                 <ArrowRight className="w-5 h-5" />
@@ -109,23 +109,23 @@ export default function Hero() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="max-w-xl pt-8"
+              className="max-w-xl pt-8 px-4 sm:px-0"
             >
               <form onSubmit={handleSearch} className="relative group">
-                <div className="relative flex items-center bg-white/5 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/10 group-hover:border-blue-500/50 group-focus-within:border-blue-500 transition-all p-2">
-                  <div className="pl-4 pr-3 text-zinc-500">
-                    <Search className="w-5 h-5" />
+                <div className="relative flex items-center bg-white/5 backdrop-blur-xl shadow-2xl rounded-2xl sm:rounded-3xl border border-white/10 group-hover:border-blue-500/50 group-focus-within:border-blue-500 transition-all p-1.5 sm:p-2">
+                  <div className="pl-3 sm:pl-4 pr-2 sm:pr-3 text-zinc-500">
+                    <Search className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search templates, 3D, music..."
-                    className="flex-1 bg-transparent text-white placeholder:text-zinc-500 text-lg focus:outline-none py-3 min-w-0"
+                    placeholder="Search templates..."
+                    className="flex-1 bg-transparent text-white placeholder:text-zinc-500 text-base sm:text-lg focus:outline-none py-2.5 sm:py-3 min-w-0"
                   />
                   <button
                     type="submit"
-                    className="bg-blue-600 text-white px-8 py-3 rounded-2xl text-lg font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 active:scale-95"
+                    className="bg-blue-600 text-white px-5 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-base sm:text-lg font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 active:scale-95"
                   >
                     Find
                   </button>
@@ -134,13 +134,13 @@ export default function Hero() {
 
               {/* Popular Searches */}
               <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 justify-center lg:justify-start">
-                <span className="text-sm font-bold text-zinc-500 uppercase tracking-wider">Popular</span>
+                <span className="text-[10px] sm:text-sm font-bold text-zinc-500 uppercase tracking-wider">Popular</span>
                 <div className="flex flex-wrap items-center gap-2">
                   {popularSearches.map((tag) => (
                     <Link
                       key={tag.label}
                       href={tag.href}
-                      className="text-xs font-semibold text-zinc-300 bg-white/5 border border-white/10 px-4 py-1.5 rounded-xl hover:bg-blue-600/20 hover:border-blue-500/50 hover:text-blue-400 transition-all shadow-sm"
+                      className="text-[10px] sm:text-xs font-semibold text-zinc-300 bg-white/5 border border-white/10 px-3 sm:px-4 py-1 sm:py-1.5 rounded-lg sm:rounded-xl hover:bg-blue-600/20 hover:border-blue-500/50 hover:text-blue-400 transition-all shadow-sm"
                     >
                       {tag.label}
                     </Link>
