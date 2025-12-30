@@ -13,9 +13,16 @@ function AuthCallbackContent() {
   const [returnUrl, setReturnUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    // Get return URL from query param or sessionStorage (for email confirmation)
     const returnParam = searchParams.get('return');
+    const storedReturnUrl = sessionStorage.getItem('signup_return_url');
+    
     if (returnParam) {
       setReturnUrl(decodeURIComponent(returnParam));
+    } else if (storedReturnUrl) {
+      setReturnUrl(storedReturnUrl);
+      // Clear it after using
+      sessionStorage.removeItem('signup_return_url');
     }
   }, [searchParams]);
 

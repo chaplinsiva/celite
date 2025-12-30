@@ -66,11 +66,12 @@ function SignupContent() {
 
     try {
       const supabase = getSupabaseBrowserClient();
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { name }
+          data: { name },
+          emailRedirectTo: `${window.location.origin}/auth/callback${returnUrl ? `?return=${encodeURIComponent(returnUrl)}` : ''}`
         }
       });
 
@@ -80,8 +81,32 @@ function SignupContent() {
         return;
       }
 
-      // Auth state will be automatically updated by Supabase listener
-      router.push(returnUrl || '/dashboard');
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
+        // Email confirmation required - show message
+        setError('Please check your email to confirm your account. After confirmation, you will be redirected back.');
+        setIsSubmitting(false);
+        // Store return URL in sessionStorage for after email confirmation
+        if (returnUrl) {
+          sessionStorage.setItem('signup_return_url', returnUrl);
+        }
+        return;
+      }
+
+      // If user is immediately logged in (no email confirmation)
+      if (data.session) {
+        // Store return URL in sessionStorage as backup
+        if (returnUrl) {
+          sessionStorage.setItem('signup_return_url', returnUrl);
+        }
+        // Wait for auth state to update via listener (handled in useEffect)
+        // The useEffect will redirect when user state updates
+        setIsSubmitting(false);
+      } else {
+        // Fallback: redirect anyway (shouldn't happen normally)
+        setIsSubmitting(false);
+        router.push(returnUrl || '/dashboard');
+      }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
       setIsSubmitting(false);
@@ -116,7 +141,16 @@ function SignupContent() {
 
   useEffect(() => {
     if (user) {
-      router.push(returnUrl || '/dashboard');
+      // Check if there's a stored return URL from signup
+      const storedReturnUrl = sessionStorage.getItem('signup_return_url');
+      const urlToUse = storedReturnUrl || returnUrl || '/dashboard';
+      
+      // Clear stored return URL
+      if (storedReturnUrl) {
+        sessionStorage.removeItem('signup_return_url');
+      }
+      
+      router.push(urlToUse);
     }
   }, [user, router, returnUrl]);
 
