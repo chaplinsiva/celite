@@ -171,21 +171,26 @@ export async function GET(
       } else {
         // For paid templates, use the downloads table (requires subscription)
         const subscriptionId = sub?.id || null;
-        const downloadRecord: any = {
+        const downloadRecord = {
           user_id: userId,
           template_slug: slug,
+          subscription_id: subscriptionId, // Include even if null - column should be nullable
           downloaded_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
         };
 
-        if (subscriptionId) {
-          downloadRecord.subscription_id = subscriptionId;
-        }
+        console.log(`[Download] Attempting to insert paid download record:`, {
+          user_id: userId,
+          template_slug: slug,
+          subscription_id: subscriptionId,
+        });
 
         const { error: downloadErr } = await admin.from('downloads').insert(downloadRecord);
 
         if (downloadErr) {
           console.error('[Download] Failed to record paid download:', downloadErr);
+          console.error('[Download] Error code:', downloadErr.code);
+          console.error('[Download] Error message:', downloadErr.message);
           console.error('[Download] Download record was:', downloadRecord);
         } else {
           console.log(`[Download] ✅ Paid download recorded successfully for user ${userId}, template ${slug}`);
