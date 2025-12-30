@@ -538,7 +538,7 @@ function CheckoutContent() {
                         <h1 className="text-2xl font-bold text-zinc-900 mb-2">Sign in to checkout</h1>
                         <p className="text-zinc-600 mb-6">Please log in to complete your purchase</p>
                         <Link
-                            href="/login"
+                            href="/login?return=/checkout"
                             className="inline-flex items-center justify-center rounded-lg bg-blue-600 text-white px-6 py-3 font-semibold hover:bg-blue-700 transition-colors"
                         >
                             Sign in

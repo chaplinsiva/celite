@@ -292,11 +292,11 @@ export default function Header() {
                 </div>
               ) : !user ? (
                 <>
-                  <Link href="/login" className="hidden sm:block text-[14px] font-medium text-zinc-900 px-4 py-2 hover:bg-zinc-100 rounded-full transition-colors">
+                  <Link href={typeof window !== 'undefined' ? `/login?return=${encodeURIComponent(window.location.pathname + window.location.search)}` : '/login'} className="hidden sm:block text-[14px] font-medium text-zinc-900 px-4 py-2 hover:bg-zinc-100 rounded-full transition-colors">
                     Log in
                   </Link>
                   <Link
-                    href="/signup"
+                    href={typeof window !== 'undefined' ? `/signup?return=${encodeURIComponent(window.location.pathname + window.location.search)}` : '/signup'}
                     className="bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg border-2 border-blue-700 hover:bg-blue-700 hover:border-blue-800 transition-all shadow-sm hover:shadow-md"
                   >
                     Subscribe Now
@@ -427,7 +427,7 @@ export default function Header() {
             </Link>
             {!isAuthLoading && !user && (
               <Link
-                href="/login"
+                href={typeof window !== 'undefined' ? `/login?return=${encodeURIComponent(window.location.pathname + window.location.search)}` : '/login'}
                 className="text-lg font-medium text-zinc-800 py-2"
                 onClick={() => setIsMobileMenuOpen(false)}
               >

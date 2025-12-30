@@ -98,7 +98,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             More templates are coming soon.
           </p>
           <a
-            href="/login"
+            href={typeof window !== 'undefined' ? `/login?return=${encodeURIComponent(window.location.pathname + window.location.search)}` : '/login'}
             className="inline-flex items-center justify-center rounded-full bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition"
           >
             Login

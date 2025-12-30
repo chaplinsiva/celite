@@ -333,7 +333,7 @@ function DashboardContent() {
             <h1 className="text-3xl font-bold text-zinc-900">Please sign in to view your dashboard</h1>
             <p className="mt-4 text-zinc-500 text-lg">Access your downloads, subscription, and account settings.</p>
             <Link
-              href="/login"
+              href="/login?return=/dashboard"
               className="mt-8 inline-flex items-center rounded-2xl bg-blue-600 px-8 py-3 text-base font-semibold text-white transition hover:bg-blue-700 shadow-lg shadow-blue-600/20"
             >
               Go to Login

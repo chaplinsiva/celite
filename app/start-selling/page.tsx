@@ -39,7 +39,7 @@ export default function StartSellingPage() {
   // If user is not logged in, send them to login
   useEffect(() => {
     if (!user) {
-      router.replace("/login?redirect=/start-selling");
+      router.replace("/login?return=/start-selling");
     }
   }, [user, router]);
 

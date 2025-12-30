@@ -114,8 +114,13 @@ function SignupContent() {
     }
   };
 
+  useEffect(() => {
+    if (user) {
+      router.push(returnUrl || '/dashboard');
+    }
+  }, [user, router, returnUrl]);
+
   if (user) {
-    router.push('/dashboard');
     return <LoadingSpinner message="Redirecting..." />;
   }
 
@@ -256,7 +261,7 @@ function SignupContent() {
           {/* Sign In Link */}
           <p className="text-center text-sm text-zinc-600 mt-6">
             Already have an account?{' '}
-            <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+            <Link href={returnUrl ? `/login?return=${encodeURIComponent(returnUrl)}` : '/login'} className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
               Sign in instead
             </Link>
           </p>

@@ -30,7 +30,8 @@ function LoginContent() {
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    const returnParam = searchParams.get('return');
+    // Support both 'return' and 'redirect' parameters for backward compatibility
+    const returnParam = searchParams.get('return') || searchParams.get('redirect');
     if (returnParam) {
       setReturnUrl(decodeURIComponent(returnParam));
     }
@@ -42,10 +43,10 @@ function LoginContent() {
       setIsRedirecting(true);
       // Use setTimeout to ensure this happens after render
       setTimeout(() => {
-        router.push('/dashboard');
+        router.push(returnUrl || '/dashboard');
       }, 0);
     }
-  }, [user, router, isRedirecting]);
+  }, [user, router, isRedirecting, returnUrl]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -212,7 +213,7 @@ function LoginContent() {
           {/* Sign Up Link */}
           <p className="text-center text-sm text-zinc-600 mt-6">
             Don't have an account?{' '}
-            <Link href="/signup" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+            <Link href={returnUrl ? `/signup?return=${encodeURIComponent(returnUrl)}` : '/signup'} className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
               Create one now
             </Link>
           </p>

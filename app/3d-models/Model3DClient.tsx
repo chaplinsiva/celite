@@ -588,7 +588,7 @@ export default function Model3DClient({
             Upload your 3D models and become part of a growing creator community celebrated for creativity and innovation.
           </p>
           <Link
-            href="/signup"
+            href={typeof window !== 'undefined' ? `/signup?return=${encodeURIComponent(window.location.pathname + window.location.search)}` : '/signup'}
             className="inline-flex items-center gap-2 px-8 py-4 bg-blue-900 text-white rounded-xl font-bold shadow-xl shadow-blue-900/10 hover:bg-blue-800 hover:shadow-2xl hover:-translate-y-1 transition-all"
           >
             Get Started <ArrowRight className="w-4 h-4" />

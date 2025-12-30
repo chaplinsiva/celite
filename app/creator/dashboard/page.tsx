@@ -546,7 +546,7 @@ export default function CreatorDashboardPage() {
       const supabase = getSupabaseBrowserClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        router.replace("/login?redirect=/creator/dashboard");
+        router.replace("/login?return=/creator/dashboard");
         return;
       }
 
@@ -666,7 +666,7 @@ export default function CreatorDashboardPage() {
       const supabase = getSupabaseBrowserClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        router.replace("/login?redirect=/creator/dashboard");
+        router.replace("/login?return=/creator/dashboard");
         return;
       }
 
@@ -755,7 +755,7 @@ export default function CreatorDashboardPage() {
       const supabase = getSupabaseBrowserClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        router.replace("/login?redirect=/creator/dashboard");
+        router.replace("/login?return=/creator/dashboard");
         return;
       }
 
