@@ -85,12 +85,27 @@ export async function GET(
       // Legacy: For external URLs, redirect (but record download first)
       try {
         const subscriptionId = sub?.id || null;
-        await admin.from('downloads').insert({
-          user_id: userId,
-          template_slug: slug,
-          downloaded_at: new Date().toISOString(),
-          ...(subscriptionId && { subscription_id: subscriptionId }),
-        });
+        const now = new Date().toISOString();
+
+        // Track free templates in free_downloads
+        if (isFreeTemplate) {
+          await admin.from('free_downloads').insert({
+            user_id: userId,
+            template_slug: slug,
+            downloaded_at: now,
+            created_at: now,
+          });
+        }
+
+        // Track subscriber downloads in downloads table
+        if (active && subscriptionId) {
+          await admin.from('downloads').insert({
+            user_id: userId,
+            template_slug: slug,
+            subscription_id: subscriptionId,
+            downloaded_at: now,
+          });
+        }
       } catch (err) {
         console.error('Failed to record download:', err);
       }
@@ -149,52 +164,59 @@ export async function GET(
 
     // Record download BEFORE returning the signed URL
     try {
-      console.log(`[Download] Recording download for template: ${slug}, user: ${userId}, isFree: ${isFreeTemplate}`);
+      console.log(`[Download] Recording download for template: ${slug}, user: ${userId}, isFree: ${isFreeTemplate}, hasActiveSubscription: ${active}`);
 
+      const subscriptionId = sub?.id || null;
+      const now = new Date().toISOString();
+
+      // Always track free templates in free_downloads table
       if (isFreeTemplate) {
-        // For free templates, use the free_downloads table (no subscription required)
         const freeDownloadRecord = {
           user_id: userId,
           template_slug: slug,
-          downloaded_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
+          downloaded_at: now,
+          created_at: now,
         };
 
-        const { error: downloadErr } = await admin.from('free_downloads').insert(freeDownloadRecord);
+        const { error: freeErr } = await admin.from('free_downloads').insert(freeDownloadRecord);
 
-        if (downloadErr) {
-          console.error('[Download] Failed to record free download:', downloadErr);
+        if (freeErr) {
+          console.error('[Download] Failed to record free download:', freeErr);
           console.error('[Download] Free download record was:', freeDownloadRecord);
         } else {
           console.log(`[Download] ✅ Free download recorded successfully for user ${userId}, template ${slug}`);
         }
-      } else {
-        // For paid templates, use the downloads table (requires subscription)
-        const subscriptionId = sub?.id || null;
-        const downloadRecord = {
+      }
+
+      // Track subscriber downloads in downloads table (for both free and paid templates when user has active subscription)
+      if (active && subscriptionId) {
+        const subscriberDownloadRecord = {
           user_id: userId,
           template_slug: slug,
-          subscription_id: subscriptionId, // Include even if null - column should be nullable
-          downloaded_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
+          subscription_id: subscriptionId,
+          downloaded_at: now,
         };
 
-        console.log(`[Download] Attempting to insert paid download record:`, {
+        console.log(`[Download] Attempting to insert subscriber download record:`, {
           user_id: userId,
           template_slug: slug,
           subscription_id: subscriptionId,
         });
 
-        const { error: downloadErr } = await admin.from('downloads').insert(downloadRecord);
+        const { error: subscriberErr } = await admin.from('downloads').insert(subscriberDownloadRecord);
 
-        if (downloadErr) {
-          console.error('[Download] Failed to record paid download:', downloadErr);
-          console.error('[Download] Error code:', downloadErr.code);
-          console.error('[Download] Error message:', downloadErr.message);
-          console.error('[Download] Download record was:', downloadRecord);
+        if (subscriberErr) {
+          console.error('[Download] Failed to record subscriber download:', subscriberErr);
+          console.error('[Download] Error code:', subscriberErr.code);
+          console.error('[Download] Error message:', subscriberErr.message);
+          console.error('[Download] Subscriber download record was:', subscriberDownloadRecord);
         } else {
-          console.log(`[Download] ✅ Paid download recorded successfully for user ${userId}, template ${slug}`);
+          console.log(`[Download] ✅ Subscriber download recorded successfully for user ${userId}, template ${slug}`);
         }
+      } else if (!isFreeTemplate && !active) {
+        // This case shouldn't happen due to access check at line 69-71, but if it does, we skip tracking
+        // since subscription_id is required for downloads table and user doesn't have active subscription
+        console.warn(`[Download] ⚠️ Paid template download attempted without active subscription for user ${userId}, template ${slug} - skipping download tracking`);
       }
     } catch (downloadErr: any) {
       console.error('[Download] Failed to record download (exception):', downloadErr);
