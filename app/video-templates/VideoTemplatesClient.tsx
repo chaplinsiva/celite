@@ -294,15 +294,7 @@ export default function VideoTemplatesClient({
               <div className="flex items-center gap-4 flex-wrap">
                 <h1 className="text-3xl md:text-4xl font-bold text-zinc-900">{pageTitle}</h1>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <div className="text-sm text-zinc-500 bg-zinc-100 px-3 py-1.5 rounded-full font-medium">
-                    {viewTemplates.length === initialTemplates.length && viewMode === "discover" ? (
-                      <span>{viewTemplates.length} {viewTemplates.length === 1 ? 'template' : 'templates'}</span>
-                    ) : (
-                      <span>
-                        Showing <span className="text-blue-600 font-semibold">{viewTemplates.length}</span> of {initialTemplates.length} {initialTemplates.length === 1 ? 'template' : 'templates'}
-                      </span>
-                    )}
-                  </div>
+
                   <div className="flex items-center gap-2 bg-white border border-zinc-200 rounded-xl p-1">
                     <button
                       onClick={() => setViewMode('discover')}
@@ -433,7 +425,6 @@ export default function VideoTemplatesClient({
                                     )}
                                   >
                                     <span>{subcat.name}</span>
-                                    <span className="text-zinc-400 text-[10px]">({templateCount})</span>
                                   </button>
                                   {selectedSubcategory === subcat.id && subSubcatsForThis.length > 0 && (
                                     <div className="ml-4 mt-1 space-y-1 border-l border-zinc-200 pl-2">
@@ -465,7 +456,6 @@ export default function VideoTemplatesClient({
                                             )}
                                           >
                                             <span>{subSubcat.name}</span>
-                                            <span className="text-zinc-400 text-[9px]">({subSubTemplateCount})</span>
                                           </button>
                                         );
                                       })}
@@ -584,36 +574,17 @@ export default function VideoTemplatesClient({
 
             {/* Pagination */}
             {viewTemplates.length > ITEMS_PER_PAGE && (
-              <div className="flex justify-center items-center gap-4 mt-12">
+              <div className="flex justify-center items-center gap-6 mt-12">
                 <button
                   onClick={() => {
                     setCurrentPage(p => Math.max(1, p - 1));
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   disabled={currentPage === 1}
-                  className="w-8 h-8 flex items-center justify-center text-zinc-400 disabled:opacity-30 hover:text-zinc-900 transition-colors"
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-blue-600 hover:text-white transition-all"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => {
-                        setCurrentPage(page);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-200",
-                        currentPage === page
-                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20 scale-100"
-                          : "bg-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 scale-95 hover:scale-100"
-                      )}
-                    >
-                      {page}
-                    </button>
-                  ))}
 
                 <button
                   onClick={() => {
@@ -621,7 +592,7 @@ export default function VideoTemplatesClient({
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   disabled={currentPage === totalPages}
-                  className="w-8 h-8 flex items-center justify-center text-zinc-400 disabled:opacity-30 hover:text-zinc-900 transition-colors"
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-blue-600 hover:text-white transition-all"
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>

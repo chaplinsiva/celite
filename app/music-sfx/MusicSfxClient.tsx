@@ -502,7 +502,6 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
                   >
                     <span className="flex items-center justify-between">
                       <span>All</span>
-                      <span className="text-xs opacity-80">({initialTemplates.length})</span>
                     </span>
                   </button>
 
@@ -544,7 +543,6 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
                             )}
                             <span className="truncate">{subcat.name}</span>
                           </span>
-                          <span className="text-xs opacity-80 flex-shrink-0 ml-2">({count})</span>
                         </button>
 
                         {/* Nested Sub-Categories */}
@@ -585,7 +583,6 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
                                   )}
                                 >
                                   <span className="truncate">{subSubcat.name}</span>
-                                  <span className="text-xs opacity-70 flex-shrink-0 ml-2">({subCount})</span>
                                 </button>
                               );
                             })}
@@ -607,13 +604,8 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
                 <div className="mb-4 sm:mb-6 flex items-center justify-between">
                   <div>
                     <h2 className="text-xl sm:text-2xl font-bold text-zinc-900">
-                      {filteredTemplates.length} {filteredTemplates.length === 1 ? 'Track' : 'Tracks'}
+                      Tracks
                     </h2>
-                    {filteredTemplates.length > ITEMS_PER_PAGE && (
-                      <p className="text-sm text-zinc-500 mt-1">
-                        Page {currentPage} of {totalPages}
-                      </p>
-                    )}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-zinc-500">
                     <Volume2 className="w-4 h-4" />
@@ -626,7 +618,6 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
                   {paginatedTemplates.map((template, index) => {
                     const rawAudioUrl = template.audio_preview_path || template.video_path;
                     const audioUrl = rawAudioUrl ? convertR2UrlToCdn(rawAudioUrl) || rawAudioUrl : null;
-                    const gradient = gradients[index % gradients.length];
                     const isPlaying = playingSlug === template.slug;
                     const isLoadingThis = isLoading === template.slug;
 
@@ -736,36 +727,17 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
 
                 {/* Pagination */}
                 {filteredTemplates.length > ITEMS_PER_PAGE && (
-                  <div className="flex justify-center items-center gap-4 mt-12">
+                  <div className="flex justify-center items-center gap-6 mt-12">
                     <button
                       onClick={() => {
                         setCurrentPage(p => Math.max(1, p - 1));
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
                       disabled={currentPage === 1}
-                      className="w-8 h-8 flex items-center justify-center text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-zinc-900 transition-colors"
+                      className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-blue-600 hover:text-white transition-all"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
-
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .map((page) => (
-                        <button
-                          key={page}
-                          onClick={() => {
-                            setCurrentPage(page);
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }}
-                          className={cn(
-                            "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-200",
-                            currentPage === page
-                              ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20 scale-100"
-                              : "bg-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 scale-95 hover:scale-100"
-                          )}
-                        >
-                          {page}
-                        </button>
-                      ))}
 
                     <button
                       onClick={() => {
@@ -773,17 +745,10 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
                       disabled={currentPage === totalPages}
-                      className="w-8 h-8 flex items-center justify-center text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-zinc-900 transition-colors"
+                      className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-blue-600 hover:text-white transition-all"
                     >
                       <ChevronRight className="w-5 h-5" />
                     </button>
-                  </div>
-                )}
-
-                {/* Page Info */}
-                {filteredTemplates.length > ITEMS_PER_PAGE && (
-                  <div className="text-center mt-4 text-sm text-zinc-500">
-                    Showing {startIndex + 1}-{Math.min(endIndex, filteredTemplates.length)} of {filteredTemplates.length} tracks
                   </div>
                 )}
               </div>
@@ -808,7 +773,6 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
         </div>
       </div>
 
-      {/* Inline CSS for equalizer animation */}
       <style jsx global>{`
         @keyframes equalizerBar {
           0%, 100% {

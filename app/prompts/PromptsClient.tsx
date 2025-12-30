@@ -145,14 +145,6 @@ export default function PromptsClient({ initialTemplates, subcategories }: Promp
                                         }`}
                                 >
                                     {sub.name}
-                                    {count > 0 && (
-                                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${selectedSubcategory === sub.slug
-                                            ? 'bg-white/20'
-                                            : 'bg-zinc-200'
-                                            }`}>
-                                            {count}
-                                        </span>
-                                    )}
                                 </button>
                             );
                         })}
@@ -162,12 +154,7 @@ export default function PromptsClient({ initialTemplates, subcategories }: Promp
 
             {/* Templates Grid */}
             <div className="max-w-[1440px] mx-auto px-6 pb-16">
-                {/* Results Header */}
-                <div className="mb-6 pb-4 border-b border-zinc-100">
-                    <p className="text-zinc-500">
-                        Showing <span className="font-semibold text-zinc-800">{filteredTemplates.length}</span> prompts
-                    </p>
-                </div>
+
 
                 {filteredTemplates.length === 0 ? (
                     <div className="text-center py-16">

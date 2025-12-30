@@ -113,9 +113,7 @@ export default function WebsiteShowcaseCarousel() {
                 <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-0.5 transition-transform" />
               </button>
 
-              <div className="absolute top-3 right-3 sm:top-6 sm:right-6 z-10 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-white/80 backdrop-blur-sm border border-zinc-100 text-[10px] sm:text-xs text-zinc-500 font-medium">
-                {String(currentIndex + 1).padStart(2, '0')} / {String(websites.length).padStart(2, '0')}
-              </div>
+
             </>
           )}
 

@@ -225,7 +225,7 @@ export default function StockPhotosClient({ initialTemplates }: { initialTemplat
                   const count = initialTemplates.filter(t => t.subcategory_id === subcat.id).length;
                   return (
                     <option key={subcat.id} value={subcat.id}>
-                      {subcat.name} ({count})
+                      {subcat.name}
                     </option>
                   );
                 })}
@@ -241,7 +241,7 @@ export default function StockPhotosClient({ initialTemplates }: { initialTemplat
           <div>
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-zinc-900">
-                {filteredTemplates.length} {filteredTemplates.length === 1 ? 'Photo' : 'Photos'}
+                Photos
               </h2>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-[200px]">

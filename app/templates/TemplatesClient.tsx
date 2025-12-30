@@ -142,7 +142,7 @@ export default function TemplatesClient() {
                     .select('slug, name, img, video, video_path, thumbnail_path, audio_preview_path, model_3d_path, category_id, categories(id, name, slug)')
                     .eq('status', 'approved')
                     .order('created_at', { ascending: false })
-                    .limit(500);
+                    .limit(2000);
 
                 if (error) {
                     console.error('Error loading templates:', error);
@@ -181,18 +181,24 @@ export default function TemplatesClient() {
                                 groupsByCategory.set(categoryId, []);
                                 categoryCounts.set(categoryId, 0);
                             }
-                            groupsByCategory.get(categoryId)!.push({
-                                slug: t.slug,
-                                name: t.name,
-                                img: t.img,
-                                video: t.video,
-                                video_path: t.video_path,
-                                thumbnail_path: t.thumbnail_path,
-                                audio_preview_path: t.audio_preview_path,
-                                model_3d_path: t.model_3d_path,
-                                category_id: t.category_id,
-                            });
+                            // Count all templates in this category
                             categoryCounts.set(categoryId, categoryCounts.get(categoryId)! + 1);
+
+                            // Only add up to 8 templates per category for display
+                            const currentTemplates = groupsByCategory.get(categoryId)!;
+                            if (currentTemplates.length < 8) {
+                                currentTemplates.push({
+                                    slug: t.slug,
+                                    name: t.name,
+                                    img: t.img,
+                                    video: t.video,
+                                    video_path: t.video_path,
+                                    thumbnail_path: t.thumbnail_path,
+                                    audio_preview_path: t.audio_preview_path,
+                                    model_3d_path: t.model_3d_path,
+                                    category_id: t.category_id,
+                                });
+                            }
                         }
                     });
 
@@ -205,11 +211,11 @@ export default function TemplatesClient() {
                             return {
                                 category,
                                 displayName: category.name,
-                                templates: templates.slice(0, 8), // Show max 8 templates per category
+                                templates: templates,
                                 count: categoryCounts.get(categoryId) || 0,
                             };
                         })
-                        .filter((group): group is CategoryGroup => group !== null)
+                        .filter((group): group is CategoryGroup => group !== null && group.templates.length > 0)
                         .sort((a, b) => {
                             // Sort by count (descending), then by name
                             if (b.count !== a.count) {
@@ -326,7 +332,7 @@ export default function TemplatesClient() {
                     <p className="text-zinc-600 text-lg md:text-xl max-w-3xl mx-auto">
                         {searchQuery
                             ? `Found templates matching your search query.`
-                            : 'Discover a vast collection of creative assets across multiple categories. From video templates to graphics, fonts to music - find everything you need for your creative projects.'
+                            : `Discover our full collection of creative assets. From video templates to graphics, fonts to music - find everything you need.`
                         }
                     </p>
                 </div>
@@ -369,9 +375,6 @@ export default function TemplatesClient() {
                                     <div className="h-1 w-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full"></div>
                                     <div>
                                         <h2 className="text-2xl md:text-3xl font-bold text-zinc-900">{group.displayName}</h2>
-                                        <p className="text-sm text-zinc-500 mt-1">
-                                            {group.count} {group.count === 1 ? 'template' : 'templates'} available
-                                        </p>
                                     </div>
                                 </div>
                                 <Link

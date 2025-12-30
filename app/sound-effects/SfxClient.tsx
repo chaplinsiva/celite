@@ -54,7 +54,6 @@ export default function SfxClient({ initialTemplates }: { initialTemplates: Temp
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const soundEffectsCategorySlug = 'sound-effects';
 
   // Audio playback state - single audio instance for the entire component
@@ -107,7 +106,7 @@ export default function SfxClient({ initialTemplates }: { initialTemplates: Temp
   useEffect(() => {
     const fetchCategories = async () => {
       const supabase = getSupabaseBrowserClient();
-      
+
       // First get the category ID
       const { data: category } = await supabase
         .from('categories')
@@ -437,7 +436,6 @@ export default function SfxClient({ initialTemplates }: { initialTemplates: Temp
                     >
                       <span className="flex items-center justify-between">
                         <span>All</span>
-                        <span className="text-xs opacity-80">({initialTemplates.length})</span>
                       </span>
                     </button>
                     {subcategories.map((subcat) => {
@@ -457,7 +455,6 @@ export default function SfxClient({ initialTemplates }: { initialTemplates: Temp
                         >
                           <span className="flex items-center justify-between">
                             <span className="truncate">{subcat.name}</span>
-                            <span className="text-xs opacity-80 flex-shrink-0 ml-2">({count})</span>
                           </span>
                         </button>
                       );
@@ -475,13 +472,8 @@ export default function SfxClient({ initialTemplates }: { initialTemplates: Temp
                 <div className="mb-4 sm:mb-6 flex items-center justify-between">
                   <div>
                     <h2 className="text-xl sm:text-2xl font-bold text-zinc-900">
-                      {filteredTemplates.length} {filteredTemplates.length === 1 ? 'Sound Effect' : 'Sound Effects'}
+                      Sound Effects
                     </h2>
-                    {filteredTemplates.length > ITEMS_PER_PAGE && (
-                      <p className="text-sm text-zinc-500 mt-1">
-                        Page {currentPage} of {totalPages}
-                      </p>
-                    )}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-zinc-500">
                     <Volume2 className="w-4 h-4" />
@@ -514,8 +506,8 @@ export default function SfxClient({ initialTemplates }: { initialTemplates: Temp
                             onClick={(e) => handleTap(template.slug, audioUrl, e)}
                             className={cn(
                               "flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300",
-                              isPlaying 
-                                ? "bg-blue-600 text-white shadow-lg scale-105" 
+                              isPlaying
+                                ? "bg-blue-600 text-white shadow-lg scale-105"
                                 : "bg-zinc-100 text-zinc-700 hover:bg-blue-600 hover:text-white hover:scale-105",
                               isLoadingThis && "animate-pulse"
                             )}
@@ -523,6 +515,7 @@ export default function SfxClient({ initialTemplates }: { initialTemplates: Temp
                             {isLoadingThis ? (
                               <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
                             ) : isPlaying ? (
+                              /* Equalizer Animation */
                               <div className="flex items-end gap-0.5 h-5">
                                 <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '60%', animationDelay: '0ms' }} />
                                 <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '100%', animationDelay: '100ms' }} />
@@ -535,7 +528,7 @@ export default function SfxClient({ initialTemplates }: { initialTemplates: Temp
                             )}
                           </button>
 
-                          {/* Sound Info */}
+                          {/* Track Info */}
                           <div className="flex-1 min-w-0">
                             <h3 className="text-base font-semibold text-zinc-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
                               {template.name}
@@ -599,35 +592,17 @@ export default function SfxClient({ initialTemplates }: { initialTemplates: Temp
 
                 {/* Pagination */}
                 {filteredTemplates.length > ITEMS_PER_PAGE && (
-                  <div className="flex justify-center items-center gap-4 mt-12">
+                  <div className="flex justify-center items-center gap-6 mt-12">
                     <button
                       onClick={() => {
                         setCurrentPage(p => Math.max(1, p - 1));
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
                       disabled={currentPage === 1}
-                      className="w-8 h-8 flex items-center justify-center text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-zinc-900 transition-colors"
+                      className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-blue-600 hover:text-white transition-all"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
-
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => {
-                          setCurrentPage(page);
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
-                        className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-200",
-                          currentPage === page
-                            ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20 scale-100"
-                            : "bg-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 scale-95 hover:scale-100"
-                        )}
-                      >
-                        {page}
-                      </button>
-                    ))}
 
                     <button
                       onClick={() => {
@@ -635,17 +610,10 @@ export default function SfxClient({ initialTemplates }: { initialTemplates: Temp
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
                       disabled={currentPage === totalPages}
-                      className="w-8 h-8 flex items-center justify-center text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-zinc-900 transition-colors"
+                      className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-blue-600 hover:text-white transition-all"
                     >
                       <ChevronRight className="w-5 h-5" />
                     </button>
-                  </div>
-                )}
-
-                {/* Page Info */}
-                {filteredTemplates.length > ITEMS_PER_PAGE && (
-                  <div className="text-center mt-4 text-sm text-zinc-500">
-                    Showing {startIndex + 1}-{Math.min(endIndex, filteredTemplates.length)} of {filteredTemplates.length} sound effects
                   </div>
                 )}
               </div>
@@ -670,7 +638,6 @@ export default function SfxClient({ initialTemplates }: { initialTemplates: Temp
         </div>
       </div>
 
-      {/* Inline CSS for equalizer animation */}
       <style jsx global>{`
         @keyframes equalizerBar {
           0%, 100% {
@@ -684,5 +651,3 @@ export default function SfxClient({ initialTemplates }: { initialTemplates: Temp
     </main>
   );
 }
-
-

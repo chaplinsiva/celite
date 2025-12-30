@@ -287,15 +287,6 @@ export default function Model3DClient({
                 <h1 className="text-3xl md:text-4xl font-bold text-zinc-900">
                   <span className="text-blue-600">{pageTitle.split(' ')[0]}</span> {pageTitle.split(' ').slice(1).join(' ')}
                 </h1>
-                <div className="text-sm text-zinc-500 bg-zinc-100 px-3 py-1.5 rounded-full font-medium">
-                  {filteredTemplates.length === initialTemplates.length ? (
-                    <span>{filteredTemplates.length} {filteredTemplates.length === 1 ? 'model' : 'models'}</span>
-                  ) : (
-                    <span>
-                      Showing <span className="text-blue-600 font-semibold">{filteredTemplates.length}</span> of {initialTemplates.length} {initialTemplates.length === 1 ? 'model' : 'models'}
-                    </span>
-                  )}
-                </div>
               </div>
               <p className="text-zinc-500 mt-2 max-w-2xl">
                 {pageSubtitle}
@@ -420,7 +411,6 @@ export default function Model3DClient({
                                     )}
                                   >
                                     <span>{subcat.name}</span>
-                                    <span className="text-zinc-400 text-[10px]">({templateCount})</span>
                                   </button>
                                   {selectedSubcategory === subcat.id && subSubcatsForThis.length > 0 && (
                                     <div className="ml-4 mt-1 space-y-1 border-l border-zinc-200 pl-2">
@@ -447,7 +437,6 @@ export default function Model3DClient({
                                             )}
                                           >
                                             <span>{subSubcat.name}</span>
-                                            <span className="text-zinc-400 text-[9px]">({subSubTemplateCount})</span>
                                           </button>
                                         );
                                       })}

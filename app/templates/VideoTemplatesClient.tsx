@@ -281,15 +281,6 @@ export default function VideoTemplatesClient({
                   )}
                 </h1>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <div className="text-sm text-zinc-500 bg-zinc-100 px-3 py-1.5 rounded-full font-medium">
-                    {viewTemplates.length === initialTemplates.length && viewMode === "discover" ? (
-                      <span>{viewTemplates.length} {viewTemplates.length === 1 ? 'template' : 'templates'}</span>
-                    ) : (
-                      <span>
-                        Showing <span className="text-blue-600 font-semibold">{viewTemplates.length}</span> of {initialTemplates.length} {initialTemplates.length === 1 ? 'template' : 'templates'}
-                      </span>
-                    )}
-                  </div>
                   <div className="inline-flex rounded-full bg-zinc-100 p-1 text-xs">
                     <button
                       type="button"
@@ -433,7 +424,6 @@ export default function VideoTemplatesClient({
                                   )}
                                 >
                                   <span>{subcat.name}</span>
-                                  <span className="text-zinc-400 text-[10px]">({templateCount})</span>
                                 </button>
                               );
                             })}
