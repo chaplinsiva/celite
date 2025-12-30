@@ -62,10 +62,6 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
                 </div>
             )}
 
-            {/* Page Overlay for Navigation */}
-            {isNavigating && (
-                <div className="fixed inset-0 bg-white/50 backdrop-blur-[1px] z-[9998] pointer-events-none transition-opacity duration-200" />
-            )}
 
             {children}
 
