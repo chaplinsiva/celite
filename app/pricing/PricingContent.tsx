@@ -1,16 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Check, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Check } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
-import { formatPrice } from '@/lib/currency';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 
 export default function PricingContent() {
+  const router = useRouter();
   const [monthlyPrice, setMonthlyPrice] = useState<number | null>(null);
   const [yearlyPrice, setYearlyPrice] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isYearly, setIsYearly] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
     const loadPrices = async () => {
@@ -20,7 +22,6 @@ export default function PricingContent() {
         const settingsMap: Record<string, string> = {};
         (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
 
-        // Get amounts in paise from backend only
         const monthlyPaiseStr = settingsMap.RAZORPAY_MONTHLY_AMOUNT;
         const yearlyPaiseStr = settingsMap.RAZORPAY_YEARLY_AMOUNT;
 
@@ -31,7 +32,6 @@ export default function PricingContent() {
         let monthlyPaise = Number(monthlyPaiseStr);
         let yearlyPaise = Number(yearlyPaiseStr);
 
-        // Convert from paise to INR
         if (monthlyPaise >= 10000) {
           monthlyPaise = monthlyPaise / 100;
         }
@@ -51,6 +51,11 @@ export default function PricingContent() {
     loadPrices();
   }, []);
 
+  const handleSubscribe = () => {
+    setIsNavigating(true);
+    router.push(`/checkout?subscription=${isYearly ? 'yearly' : 'monthly'}`);
+  };
+
   if (loading) {
     return <LoadingSpinner message="Loading pricing..." />;
   }
@@ -58,7 +63,7 @@ export default function PricingContent() {
   if (monthlyPrice === null || yearlyPrice === null) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-600">Unable to load pricing information. Please try again later.</p>
+        <p className="text-zinc-600">Unable to load pricing information. Please try again later.</p>
       </div>
     );
   }
@@ -74,123 +79,115 @@ export default function PricingContent() {
     "Priority Support"
   ];
 
+  const yearlyPerMonth = Math.round(yearlyPrice / 12);
+  const savings = (monthlyPrice * 12) - yearlyPrice;
+
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-160px)] py-8">
-      <div className="w-full">
-        {/* Header Section */}
-        <section className="relative max-w-4xl mx-auto text-center mb-12 md:mb-16 px-4">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 md:mb-4">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-              Choose Your Plan
-            </span>
+      <div className="w-full max-w-md mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 mb-3">
+            Choose Your Plan
           </h1>
-          <p className="text-zinc-600 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
-            Unlock unlimited access to premium templates and elevate your creative projects.
+          <p className="text-zinc-500 text-base max-w-xl mx-auto">
+            Unlock unlimited access to premium templates.
           </p>
-        </section>
+        </div>
 
-        {/* Pricing Cards */}
-        <section className="relative max-w-5xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
+        {/* Toggle Switch */}
+        <div className="flex items-center justify-center gap-4 mb-8">
+          <span className={`text-sm font-medium ${!isYearly ? 'text-zinc-900' : 'text-zinc-400'}`}>
+            Monthly
+          </span>
+          <button
+            onClick={() => setIsYearly(!isYearly)}
+            className={`relative w-14 h-7 rounded-full transition-colors ${isYearly ? 'bg-zinc-900' : 'bg-zinc-300'}`}
+          >
+            <div
+              className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform ${isYearly ? 'translate-x-8' : 'translate-x-1'
+                }`}
+            />
+          </button>
+          <span className={`text-sm font-medium ${isYearly ? 'text-zinc-900' : 'text-zinc-400'}`}>
+            Yearly
+            {isYearly && (
+              <span className="ml-1 text-xs text-green-600 font-semibold">Save ₹{savings.toLocaleString()}</span>
+            )}
+          </span>
+        </div>
 
-            {/* Monthly Plan */}
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl md:rounded-3xl opacity-75 group-hover:opacity-100 blur transition duration-500"></div>
-              <div className="relative bg-white rounded-2xl md:rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-blue-100">
-                {/* Popular Badge */}
-                <div className="absolute -top-3 md:-top-4 left-1/2 -translate-x-1/2">
-                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-lg flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    Most Popular
-                  </div>
+        {/* Pricing Card */}
+        <div className="bg-zinc-900 text-white rounded-2xl p-6 sm:p-8">
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-bold mb-4">
+              {isYearly ? 'Yearly Plan' : 'Monthly Plan'}
+            </h2>
+
+            {isYearly ? (
+              <>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <span className="text-lg text-zinc-500 line-through">₹{monthlyPrice}</span>
+                  <span className="text-4xl font-bold">₹{yearlyPerMonth}</span>
+                  <span className="text-zinc-400 text-lg">/month</span>
                 </div>
-
-                <div className="text-center mb-4 sm:mb-6 mt-2 sm:mt-4">
-                  <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 mb-3 sm:mb-4">Monthly</h2>
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <span className="text-lg sm:text-xl text-zinc-400 line-through">₹899</span>
-                    <span className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                      ₹{monthlyPrice}
-                    </span>
-                  </div>
-                  <p className="text-zinc-600 text-sm">per month</p>
-                  <p className="text-blue-600 text-xs font-semibold mt-1">Limited offer - Save 33%</p>
+                <p className="text-zinc-400 text-sm">Billed ₹{yearlyPrice.toLocaleString()} yearly</p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <span className="text-lg text-zinc-500 line-through">₹899</span>
+                  <span className="text-4xl font-bold">₹{monthlyPrice}</span>
+                  <span className="text-zinc-400 text-lg">/month</span>
                 </div>
-
-                <Link
-                  href="/checkout?subscription=monthly"
-                  className="block w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 sm:py-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl text-center mb-4 sm:mb-6 text-sm sm:text-base"
-                >
-                  Subscribe Now
-                </Link>
-
-                <ul className="space-y-2 sm:space-y-3">
-                  {features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2 sm:gap-3 text-zinc-700">
-                      <Check className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-xs sm:text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Yearly Plan */}
-            <div className="relative group">
-              <div className="relative bg-white rounded-2xl md:rounded-3xl p-6 sm:p-8 shadow-lg border-2 border-zinc-200 hover:border-blue-300 transition-all hover:shadow-xl">
-                <div className="text-center mb-4 sm:mb-6">
-                  <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 mb-3 sm:mb-4">Yearly</h2>
-                  <div className="mb-2">
-                    <span className="text-4xl sm:text-5xl font-bold text-zinc-900">
-                      ₹{yearlyPrice.toLocaleString()}
-                    </span>
-                  </div>
-                  <p className="text-zinc-600 text-sm">per year</p>
-                  <p className="text-green-600 text-xs font-semibold mt-1">
-                    Save ₹{((monthlyPrice * 12) - yearlyPrice).toLocaleString()} with annual plan
-                  </p>
-                </div>
-
-                <Link
-                  href="/checkout?subscription=yearly"
-                  className="block w-full bg-zinc-900 text-white py-3 sm:py-4 rounded-xl font-semibold hover:bg-zinc-800 transition-all shadow-md hover:shadow-lg text-center mb-4 sm:mb-6 text-sm sm:text-base"
-                >
-                  Subscribe Now
-                </Link>
-
-                <ul className="space-y-2 sm:space-y-3">
-                  {features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2 sm:gap-3 text-zinc-700">
-                      <Check className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-900 flex-shrink-0 mt-0.5" />
-                      <span className="text-xs sm:text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+                <p className="text-zinc-400 text-sm">Billed monthly</p>
+              </>
+            )}
           </div>
 
-          {/* Trust Indicators */}
-          <div className="mt-12 md:mt-16 text-center px-4">
-            <p className="text-zinc-500 text-xs sm:text-sm mb-3 sm:mb-4">Trusted by 10,000+ creators worldwide</p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-xs sm:text-sm text-zinc-600">
-              <div className="flex items-center gap-2">
-                <Check className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
-                Cancel anytime
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
-                Secure payment
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
-                Instant access
-              </div>
+          <button
+            onClick={handleSubscribe}
+            disabled={isNavigating}
+            className="relative block w-full bg-white text-zinc-900 py-3 rounded-lg font-semibold hover:bg-zinc-100 transition-colors text-center mb-6 disabled:opacity-70"
+          >
+            {isNavigating ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="w-5 h-5 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin" />
+                Loading...
+              </span>
+            ) : (
+              'Subscribe Now'
+            )}
+          </button>
+
+          <ul className="space-y-3">
+            {features.map((feature, index) => (
+              <li key={index} className="flex items-start gap-3 text-zinc-300">
+                <Check className="w-4 h-4 text-white flex-shrink-0 mt-0.5" />
+                <span className="text-sm">{feature}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Trust Indicators */}
+        <div className="mt-8 text-center">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 text-sm text-zinc-500">
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-zinc-900" />
+              Cancel anytime
+            </div>
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-zinc-900" />
+              Secure payment
+            </div>
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-zinc-900" />
+              Instant access
             </div>
           </div>
-        </section>
+        </div>
       </div>
     </div>
   );
 }
-

@@ -6,6 +6,7 @@ import LayoutWrapper from "../components/LayoutWrapper";
 import GoogleAnalytics from "../components/GoogleAnalytics";
 import { AppProvider } from "../context/AppContext";
 import { LoginModalProvider } from "../context/LoginModalContext";
+import { LoadingProvider } from "../context/LoadingContext";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import SnowEffect from "../components/SnowEffect";
@@ -220,13 +221,15 @@ export default function RootLayout({
         />
         <AppProvider>
           <LoginModalProvider>
-            <GoogleAnalytics />
-            <SpeedInsights />
-            <Analytics />
-            <SnowEffect />
-            <LayoutWrapper>
-              {children}
-            </LayoutWrapper>
+            <LoadingProvider>
+              <GoogleAnalytics />
+              <SpeedInsights />
+              <Analytics />
+              <SnowEffect />
+              <LayoutWrapper>
+                {children}
+              </LayoutWrapper>
+            </LoadingProvider>
           </LoginModalProvider>
         </AppProvider>
       </body>
