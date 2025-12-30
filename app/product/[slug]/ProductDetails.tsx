@@ -1395,14 +1395,15 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
 
       <ul className="space-y-3 mb-8">
         {[
-          'Unlimited Premium Templates',
-          'Full Source Files Access',
-          'Priority Support',
+          'Unlimited AE Templates',
+          'Stock Music & SFX',
+          'Stock Images & 3D Models',
+          'Unlimited Downloads',
           'Commercial License'
         ].map((item, i) => (
-          <li key={i} className="flex items-center gap-2 text-sm text-blue-900 font-medium">
-            <Check className="w-4 h-4 text-blue-600" />
-            {item}
+          <li key={i} className="flex items-center gap-2 text-[13px] text-blue-900 font-medium">
+            <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <span className="truncate">{item}</span>
           </li>
         ))}
       </ul>

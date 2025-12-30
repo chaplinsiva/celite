@@ -280,9 +280,9 @@ export default function VideoTemplatesClient({
   };
 
   return (
-    <main className="bg-zinc-50 min-h-screen pt-20 pb-20">
+    <main className="bg-background min-h-screen pt-20 pb-20">
       {/* Header Section */}
-      <div className="bg-white border-b border-zinc-200 pb-8 mb-8">
+      <div className="bg-background border-b border-zinc-200 pb-8 mb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <div>

@@ -91,28 +91,6 @@ export default function TemplateCollageShowcase() {
     return (
         <section className="relative w-full py-16 bg-zinc-50 overflow-hidden">
             <div className="relative max-w-[1440px] mx-auto px-6">
-                {/* Section Header */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
-                    <div>
-                        <div className="flex items-center gap-2 mb-3">
-                            <Sparkles className="w-5 h-5 text-violet-500" />
-                            <span className="text-violet-600 text-sm font-semibold uppercase tracking-wider">Featured</span>
-                        </div>
-                        <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 mb-2">
-                            Creative Templates <span className="bg-gradient-to-r from-violet-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">Gallery</span>
-                        </h2>
-                        <p className="text-zinc-500 text-lg max-w-xl">
-                            Explore our curated collection of professional templates. Hover to preview.
-                        </p>
-                    </div>
-                    <Link
-                        href="/video-templates"
-                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-800 transition-colors shadow-lg"
-                    >
-                        Explore All <ArrowRight className="w-4 h-4" />
-                    </Link>
-                </div>
-
                 {/* Collage Grid - Responsive masonry style */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4 auto-rows-[180px] lg:auto-rows-[200px]">
                     {templates.map((tpl, index) => {

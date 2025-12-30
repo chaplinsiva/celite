@@ -116,14 +116,14 @@ export default async function CreatorShopPage(props: PageProps) {
   const followers = followerCount ?? 0;
 
   return (
-    <main className="bg-gradient-to-br from-zinc-50 via-white to-zinc-50 min-h-screen pt-24 pb-20 px-4 sm:px-6 lg:px-8">
+    <main className="bg-background min-h-screen pt-24 pb-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-12">
         {/* Header */}
-        <section className="bg-gradient-to-br from-white to-zinc-50 rounded-3xl border border-zinc-200 shadow-lg p-8 sm:p-12 relative overflow-hidden">
+        <section className="bg-background rounded-3xl border border-zinc-200 shadow-lg p-8 sm:p-12 relative overflow-hidden">
           {/* Decorative background elements */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-pink-500/10 to-orange-500/10 rounded-full blur-3xl -ml-24 -mb-24"></div>
-          
+
           <div className="relative z-10">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600 mb-3 inline-block px-3 py-1 bg-blue-50 rounded-full">
               Creator Hub

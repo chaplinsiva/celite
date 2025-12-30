@@ -421,9 +421,9 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
   const hasActiveFilters = selectedSubcategory !== 'all' || selectedSubSubcategory !== 'all' || searchQuery.trim() !== '';
 
   return (
-    <main className="bg-zinc-50 min-h-screen pt-20 pb-20">
+    <main className="bg-background min-h-screen pt-20 pb-20">
       {/* Header Section */}
-      <div className="bg-white border-b border-zinc-200 pb-4 mb-4">
+      <div className="bg-background border-b border-zinc-200 pb-4 mb-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-3">
           <div className="flex flex-col gap-3 mb-4">
             <div>
@@ -601,209 +601,209 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
 
           {/* Main Content Area */}
           <div className="flex-1 min-w-0">
-        {/* Collage Grid */}
-        {filteredTemplates.length > 0 ? (
-          <div>
-            <div className="mb-4 sm:mb-6 flex items-center justify-between">
+            {/* Collage Grid */}
+            {filteredTemplates.length > 0 ? (
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-zinc-900">
-                  {filteredTemplates.length} {filteredTemplates.length === 1 ? 'Track' : 'Tracks'}
-                </h2>
-                {filteredTemplates.length > ITEMS_PER_PAGE && (
-                  <p className="text-sm text-zinc-500 mt-1">
-                    Page {currentPage} of {totalPages}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 text-sm text-zinc-500">
-                <Volume2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Hover to preview</span>
-              </div>
-            </div>
-
-            {/* Tile Layout */}
-            <div className="space-y-3">
-              {paginatedTemplates.map((template, index) => {
-                const rawAudioUrl = template.audio_preview_path || template.video_path;
-                const audioUrl = rawAudioUrl ? convertR2UrlToCdn(rawAudioUrl) || rawAudioUrl : null;
-                const gradient = gradients[index % gradients.length];
-                const isPlaying = playingSlug === template.slug;
-                const isLoadingThis = isLoading === template.slug;
-
-                return (
-                  <div
-                    key={template.slug}
-                    className={cn(
-                      "group relative bg-white rounded-xl border border-zinc-200 overflow-hidden transition-all duration-300",
-                      isPlaying && "ring-2 ring-blue-500 shadow-lg shadow-blue-500/20",
-                      !isPlaying && "hover:shadow-md hover:border-zinc-300"
-                    )}
-                    onMouseEnter={() => handleMouseEnter(template.slug, audioUrl)}
-                    onMouseLeave={handleMouseLeave}
-                  >
-                    <div className="flex items-center gap-4 p-4">
-                      {/* Play Button */}
-                      <button
-                        onClick={(e) => handleTap(template.slug, audioUrl, e)}
-                        className={cn(
-                          "flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300",
-                          isPlaying 
-                            ? "bg-blue-600 text-white shadow-lg scale-105" 
-                            : "bg-zinc-100 text-zinc-700 hover:bg-blue-600 hover:text-white hover:scale-105",
-                          isLoadingThis && "animate-pulse"
-                        )}
-                      >
-                        {isLoadingThis ? (
-                          <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        ) : isPlaying ? (
-                          /* Equalizer Animation */
-                          <div className="flex items-end gap-0.5 h-5">
-                            <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '60%', animationDelay: '0ms' }} />
-                            <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '100%', animationDelay: '100ms' }} />
-                            <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '40%', animationDelay: '200ms' }} />
-                            <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '80%', animationDelay: '300ms' }} />
-                            <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '50%', animationDelay: '400ms' }} />
-                          </div>
-                        ) : (
-                          <Play className="w-5 h-5 ml-0.5" fill="currentColor" />
-                        )}
-                      </button>
-
-                      {/* Track Info */}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-semibold text-zinc-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
-                          {template.name}
-                        </h3>
-                        {template.subtitle && (
-                          <p className="text-sm text-zinc-500 line-clamp-1 mt-0.5">
-                            {template.subtitle}
-                          </p>
-                        )}
-                        {template.vendor_name && (
-                          <p className="text-xs text-zinc-400 mt-1">
-                            by {template.vendor_name}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {/* Playing Indicator */}
-                        {isPlaying && (
-                          <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-medium">
-                            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse" />
-                            Playing
-                          </div>
-                        )}
-
-                        {/* Download Button */}
-                        <button
-                          onClick={(e) => handleDownload(template.slug, e)}
-                          className="p-2 text-zinc-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                          title="Download"
-                        >
-                          <Download className="w-5 h-5" />
-                        </button>
-
-                        {/* View Details Link */}
-                        <Link
-                          href={`/product/${template.slug}`}
-                          className="px-4 py-2 text-sm font-medium text-zinc-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          View
-                        </Link>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar - Shows when playing */}
-                    {isPlaying && (
-                      <div
-                        className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-100 cursor-pointer"
-                        onClick={(e) => handleSeek(e, template.slug)}
-                        onMouseDown={(e) => e.stopPropagation()}
-                      >
-                        <div
-                          className="h-full bg-blue-600 transition-all duration-75 pointer-events-none"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
+                <div className="mb-4 sm:mb-6 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-zinc-900">
+                      {filteredTemplates.length} {filteredTemplates.length === 1 ? 'Track' : 'Tracks'}
+                    </h2>
+                    {filteredTemplates.length > ITEMS_PER_PAGE && (
+                      <p className="text-sm text-zinc-500 mt-1">
+                        Page {currentPage} of {totalPages}
+                      </p>
                     )}
                   </div>
-                );
-              })}
-            </div>
+                  <div className="flex items-center gap-2 text-sm text-zinc-500">
+                    <Volume2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Hover to preview</span>
+                  </div>
+                </div>
 
-            {/* Pagination */}
-            {filteredTemplates.length > ITEMS_PER_PAGE && (
-              <div className="flex justify-center items-center gap-4 mt-12">
-                <button
-                  onClick={() => {
-                    setCurrentPage(p => Math.max(1, p - 1));
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  disabled={currentPage === 1}
-                  className="w-8 h-8 flex items-center justify-center text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-zinc-900 transition-colors"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
+                {/* Tile Layout */}
+                <div className="space-y-3">
+                  {paginatedTemplates.map((template, index) => {
+                    const rawAudioUrl = template.audio_preview_path || template.video_path;
+                    const audioUrl = rawAudioUrl ? convertR2UrlToCdn(rawAudioUrl) || rawAudioUrl : null;
+                    const gradient = gradients[index % gradients.length];
+                    const isPlaying = playingSlug === template.slug;
+                    const isLoadingThis = isLoading === template.slug;
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .map((page) => (
+                    return (
+                      <div
+                        key={template.slug}
+                        className={cn(
+                          "group relative bg-white rounded-xl border border-zinc-200 overflow-hidden transition-all duration-300",
+                          isPlaying && "ring-2 ring-blue-500 shadow-lg shadow-blue-500/20",
+                          !isPlaying && "hover:shadow-md hover:border-zinc-300"
+                        )}
+                        onMouseEnter={() => handleMouseEnter(template.slug, audioUrl)}
+                        onMouseLeave={handleMouseLeave}
+                      >
+                        <div className="flex items-center gap-4 p-4">
+                          {/* Play Button */}
+                          <button
+                            onClick={(e) => handleTap(template.slug, audioUrl, e)}
+                            className={cn(
+                              "flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300",
+                              isPlaying
+                                ? "bg-blue-600 text-white shadow-lg scale-105"
+                                : "bg-zinc-100 text-zinc-700 hover:bg-blue-600 hover:text-white hover:scale-105",
+                              isLoadingThis && "animate-pulse"
+                            )}
+                          >
+                            {isLoadingThis ? (
+                              <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            ) : isPlaying ? (
+                              /* Equalizer Animation */
+                              <div className="flex items-end gap-0.5 h-5">
+                                <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '60%', animationDelay: '0ms' }} />
+                                <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '100%', animationDelay: '100ms' }} />
+                                <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '40%', animationDelay: '200ms' }} />
+                                <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '80%', animationDelay: '300ms' }} />
+                                <div className="w-0.5 bg-current rounded-full animate-[equalizerBar_0.4s_ease-in-out_infinite]" style={{ height: '50%', animationDelay: '400ms' }} />
+                              </div>
+                            ) : (
+                              <Play className="w-5 h-5 ml-0.5" fill="currentColor" />
+                            )}
+                          </button>
+
+                          {/* Track Info */}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-base font-semibold text-zinc-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                              {template.name}
+                            </h3>
+                            {template.subtitle && (
+                              <p className="text-sm text-zinc-500 line-clamp-1 mt-0.5">
+                                {template.subtitle}
+                              </p>
+                            )}
+                            {template.vendor_name && (
+                              <p className="text-xs text-zinc-400 mt-1">
+                                by {template.vendor_name}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {/* Playing Indicator */}
+                            {isPlaying && (
+                              <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-medium">
+                                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse" />
+                                Playing
+                              </div>
+                            )}
+
+                            {/* Download Button */}
+                            <button
+                              onClick={(e) => handleDownload(template.slug, e)}
+                              className="p-2 text-zinc-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                              title="Download"
+                            >
+                              <Download className="w-5 h-5" />
+                            </button>
+
+                            {/* View Details Link */}
+                            <Link
+                              href={`/product/${template.slug}`}
+                              className="px-4 py-2 text-sm font-medium text-zinc-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              View
+                            </Link>
+                          </div>
+                        </div>
+
+                        {/* Progress Bar - Shows when playing */}
+                        {isPlaying && (
+                          <div
+                            className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-100 cursor-pointer"
+                            onClick={(e) => handleSeek(e, template.slug)}
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            <div
+                              className="h-full bg-blue-600 transition-all duration-75 pointer-events-none"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Pagination */}
+                {filteredTemplates.length > ITEMS_PER_PAGE && (
+                  <div className="flex justify-center items-center gap-4 mt-12">
                     <button
-                      key={page}
                       onClick={() => {
-                        setCurrentPage(page);
+                        setCurrentPage(p => Math.max(1, p - 1));
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
-                      className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-200",
-                        currentPage === page
-                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20 scale-100"
-                          : "bg-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 scale-95 hover:scale-100"
-                      )}
+                      disabled={currentPage === 1}
+                      className="w-8 h-8 flex items-center justify-center text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-zinc-900 transition-colors"
                     >
-                      {page}
+                      <ChevronLeft className="w-5 h-5" />
                     </button>
-                  ))}
 
-                <button
-                  onClick={() => {
-                    setCurrentPage(p => Math.min(totalPages, p + 1));
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  disabled={currentPage === totalPages}
-                  className="w-8 h-8 flex items-center justify-center text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-zinc-900 transition-colors"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => {
+                            setCurrentPage(page);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all duration-200",
+                            currentPage === page
+                              ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20 scale-100"
+                              : "bg-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 scale-95 hover:scale-100"
+                          )}
+                        >
+                          {page}
+                        </button>
+                      ))}
+
+                    <button
+                      onClick={() => {
+                        setCurrentPage(p => Math.min(totalPages, p + 1));
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      disabled={currentPage === totalPages}
+                      className="w-8 h-8 flex items-center justify-center text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-zinc-900 transition-colors"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Page Info */}
+                {filteredTemplates.length > ITEMS_PER_PAGE && (
+                  <div className="text-center mt-4 text-sm text-zinc-500">
+                    Showing {startIndex + 1}-{Math.min(endIndex, filteredTemplates.length)} of {filteredTemplates.length} tracks
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-20 bg-white rounded-2xl border border-zinc-200 border-dashed">
+                <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Music className="w-8 h-8 text-zinc-400" />
+                </div>
+                <h3 className="text-xl font-bold text-zinc-900 mb-2">No tracks found</h3>
+                <p className="text-zinc-500 mb-6">We couldn't find any music or sound effects matching your search.</p>
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                )}
               </div>
             )}
-
-            {/* Page Info */}
-            {filteredTemplates.length > ITEMS_PER_PAGE && (
-              <div className="text-center mt-4 text-sm text-zinc-500">
-                Showing {startIndex + 1}-{Math.min(endIndex, filteredTemplates.length)} of {filteredTemplates.length} tracks
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-20 bg-white rounded-2xl border border-zinc-200 border-dashed">
-            <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Music className="w-8 h-8 text-zinc-400" />
-            </div>
-            <h3 className="text-xl font-bold text-zinc-900 mb-2">No tracks found</h3>
-            <p className="text-zinc-500 mb-6">We couldn't find any music or sound effects matching your search.</p>
-            {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                Clear Filters
-              </button>
-            )}
-          </div>
-        )}
           </div>
         </div>
       </div>

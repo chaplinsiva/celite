@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '../context/AppContext';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Search, ChevronDown } from 'lucide-react';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -100,6 +100,9 @@ export default function Header() {
   const [subSubcategories, setSubSubcategories] = useState<SubSubcategory[]>([]);
   const [activeNavItem, setActiveNavItem] = useState<string | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState({ name: 'All Categories', slug: '' });
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
 
   // Christmas theme: Show festive logo in December
   const isDecember = new Date().getMonth() === 11;
@@ -179,201 +182,83 @@ export default function Header() {
 
   return (
     <>
-      <header className="w-full fixed top-0 left-0 z-50 backdrop-blur-md bg-white/90 border-b border-zinc-100 transition-all duration-300">
+      <header className="w-full fixed top-0 left-0 z-[100] backdrop-blur-md bg-background/90 border-b border-zinc-100 transition-all duration-300">
         <nav className="max-w-[1440px] mx-auto h-20 px-6 sm:px-8 flex items-center justify-between">
           {/* Left: Logo & Nav */}
           <div className="flex items-center gap-10">
-            <Link href="/" className="flex items-center gap-2 focus:outline-none hover:opacity-80 transition-opacity">
+            <Link href="/" className="flex items-center gap-2 focus:outline-none hover:opacity-80 transition-opacity shrink-0">
               <img src={isDecember ? "/chirtsmaslogo.png" : "/logo/logo.png"} alt="Celite Logo" className="h-9 w-auto object-contain" />
               <span className="text-xl font-bold text-zinc-900">Celite</span>
             </Link>
 
-            {/* Desktop Nav */}
-            <div className="hidden lg:flex items-center gap-4">
-              <NavigationMenu>
-                <NavigationMenuList className="gap-1">
-                  {/* Define the order for main categories */}
-                  {[
-                    { name: 'Video Templates', route: '/video-templates', slug: 'video-templates' },
-                    { name: 'Photos', route: '/stock-photos', slug: 'stock-images' },
-                    { name: 'Music', route: '/stock-musics', slug: 'stock-musics' },
-                    { name: 'SFX', route: '/sound-effects', slug: 'sound-effects' },
-                    { name: 'Web', route: '/web-templates', slug: 'website-templates' },
-                    { name: 'Graphics', route: '/graphics', slug: 'psd-templates' },
-                    { name: '3D', route: '/3d-models', slug: '3d-models' },
-                    { name: 'Prompts', route: '/prompts', slug: 'prompts' },
-                  ].map((navItem) => {
-                    // Find the category
-                    const category = categories.find(cat =>
-                      cat.slug === navItem.slug ||
-                      cat.name.toLowerCase() === navItem.name.toLowerCase()
-                    );
+            {/* Global Search Bar */}
+            <div className="hidden lg:flex items-center ml-4 bg-zinc-100/80 hover:bg-zinc-100 rounded-full border border-zinc-200/50 transition-all focus-within:ring-2 focus-within:ring-blue-600/20 focus-within:border-blue-600/30 group">
+              {/* Category Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
+                  className="flex items-center gap-1.5 px-4 h-10 text-[13px] font-semibold text-zinc-600 hover:text-black border-r border-zinc-200 transition-colors"
+                >
+                  <span className="max-w-[100px] truncate">{selectedCategory.name}</span>
+                  <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", isCategoryMenuOpen && "rotate-180")} />
+                </button>
 
-                    if (!category) return null;
+                {isCategoryMenuOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-zinc-100 py-2 z-[110] animate-in fade-in zoom-in-95 duration-200">
+                    <button
+                      onClick={() => {
+                        setSelectedCategory({ name: 'All Categories', slug: '' });
+                        setIsCategoryMenuOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 transition-colors font-medium text-zinc-700"
+                    >
+                      All Categories
+                    </button>
+                    {[
+                      { name: 'Video Templates', slug: 'video-templates' },
+                      { name: 'Stock Photos', slug: 'stock-images' },
+                      { name: 'Music & SFX', slug: 'stock-musics' },
+                      { name: 'Web Templates', slug: 'website-templates' },
+                      { name: 'Graphics', slug: 'psd-templates' },
+                      { name: '3D Models', slug: '3d-models' },
+                    ].map((cat) => (
+                      <button
+                        key={cat.slug}
+                        onClick={() => {
+                          setSelectedCategory(cat);
+                          setIsCategoryMenuOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 transition-colors font-medium text-zinc-700"
+                      >
+                        {cat.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-                    const categorySubcategories = subcategories.filter(
-                      sub => sub.category_id === category.id
-                    );
-                    const categoryRoute = getCategoryRoute(category.slug);
-
-                    return (
-                      <NavigationMenuItem key={category.id}>
-                        {categorySubcategories.length > 0 ? (
-                          <>
-                            <NavigationMenuTrigger className="text-sm font-medium">
-                              {navItem.name}
-                            </NavigationMenuTrigger>
-                            <NavigationMenuContent>
-                              <div className="grid gap-3 p-4 md:w-[500px] lg:w-[600px] lg:grid-cols-[.75fr_1fr]">
-                                <div className="row-span-3">
-                                  <NavigationMenuLink asChild>
-                                    <a
-                                      className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md"
-                                      href={categoryRoute}
-                                    >
-                                      <div className="mb-2 mt-4 text-lg font-medium">
-                                        {navItem.name}
-                                      </div>
-                                      <p className="text-sm leading-tight text-muted-foreground">
-                                        Browse our collection
-                                      </p>
-                                      <div className="mt-4 aspect-video rounded-md overflow-hidden relative">
-                                        <img
-                                          src={
-                                            {
-                                              'Video Templates': 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=400&h=225&auto=format&fit=crop',
-                                              'Video Template': 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=400&h=225&auto=format&fit=crop',
-                                              'Photos': 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=400&h=225&auto=format&fit=crop',
-                                              'Music': 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=400&h=225&auto=format&fit=crop',
-                                              'SFX': 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=400&h=225&auto=format&fit=crop',
-                                              'Web': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=400&h=225&auto=format&fit=crop',
-                                              'Graphics': 'https://images.unsplash.com/photo-1626785774573-4b799315345d?q=80&w=400&h=225&auto=format&fit=crop',
-                                              '3D': 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&h=225&auto=format&fit=crop',
-                                              'Prompts': 'https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=400&h=225&auto=format&fit=crop'
-                                            }[navItem.name] || 'https://images.unsplash.com/photo-1520004481444-a957b6563721?q=80&w=400&h=225&auto=format&fit=crop'
-                                          }
-                                          alt={`Stock ${navItem.name}`}
-                                          className="w-full h-full object-cover"
-                                          onError={(e) => {
-                                            (e.target as HTMLImageElement).style.display = 'none';
-                                            const parent = e.currentTarget.parentElement;
-                                            if (parent) {
-                                              const fallbackIcon = parent.querySelector('.fallback-icon');
-                                              if (fallbackIcon) {
-                                                (fallbackIcon as HTMLElement).style.display = 'flex';
-                                              }
-                                            }
-                                          }}
-                                        />
-                                        <div className="fallback-icon absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-200 to-zinc-300 hidden">
-                                          {navItem.name === 'Video Templates' ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
-                                              <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                                              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                                            </svg>
-                                          ) : navItem.name === 'Photos' ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
-                                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                              <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                                              <path d="M21 15l-5-5L5 21"></path>
-                                            </svg>
-                                          ) : navItem.name === 'Music' ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
-                                              <path d="M9 18V5l12-2v13"></path>
-                                              <circle cx="6" cy="18" r="3"></circle>
-                                              <circle cx="18" cy="16" r="3"></circle>
-                                            </svg>
-                                          ) : navItem.name === 'SFX' ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
-                                              <path d="M3 15v-6h4l5 5v-5h2m0 0v6m0-6v6m0-6h4l1 1v4m-1 0h-4"></path>
-                                              <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0"></path>
-                                            </svg>
-                                          ) : navItem.name === 'Web' ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
-                                              <circle cx="12" cy="12" r="10"></circle>
-                                              <line x1="2" y1="12" x2="22" y2="12"></line>
-                                              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                                            </svg>
-                                          ) : navItem.name === 'Graphics' ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
-                                              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                                              <line x1="8" y1="21" x2="16" y2="21"></line>
-                                              <line x1="12" y1="17" x2="12" y2="21"></line>
-                                            </svg>
-                                          ) : navItem.name === '3D' ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
-                                              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                                              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                                              <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                                            </svg>
-                                          ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500">
-                                              <path d="M12 8a5 5 0 0 1 5 5c0 2.76-2.5 5.24-5 5.8V22h-2v-3.2c-2.5-.6-5-3.08-5-5.8a5 5 0 0 1 5-5z"></path>
-                                              <path d="M8.5 11.5 12 8l3.5 3.5"></path>
-                                            </svg>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </a>
-                                  </NavigationMenuLink>
-                                </div>
-                                <div className="space-y-3">
-                                  <div className="space-y-1">
-                                    {categorySubcategories.slice(0, 4).map((subcategory) => {
-                                      const subSubcats = subSubcategories.filter(
-                                        ss => ss.subcategory_id === subcategory.id
-                                      );
-
-                                      return (
-                                        <div key={subcategory.id} className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                                          <NavigationMenuLink
-                                            href={`${categoryRoute}?subcategory=${subcategory.slug}`}
-                                            className="text-sm font-medium leading-none peer-data-[state=active]:text-accent-foreground"
-                                          >
-                                            {subcategory.name}
-                                          </NavigationMenuLink>
-                                          {subSubcats.length > 0 && (
-                                            <ul className="mt-2 space-y-1 ml-2 border-l border-zinc-200 pl-2">
-                                              {subSubcats.slice(0, 3).map((subSubcat) => (
-                                                <li key={subSubcat.id}>
-                                                  <NavigationMenuLink
-                                                    href={`${categoryRoute}?subcategory=${subcategory.slug}&subsubcategory=${subSubcat.slug}`}
-                                                    className="block select-none space-y-1 rounded-md p-1 no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground text-xs"
-                                                  >
-                                                    {subSubcat.name}
-                                                  </NavigationMenuLink>
-                                                </li>
-                                              ))}
-                                            </ul>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                  {categorySubcategories.length > 4 && (
-                                    <div className="pt-2 border-t border-zinc-200">
-                                      <NavigationMenuLink
-                                        href={categoryRoute}
-                                        className="text-xs font-medium text-muted-foreground hover:text-foreground"
-                                      >
-                                        + {categorySubcategories.length - 4} more categories →
-                                      </NavigationMenuLink>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </NavigationMenuContent>
-                          </>
-                        ) : (
-                          <NavigationMenuLink href={categoryRoute} className="text-sm font-medium">
-                            {navItem.name}
-                          </NavigationMenuLink>
-                        )}
-                      </NavigationMenuItem>
-                    );
-                  })}
-                </NavigationMenuList>
-              </NavigationMenu>
+              {/* Search Input */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (searchQuery.trim()) {
+                    const route = selectedCategory.slug ? getCategoryRoute(selectedCategory.slug) : '/video-templates';
+                    router.push(`${route}?search=${encodeURIComponent(searchQuery)}`);
+                  }
+                }}
+                className="flex items-center flex-1 min-w-[200px] xl:min-w-[350px]"
+              >
+                <input
+                  type="text"
+                  placeholder={`Search assets...`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-transparent border-none focus:ring-0 text-[13px] font-medium placeholder:text-zinc-400 px-4"
+                />
+                <button type="submit" className="p-2 mr-1 rounded-full text-zinc-400 group-hover:text-black transition-colors">
+                  <Search className="w-4 h-4" />
+                </button>
+              </form>
             </div>
           </div>
 
@@ -466,7 +351,7 @@ export default function Header() {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden absolute top-20 left-0 w-full bg-white border-b border-zinc-100 shadow-xl py-6 px-6 flex flex-col gap-4 animate-in slide-in-from-top-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
+          <div className="lg:hidden absolute top-20 left-0 w-full bg-background border-b border-zinc-100 shadow-xl py-6 px-6 flex flex-col gap-4 animate-in slide-in-from-top-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
             {/* Mobile nav in specific order */}
             {[
               { name: 'Video Templates', route: '/video-templates', slug: 'video-templates' },

@@ -319,7 +319,7 @@
 :root {
   --radius: 0.5rem;
   /* Light Mode Default */
-  --background: #ffffff;
+  --background: #fdf8f3;
   --foreground: #09090b;
   /* zinc-950 */
   --card: #ffffff;
@@ -409,7 +409,6 @@
 @layer base {
   * {
     @apply border-border;
-    font-style: normal !important;
     font-variation-settings: normal;
   }
 
@@ -418,13 +417,11 @@
   }
 
   html {
-    @apply bg-white scroll-smooth;
-    font-style: normal;
+    @apply bg-background scroll-smooth;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-style: normal !important;
     font-variation-settings: normal;
     /* Black 2D cursor */
     cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M2 2 L2 16 L9 16 L12 22 L14 20 L11 15 L16 15 Z' fill='%23000000' stroke='%23ffffff' stroke-width='0.5'/%3E%3C/svg%3E") 2 2, auto;
@@ -440,7 +437,7 @@
     cursor: pointer;
   }
 
-  /* Ensure all fonts render normally - no italic */
+  /* Ensure all fonts render normally by default - but allow italics when specified */
   h1,
   h2,
   h3,
@@ -455,14 +452,13 @@
   input,
   textarea,
   label {
-    font-style: normal !important;
     font-variation-settings: normal !important;
     font-synthesis: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Force non-italic for all text elements */
+  /* Force non-italic for all text elements by default, but specific classes will override */
   * {
     font-synthesis: none;
   }

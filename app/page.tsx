@@ -1,13 +1,10 @@
 import type { Metadata } from 'next';
 import Hero from '../components/Hero';
-import TemplateCollageShowcase from '../components/TemplateCollageShowcase';
 import LatestTemplatesCarousel from '../components/LatestTemplatesCarousel';
 import WebsiteShowcaseCarousel from '../components/WebsiteShowcaseCarousel';
 import CategoriesSection from '../components/CategoriesSection';
-import TestimonialsSection from '../components/TestimonialsSection';
-import CTASection from '../components/CTASection';
-import TrustSection from '../components/TrustSection';
-import HomeCreatorsSection from '../components/HomeCreatorsSection';
+import VideoCollectionsCarousel from '../components/VideoCollectionsCarousel';
+import FAQAndSubscribe from '../components/FAQAndSubscribe';
 
 export const metadata: Metadata = {
   title: "Celite - Professional After Effects Templates",
@@ -21,16 +18,12 @@ export const revalidate = 0;
 
 export default function Home() {
   return (
-    <main className="bg-white min-h-screen">
+    <main className="bg-background min-h-screen">
       <Hero />
-      <LatestTemplatesCarousel />
       <CategoriesSection />
-      <TrustSection />
-      <TemplateCollageShowcase />
-      <HomeCreatorsSection />
+      <VideoCollectionsCarousel />
       <WebsiteShowcaseCarousel />
-      <TestimonialsSection />
-      <CTASection />
+      <FAQAndSubscribe />
     </main>
   );
 }

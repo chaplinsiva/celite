@@ -4,7 +4,7 @@ import { Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
 
 export default function ContactContent() {
   return (
-    <main className="bg-white min-h-screen flex items-center justify-center py-12 px-4">
+    <main className="bg-background min-h-screen flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-4xl">
         {/* Header */}
         <div className="text-center mb-12">

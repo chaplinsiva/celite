@@ -57,7 +57,7 @@ export default function HomeCreatorsSection() {
   if (loading || creators.length === 0) return null;
 
   return (
-    <section className="py-16 border-t border-zinc-100 bg-white">
+    <section className="py-16 border-t border-zinc-100 bg-background">
       <div className="max-w-6xl mx-auto px-6 space-y-6">
         <div className="flex items-center justify-between gap-4">
           <div>

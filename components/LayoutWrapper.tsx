@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Header from './Header';
+import CategoryNav from './CategoryNav';
 import Footer from './Footer';
 import PromoBanner from './PromoBanner';
 import { useAppContext } from '../context/AppContext';
@@ -115,7 +116,8 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   return (
     <div className="isolate flex flex-col min-h-screen">
       <Header />
-      <div className="mt-20">
+      <CategoryNav />
+      <div className="lg:mt-[140px] mt-24">
         <PromoBanner />
       </div>
       <main className="flex-1">

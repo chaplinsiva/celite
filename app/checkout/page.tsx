@@ -133,7 +133,7 @@ function CheckoutContent() {
 
   if (!user) {
     return (
-      <main className="bg-white min-h-screen flex items-center justify-center py-12 px-4">
+      <main className="bg-background min-h-screen flex items-center justify-center py-12 px-4">
         <div className="w-full max-w-md text-center">
           <div className="bg-white rounded-xl border-2 border-zinc-200 p-8 shadow-lg">
             <h1 className="text-2xl font-bold text-zinc-900 mb-2">Sign in to checkout</h1>
@@ -153,7 +153,7 @@ function CheckoutContent() {
   // Show empty cart message only if not a subscription checkout
   if (cartCount === 0 && !subscriptionPlan) {
     return (
-      <main className="bg-white min-h-screen flex items-center justify-center py-12 px-4">
+      <main className="bg-background min-h-screen flex items-center justify-center py-12 px-4">
         <div className="w-full max-w-md text-center">
           <div className="bg-white rounded-xl border-2 border-zinc-200 p-8 shadow-lg">
             <h1 className="text-2xl font-bold text-zinc-900 mb-2">Your cart is empty</h1>
@@ -636,7 +636,7 @@ function CheckoutContent() {
   };
 
   return (
-    <main className="bg-white min-h-screen pt-24 pb-24 px-4 sm:px-6">
+    <main className="bg-background min-h-screen pt-24 pb-24 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">

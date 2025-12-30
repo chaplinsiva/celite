@@ -199,7 +199,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.variable} antialiased bg-white text-zinc-900 group/body`} style={{ fontStyle: 'normal', fontSynthesis: 'none' }}>
+      <body className={`${inter.variable} antialiased bg-background text-zinc-900 group/body`} style={{ fontStyle: 'normal', fontSynthesis: 'none' }}>
         <Script
           strategy="afterInteractive"
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}

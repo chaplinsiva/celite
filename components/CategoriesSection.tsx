@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { cn } from "@/lib/utils";
+import { ArrowRight } from 'lucide-react';
 
 const categories = [
   {
     name: "Video Templates",
     href: "/video-templates",
-    imageUrl: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&q=80",
-    span: "col-span-1 row-span-2"
+    imageUrl: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&q=80",
+    span: "col-span-2 row-span-2"
   },
   {
     name: "Web Templates",
@@ -17,61 +18,75 @@ const categories = [
     span: "col-span-1 row-span-1"
   },
   {
-    name: "Graphics",
-    href: "/graphics",
-    imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80",
-    span: "col-span-1 row-span-2"
-  },
-  {
     name: "Stock Photos",
     href: "/stock-photos",
-    imageUrl: "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80",
     span: "col-span-1 row-span-1"
   },
   {
     name: "Music & SFX",
     href: "/music-sfx",
-    imageUrl: "https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80",
+    span: "col-span-1 row-span-1"
+  },
+  {
+    name: "AI Prompts",
+    href: "/prompts",
+    imageUrl: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80",
     span: "col-span-1 row-span-1"
   },
   {
     name: "3D Models",
     href: "/3d-models",
-    imageUrl: "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=800&q=80",
-    span: "col-span-1 row-span-1"
+    imageUrl: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80",
+    span: "col-span-2 row-span-2"
   },
   {
-    name: "All Categories",
+    name: "Graphics",
+    href: "/graphics",
+    imageUrl: "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&q=80",
+    span: "col-span-1 row-span-2"
+  },
+  {
+    name: "Sound Effects",
+    href: "/sound-effects",
+    imageUrl: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&q=80",
+    span: "col-span-1 row-span-2"
+  },
+  {
+    name: "Browse All",
     href: "/templates",
-    imageUrl: "https://images.unsplash.com/photo-1618556450994-a6a128ef0d9d?w=800&q=80",
-    span: "col-span-1 row-span-1"
+    imageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
+    span: "col-span-2 sm:col-span-3 md:col-span-4 row-span-1"
   },
 ];
 
 export default function CategoriesSection() {
   return (
-    <section className="relative w-full py-20 bg-gradient-to-br from-purple-50/30 via-white to-blue-50/30">
-      <div className="max-w-7xl mx-auto px-6">
-        {/* Section Header - Centered */}
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold mb-3">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-500">
-              Explore Categories
-            </span>
+    <section className="relative w-full py-6 md:py-10 px-4 sm:px-6 bg-background">
+      <div className="max-w-[1400px] mx-auto">
+        {/* Header - Title on left, View all on right */}
+        <div className="flex items-end justify-between mb-6">
+          <h2 className="text-3xl md:text-4xl font-black text-black tracking-tight">
+            Explore Categories
           </h2>
-          <p className="text-zinc-600 text-lg max-w-2xl mx-auto">
-            Browse templates, assets, and tools tailored for your creative needs.
-          </p>
+          <Link
+            href="/templates"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors group"
+          >
+            View all
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </Link>
         </div>
 
-        {/* Categories Grid - Masonry/Bento Style - Same layout on all screens, just scaled */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4 auto-rows-[100px] sm:auto-rows-[150px] lg:auto-rows-[200px]">
+        {/* Categories Collage Grid - High rows for "scorable" feel */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 auto-rows-[180px] sm:auto-rows-[220px] md:auto-rows-[300px]">
           {categories.map((category, index) => (
             <Link
               key={index}
               href={category.href}
               className={cn(
-                "group relative overflow-hidden rounded-xl sm:rounded-2xl lg:rounded-3xl border-2 border-zinc-200 bg-white shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1",
+                "group relative overflow-hidden rounded-xl bg-zinc-900 shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-[1.01]",
                 category.span
               )}
             >
@@ -80,15 +95,15 @@ export default function CategoriesSection() {
                 <img
                   src={category.imageUrl}
                   alt={category.name}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-90"
                 />
                 {/* Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-95 transition-opacity duration-500" />
               </div>
 
               {/* Category Name */}
-              <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 lg:p-6">
-                <h3 className="text-[10px] sm:text-sm md:text-lg lg:text-2xl font-bold text-white drop-shadow-lg">
+              <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white drop-shadow-2xl tracking-tight">
                   {category.name}
                 </h3>
               </div>

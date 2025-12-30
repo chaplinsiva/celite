@@ -327,7 +327,7 @@ function DashboardContent() {
 
   if (!user) {
     return (
-      <main className="bg-zinc-50 min-h-screen pt-20 pb-20 px-6 relative">
+      <main className="bg-background min-h-screen pt-20 pb-20 px-6 relative">
         <div className="relative max-w-3xl mx-auto text-center mt-20">
           <div className="bg-white rounded-3xl border border-zinc-200 p-12 shadow-xl shadow-blue-900/5">
             <h1 className="text-3xl font-bold text-zinc-900">Please sign in to view your dashboard</h1>
@@ -350,7 +350,7 @@ function DashboardContent() {
     : user.email.split("@")[0];
 
   return (
-    <main className="bg-zinc-50 min-h-screen pt-20 pb-20 px-6 relative">
+    <main className="bg-background min-h-screen pt-20 pb-20 px-6 relative">
       <div className="relative max-w-6xl mx-auto space-y-6">
         {/* Welcome Section */}
         <section className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
@@ -378,22 +378,20 @@ function DashboardContent() {
               <button
                 type="button"
                 onClick={() => setViewMode("buyer")}
-                className={`px-4 py-1.5 rounded-full font-medium transition-colors ${
-                  viewMode === "buyer"
-                    ? "bg-white text-zinc-900 shadow-sm"
-                    : "text-zinc-500 hover:text-zinc-900"
-                }`}
+                className={`px-4 py-1.5 rounded-full font-medium transition-colors ${viewMode === "buyer"
+                  ? "bg-white text-zinc-900 shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-900"
+                  }`}
               >
                 Buyer mode
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode("seller")}
-                className={`px-4 py-1.5 rounded-full font-medium transition-colors ${
-                  viewMode === "seller"
-                    ? "bg-white text-zinc-900 shadow-sm"
-                    : "text-zinc-500 hover:text-zinc-900"
-                }`}
+                className={`px-4 py-1.5 rounded-full font-medium transition-colors ${viewMode === "seller"
+                  ? "bg-white text-zinc-900 shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-900"
+                  }`}
               >
                 Seller mode
               </button>
@@ -425,116 +423,116 @@ function DashboardContent() {
         </section>
 
         {viewMode === "buyer" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Recent Downloads (Main Column) */}
-          <section className="lg:col-span-2 bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm h-fit">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-zinc-900">Recent Downloads</h2>
-              <Link href="/video-templates" className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline">Browse templates</Link>
-            </div>
-
-            {recentDownloads.length === 0 ? (
-              <div className="text-center py-12 bg-zinc-50 rounded-2xl border border-zinc-100 border-dashed">
-                <p className="text-zinc-500 mb-4">You haven't downloaded any templates yet.</p>
-                <Link href="/video-templates" className="text-sm font-semibold text-blue-600 hover:underline">
-                  Explore Collection
-                </Link>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Recent Downloads (Main Column) */}
+            <section className="lg:col-span-2 bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm h-fit">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-zinc-900">Recent Downloads</h2>
+                <Link href="/video-templates" className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline">Browse templates</Link>
               </div>
-            ) : (
-              <ul className="space-y-3">
-                {recentDownloads.map((d) => (
-                  <li key={`${d.slug}-${d.downloaded_at}`} className="group flex items-center justify-between p-3 rounded-2xl hover:bg-zinc-50 transition-colors border border-transparent hover:border-zinc-100">
-                    <div className="flex items-center gap-4">
-                      <div className="h-14 w-20 overflow-hidden rounded-xl bg-zinc-100 border border-zinc-200 shadow-sm relative">
-                        {d.img ? (
-                          <img src={d.img} alt={d.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-zinc-300">
-                            <span className="text-xs">No img</span>
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <Link
-                          href={`/product/${d.slug}`}
-                          className="text-base font-semibold text-zinc-900 hover:text-blue-600 transition-colors"
-                        >
-                          {d.name}
-                        </Link>
-                        <p className="text-xs text-zinc-500 mt-1">
-                          Downloaded on {new Date(d.downloaded_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <Link
-                      href={`/product/${d.slug}`}
-                      className="px-4 py-2 rounded-xl bg-white border border-zinc-200 text-xs font-semibold text-zinc-700 shadow-sm hover:border-zinc-300 transition-all opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0"
-                    >
-                      View
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
 
-          {/* Sidebar: Account & Subscription Info */}
-          <div className="space-y-6">
-            {/* Account Settings */}
-            <section className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
-              <h2 className="text-xl font-bold text-zinc-900 mb-2">Account Settings</h2>
-              <p className="text-sm text-zinc-500 mb-6">Manage your profile and security.</p>
-
-              <div className="flex flex-col gap-3">
-                <button onClick={() => setShowEditProfile(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
-                  Edit Profile
-                  <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
-                </button>
-                <button onClick={() => setShowChangePassword(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
-                  Change Password
-                  <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
-                </button>
-                <button onClick={() => setShowManageSubscription(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
-                  Manage Subscription
-                  <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
-                </button>
-                <button
-                  onClick={logout}
-                  className="w-full text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 border border-transparent hover:border-red-100 text-sm font-medium transition-colors mt-2"
-                >
-                  Log Out
-                </button>
-              </div>
-            </section>
-
-            {/* Quick Sub Details */}
-            <section className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
-              <h2 className="text-lg font-bold text-zinc-900 mb-4">Subscription Details</h2>
-              {!sub ? (
-                <p className="text-sm text-zinc-500">No active subscription.</p>
-              ) : (
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between py-2 border-b border-zinc-100">
-                    <span className="text-zinc-500">Status</span>
-                    <span className={`font-semibold ${isActuallyActive ? 'text-green-600' : 'text-zinc-900'}`}>{subscriptionTier}</span>
-                  </div>
-                  {sub.valid_until && (
-                    <div className="flex justify-between py-2 border-b border-zinc-100">
-                      <span className="text-zinc-500">Renews</span>
-                      <span className="text-zinc-900 font-medium">{new Date(sub.valid_until).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                  {sub.autopay_enabled !== null && (
-                    <div className="flex justify-between py-2 border-b border-zinc-100">
-                      <span className="text-zinc-500">Autopay</span>
-                      <span className="text-zinc-900 font-medium">{sub.autopay_enabled ? 'On' : 'Off'}</span>
-                    </div>
-                  )}
+              {recentDownloads.length === 0 ? (
+                <div className="text-center py-12 bg-zinc-50 rounded-2xl border border-zinc-100 border-dashed">
+                  <p className="text-zinc-500 mb-4">You haven't downloaded any templates yet.</p>
+                  <Link href="/video-templates" className="text-sm font-semibold text-blue-600 hover:underline">
+                    Explore Collection
+                  </Link>
                 </div>
+              ) : (
+                <ul className="space-y-3">
+                  {recentDownloads.map((d) => (
+                    <li key={`${d.slug}-${d.downloaded_at}`} className="group flex items-center justify-between p-3 rounded-2xl hover:bg-zinc-50 transition-colors border border-transparent hover:border-zinc-100">
+                      <div className="flex items-center gap-4">
+                        <div className="h-14 w-20 overflow-hidden rounded-xl bg-zinc-100 border border-zinc-200 shadow-sm relative">
+                          {d.img ? (
+                            <img src={d.img} alt={d.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-zinc-300">
+                              <span className="text-xs">No img</span>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <Link
+                            href={`/product/${d.slug}`}
+                            className="text-base font-semibold text-zinc-900 hover:text-blue-600 transition-colors"
+                          >
+                            {d.name}
+                          </Link>
+                          <p className="text-xs text-zinc-500 mt-1">
+                            Downloaded on {new Date(d.downloaded_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <Link
+                        href={`/product/${d.slug}`}
+                        className="px-4 py-2 rounded-xl bg-white border border-zinc-200 text-xs font-semibold text-zinc-700 shadow-sm hover:border-zinc-300 transition-all opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0"
+                      >
+                        View
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               )}
             </section>
+
+            {/* Sidebar: Account & Subscription Info */}
+            <div className="space-y-6">
+              {/* Account Settings */}
+              <section className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
+                <h2 className="text-xl font-bold text-zinc-900 mb-2">Account Settings</h2>
+                <p className="text-sm text-zinc-500 mb-6">Manage your profile and security.</p>
+
+                <div className="flex flex-col gap-3">
+                  <button onClick={() => setShowEditProfile(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
+                    Edit Profile
+                    <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
+                  </button>
+                  <button onClick={() => setShowChangePassword(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
+                    Change Password
+                    <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
+                  </button>
+                  <button onClick={() => setShowManageSubscription(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
+                    Manage Subscription
+                    <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
+                  </button>
+                  <button
+                    onClick={logout}
+                    className="w-full text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 border border-transparent hover:border-red-100 text-sm font-medium transition-colors mt-2"
+                  >
+                    Log Out
+                  </button>
+                </div>
+              </section>
+
+              {/* Quick Sub Details */}
+              <section className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
+                <h2 className="text-lg font-bold text-zinc-900 mb-4">Subscription Details</h2>
+                {!sub ? (
+                  <p className="text-sm text-zinc-500">No active subscription.</p>
+                ) : (
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between py-2 border-b border-zinc-100">
+                      <span className="text-zinc-500">Status</span>
+                      <span className={`font-semibold ${isActuallyActive ? 'text-green-600' : 'text-zinc-900'}`}>{subscriptionTier}</span>
+                    </div>
+                    {sub.valid_until && (
+                      <div className="flex justify-between py-2 border-b border-zinc-100">
+                        <span className="text-zinc-500">Renews</span>
+                        <span className="text-zinc-900 font-medium">{new Date(sub.valid_until).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {sub.autopay_enabled !== null && (
+                      <div className="flex justify-between py-2 border-b border-zinc-100">
+                        <span className="text-zinc-500">Autopay</span>
+                        <span className="text-zinc-900 font-medium">{sub.autopay_enabled ? 'On' : 'Off'}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+            </div>
           </div>
-        </div>
         )}
 
         {viewMode === "seller" && creatorShop && (

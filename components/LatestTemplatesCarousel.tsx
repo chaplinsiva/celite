@@ -254,7 +254,7 @@ export default function LatestTemplatesCarousel() {
   };
 
   return (
-    <section className="relative w-full py-16 bg-white overflow-hidden">
+    <section className="relative w-full py-16 bg-background overflow-hidden">
       <div className="relative max-w-[1440px] mx-auto px-6 sm:px-8">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">

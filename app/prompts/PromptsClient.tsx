@@ -90,7 +90,7 @@ export default function PromptsClient({ initialTemplates, subcategories }: Promp
     }, [initialTemplates, subcategories]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-white to-zinc-50">
+        <div className="min-h-screen bg-background">
             {/* Header Section - Compact */}
             <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white">
                 <div className="max-w-[1440px] mx-auto px-6 py-8">

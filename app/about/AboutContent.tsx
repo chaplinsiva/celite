@@ -32,7 +32,7 @@ const founders = [
 
 export default function AboutContent() {
   return (
-    <main className="bg-white min-h-screen py-12 px-4">
+    <main className="bg-background min-h-screen py-12 px-4">
       {/* Hero Section */}
       <section className="max-w-4xl mx-auto text-center mb-16">
         <div className="inline-flex items-center gap-2 mb-6">

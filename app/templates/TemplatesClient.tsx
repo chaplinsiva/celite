@@ -298,7 +298,7 @@ export default function TemplatesClient() {
 
     if (loading) {
         return (
-            <main className="bg-gradient-to-br from-purple-50/30 via-white to-blue-50/30 min-h-screen pt-20 pb-20">
+            <main className="bg-background min-h-screen pt-20 pb-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center py-20">
                         <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
@@ -310,7 +310,7 @@ export default function TemplatesClient() {
     }
 
     return (
-        <main className="bg-gradient-to-br from-purple-50/30 via-white to-blue-50/30 min-h-screen pt-20 pb-20">
+        <main className="bg-background min-h-screen pt-20 pb-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header Section */}
                 <div className="text-center mb-12 pt-8">

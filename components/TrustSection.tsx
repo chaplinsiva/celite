@@ -27,7 +27,7 @@ const features = [
 
 export default function TrustSection() {
     return (
-        <section className="relative w-full py-8 sm:py-12 md:py-20 bg-zinc-50 border-y border-zinc-100">
+        <section className="relative w-full py-8 sm:py-12 md:py-20 bg-background border-y border-zinc-100">
             <div className="max-w-[1440px] mx-auto px-4 sm:px-6">
                 <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-12 md:mb-16">
                     <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-5xl font-bold text-zinc-900 mb-2 sm:mb-4">

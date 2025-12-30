@@ -64,12 +64,14 @@ export default function PricingContent() {
   }
 
   const features = [
-    "Unlimited Premium Templates",
+    "Unlimited After Effects Templates",
+    "Premium Stock Music & SFX",
+    "High-Quality Stock Images",
+    "Professional 3D Models",
+    "Unlimited Downloads",
     "Full Source File Access",
     "Commercial License",
-    "Priority Support",
-    "Regular Updates",
-    "New Templates Every Week"
+    "Priority Support"
   ];
 
   return (

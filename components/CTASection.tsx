@@ -6,7 +6,7 @@ import { GlowingEffect } from "@/components/ui/glowing-effect";
 
 export default function CTASection() {
   return (
-    <section className="relative w-full py-20 sm:py-24 md:py-28 overflow-hidden bg-white">
+    <section className="relative w-full py-20 sm:py-24 md:py-28 overflow-hidden bg-background">
       {/* Colorful Background Gradients */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-0 w-96 h-96 bg-blue-100/40 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
