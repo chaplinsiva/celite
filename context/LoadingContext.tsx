@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 interface LoadingContextType {
     isLoading: boolean;
@@ -23,15 +23,14 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(false);
     const [isNavigating, setIsNavigating] = useState(false);
     const pathname = usePathname();
-    const searchParams = useSearchParams();
 
     const startLoading = useCallback(() => setIsLoading(true), []);
     const stopLoading = useCallback(() => setIsLoading(false), []);
 
-    // Track navigation
+    // Track navigation - reset when pathname changes
     useEffect(() => {
         setIsNavigating(false);
-    }, [pathname, searchParams]);
+    }, [pathname]);
 
     // Listen for link clicks to show navigation loading
     useEffect(() => {
@@ -40,9 +39,13 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
             const link = target.closest('a');
 
             if (link && link.href && !link.href.startsWith('#') && !link.target) {
-                const url = new URL(link.href);
-                if (url.origin === window.location.origin && url.pathname !== window.location.pathname) {
-                    setIsNavigating(true);
+                try {
+                    const url = new URL(link.href);
+                    if (url.origin === window.location.origin && url.pathname !== window.location.pathname) {
+                        setIsNavigating(true);
+                    }
+                } catch {
+                    // Invalid URL, ignore
                 }
             }
         };
@@ -62,25 +65,24 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
                 </div>
             )}
 
-
             {children}
 
             <style jsx global>{`
-        @keyframes progress {
-          0% {
-            width: 0%;
-            margin-left: 0%;
-          }
-          50% {
-            width: 60%;
-            margin-left: 20%;
-          }
-          100% {
-            width: 0%;
-            margin-left: 100%;
-          }
-        }
-      `}</style>
+                @keyframes progress {
+                    0% {
+                        width: 0%;
+                        margin-left: 0%;
+                    }
+                    50% {
+                        width: 60%;
+                        margin-left: 20%;
+                    }
+                    100% {
+                        width: 0%;
+                        margin-left: 100%;
+                    }
+                }
+            `}</style>
         </LoadingContext.Provider>
     );
 }
