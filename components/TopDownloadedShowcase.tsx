@@ -159,18 +159,18 @@ export default function TopDownloadedShowcase() {
             return {
               slug: r.slug,
               name: r.name,
-              video_path: r.video_path,
-              thumbnail_path: r.thumbnail_path,
-              img: r.img,
+              video_path: r.video_path || null,
+              thumbnail_path: r.thumbnail_path || null,
+              img: r.img || null,
               downloadCount: downloadCounts[r.slug] || 0,
               category: r.categories ? (Array.isArray(r.categories) ? r.categories[0] : r.categories) : null,
-            };
+            } as TopTemplate;
           })
           .filter((t): t is TopTemplate => t !== null);
 
         // If we have an odd number of templates, adjust to even number for better grid layout
         // Remove the last one if odd, or ensure we have a good number for the grid
-        const finalTemplates = mapped.length % 2 === 0 ? mapped : mapped.slice(0, -1);
+        const finalTemplates: TopTemplate[] = mapped.length % 2 === 0 ? mapped : mapped.slice(0, -1);
 
         console.log(`Setting ${finalTemplates.length} templates to display`);
         setTemplates(finalTemplates);
