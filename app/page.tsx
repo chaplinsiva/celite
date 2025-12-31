@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import Hero from '../components/Hero';
+import TopDownloadedShowcase from '../components/TopDownloadedShowcase';
 import LatestTemplatesCarousel from '../components/LatestTemplatesCarousel';
 import WebsiteShowcaseCarousel from '../components/WebsiteShowcaseCarousel';
 import CategoriesSection from '../components/CategoriesSection';
+import MusicSfxShowcase from '../components/MusicSfxShowcase';
 import VideoCollectionsCarousel from '../components/VideoCollectionsCarousel';
 import FAQAndSubscribe from '../components/FAQAndSubscribe';
 
@@ -20,7 +22,9 @@ export default function Home() {
   return (
     <main className="bg-background min-h-screen">
       <Hero />
+      <TopDownloadedShowcase />
       <CategoriesSection />
+      <MusicSfxShowcase />
       <VideoCollectionsCarousel />
       <WebsiteShowcaseCarousel />
       <FAQAndSubscribe />
