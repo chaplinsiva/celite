@@ -2,12 +2,6 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../../lib/supabaseAdmin';
 import { uploadPreviewToR2 } from '../../../../../lib/r2Client';
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 

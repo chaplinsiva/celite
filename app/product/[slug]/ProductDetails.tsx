@@ -883,6 +883,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               price={Number(product.price ?? 400)}
               handleAddToCart={handleAddToCart}
               addingCart={addingCart}
+            justPurchased={justPurchased}
             />
 
             {/* Description / Prompt */}
@@ -982,6 +983,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 price={Number(product.price ?? 400)}
                 handleAddToCart={handleAddToCart}
                 addingCart={addingCart}
+                justPurchased={justPurchased}
               />
 
               {/* Features Table / Tech Specs - Hidden for Prompts */}
@@ -1336,7 +1338,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   );
 }
 
-function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className, isPrompt, handleCopyPrompt, promptCopied, user, isFree, productSlug, price, handleAddToCart, addingCart }: {
+function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className, isPrompt, handleCopyPrompt, promptCopied, user, isFree, productSlug, price, handleAddToCart, addingCart, justPurchased }: {
   isSubActive: boolean;
   downloading: boolean;
   handleDownload: () => void;
@@ -1351,6 +1353,7 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
   price: number;
   handleAddToCart: () => void;
   addingCart: boolean;
+  justPurchased?: boolean;
 }) {
   // For prompts: show Copy Prompt button (no login required)
   if (isPrompt) {
