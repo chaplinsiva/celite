@@ -56,14 +56,7 @@ export async function GET(
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
 
-    // Check subscription (skip for free templates)
-    const { data: sub } = await admin
-      .from('subscriptions')
-      .select('id, is_active, valid_until')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    const active = !!sub?.is_active && (!sub?.valid_until || new Date(sub.valid_until as any).getTime() > Date.now());
+    // (Subscriptions removed) - only purchases or free templates allow download
     const { data: purchase } = await admin
       .from('order_items')
       .select('id, orders!inner(user_id,status)')
@@ -74,7 +67,7 @@ export async function GET(
     const hasPurchase = !!purchase;
     const isFreeTemplate = template?.is_free === true;
 
-    if (!active && !isFreeTemplate && !hasPurchase) {
+    if (!isFreeTemplate && !hasPurchase) {
       return NextResponse.json({ error: 'Access denied. Please purchase this template to download.' }, { status: 403 });
     }
 
@@ -105,14 +98,14 @@ export async function GET(
           });
         }
 
-        // Track subscriber downloads in downloads table
-        if (active && subscriptionId) {
-        await admin.from('downloads').insert({
-          user_id: userId,
-          template_slug: slug,
-            subscription_id: subscriptionId,
+        // Track purchase downloads in downloads table (lifetime access)
+        if (hasPurchase) {
+          await admin.from('downloads').insert({
+            user_id: userId,
+            template_slug: slug,
+            subscription_id: null,
             downloaded_at: now,
-        });
+          });
         }
       } catch (err) {
         console.error('Failed to record download:', err);
@@ -174,7 +167,6 @@ export async function GET(
     try {
       console.log(`[Download] Recording download for template: ${slug}, user: ${userId}, isFree: ${isFreeTemplate}, hasActiveSubscription: ${active}`);
 
-      const subscriptionId = sub?.id || null;
       const now = new Date().toISOString();
 
       // Always track free templates in free_downloads table
@@ -196,32 +188,8 @@ export async function GET(
         }
       }
 
-      // Track subscriber downloads in downloads table (for both free and paid templates when user has active subscription)
-      if (active && subscriptionId) {
-        const subscriberDownloadRecord = {
-          user_id: userId,
-          template_slug: slug,
-          subscription_id: subscriptionId,
-          downloaded_at: now,
-        };
-
-        console.log(`[Download] Attempting to insert subscriber download record:`, {
-          user_id: userId,
-          template_slug: slug,
-          subscription_id: subscriptionId,
-        });
-
-        const { error: subscriberErr } = await admin.from('downloads').insert(subscriberDownloadRecord);
-
-        if (subscriberErr) {
-          console.error('[Download] Failed to record subscriber download:', subscriberErr);
-          console.error('[Download] Error code:', subscriberErr.code);
-          console.error('[Download] Error message:', subscriberErr.message);
-          console.error('[Download] Subscriber download record was:', subscriberDownloadRecord);
-        } else {
-          console.log(`[Download] ✅ Subscriber download recorded successfully for user ${userId}, template ${slug}`);
-        }
-      } else if (hasPurchase) {
+      // Track purchase downloads in downloads table (lifetime access)
+      if (hasPurchase) {
         const { error: purchaseErr } = await admin.from('downloads').insert({
           user_id: userId,
           template_slug: slug,
@@ -231,9 +199,9 @@ export async function GET(
         if (purchaseErr) {
           console.error('[Download] Failed to record purchase download:', purchaseErr);
         }
-      } else if (!isFreeTemplate && !active) {
+      } else if (!isFreeTemplate) {
         // This case shouldn't happen due to access check, but if it does, we skip tracking
-        console.warn(`[Download] ⚠️ Paid template download attempted without active subscription or purchase for user ${userId}, template ${slug} - skipping download tracking`);
+        console.warn(`[Download] ⚠️ Paid template download attempted without purchase for user ${userId}, template ${slug} - skipping download tracking`);
       }
     } catch (downloadErr: any) {
       console.error('[Download] Failed to record download (exception):', downloadErr);

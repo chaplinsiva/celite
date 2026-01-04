@@ -80,6 +80,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   const [promptCopied, setPromptCopied] = useState(false);
   const [addingCart, setAddingCart] = useState(false);
   const [justPurchased, setJustPurchased] = useState(false);
+  const [hasPurchase, setHasPurchase] = useState(false);
   const displayDownloadCount = (product as any).displayDownloadCount ?? (product as any).downloadCount ?? stableMockCount(product.slug);
   const followerCount = (product as any).followerCount ?? stableMockFollowers((product as any).vendor_name || product.slug);
   const vendorAvatar = (product as any).profile_image_url || null;
@@ -168,32 +169,8 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
 
   // Function to load subscription status from backend
   const loadSubscriptionStatus = useCallback(async () => {
-    try {
-      if (!user) {
-        setIsSubActive(false);
-        return;
-      }
-      const supabase = getSupabaseBrowserClient();
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select('is_active, valid_until')
-        .eq('user_id', (user as any).id)
-        .maybeSingle();
-
-      if (error || !data) {
-        setIsSubActive(false);
-        return;
-      }
-
-      const now = Date.now();
-      const validUntil = data.valid_until ? new Date(data.valid_until).getTime() : null;
-      const active = !!data.is_active && (!validUntil || validUntil > now);
-
-      setIsSubActive(active);
-    } catch (error) {
-      console.error('Error loading subscription:', error);
-      setIsSubActive(false);
-    }
+    // Subscriptions removed; always treat as not active
+    setIsSubActive(false);
   }, [user]);
 
   useEffect(() => {
@@ -204,6 +181,35 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
     const flag = searchParams?.get('payment');
     setJustPurchased(flag === 'success');
   }, [searchParams]);
+
+  useEffect(() => {
+    const checkPurchase = async () => {
+      if (!user) {
+        setHasPurchase(false);
+        return;
+      }
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from('order_items')
+          .select('slug, orders!inner(user_id,status)')
+          .eq('slug', product.slug)
+          .eq('orders.user_id', (user as any).id)
+          .eq('orders.status', 'paid')
+          .maybeSingle();
+        if (error) {
+          console.error('Failed to check purchase', error);
+          setHasPurchase(false);
+          return;
+        }
+        setHasPurchase(!!data);
+      } catch (e) {
+        console.error('Failed to check purchase', e);
+        setHasPurchase(false);
+      }
+    };
+    checkPurchase();
+  }, [user, product.slug]);
 
   // Fetch "More in This Style" templates based on keyword matching
   useEffect(() => {
@@ -884,6 +890,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               handleAddToCart={handleAddToCart}
               addingCart={addingCart}
             justPurchased={justPurchased}
+            hasPurchase={hasPurchase}
             />
 
             {/* Description / Prompt */}
@@ -984,6 +991,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 handleAddToCart={handleAddToCart}
                 addingCart={addingCart}
                 justPurchased={justPurchased}
+                hasPurchase={hasPurchase}
               />
 
               {/* Features Table / Tech Specs - Hidden for Prompts */}
@@ -1338,7 +1346,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   );
 }
 
-function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className, isPrompt, handleCopyPrompt, promptCopied, user, isFree, productSlug, price, handleAddToCart, addingCart, justPurchased }: {
+function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className, isPrompt, handleCopyPrompt, promptCopied, user, isFree, productSlug, price, handleAddToCart, addingCart, justPurchased, hasPurchase }: {
   isSubActive: boolean;
   downloading: boolean;
   handleDownload: () => void;
@@ -1354,6 +1362,7 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
   handleAddToCart: () => void;
   addingCart: boolean;
   justPurchased?: boolean;
+  hasPurchase?: boolean;
 }) {
   // For prompts: show Copy Prompt button (no login required)
   if (isPrompt) {
@@ -1477,9 +1486,9 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
   // For non-subscribed users, show pay-per-product purchase card
   return (
     <div className={cn("bg-blue-50/50 rounded-2xl p-6 border border-blue-100", className)}>
-      {justPurchased && (
+      {(justPurchased || hasPurchase) && (
         <div className="mb-3 text-sm text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
-          Payment successful! Click download now to get your files.
+          {justPurchased ? 'Payment successful! Click download now to get your files.' : 'You own this item. Download anytime.'}
         </div>
       )}
       <div className="flex justify-between items-start mb-4">
@@ -1523,7 +1532,7 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
         >
           Buy for ₹{Math.round(price || 0)}
         </button>
-        {justPurchased && (
+        {(justPurchased || hasPurchase) && (
           <button
             onClick={handleDownload}
             className="w-full mt-2 sm:mt-0 py-3 rounded-lg border border-green-700 text-green-800 font-semibold text-sm hover:bg-green-50 active:scale-[0.98] transition-all sm:w-auto sm:px-4"
