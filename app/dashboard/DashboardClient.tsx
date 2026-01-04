@@ -75,24 +75,8 @@ function DashboardContent() {
       });
     }
 
-    // Load subscription - use realtime subscription for auto-updates
-    const { data: s } = await supabase
-      .from('subscriptions')
-      .select('is_active, plan, valid_until, created_at, updated_at, autopay_enabled')
-      .eq('user_id', (user as any).id)
-      .maybeSingle();
-    if (s) {
-      setSub({
-        is_active: !!s.is_active,
-        plan: s.plan ?? null,
-        valid_until: s.valid_until ?? null,
-        created_at: s.created_at ?? null,
-        updated_at: s.updated_at ?? null,
-        autopay_enabled: typeof s.autopay_enabled === 'boolean' ? s.autopay_enabled : null,
-      });
-    } else {
-      setSub(null);
-    }
+    // Subscriptions removed - always set to null
+    setSub(null);
 
     // Load pricing from settings
     const { data: settings } = await supabase.from('settings').select('key,value');

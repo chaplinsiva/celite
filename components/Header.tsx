@@ -146,27 +146,13 @@ export default function Header() {
         setCartCount(0);
         return;
       }
-      const supabase = getSupabaseBrowserClient();
-      const { data: sub } = await supabase
-        .from('subscriptions')
-        .select('is_active, valid_until')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!sub) {
-        setIsSubscribed(false);
-        setIsExpired(false);
-      } else {
-        const now = Date.now();
-        const validUntil = sub.valid_until ? new Date(sub.valid_until).getTime() : null;
-        const actuallyActive = !!sub.is_active && (!validUntil || validUntil > now);
-        const expired: boolean = !!(sub.is_active && validUntil && validUntil <= now);
-
-        setIsSubscribed(actuallyActive);
-        setIsExpired(expired);
-      }
+      
+      // Subscriptions removed - always treat as not subscribed
+      setIsSubscribed(false);
+      setIsExpired(false);
 
       // Check if user has a creator shop
+      const supabase = getSupabaseBrowserClient();
       try {
         const { data: shop } = await supabase
           .from('creator_shops')

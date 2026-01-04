@@ -234,21 +234,23 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
 
         // Then check if any of those orders contain this product
         const orderIds = userOrders.map((o: any) => o.id);
-        const { data: orderItem, error: itemError } = await supabase
+        const { data: orderItems, error: itemError } = await supabase
           .from('order_items')
           .select('id')
           .eq('slug', product.slug)
           .in('order_id', orderIds)
-          .maybeSingle();
+          .limit(1);
 
         if (itemError) {
           console.error('[ProductDetails] Failed to check order items', itemError);
           setHasPurchase(false);
+          setCheckingPurchase(false);
           return;
         }
 
-        console.log('[ProductDetails] Has purchase:', !!orderItem);
-        setHasPurchase(!!orderItem);
+        const hasPurchased = orderItems && orderItems.length > 0;
+        console.log('[ProductDetails] Has purchase:', hasPurchased);
+        setHasPurchase(hasPurchased);
         setCheckingPurchase(false);
       } catch (e) {
         console.error('[ProductDetails] Failed to check purchase', e);
