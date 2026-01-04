@@ -8,7 +8,7 @@ import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { formatPrice } from "../../lib/currency";
 import PurchaseDownloadButton from "./PurchaseDownloadButton";
 import { GlowingEffect } from "../../components/ui/glowing-effect";
-import { cn } from "../../lib/utils";
+import { cn, convertR2UrlToCdn } from "../../lib/utils";
 import LoadingSpinner from "../../components/ui/loading-spinner";
 
 type DownloadItemRow = {
@@ -29,6 +29,7 @@ type OrderItem = {
   name: string;
   price: number;
   created_at: string;
+  img: string | null;
 };
 
 // Component that uses search params (needs to be in Suspense)
@@ -122,11 +123,14 @@ function DashboardContent() {
         const slugs = Array.from(new Set(dl.map((d: any) => d.template_slug)));
         const { data: tpls } = await supabase
           .from('templates')
-          .select('slug,name,img')
+          .select('slug,name,img,thumbnail_path')
           .in('slug', slugs);
         const tplMap: Record<string, { name: string; img: string | null }> = {};
         (tpls ?? []).forEach((t: any) => {
-          tplMap[t.slug] = { name: t.name, img: t.img ?? null };
+          // Prioritize thumbnail_path, fallback to img, convert to CDN URL
+          const rawImageUrl = t.thumbnail_path || t.img || null;
+          const imageUrl = rawImageUrl ? convertR2UrlToCdn(rawImageUrl) || rawImageUrl : null;
+          tplMap[t.slug] = { name: t.name, img: imageUrl };
         });
 
         const enriched: DownloadItemRow[] = dl.map((d: any) => ({
@@ -148,20 +152,40 @@ function DashboardContent() {
     try {
       const { data: orderItems, error: orderErr } = await supabase
         .from('order_items')
-        .select('slug,name,price,orders!inner(created_at,user_id,status)')
+        .select('slug,name,price,img,orders!inner(created_at,user_id,status)')
         .order('orders(created_at)', { ascending: false })
         .limit(10);
 
       if (orderErr) throw orderErr;
 
       const filtered = (orderItems || []).filter((oi: any) => oi.orders?.user_id === (user as any).id && oi.orders?.status === 'paid');
+      
+      // If order_items don't have img, fetch from templates
+      const slugsNeedingImg = filtered.filter((oi: any) => !oi.img).map((oi: any) => oi.slug);
+      let templateImgMap: Record<string, string | null> = {};
+      
+      if (slugsNeedingImg.length > 0) {
+        const { data: tpls } = await supabase
+          .from('templates')
+          .select('slug,thumbnail_path,img')
+          .in('slug', slugsNeedingImg);
+        (tpls || []).forEach((t: any) => {
+          const rawImageUrl = t.thumbnail_path || t.img || null;
+          templateImgMap[t.slug] = rawImageUrl ? convertR2UrlToCdn(rawImageUrl) || rawImageUrl : null;
+        });
+      }
+
       setOrders(
-        filtered.map((oi: any) => ({
-          slug: oi.slug,
-          name: oi.name,
-          price: Number(oi.price || 0),
-          created_at: oi.orders?.created_at || new Date().toISOString(),
-        }))
+        filtered.map((oi: any) => {
+          const rawImg = oi.img || templateImgMap[oi.slug] || null;
+          return {
+            slug: oi.slug,
+            name: oi.name,
+            price: Number(oi.price || 0),
+            created_at: oi.orders?.created_at || new Date().toISOString(),
+            img: rawImg ? convertR2UrlToCdn(rawImg) || rawImg : null,
+          };
+        })
       );
     } catch (e) {
       console.error('Failed to load orders', e);
@@ -425,7 +449,19 @@ function DashboardContent() {
                     <div className="flex items-center gap-4">
                       <div className="h-14 w-20 overflow-hidden rounded-xl bg-zinc-100 border border-zinc-200 shadow-sm relative">
                         {d.img ? (
-                          <img src={d.img} alt={d.name} className="w-full h-full object-cover" />
+                          <img 
+                            src={d.img} 
+                            alt={d.name} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Fallback if image fails to load
+                              e.currentTarget.style.display = 'none';
+                              const parent = e.currentTarget.parentElement;
+                              if (parent) {
+                                parent.innerHTML = '<div class="w-full h-full flex items-center justify-center text-zinc-300"><span class="text-xs">No img</span></div>';
+                              }
+                            }}
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-zinc-300">
                             <span className="text-xs">No img</span>
@@ -471,14 +507,23 @@ function DashboardContent() {
               ) : (
                 <ul className="space-y-3">
                   {orders.map((o) => (
-                    <li key={`${o.slug}-${o.created_at}`} className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-zinc-900">{o.name}</p>
+                    <li key={`${o.slug}-${o.created_at}`} className="flex items-center gap-3">
+                      <div className="h-12 w-16 overflow-hidden rounded-lg bg-zinc-100 border border-zinc-200 shadow-sm flex-shrink-0">
+                        {o.img ? (
+                          <img src={o.img} alt={o.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-zinc-300">
+                            <span className="text-[10px]">No img</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-zinc-900 truncate">{o.name}</p>
                         <p className="text-xs text-zinc-500">₹{Math.round(o.price).toLocaleString('en-IN')}</p>
                       </div>
                       <Link
                         href={`/product/${o.slug}`}
-                        className="text-xs font-semibold text-blue-600 hover:underline"
+                        className="text-xs font-semibold text-blue-600 hover:underline whitespace-nowrap"
                       >
                         Download now
                       </Link>
