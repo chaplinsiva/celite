@@ -187,11 +187,6 @@ export default function RootLayout({
                 },
                 {
                   "@type": "SiteNavigationElement",
-                  "name": "Pricing",
-                  "url": "https://celite.in/pricing"
-                },
-                {
-                  "@type": "SiteNavigationElement",
                   "name": "Start Selling",
                   "url": "https://celite.in/start-selling"
                 }

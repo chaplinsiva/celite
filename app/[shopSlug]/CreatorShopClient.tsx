@@ -20,6 +20,7 @@ type CreatorTemplate = {
   model_3d_path?: string | null;
   category_id: string | null;
   created_at: string | null;
+  displayDownloadCount?: number;
 };
 
 type Category = {
@@ -161,10 +162,11 @@ function TemplateCard({ template, category }: { template: CreatorTemplate; categ
             {template.subtitle}
           </p>
         )}
-        <div className="mt-auto pt-3 border-t border-zinc-100">
-          <span className="text-xs text-zinc-500 font-medium">
-            View Details →
+        <div className="mt-auto pt-3 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-600">
+          <span className="inline-flex items-center gap-1 font-semibold text-blue-700">
+            {(template.displayDownloadCount ?? 0)}+ downloads
           </span>
+          <span className="font-medium">View Details →</span>
         </div>
       </div>
     </Link>

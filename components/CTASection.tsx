@@ -48,9 +48,9 @@ export default function CTASection() {
 
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link href="/pricing">
+                <Link href="/video-templates">
                   <LiquidButton className="text-white bg-blue-600 hover:bg-blue-700 border-none rounded-full" size="lg">
-                    Get Started
+                    Browse Templates
                   </LiquidButton>
                 </Link>
                 <Link

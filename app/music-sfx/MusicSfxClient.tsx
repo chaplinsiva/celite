@@ -338,8 +338,20 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
       const validUntil = sub?.valid_until ? new Date(sub.valid_until as any).getTime() : null;
       const isSubscribed = !!sub?.is_active && (!validUntil || validUntil > now);
 
-      if (!isSubscribed) {
-        router.push('/pricing');
+      // Check if user has purchased this template
+      const { data: purchase } = await supabase
+        .from('order_items')
+        .select('id, order_id, orders!inner(user_id, status)')
+        .eq('slug', slug)
+        .eq('orders.user_id', user.id)
+        .eq('orders.status', 'paid')
+        .maybeSingle();
+
+      const hasPurchased = !!purchase;
+
+      if (!isSubscribed && !hasPurchased) {
+        // Redirect to product page to purchase
+        router.push(`/product/${slug}`);
         return;
       }
 
@@ -351,13 +363,13 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
         try {
           const errorJson = await res.json();
           if (errorJson.error?.includes('Access denied') || errorJson.error?.includes('subscription')) {
-            router.push('/pricing');
+            router.push(`/product/${slug}`);
           } else {
             alert(errorJson.error || 'Download failed');
           }
         } catch {
           if (res.status === 403) {
-            router.push('/pricing');
+            router.push(`/product/${slug}`);
           } else if (res.status === 401) {
             openLoginModal();
           } else {
@@ -377,7 +389,7 @@ export default function MusicSfxClient({ initialTemplates }: { initialTemplates:
         }
         if (json.error) {
           if (json.error.includes('Access denied') || json.error.includes('subscription')) {
-            router.push('/pricing');
+            router.push(`/product/${slug}`);
           } else {
             alert(json.error || 'Download failed');
           }

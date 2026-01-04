@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -13,11 +13,24 @@ type FreeTemplate = {
   thumbnail_path?: string | null;
   img?: string | null;
   software?: string[] | null;
+  vendor_name?: string | null;
+  created_at?: string | null;
+  displayDownloadCount?: number;
+};
+
+const stableMockCount = (slug: string) => {
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) {
+    hash = ((hash << 5) - hash + slug.charCodeAt(i)) | 0;
+  }
+  const normalized = Math.abs(hash) % 151; // 0..150
+  return 100 + normalized; // 100..250
 };
 
 export default function Hero() {
   const [freeAfterEffects, setFreeAfterEffects] = useState<FreeTemplate[]>([]);
   const [freeAlightMotion, setFreeAlightMotion] = useState<FreeTemplate[]>([]);
+  const [minimalTemplates, setMinimalTemplates] = useState<FreeTemplate[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -74,6 +87,25 @@ export default function Hero() {
           setFreeAlightMotion(alightMotionTemplates.slice(0, 3));
         }
 
+        // Vendor showcase: minimal video templates (20 recent), show mock downloads for older items
+        const { data: minimal } = await supabase
+          .from('templates')
+          .select('slug, name, thumbnail_path, img, vendor_name, created_at')
+          .eq('status', 'approved')
+          .eq('category_id', '448b09c7-addb-4875-83d9-a207e213f6d0') // video templates
+          .order('created_at', { ascending: false })
+          .limit(20);
+        if (minimal) {
+          const mapped = minimal.map((t: any) => {
+            const createdAt = t.created_at ? new Date(t.created_at).getTime() : 0;
+            const freshMs = 3 * 24 * 60 * 60 * 1000;
+            const isNew = createdAt ? (Date.now() - createdAt) < freshMs : false;
+            const displayDownloadCount = isNew ? 0 : stableMockCount(t.slug);
+            return { ...t, displayDownloadCount };
+          });
+          setMinimalTemplates(mapped);
+        }
+
         setLoading(false);
       } catch (error) {
         console.error('Error fetching free templates:', error);
@@ -94,95 +126,86 @@ export default function Hero() {
     <section className="relative w-full py-4 md:py-6 px-4 sm:px-6 bg-[#fdf8f3]">
       <div className="max-w-[1400px] mx-auto">
         <div className="flex flex-col lg:flex-row gap-4 items-stretch">
-
           {/* Main Dark Banner */}
-          <div className="flex-[3] relative bg-[#1a1a1a] rounded-[1.5rem] overflow-hidden flex flex-col md:flex-row min-h-[280px] md:min-h-[320px]">
-            {/* Background Image Effect */}
-            <div className="absolute inset-0 z-0">
-              <div className="absolute inset-y-0 right-0 w-full md:w-1/2 h-full">
-                <img
-                  src="/hero-simple.png"
-                  alt="Creative Lifestyle"
-                  className="w-full h-full object-cover opacity-80 md:opacity-100"
-                />
-                {/* Gradient Fade to Black */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a1a] via-[#1a1a1a]/40 to-transparent"></div>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="relative z-10 flex-1 flex flex-col justify-center p-6 md:p-10">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="w-6 h-6 bg-[#2563eb] rounded-full mb-4 invisible md:visible"
+          <div className="flex-1 relative bg-[#1a1a1a] rounded-[1.5rem] overflow-hidden min-h-[260px] md:min-h-[300px]">
+            <div className="absolute inset-0">
+              <img
+                src="/hero-simple.png"
+                alt="Creative Lifestyle"
+                className="w-full h-full object-cover opacity-80 md:opacity-100"
               />
-
+              <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a1a] via-[#1a1a1a]/50 to-transparent"></div>
+            </div>
+            <div className="relative z-10 p-6 md:p-10 space-y-4 max-w-2xl">
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-4xl sm:text-5xl md:text-6xl font-[900] tracking-tighter text-[#2563eb] leading-[0.9] mb-4"
+                className="text-4xl sm:text-5xl md:text-6xl font-[900] tracking-tighter text-white leading-[0.9]"
               >
                 PLACE OF <br className="hidden sm:block" />
                 CREATIVITY
               </motion.h1>
-
-              <motion.div
+              <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="max-w-lg"
+                className="text-base sm:text-lg md:text-xl font-bold text-white leading-tight"
               >
-                <p className="text-base sm:text-lg md:text-xl font-bold text-white leading-tight mb-2">
-                  Unlimited After Effects templates, stock music, sfx, stock images, 3d models all like that
-                </p>
-                <p className="text-white/60 text-[10px]">
-                  ^2026 New Year Gift Try Remo After Effects Template as Free
-                </p>
+                Pay-per-product downloads. Premium video, music, SFX, photos, 3D—no subscriptions.
+              </motion.p>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="flex flex-wrap gap-3"
+              >
+                <Link
+                  href="/video-templates"
+                  className="inline-flex items-center px-5 py-3 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow-lg shadow-blue-600/20"
+                >
+                  Browse templates
+                </Link>
+                <Link
+                  href="/music-sfx"
+                  className="inline-flex items-center px-5 py-3 rounded-full border border-white/30 text-white text-sm font-semibold hover:bg-white/10"
+                >
+                  Explore music & SFX
+                </Link>
               </motion.div>
+              <p className="text-[11px] text-white/70">
+                Legacy freebies remain accessible for existing users.
+              </p>
             </div>
           </div>
-
-          {/* Pricing Card Section */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex-1 min-w-[280px]"
-          >
-            <div className="h-full bg-white rounded-[1.5rem] p-6 md:p-8 shadow-xl border border-zinc-100 flex flex-col">
-              <div className="mb-4">
-                <p className="text-zinc-500 text-xs font-medium mb-1">From</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl md:text-4xl font-black text-zinc-900">₹599</span>
-                  <span className="text-zinc-500 font-medium text-sm">/month</span>
-                </div>
-              </div>
-
-              <ul className="space-y-3 mb-6 flex-1">
-                {[
-                  { icon: Download, text: 'Unlimited After Effects templates' },
-                  { icon: Star, text: 'Stock music, SFX & images' },
-                  { icon: Check, text: 'Commercial license included' },
-                  { icon: ArrowRight, text: 'Cancel anytime' }
-                ].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3 text-zinc-700 font-semibold text-sm">
-                    <item.icon className="w-4 h-4 flex-shrink-0 text-zinc-400" />
-                    <span>{item.text}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Link
-                href="/pricing"
-                className="w-full bg-[#2563eb] text-white py-3 md:py-4 rounded-xl font-bold text-center text-sm hover:bg-blue-700 transition-all active:scale-[0.98] shadow-lg shadow-blue-600/20"
-              >
-                Get unlimited downloads
-              </Link>
-            </div>
-          </motion.div>
-
         </div>
+
+        {/* Vendor showcase: minimal video templates */}
+        {minimalTemplates.length > 0 && (
+          <div className="mt-6 bg-white border border-zinc-200 rounded-2xl p-4 sm:p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-xl sm:text-2xl font-black text-zinc-900">Featured creators</h3>
+                <p className="text-sm text-zinc-500">Recent video templates with vendor credits</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {minimalTemplates.map((tpl) => (
+                <Link key={tpl.slug} href={`/product/${tpl.slug}`} className="group rounded-xl border border-zinc-200 bg-zinc-50 hover:border-blue-500 transition-all overflow-hidden">
+                  <div className="aspect-video bg-zinc-100">
+                    <img src={getThumbnail(tpl)} alt={tpl.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  </div>
+                  <div className="p-3 space-y-1">
+                    <p className="text-sm font-semibold text-zinc-900 line-clamp-2 group-hover:text-blue-600 transition-colors">{tpl.name}</p>
+                    {tpl.vendor_name && <p className="text-[12px] text-zinc-500">By {tpl.vendor_name}</p>}
+                    <p className="text-[11px] text-zinc-500 flex items-center gap-1">
+                      <Download className="w-3 h-3" /> {(tpl.displayDownloadCount ?? 0)}+ downloads
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Free Templates Section - Under Hero */}
         {(freeAfterEffects.length > 0 || freeAlightMotion.length > 0) && (

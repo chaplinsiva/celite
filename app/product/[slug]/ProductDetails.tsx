@@ -25,7 +25,7 @@ interface Review {
 }
 
 interface ProductDetailsProps {
-  product: Template & { source_path?: string | null; vendor_name?: string | null; model_3d_path?: string | null; category_id?: string | null; subcategory_id?: string | null; category_slug?: string | null; category_name?: string | null };
+  product: Template & { source_path?: string | null; vendor_name?: string | null; vendor_slug?: string | null; profile_image_url?: string | null; downloadCount?: number; displayDownloadCount?: number; followerCount?: number; model_3d_path?: string | null; category_id?: string | null; subcategory_id?: string | null; category_slug?: string | null; category_name?: string | null };
   related: Template[];
   reviews: Review[];
 }
@@ -38,6 +38,24 @@ const getThumbnail = (item: Template | (Template & { source_path?: string | null
   return '/PNG1.png';
 };
 
+const stableMockCount = (slug: string) => {
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) {
+    hash = ((hash << 5) - hash + slug.charCodeAt(i)) | 0;
+  }
+  const normalized = Math.abs(hash) % 151; // 0..150
+  return 100 + normalized; // 100..250
+};
+
+const stableMockFollowers = (seed: string) => {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+  }
+  const normalized = Math.abs(hash) % 201; // 0..200
+  return 100 + normalized; // 100..300
+};
+
 const MUSIC_SFX_CATEGORY_ID = '143d45f1-a55b-42be-9f51-aab507a20fac';
 
 const isMusicItem = (item: any) => {
@@ -46,7 +64,7 @@ const isMusicItem = (item: any) => {
 };
 
 export default function ProductDetails({ product, related, reviews }: ProductDetailsProps) {
-  const { user } = useAppContext();
+  const { user, addToCart } = useAppContext();
   const { openLoginModal } = useLoginModal();
   const router = useRouter();
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -59,6 +77,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   const [loadingMoreInStyle, setLoadingMoreInStyle] = useState(true);
   const [loadingYouMayAlsoLike, setLoadingYouMayAlsoLike] = useState(true);
   const [promptCopied, setPromptCopied] = useState(false);
+  const [addingCart, setAddingCart] = useState(false);
+  const displayDownloadCount = (product as any).displayDownloadCount ?? (product as any).downloadCount ?? stableMockCount(product.slug);
+  const followerCount = (product as any).followerCount ?? stableMockFollowers((product as any).vendor_name || product.slug);
+  const vendorAvatar = (product as any).profile_image_url || null;
 
   // Check if this is a prompt product (only requires login, not subscription)
   const isPromptProduct = (product as any).category_slug === 'prompts' ||
@@ -82,12 +104,62 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
     }
   };
 
+  const handleAddToCart = async () => {
+    if (!user) {
+      openLoginModal();
+      return;
+    }
+    setAddingCart(true);
+    setFeedback(null);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        openLoginModal();
+        return;
+      }
+      const res = await fetch('/api/cart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          slug: product.slug,
+          name: product.name,
+          price: product.price,
+          qty: 1,
+          img: (product as any).thumbnail_path || product.img || '',
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        setFeedback(json.error || 'Failed to add to cart');
+        return;
+      }
+      // Update local cart context as well
+      addToCart({
+        slug: product.slug,
+        name: product.name,
+        price: Number(product.price ?? 0),
+        img: (product as any).thumbnail_path || product.img || '',
+      });
+      setFeedback('Added to cart');
+      setTimeout(() => setFeedback(null), 2000);
+    } catch (e: any) {
+      setFeedback(e?.message || 'Failed to add to cart');
+      setTimeout(() => setFeedback(null), 3000);
+    } finally {
+      setAddingCart(false);
+    }
+  };
+
   // Track view_item event when product page loads
   useEffect(() => {
     trackViewItem({
       item_id: product.slug,
       item_name: product.name,
-      price: 0, // Subscription model
+      price: Number(product.price ?? 0),
       currency: 'INR',
     });
   }, [product.slug, product.name]);
@@ -163,7 +235,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               name: r.name,
               subtitle: r.subtitle,
               desc: r.description ?? '',
-              price: 0,
+              price: Number(r.price ?? product.price ?? 400),
               img: r.img,
               video: r.video,
               video_path: r.video_path ?? null,
@@ -229,7 +301,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
             name: item.template.name,
             subtitle: item.template.subtitle,
             desc: item.template.description ?? '',
-            price: 0,
+            price: Number(item.template.price ?? product.price ?? 400),
             img: item.template.img,
             video: item.template.video,
             video_path: item.template.video_path ?? null,
@@ -254,7 +326,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               name: r.name,
               subtitle: r.subtitle,
               desc: r.description ?? '',
-              price: 0,
+              price: Number(r.price ?? product.price ?? 400),
               img: r.img,
               video: r.video,
               video_path: r.video_path ?? null,
@@ -343,7 +415,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               name: item.template.name,
               subtitle: item.template.subtitle,
               desc: item.template.description ?? '',
-              price: 0,
+              price: Number(item.template.price ?? product.price ?? 400),
               img: item.template.img,
               video: item.template.video,
               video_path: item.template.video_path ?? null,
@@ -367,7 +439,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 name: r.name,
                 subtitle: r.subtitle,
                 desc: r.description ?? '',
-                price: 0,
+                price: Number(r.price ?? product.price ?? 400),
                 img: r.img,
                 video: r.video,
                 video_path: r.video_path ?? null,
@@ -406,7 +478,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               name: r.name,
               subtitle: r.subtitle,
               desc: r.description ?? '',
-              price: 0,
+              price: Number(r.price ?? product.price ?? 400),
               img: r.img,
               video: r.video,
               video_path: r.video_path ?? null,
@@ -450,8 +522,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
       });
 
       if (res.status === 403) {
-        router.push('/pricing');
-        setFeedback('Please subscribe to download this template.');
+        setFeedback('Please purchase this template to download.');
         setDownloading(false);
         return;
       }
@@ -477,8 +548,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
       // Handle errors
       if (json.error) {
         if (json.error.includes('Access denied') || json.error.includes('subscribe')) {
-          router.push('/pricing');
-          setFeedback('Please subscribe to download this template.');
+          setFeedback('Please purchase this template to download.');
         } else if (json.error.includes('not found') || json.error.includes('not available')) {
           setFeedback('Source file not available for this template.');
         } else {
@@ -666,12 +736,25 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               const vendor = (product as any).vendor_name;
               if (!vendor) return null; // Don't show vendor section if no vendor name
               const initial = vendor.charAt(0).toUpperCase() || 'C';
+              const vendorSlug = (product as any).vendor_slug;
               return (
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">
-                    {initial}
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600 overflow-hidden">
+                    {vendorAvatar ? <img src={vendorAvatar} alt={vendor} className="w-full h-full object-cover" /> : initial}
                   </div>
-                  <span className="text-sm font-medium text-zinc-700">{vendor}</span>
+                  <div className="flex flex-col">
+                    {vendorSlug ? (
+                      <Link href={`/${vendorSlug}`} className="text-sm font-medium text-zinc-700 hover:text-blue-600">
+                        {vendor}
+                      </Link>
+                    ) : (
+                      <span className="text-sm font-medium text-zinc-700">{vendor}</span>
+                    )}
+                    <div className="flex items-center gap-3 text-[11px] text-zinc-500">
+                      <span className="flex items-center gap-1"><Download className="w-3 h-3" /> {displayDownloadCount}+ downloads</span>
+                      <span className="flex items-center gap-1"><Star className="w-3 h-3" /> {followerCount}+ followers</span>
+                    </div>
+                  </div>
                   <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
                     <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
                   </div>
@@ -789,6 +872,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               promptCopied={promptCopied}
               user={user}
               isFree={!!product.is_free}
+              productSlug={product.slug}
+              price={Number(product.price ?? 400)}
+              handleAddToCart={handleAddToCart}
+              addingCart={addingCart}
             />
 
             {/* Description / Prompt */}
@@ -884,6 +971,10 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 promptCopied={promptCopied}
                 user={user}
                 isFree={!!product.is_free}
+                productSlug={product.slug}
+                price={Number(product.price ?? 400)}
+                handleAddToCart={handleAddToCart}
+                addingCart={addingCart}
               />
 
               {/* Features Table / Tech Specs - Hidden for Prompts */}
@@ -1238,7 +1329,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   );
 }
 
-function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className, isPrompt, handleCopyPrompt, promptCopied, user, isFree }: {
+function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className, isPrompt, handleCopyPrompt, promptCopied, user, isFree, productSlug, price, handleAddToCart, addingCart }: {
   isSubActive: boolean;
   downloading: boolean;
   handleDownload: () => void;
@@ -1249,6 +1340,10 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
   promptCopied?: boolean;
   user?: any;
   isFree?: boolean;
+  productSlug: string;
+  price: number;
+  handleAddToCart: () => void;
+  addingCart: boolean;
 }) {
   // For prompts: show Copy Prompt button (no login required)
   if (isPrompt) {
@@ -1369,37 +1464,28 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
     );
   }
 
-  // For non-subscribed users, show the full subscription card
+  // For non-subscribed users, show pay-per-product purchase card
   return (
     <div className={cn("bg-blue-50/50 rounded-2xl p-6 border border-blue-100", className)}>
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-2xl font-bold text-blue-900">Monthly</h3>
-          <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold uppercase tracking-wider rounded">
-            Limited Offer
-          </span>
+          <h3 className="text-2xl font-bold text-blue-900">Buy this template</h3>
+          <p className="text-xs text-blue-700 mt-1">One-time purchase, instant download</p>
         </div>
         <span className="bg-blue-900 text-white text-[10px] uppercase font-bold px-2 py-1 rounded shadow-sm shadow-blue-900/20 flex items-center gap-1">
-          <Star className="w-3 h-3 fill-current" /> Popular
+          <Star className="w-3 h-3 fill-current" /> Pay-per-product
         </span>
       </div>
 
-      <div className="flex items-baseline gap-2 mb-2">
-        <span className="text-sm text-blue-400 line-through font-medium">₹899</span>
-        <span className="text-3xl font-bold text-blue-700">₹599</span>
-        <span className="text-sm text-blue-600/80 font-medium">/ month</span>
+      <div className="flex items-baseline gap-2 mb-4">
+        <span className="text-3xl font-bold text-blue-700">₹{Math.round(price || 0)}</span>
+        <span className="text-sm text-blue-600/80 font-medium">one-time</span>
       </div>
-      <p className="text-xs text-blue-600/70 mb-6 leading-relaxed">
-        Best balance for creators who want full premium access
-      </p>
-
       <ul className="space-y-3 mb-8">
         {[
-          'Unlimited AE Templates',
-          'Stock Music & SFX',
-          'Stock Images & 3D Models',
-          'Unlimited Downloads',
-          'Commercial License'
+          'High-quality source files',
+          'Commercial license for this item',
+          'Immediate access after payment'
         ].map((item, i) => (
           <li key={i} className="flex items-center gap-2 text-[13px] text-blue-900 font-medium">
             <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />
@@ -1409,10 +1495,17 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
       </ul>
 
       <button
-        onClick={() => router.push('/pricing')}
+        onClick={() => router.push(`/checkout?product=${productSlug}`)}
         className="w-full py-3 rounded-lg bg-blue-900 text-white font-bold text-sm shadow-xl shadow-blue-900/10 hover:bg-blue-800 active:scale-[0.98] transition-all"
       >
-        Subscribe to Download
+        Buy for ₹{Math.round(price || 0)}
+      </button>
+      <button
+        onClick={handleAddToCart}
+        disabled={addingCart}
+        className="w-full py-2.5 mt-2 rounded-lg border border-blue-900 text-blue-900 font-semibold text-sm hover:bg-blue-50 active:scale-[0.98] transition-all disabled:opacity-60"
+      >
+        {addingCart ? 'Adding...' : 'Add to cart'}
       </button>
     </div>
   );

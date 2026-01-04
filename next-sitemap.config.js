@@ -43,7 +43,6 @@ async function getSupabaseData() {
 const STATIC_PAGES = [
   // Core pages - highest priority
   { loc: '/', changefreq: 'daily', priority: 1.0 },
-  { loc: '/pricing', changefreq: 'weekly', priority: 0.9 },
 
   // Category landing pages - high priority for discoverability
   { loc: '/video-templates', changefreq: 'daily', priority: 0.9 },

@@ -21,6 +21,8 @@ type CreatorTemplate = {
   model_3d_path?: string | null;
   category_id: string | null;
   created_at: string | null;
+  downloadCount?: number;
+  displayDownloadCount?: number;
 };
 
 type Category = {
@@ -79,6 +81,45 @@ export default async function CreatorShopPage(props: PageProps) {
 
   const creatorTemplates: CreatorTemplate[] = (templates || []) as any;
 
+  // Compute download counts and mock display counts for legacy zero-download templates
+  const slugs = creatorTemplates.map((t) => t.slug);
+  let downloadCounts: Record<string, number> = {};
+  if (slugs.length > 0) {
+    const { data: dl } = await supabase
+      .from('downloads')
+      .select('template_slug')
+      .in('template_slug', slugs);
+    (dl || []).forEach((d: any) => {
+      if (d.template_slug) {
+        downloadCounts[d.template_slug] = (downloadCounts[d.template_slug] || 0) + 1;
+      }
+    });
+  }
+
+  const stableMockCount = (slug: string) => {
+    let hash = 0;
+    for (let i = 0; i < slug.length; i++) {
+      hash = ((hash << 5) - hash + slug.charCodeAt(i)) | 0;
+    }
+    const normalized = Math.abs(hash) % 151; // 0..150
+    return 100 + normalized; // 100..250
+  };
+
+  const NEW_MS = 3 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+
+  const enrichedTemplates: CreatorTemplate[] = creatorTemplates.map((t) => {
+    const real = downloadCounts[t.slug] || 0;
+    const createdAt = t.created_at ? new Date(t.created_at).getTime() : 0;
+    const isNew = createdAt ? (now - createdAt) < NEW_MS : false;
+    const display = real > 0 ? real : (isNew ? 0 : stableMockCount(t.slug));
+    return {
+      ...t,
+      downloadCount: real,
+      displayDownloadCount: display,
+    };
+  });
+
   const { data: categories } = await supabase
     .from("categories")
     .select("id,name,slug")
@@ -91,7 +132,7 @@ export default async function CreatorShopPage(props: PageProps) {
 
   const grouped = new Map<string, { category: Category | null; items: CreatorTemplate[] }>();
 
-  for (const t of creatorTemplates) {
+  for (const t of enrichedTemplates) {
     const cat =
       t.category_id && categoryMap.has(t.category_id)
         ? categoryMap.get(t.category_id)!
@@ -113,7 +154,12 @@ export default async function CreatorShopPage(props: PageProps) {
     .select("id", { count: "exact", head: true })
     .eq("creator_shop_id", shop.id);
 
-  const followers = followerCount ?? 0;
+  const followers = (followerCount ?? 0) || stableMockCount(shop.slug);
+
+  const totalDisplayDownloads = enrichedTemplates.reduce(
+    (sum, t) => sum + (t.displayDownloadCount ?? 0),
+    0
+  );
 
   return (
     <main className="bg-background min-h-screen pt-24 pb-20 px-4 sm:px-6 lg:px-8">
@@ -136,6 +182,17 @@ export default async function CreatorShopPage(props: PageProps) {
                 {shop.description}
               </p>
             )}
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="px-4 py-2 rounded-full border border-zinc-200 bg-white shadow-sm text-sm font-semibold text-zinc-700">
+                {totalDisplayDownloads}+ downloads
+              </div>
+              <div className="px-4 py-2 rounded-full border border-zinc-200 bg-white shadow-sm text-sm font-semibold text-zinc-700">
+                {followers}+ followers
+              </div>
+              <div className="px-4 py-2 rounded-full border border-blue-100 bg-blue-50 text-sm font-semibold text-blue-700">
+                {creatorTemplates.length} templates
+              </div>
+            </div>
             {shop.user_id && (
               <div className="mt-6">
                 <CreatorFollowButton

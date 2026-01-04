@@ -10,6 +10,7 @@ type CreatorShop = {
   slug: string;
   name: string;
   description: string | null;
+  profile_image_url?: string | null;
   bank_account_name: string | null;
   bank_account_number: string | null;
   bank_ifsc: string | null;
@@ -21,9 +22,25 @@ type CreatorTemplateRow = {
   slug: string;
   name: string;
   subtitle: string | null;
+  description?: string | null;
   video: string | null;
+  video_path?: string | null;
+  thumbnail_path?: string | null;
+  audio_preview_path?: string | null;
+  model_3d_path?: string | null;
+  source_path?: string | null;
   created_at: string | null;
   downloadCount: number;
+  displayDownloadCount?: number;
+  isMockDownloadCount?: boolean;
+  price?: number;
+  vendorRevenue?: number;
+  grossRevenue?: number;
+  vendor_name?: string;
+  features?: string[];
+  software?: string[];
+  plugins?: string[];
+  tags?: string[];
   status?: string | null;
 };
 
@@ -51,11 +68,23 @@ export default function CreatorDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [totalDownloads, setTotalDownloads] = useState<number>(0);
-  const [uniqueUserPeriods, setUniqueUserPeriods] = useState<number>(0);
-  const [revenue, setRevenue] = useState<number>(0);
+  const [totalGross, setTotalGross] = useState<number>(0);
+  const [vendorShare, setVendorShare] = useState<number>(0);
+  const [availablePayout, setAvailablePayout] = useState<number>(0);
+  const [pendingPayouts, setPendingPayouts] = useState<number>(0);
+  const [approvedPayouts, setApprovedPayouts] = useState<number>(0);
+  const [totalDisplayDownloads, setTotalDisplayDownloads] = useState<number>(0);
+  const [followerCount, setFollowerCount] = useState<number>(0);
+  const [weeklyStats, setWeeklyStats] = useState<{ gross: number; vendor: number; downloads: number }>({ gross: 0, vendor: 0, downloads: 0 });
+  const [monthlyStats, setMonthlyStats] = useState<{ gross: number; vendor: number; downloads: number }>({ gross: 0, vendor: 0, downloads: 0 });
+  const [series, setSeries] = useState<{ labels: string[]; revenue: number[]; vendor: number[]; downloads: number[] }>({ labels: [], revenue: [], vendor: [], downloads: [] });
+  const [withdrawals, setWithdrawals] = useState<Array<{ id: string; amount: number; status: string; created_at: string; processed_at?: string | null }>>([]);
+  const [withdrawAmount, setWithdrawAmount] = useState<string>('');
+  const [profileUploading, setProfileUploading] = useState(false);
 
   const [formOpen, setFormOpen] = useState(false);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [form, setForm] = useState({
     name: "",
     slug: "",
@@ -67,6 +96,7 @@ export default function CreatorDashboardPage() {
     model_3d_path: "",
     source_path: "",
     description: "",
+    price: 0,
     category_id: "",
     subcategory_id: "",
     sub_subcategory_id: "",
@@ -80,6 +110,7 @@ export default function CreatorDashboardPage() {
   const thumbnailInputRef = useRef<HTMLInputElement | null>(null);
   const audioPreviewInputRef = useRef<HTMLInputElement | null>(null);
   const model3DInputRef = useRef<HTMLInputElement | null>(null);
+  const profileImageInputRef = useRef<HTMLInputElement | null>(null);
   const [uploadingSource, setUploadingSource] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
@@ -137,6 +168,7 @@ export default function CreatorDashboardPage() {
       model_3d_path: "",
       source_path: "",
       description: "",
+      price: 0,
       category_id: "",
       subcategory_id: "",
       sub_subcategory_id: "",
@@ -146,6 +178,7 @@ export default function CreatorDashboardPage() {
       tags: "",
     });
     setSlugManuallyEdited(false);
+    setIsDirty(false);
   };
 
   const formatSpeed = (bytesPerSecond: number): string => {
@@ -529,6 +562,7 @@ export default function CreatorDashboardPage() {
       setMessage("Content generated successfully!");
       setAutofillOpen(false);
       setAutofillTemplateType("");
+      setIsDirty(true);
     } catch (e: any) {
       console.error("Autofill error:", e);
       setError(e?.message || "Failed to generate content");
@@ -551,8 +585,13 @@ export default function CreatorDashboardPage() {
       }
 
       // Fetch API and categories in parallel for faster loading
-      const [apiResponse, catsResult, subsResult, subSubsResult] = await Promise.all([
+      const [apiResponse, withdrawRes, catsResult, subsResult, subSubsResult] = await Promise.all([
         fetch("/api/creator/templates", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }),
+        fetch("/api/creator/withdrawals", {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
           },
@@ -563,6 +602,7 @@ export default function CreatorDashboardPage() {
       ]);
 
       const json = await apiResponse.json();
+      const withdrawJson = await withdrawRes.json().catch(() => ({ ok: false }));
 
       if (!apiResponse.ok || !json.ok) {
         setError(json.error || "Failed to load creator data.");
@@ -572,18 +612,39 @@ export default function CreatorDashboardPage() {
 
       setShop(json.shop);
       setTemplates(json.templates || []);
+      const displayTotal = (json.templates || []).reduce(
+        (sum: number, t: any) => sum + (t.displayDownloadCount ?? t.downloadCount ?? 0),
+        0
+      );
+      setTotalDisplayDownloads(displayTotal);
       if (json.stats) {
         setTotalDownloads(json.stats.totalDownloads ?? 0);
-        setUniqueUserPeriods(json.stats.uniqueUserPeriods ?? 0);
-        setRevenue(json.stats.revenue ?? 0);
+        setTotalGross(json.stats.totalGross ?? 0);
+        setVendorShare(json.stats.vendorShareTotal ?? 0);
+        setAvailablePayout(json.stats.availableForWithdraw ?? 0);
+        setPendingPayouts(json.stats.pendingPayouts ?? 0);
+        setApprovedPayouts(json.stats.approvedPayouts ?? 0);
+        setFollowerCount(json.stats.followerCount ?? 0);
+        setWeeklyStats(json.stats.weekly || { gross: 0, vendor: 0, downloads: 0 });
+        setMonthlyStats(json.stats.monthly || { gross: 0, vendor: 0, downloads: 0 });
+        setSeries(json.stats.series || { labels: [], revenue: [], vendor: [], downloads: [] });
       } else {
         const fallbackDownloads = (json.templates || []).reduce(
           (sum: number, t: any) => sum + (t.downloadCount || 0),
           0
         );
         setTotalDownloads(fallbackDownloads);
-        setUniqueUserPeriods(0);
-        setRevenue(0);
+        setTotalGross(0);
+        setVendorShare(0);
+      }
+
+      if (withdrawRes.ok && withdrawJson.ok) {
+        setWithdrawals(withdrawJson.requests || []);
+        if (withdrawJson.balance) {
+          setAvailablePayout(withdrawJson.balance.available ?? json.stats?.availableForWithdraw ?? 0);
+          setPendingPayouts(withdrawJson.balance.pendingPayouts ?? json.stats?.pendingPayouts ?? 0);
+          setApprovedPayouts(withdrawJson.balance.approvedPayouts ?? json.stats?.approvedPayouts ?? 0);
+        }
       }
 
       if (!json.shop) {
@@ -654,6 +715,25 @@ export default function CreatorDashboardPage() {
     loadData();
   }, [user, loadData, router]);
 
+  // Mark dirty when form changes while open
+  useEffect(() => {
+    if (formOpen) {
+      setIsDirty(true);
+    }
+  }, [form, formOpen]);
+
+  // Warn before closing if there are unsaved changes while form is open
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty && formOpen) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty, formOpen]);
+
   const handleCreateTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -677,12 +757,50 @@ export default function CreatorDashboardPage() {
         return;
       }
 
+      // Require category and subcategory selection
+      if (!form.category_id) {
+        setError("Please select a category.");
+        setSaving(false);
+        return;
+      }
+      if (!form.subcategory_id) {
+        setError("Please select a subcategory.");
+        setSaving(false);
+        return;
+      }
+
+      const VIDEO_CATEGORY_ID = '448b09c7-addb-4875-83d9-a207e213f6d0';
+      const MUSIC_SFX_CATEGORY_ID = '143d45f1-a55b-42be-9f51-aab507a20fac';
+      const STOCK_PHOTOS_CATEGORY_ID = 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47';
+
+      // Required assets by category
+      if (form.category_id === VIDEO_CATEGORY_ID) {
+        if (!form.thumbnail_path || !form.video_path || !form.source_path) {
+          setError("Video templates need thumbnail, video preview, and source file.");
+          setSaving(false);
+          return;
+        }
+      } else if (form.category_id === MUSIC_SFX_CATEGORY_ID) {
+        if (!form.audio_preview_path || !form.source_path) {
+          setError("Music/SFX needs audio preview and source file.");
+          setSaving(false);
+          return;
+        }
+      } else if (form.category_id === STOCK_PHOTOS_CATEGORY_ID) {
+        if (!form.thumbnail_path || !form.source_path) {
+          setError("Stock items need a thumbnail and source file.");
+          setSaving(false);
+          return;
+        }
+      }
+
       const payload = {
         template: {
           name: form.name,
           slug,
           subtitle: form.subtitle,
           description: form.description,
+          price: Number(form.price) || 0,
           video_path: form.video_path,
           thumbnail_path: form.thumbnail_path,
           audio_preview_path: form.audio_preview_path,
@@ -779,6 +897,115 @@ export default function CreatorDashboardPage() {
       console.error("Failed to delete template:", e);
       setError(e?.message || "Failed to delete template.");
     }
+  };
+
+  const handleWithdrawRequest = async () => {
+    if (!user) return;
+    setError(null);
+    setMessage(null);
+
+    const amountNum = Number(withdrawAmount || availablePayout || 0);
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      setError("Enter a valid amount");
+      return;
+    }
+    if (amountNum < 1000) {
+      setError("Minimum withdrawal is ₹1000");
+      return;
+    }
+    if (amountNum > availablePayout) {
+      setError("Amount exceeds available balance");
+      return;
+    }
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.replace("/login?return=/creator/dashboard");
+        return;
+      }
+
+      const res = await fetch("/api/creator/withdrawals", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ amount: amountNum }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        setError(json.error || "Failed to submit withdrawal request.");
+        return;
+      }
+      setMessage("Withdrawal request submitted for review.");
+      setWithdrawAmount("");
+      await loadData();
+    } catch (e: any) {
+      console.error("Withdrawal request failed:", e);
+      setError(e?.message || "Failed to submit withdrawal request.");
+    }
+  };
+
+  const handleProfileImageUpload = async (file: File) => {
+    setError(null);
+    setMessage(null);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.replace("/login?return=/creator/dashboard");
+        return;
+      }
+      setProfileUploading(true);
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/creator/profile/upload', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: fd,
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        setError(json.error || 'Failed to upload profile image.');
+        return;
+      }
+      setMessage('Profile image updated');
+      await loadData();
+    } catch (e: any) {
+      console.error("Profile upload failed:", e);
+      setError(e?.message || "Failed to upload profile image.");
+    } finally {
+      setProfileUploading(false);
+    }
+  };
+
+  const startEditTemplate = (tpl: CreatorTemplateRow) => {
+    setFormOpen(true);
+    setSlugManuallyEdited(true);
+    setForm({
+      name: tpl.name || "",
+      slug: tpl.slug || "",
+      subtitle: tpl.subtitle || "",
+      video: tpl.video || "",
+      video_path: tpl.video_path || "",
+      thumbnail_path: tpl.thumbnail_path || "",
+      audio_preview_path: tpl.audio_preview_path || "",
+      model_3d_path: tpl.model_3d_path || "",
+      source_path: tpl.source_path || "",
+      description: tpl.description || "",
+      price: Number(tpl.price ?? 0),
+      category_id: "",
+      subcategory_id: "",
+      sub_subcategory_id: "",
+      features: (tpl.features || []).join(", "),
+      software: (tpl.software || []).join(", "),
+      plugins: (tpl.plugins || []).join(", "),
+      tags: (tpl.tags || []).join(", "),
+    });
   };
 
   const [active, setActive] = useState<"overview" | "templates" | "settings">(
@@ -961,31 +1188,30 @@ export default function CreatorDashboardPage() {
                           Total downloads
                         </p>
                         <p className="text-2xl font-bold text-zinc-900">
-                          {totalDownloads}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
-                        <p className="text-xs text-zinc-500 mb-1">
-                          Unique users for revenue
-                        </p>
-                        <p className="text-2xl font-bold text-zinc-900">
-                          {uniqueUserPeriods}
+                          {totalDisplayDownloads}
                         </p>
                         <p className="text-[10px] text-zinc-400 mt-1">
-                          Each user counted once per 30 days across all your
-                          templates.
+                          Includes mock counts for legacy zero-download templates.
                         </p>
                       </div>
                       <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
                         <p className="text-xs text-zinc-500 mb-1">
-                          Revenue
+                          Gross revenue
                         </p>
                         <p className="text-2xl font-bold text-zinc-900">
-                          ₹{Math.round(revenue).toLocaleString('en-IN')}
+                          ₹{Math.round(totalGross).toLocaleString('en-IN')}
                         </p>
-                        {revenue > 0 && revenue < 800 && (
+                      </div>
+                      <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
+                        <p className="text-xs text-zinc-500 mb-1">
+                          Your revenue (65%)
+                        </p>
+                        <p className="text-2xl font-bold text-zinc-900">
+                          ₹{Math.round(vendorShare).toLocaleString('en-IN')}
+                        </p>
+                        {vendorShare > 0 && vendorShare < 1000 && (
                           <p className="text-[10px] text-amber-600 mt-1">
-                            Minimum payout: ₹800
+                            Minimum payout: ₹1000
                           </p>
                         )}
                       </div>
@@ -999,6 +1225,61 @@ export default function CreatorDashboardPage() {
                           ? `celite.in/${shop.slug}`
                           : "Create your shop to get a URL"}
                       </p>
+                    </div>
+                    <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4 mt-4">
+                      <p className="text-xs text-zinc-500 mb-1">
+                        Followers
+                      </p>
+                      <p className="text-2xl font-bold text-zinc-900">
+                        {(Math.round(followerCount) || 0).toLocaleString('en-IN')}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 mt-1">
+                        Legacy creators may show mock followers for older listings.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-sm font-bold text-zinc-900">Revenue & downloads</h2>
+                      <p className="text-[11px] text-zinc-500">Auto-updated (weekly / monthly)</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-4">
+                      <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
+                        <p className="text-xs text-zinc-500 mb-1">This week</p>
+                        <p className="text-lg font-bold text-zinc-900">₹{Math.round(weeklyStats.vendor).toLocaleString('en-IN')}</p>
+                        <p className="text-[11px] text-zinc-500">Gross: ₹{Math.round(weeklyStats.gross).toLocaleString('en-IN')} · Downloads: {weeklyStats.downloads}</p>
+                      </div>
+                      <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
+                        <p className="text-xs text-zinc-500 mb-1">This month</p>
+                        <p className="text-lg font-bold text-zinc-900">₹{Math.round(monthlyStats.vendor).toLocaleString('en-IN')}</p>
+                        <p className="text-[11px] text-zinc-500">Gross: ₹{Math.round(monthlyStats.gross).toLocaleString('en-IN')} · Downloads: {monthlyStats.downloads}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-500 mb-2">Last 30 days (gross vs your share)</p>
+                      <div className="flex items-end gap-1 h-32 rounded-2xl border border-zinc-100 bg-zinc-50 p-3 overflow-x-auto">
+                        {series.labels.length === 0 ? (
+                          <p className="text-[11px] text-zinc-500">No data yet.</p>
+                        ) : (
+                          series.labels.map((label, idx) => {
+                            const gross = series.revenue[idx] || 0;
+                            const vendor = series.vendor[idx] || 0;
+                            const max = Math.max(...series.revenue, 1);
+                            const height = Math.max(4, (gross / max) * 100);
+                            const vendorHeight = Math.max(2, (vendor / max) * 100);
+                            return (
+                              <div key={label} className="flex flex-col items-center gap-1">
+                                <div className="w-3 relative flex items-end gap-[2px]" title={`${label}: gross ₹${Math.round(gross)} | your share ₹${Math.round(vendor)}`}>
+                                  <div className="flex-1 bg-zinc-300 rounded-sm" style={{ height: `${height}%` }} />
+                                  <div className="flex-1 bg-blue-500 rounded-sm" style={{ height: `${vendorHeight}%` }} />
+                                </div>
+                                <span className="text-[9px] text-zinc-400">{label.slice(5)}</span>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -1035,8 +1316,8 @@ export default function CreatorDashboardPage() {
                                   {tpl.name}
                                 </Link>
                                 <p className="text-xs text-zinc-500">
-                                  {tpl.downloadCount}{" "}
-                                  {tpl.downloadCount === 1
+                                  {(tpl.displayDownloadCount ?? tpl.downloadCount)}{" "}
+                                  {(tpl.displayDownloadCount ?? tpl.downloadCount) === 1
                                     ? "download"
                                     : "downloads"}{" "}
                                   · {status}
@@ -1078,6 +1359,36 @@ export default function CreatorDashboardPage() {
                         {shop.description && (
                           <p className="mt-1">{shop.description}</p>
                         )}
+                        <div className="flex items-center gap-3 mt-3">
+                          <div className="h-12 w-12 rounded-full overflow-hidden border border-zinc-200 bg-zinc-100">
+                            {shop.profile_image_url ? (
+                              <img src={shop.profile_image_url} alt="Profile" className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-[10px] text-zinc-400">No photo</div>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <button
+                              type="button"
+                              onClick={() => profileImageInputRef.current?.click()}
+                              className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                              disabled={profileUploading}
+                            >
+                              {profileUploading ? 'Uploading...' : shop.profile_image_url ? 'Change profile image' : 'Upload profile image'}
+                            </button>
+                            <input
+                              ref={profileImageInputRef}
+                              type="file"
+                              accept="image/*"
+                              hidden
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleProfileImageUpload(file);
+                              }}
+                            />
+                            <p className="text-[10px] text-zinc-400">Stored in preview bucket.</p>
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <p className="text-xs text-zinc-500">
@@ -1099,20 +1410,23 @@ export default function CreatorDashboardPage() {
                     </h3>
                     {shop ? (
                       <div className="space-y-3 text-xs text-zinc-600">
-                        {revenue > 0 && (
+                        {vendorShare > 0 && (
                           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 mb-3">
                             <p className="text-xs text-zinc-500 mb-1">
-                              Current revenue
+                              Your revenue (65%)
                             </p>
                             <p className="text-lg font-bold text-zinc-900">
-                              ₹{Math.round(revenue).toLocaleString('en-IN')}
+                              ₹{Math.round(vendorShare).toLocaleString('en-IN')}
                             </p>
-                            {revenue < 800 && (
+                            <p className="text-[11px] text-zinc-600 mt-1">
+                              Available: ₹{Math.round(availablePayout).toLocaleString('en-IN')} (Pending: ₹{Math.round(pendingPayouts).toLocaleString('en-IN')})
+                            </p>
+                            {vendorShare < 1000 && (
                               <p className="text-[10px] text-amber-600 mt-1">
-                                Minimum payout: ₹800
+                                Minimum payout: ₹1000
                               </p>
                             )}
-                            {revenue >= 800 && (
+                            {vendorShare >= 1000 && availablePayout >= 1000 && (
                               <p className="text-[10px] text-emerald-600 mt-1">
                                 Eligible for payout
                               </p>
@@ -1144,6 +1458,52 @@ export default function CreatorDashboardPage() {
                         >
                           Edit bank details
                         </button>
+                        <div className="mt-4 rounded-xl border border-zinc-200 bg-white p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-xs text-zinc-500">Available to withdraw</p>
+                              <p className="text-lg font-bold text-zinc-900">₹{Math.round(availablePayout).toLocaleString('en-IN')}</p>
+                            </div>
+                            <div className="text-right text-[11px] text-zinc-500">
+                              <p>Pending: ₹{Math.round(pendingPayouts).toLocaleString('en-IN')}</p>
+                              <p>Approved: ₹{Math.round(approvedPayouts).toLocaleString('en-IN')}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              type="number"
+                              min={0}
+                              value={withdrawAmount || (availablePayout > 0 ? availablePayout : "")}
+                              onChange={(e) => setWithdrawAmount(e.target.value)}
+                              className="flex-1 px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              placeholder="Amount (min ₹1000)"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleWithdrawRequest}
+                              disabled={availablePayout < 1000}
+                              className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-60"
+                            >
+                              Request payout
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-zinc-500">Minimum withdrawal: ₹1000. Requests are sent to admin for approval.</p>
+                          {withdrawals.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold text-zinc-700">Recent requests</p>
+                              <ul className="space-y-1 text-[11px] text-zinc-600">
+                                {withdrawals.slice(0, 3).map((w) => (
+                                  <li key={w.id} className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2">
+                                    <span>₹{Number(w.amount || 0).toLocaleString('en-IN')} · {new Date(w.created_at).toLocaleDateString()}</span>
+                                    <span className={`font-semibold ${w.status === 'approved' ? 'text-emerald-600' : w.status === 'rejected' ? 'text-red-600' : 'text-amber-600'}`}>
+                                      {w.status}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <p className="text-xs text-zinc-500">
@@ -1279,6 +1639,24 @@ export default function CreatorDashboardPage() {
                               className="w-full px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                               placeholder="auto-generated-from-name"
                             />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                              Price (₹)
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={form.price}
+                              onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) || 0 }))}
+                              required
+                              className="w-full px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              placeholder="e.g. 299"
+                            />
+                            <p className="text-[10px] text-zinc-400 mt-1">Buyers see this price. Your share is calculated automatically.</p>
                           </div>
                         </div>
 
@@ -1780,19 +2158,18 @@ export default function CreatorDashboardPage() {
                                   </span>
                                 </div>
                                 <p className="text-xs text-zinc-500 mt-1">
-                                  {tpl.downloadCount}{" "}
-                                  {tpl.downloadCount === 1
-                                    ? "download"
-                                    : "downloads"}{" "}
+                                  {(tpl.displayDownloadCount ?? tpl.downloadCount) || 0}{" "}
+                                  {(tpl.displayDownloadCount ?? tpl.downloadCount) === 1 ? "download" : "downloads"}{" "}
                                   {tpl.created_at && (
                                     <>
-                                      · added{" "}
-                                      {new Date(
-                                        tpl.created_at
-                                      ).toLocaleDateString()}
+                                      · added {new Date(tpl.created_at).toLocaleDateString()}
                                     </>
                                   )}{" "}
-                                  · {status}
+                                  · ₹{Number(tpl.price ?? 0).toLocaleString('en-IN')} · {status}
+                                </p>
+                                <p className="text-[11px] text-zinc-500">
+                                  Your revenue: ₹{Math.round(tpl.vendorRevenue || 0).toLocaleString('en-IN')}
+                                  {tpl.isMockDownloadCount && " (includes legacy display count)"}
                                 </p>
                               </div>
                               <div className="flex items-center gap-3">
@@ -1808,6 +2185,13 @@ export default function CreatorDashboardPage() {
                                   >
                                     View
                                   </Link>
+                                  <button
+                                    type="button"
+                                    onClick={() => startEditTemplate(tpl)}
+                                    className="text-xs font-semibold text-emerald-600 hover:text-emerald-700"
+                                  >
+                                    Edit
+                                  </button>
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteTemplate(tpl.slug)}

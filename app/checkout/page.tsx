@@ -39,35 +39,10 @@ function CheckoutContent() {
   const [subscriptionPrice, setSubscriptionPrice] = useState<number | null>(null);
   const [countryCode, setCountryCode] = useState("+91"); // Default to India
 
-  // Handle subscription checkout (from Pricing page)
+  // Disable new subscription checkout; force pay-per-product
   useEffect(() => {
-    const subscriptionType = searchParams?.get('subscription') as 'monthly' | 'yearly' | null;
-    if (subscriptionType && (subscriptionType === 'monthly' || subscriptionType === 'yearly')) {
-      setSubscriptionPlan(subscriptionType);
-      // Load subscription price from database
-      const loadSubscriptionPrice = async () => {
-        const supabase = getSupabaseBrowserClient();
-        const { data: settings } = await supabase.from('settings').select('key,value');
-        const settingsMap: Record<string, string> = {};
-        (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
-
-        let amountPaise = 0;
-        if (subscriptionType === 'monthly') {
-          const monthlyAmount = settingsMap.RAZORPAY_MONTHLY_AMOUNT;
-          if (!monthlyAmount) throw new Error('Monthly subscription price not found');
-          amountPaise = Number(monthlyAmount);
-        } else {
-          const yearlyAmount = settingsMap.RAZORPAY_YEARLY_AMOUNT;
-          if (!yearlyAmount) throw new Error('Yearly subscription price not found');
-          amountPaise = Number(yearlyAmount);
-        }
-
-        // Convert from paise to INR
-        const amountINR = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
-        setSubscriptionPrice(Math.round(amountINR));
-      };
-      loadSubscriptionPrice();
-    }
+    setSubscriptionPlan(null);
+    setSubscriptionPrice(null);
   }, [searchParams]);
 
   // Handle direct product checkout (from Buy Now)

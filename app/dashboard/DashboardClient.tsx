@@ -300,13 +300,8 @@ function DashboardContent() {
 
   const confirmRenewSubscription = async () => {
     setShowRenewConfirm(false);
-    // Redirect to checkout with the subscription plan
-    if (sub?.plan) {
-      router.push(`/checkout?subscription=${sub.plan}`);
-    } else {
-      // If no plan found, redirect to pricing page
-      router.push('/pricing');
-    }
+    // Redirect to browse templates (subscription no longer available)
+    router.push('/video-templates');
   };
 
   // Check if subscription is actually active (is_active AND valid_until in future)
@@ -402,11 +397,8 @@ function DashboardContent() {
           <div className="mt-6 flex flex-wrap gap-2 text-xs">
             {!isActuallyActive && !isPaused && !hasExpiredPlan && (
               <>
-                <Link href="/pricing" className="inline-flex items-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 shadow-md shadow-blue-600/10">
-                  Subscribe Monthly ({displayMonthlyPrice})
-                </Link>
-                <Link href="/pricing" className="inline-flex items-center rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 hover:border-zinc-300">
-                  Subscribe Yearly ({displayYearlyPrice})
+                <Link href="/video-templates" className="inline-flex items-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 shadow-md shadow-blue-600/10">
+                  Browse Templates
                 </Link>
               </>
             )}
@@ -598,7 +590,7 @@ function DashboardContent() {
               validUntil={sub?.valid_until ?? null}
               onCancel={handleCancelSubscription}
               onRenew={handleRenewSubscription}
-              onUpgrade={() => { setShowManageSubscription(false); window.location.href = '/pricing'; }}
+              onUpgrade={() => { setShowManageSubscription(false); window.location.href = '/video-templates'; }}
               onClose={() => setShowManageSubscription(false)}
               loading={loading}
             />

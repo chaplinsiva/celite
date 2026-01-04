@@ -105,7 +105,7 @@ function SignupContent() {
       } else {
         // Fallback: redirect anyway (shouldn't happen normally)
         setIsSubmitting(false);
-        router.push(returnUrl || '/dashboard');
+      router.push(returnUrl || '/dashboard');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');

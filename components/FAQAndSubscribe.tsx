@@ -93,14 +93,14 @@ export default function FAQAndSubscribe() {
                                 Subscribe Celite
                             </h2>
                             <p className="text-zinc-600 text-sm md:text-base mb-8 font-medium leading-relaxed">
-                                Get unlimited access to premium After Effects templates, stock video, music, and more. Join our creative community and elevate your projects.
+                                Get premium After Effects templates, stock video, music, and more. Purchase individual templates and elevate your projects.
                             </p>
 
                             <Link
-                                href="/pricing"
+                                href="/video-templates"
                                 className="inline-flex items-center justify-center w-full py-4 px-6 bg-black text-white rounded-xl font-black text-base hover:bg-zinc-800 transition-all shadow-lg active:scale-[0.98] group/btn"
                             >
-                                Subscribe Now
+                                Browse Templates
                                 <ArrowRight className="ml-2 w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
                             </Link>
 

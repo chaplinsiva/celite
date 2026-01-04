@@ -20,6 +20,24 @@ const reviews = [
   },
 ];
 
+const stableMockCount = (slug: string) => {
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) {
+    hash = ((hash << 5) - hash + slug.charCodeAt(i)) | 0;
+  }
+  const normalized = Math.abs(hash) % 151; // 0..150
+  return 100 + normalized; // 100..250
+};
+
+const stableMockFollowers = (seed: string) => {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+  }
+  const normalized = Math.abs(hash) % 201; // 0..200
+  return 100 + normalized; // 100..300
+};
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
@@ -30,7 +48,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,thumbnail_path,video_path,features,software,plugins,tags,meta_title,meta_description,vendor_name,category_id,is_free,categories(id,slug,name)')
+    .select('slug,name,subtitle,description,img,thumbnail_path,video_path,features,software,plugins,tags,meta_title,meta_description,vendor_name,category_id,is_free,price,creator_shop_id,created_at,creator_shops(slug,profile_image_url),categories(id,slug,name)')
     .eq('slug', params.slug)
     .maybeSingle();
   const prod = row ? ({
@@ -38,7 +56,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
     name: row.name,
     subtitle: row.subtitle,
     desc: row.description ?? '',
-    price: 0,
+    price: Number(row.price ?? 400),
     img: row.img,
     features: row.features ?? [],
     software: row.software ?? [],
@@ -141,20 +159,28 @@ export default async function ProductPage(props: PageProps) {
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video_path,thumbnail_path,audio_preview_path,model_3d_path,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name,category_id,subcategory_id,is_free,categories(id,slug,name)')
+    .select('slug,name,subtitle,description,img,video_path,thumbnail_path,audio_preview_path,model_3d_path,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name,category_id,subcategory_id,is_free,price,creator_shop_id,created_at,creator_shops(slug,profile_image_url),categories(id,slug,name)')
     .eq('slug', params.slug)
     .maybeSingle();
   if (!row) return notFound();
+  const { count: downloadCount } = await supabase
+    .from('downloads')
+    .select('id', { count: 'exact', head: true })
+    .eq('template_slug', params.slug);
+  const createdAtMs = row.created_at ? new Date(row.created_at as any).getTime() : 0;
+  const isNew = createdAtMs ? (Date.now() - createdAtMs) < (3 * 24 * 60 * 60 * 1000) : false;
+  const displayDownloadCount = (downloadCount ?? 0) > 0 ? (downloadCount ?? 0) : (isNew ? 0 : stableMockCount(row.slug));
+  const followerCount = stableMockFollowers((row as any).vendor_name || row.slug);
   const category = (row as any)?.categories ? (Array.isArray((row as any).categories) ? (row as any).categories[0] : (row as any).categories) : null;
   const categorySlug = category?.slug || '';
   const categoryName = category?.name || '';
 
-  const prod: Template & { source_path?: string | null; vendor_name?: string | null; video_path?: string | null; thumbnail_path?: string | null; audio_preview_path?: string | null; model_3d_path?: string | null; category_id?: string | null; subcategory_id?: string | null; category_slug?: string | null; category_name?: string | null } = {
+  const prod: Template & { source_path?: string | null; vendor_name?: string | null; vendor_slug?: string | null; profile_image_url?: string | null; downloadCount?: number; displayDownloadCount?: number; followerCount?: number; created_at?: string | null; video_path?: string | null; thumbnail_path?: string | null; audio_preview_path?: string | null; model_3d_path?: string | null; category_id?: string | null; subcategory_id?: string | null; category_slug?: string | null; category_name?: string | null } = {
     slug: row.slug,
     name: row.name,
     subtitle: row.subtitle,
     desc: row.description ?? '',
-    price: 0,
+    price: Number(row.price ?? 400),
     img: row.img,
     features: row.features ?? [],
     software: row.software ?? [],
@@ -174,12 +200,18 @@ export default async function ProductPage(props: PageProps) {
     category_slug: categorySlug,
     category_name: categoryName,
     is_free: !!row.is_free,
+    profile_image_url: (row as any)?.creator_shops?.profile_image_url ?? (Array.isArray((row as any)?.creator_shops) ? (row as any).creator_shops?.[0]?.profile_image_url : null),
+    vendor_slug: (row as any)?.creator_shops?.slug ?? (Array.isArray((row as any)?.creator_shops) ? (row as any).creator_shops?.[0]?.slug : null),
+    downloadCount: downloadCount ?? 0,
+    displayDownloadCount,
+    followerCount,
+    created_at: row.created_at as any,
   };
 
   // Fetch related templates from the same category
   let relatedQuery = supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video_path,thumbnail_path,features,software,plugins,tags,status,vendor_name')
+    .select('slug,name,subtitle,description,img,video_path,thumbnail_path,features,software,plugins,tags,status,vendor_name,price')
     .neq('slug', prod.slug)
     .eq('status', 'approved');
 
@@ -194,7 +226,7 @@ export default async function ProductPage(props: PageProps) {
     name: r.name,
     subtitle: r.subtitle,
     desc: r.description ?? '',
-    price: 0,
+    price: Number(r.price ?? 400),
     img: r.img,
     video_path: (r as any).video_path ?? null,
     thumbnail_path: (r as any).thumbnail_path ?? null,

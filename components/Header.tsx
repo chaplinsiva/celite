@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '../context/AppContext';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
-import { Menu, X, Search, ChevronDown } from 'lucide-react';
+import { Menu, X, Search, ChevronDown, ShoppingCart } from 'lucide-react';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -103,6 +103,7 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState({ name: 'All Categories', slug: '' });
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+  const [cartCount, setCartCount] = useState<number>(0);
 
   // Christmas theme: Show festive logo in December
   const isDecember = new Date().getMonth() === 11;
@@ -142,6 +143,7 @@ export default function Header() {
         setIsSubscribed(false);
         setIsExpired(false);
         setHasCreatorShop(false);
+        setCartCount(0);
         return;
       }
       const supabase = getSupabaseBrowserClient();
@@ -174,6 +176,26 @@ export default function Header() {
         setHasCreatorShop(!!shop);
       } catch {
         setHasCreatorShop(false);
+      }
+
+      // Fetch cart count
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setCartCount(0);
+        } else {
+          const res = await fetch('/api/cart', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          const json = await res.json();
+          if (res.ok && json.ok) {
+            setCartCount((json.items || []).length || 0);
+          } else {
+            setCartCount(0);
+          }
+        }
+      } catch {
+        setCartCount(0);
       }
     };
     checkSubscriptionAndCreator();
@@ -304,15 +326,25 @@ export default function Header() {
                 </>
               ) : (
                 <>
-                  {/* Show Subscribe Now button if user is not subscribed */}
-                  {!isSubscribed && (
-                    <Link
-                      href="/pricing"
-                      className="hidden sm:block bg-blue-600 text-white px-4 py-2 text-xs font-semibold rounded-lg border-2 border-blue-700 hover:bg-blue-700 hover:border-blue-800 transition-all shadow-sm hover:shadow-md"
-                    >
-                      Subscribe Now
-                    </Link>
-                  )}
+                  {/* Show Browse Templates button */}
+                  <Link
+                    href="/video-templates"
+                    className="hidden sm:block bg-blue-600 text-white px-4 py-2 text-xs font-semibold rounded-lg border-2 border-blue-700 hover:bg-blue-700 hover:border-blue-800 transition-all shadow-sm hover:shadow-md"
+                  >
+                    Browse Templates
+                  </Link>
+
+                  <Link
+                    href="/cart"
+                    className="relative flex items-center justify-center w-10 h-10 rounded-full border border-zinc-200 bg-white hover:bg-zinc-100 transition-colors"
+                  >
+                    <ShoppingCart className="w-4 h-4 text-zinc-700" />
+                    {cartCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">
+                        {cartCount}
+                      </span>
+                    )}
+                  </Link>
 
                   {/* User Profile */}
                   <Link href="/dashboard" className="relative group">

@@ -8,7 +8,7 @@ import { convertR2UrlToCdn } from '../../lib/utils';
 import VideoThumbnailPlayer from '../../components/VideoThumbnailPlayer';
 import MusicSfxPlayer from '../../components/MusicSfxPlayer';
 import StockPhotoViewer from '../../components/StockPhotoViewer';
-import { ChevronRight, PlayCircle, Music2, Image, Video, Box, Sparkles, Search } from 'lucide-react';
+import { ChevronRight, PlayCircle, Music2, Image, Video, Box, Sparkles, Search, Download } from 'lucide-react';
 
 type Template = {
     slug: string;
@@ -20,6 +20,9 @@ type Template = {
     audio_preview_path?: string | null;
     model_3d_path?: string | null;
     category_id?: string | null;
+    vendor_name?: string | null;
+    created_at?: string | null;
+    displayDownloadCount?: number;
 };
 
 type Category = {
@@ -110,6 +113,15 @@ const is3DModel = (template: Template): boolean => {
     return template.model_3d_path !== null && template.model_3d_path !== undefined;
 };
 
+const stableMockCount = (slug: string) => {
+    let hash = 0;
+    for (let i = 0; i < slug.length; i++) {
+        hash = ((hash << 5) - hash + slug.charCodeAt(i)) | 0;
+    }
+    const normalized = Math.abs(hash) % 151; // 0..150
+    return 100 + normalized; // 100..250
+};
+
 export default function TemplatesClient() {
     const searchParams = useSearchParams();
     const searchQuery = searchParams.get('search') || '';
@@ -139,7 +151,7 @@ export default function TemplatesClient() {
                 // Fetch templates with category relation and all asset paths
                 const { data: templates, error } = await supabase
                     .from('templates')
-                    .select('slug, name, img, video, video_path, thumbnail_path, audio_preview_path, model_3d_path, category_id, categories(id, name, slug)')
+                    .select('slug, name, img, video, video_path, thumbnail_path, audio_preview_path, model_3d_path, category_id, vendor_name, created_at, categories(id, name, slug)')
                     .eq('status', 'approved')
                     .order('created_at', { ascending: false })
                     .limit(2000);
@@ -187,6 +199,12 @@ export default function TemplatesClient() {
                             // Only add up to 8 templates per category for display
                             const currentTemplates = groupsByCategory.get(categoryId)!;
                             if (currentTemplates.length < 8) {
+                                const createdAt = t.created_at ? new Date(t.created_at).getTime() : 0;
+                                const freshMs = 3 * 24 * 60 * 60 * 1000;
+                                const isNew = createdAt ? (Date.now() - createdAt) < freshMs : false;
+                                const displayDownloadCount = (t as any).downloadCount > 0
+                                    ? (t as any).downloadCount
+                                    : (isNew ? 0 : stableMockCount(t.slug));
                                 currentTemplates.push({
                                     slug: t.slug,
                                     name: t.name,
@@ -197,6 +215,9 @@ export default function TemplatesClient() {
                                     audio_preview_path: t.audio_preview_path,
                                     model_3d_path: t.model_3d_path,
                                     category_id: t.category_id,
+                                    vendor_name: t.vendor_name,
+                                    created_at: t.created_at,
+                                    displayDownloadCount,
                                 });
                             }
                         }
@@ -404,6 +425,15 @@ export default function TemplatesClient() {
                                             <h3 className="text-sm font-semibold text-zinc-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
                                                 {template.name}
                                             </h3>
+                                            {template.vendor_name && (
+                                                <p className="text-xs text-zinc-500 mt-1">By {template.vendor_name}</p>
+                                            )}
+                                            <div className="flex items-center gap-2 mt-2 text-[11px] text-zinc-500">
+                                                <span className="flex items-center gap-1">
+                                                    <Download className="w-3 h-3" />
+                                                    {(template.displayDownloadCount ?? 0)}+
+                                                </span>
+                                            </div>
                                         </div>
                                     </Link>
                                 ))}
