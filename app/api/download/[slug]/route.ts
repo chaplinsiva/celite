@@ -98,13 +98,23 @@ export async function GET(
         }
 
         // Track purchase downloads in downloads table (lifetime access)
+        // Only insert if user doesn't already have a download record for this template
         if (hasPurchase) {
-          await admin.from('downloads').insert({
-            user_id: userId,
-            template_slug: slug,
-            creator_shop_id: template?.creator_shop_id || null,
-            downloaded_at: now,
-          });
+          const { data: existingDownload } = await admin
+            .from('downloads')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('template_slug', slug)
+            .limit(1);
+          
+          if (!existingDownload || existingDownload.length === 0) {
+            await admin.from('downloads').insert({
+              user_id: userId,
+              template_slug: slug,
+              creator_shop_id: template?.creator_shop_id || null,
+              downloaded_at: now,
+            });
+          }
         }
       } catch (err) {
         console.error('Failed to record download:', err);
@@ -188,15 +198,25 @@ export async function GET(
       }
 
       // Track purchase downloads in downloads table (lifetime access)
+      // Only insert if user doesn't already have a download record for this template
       if (hasPurchase) {
-        const { error: purchaseErr } = await admin.from('downloads').insert({
-          user_id: userId,
-          template_slug: slug,
-          creator_shop_id: template?.creator_shop_id || null,
-          downloaded_at: now,
-        });
-        if (purchaseErr) {
-          console.error('[Download] Failed to record purchase download:', purchaseErr);
+        const { data: existingDownload } = await admin
+          .from('downloads')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('template_slug', slug)
+          .limit(1);
+        
+        if (!existingDownload || existingDownload.length === 0) {
+          const { error: purchaseErr } = await admin.from('downloads').insert({
+            user_id: userId,
+            template_slug: slug,
+            creator_shop_id: template?.creator_shop_id || null,
+            downloaded_at: now,
+          });
+          if (purchaseErr) {
+            console.error('[Download] Failed to record purchase download:', purchaseErr);
+          }
         }
       } else if (!isFreeTemplate) {
         // This case shouldn't happen due to access check, but if it does, we skip tracking

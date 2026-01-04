@@ -170,38 +170,45 @@ export async function POST(req: Request) {
     const name = notes.name as string | undefined;
     
     // Insert download records for purchased items (so download count is immediately reflected)
+    // Only insert if user doesn't already have a download record for this template
     try {
       const now = new Date().toISOString();
       const slugsToLookup = cartItems && Array.isArray(cartItems) && cartItems.length > 0
         ? cartItems.map((item: any) => item.slug)
         : slug ? [slug] : [];
       
-      // Fetch creator_shop_id for each template
-      const { data: templateData } = slugsToLookup.length > 0
-        ? await admin.from('templates').select('slug, creator_shop_id').in('slug', slugsToLookup)
-        : { data: [] };
-      const creatorMap: Record<string, string | null> = {};
-      (templateData || []).forEach((t: any) => {
-        creatorMap[t.slug] = t.creator_shop_id || null;
-      });
+      if (slugsToLookup.length > 0) {
+        // Check which templates user already has download records for
+        const { data: existingDownloads } = await admin
+          .from('downloads')
+          .select('template_slug')
+          .eq('user_id', userId)
+          .in('template_slug', slugsToLookup);
+        const existingSlugs = new Set((existingDownloads || []).map((d: any) => d.template_slug));
 
-      if (cartItems && Array.isArray(cartItems) && cartItems.length > 0) {
-        // Multiple items - insert a download record for each
-        const downloadRecords = cartItems.map((item: any) => ({
-          user_id: userId,
-          template_slug: item.slug,
-          creator_shop_id: creatorMap[item.slug] || null,
-          downloaded_at: now,
-        }));
-        await admin.from('downloads').insert(downloadRecords);
-      } else if (slug) {
-        // Single item
-        await admin.from('downloads').insert({
-          user_id: userId,
-          template_slug: slug,
-          creator_shop_id: creatorMap[slug] || null,
-          downloaded_at: now,
-        });
+        // Filter to only new templates
+        const newSlugs = slugsToLookup.filter((s: string) => !existingSlugs.has(s));
+
+        if (newSlugs.length > 0) {
+          // Fetch creator_shop_id for each template
+          const { data: templateData } = await admin
+            .from('templates')
+            .select('slug, creator_shop_id')
+            .in('slug', newSlugs);
+          const creatorMap: Record<string, string | null> = {};
+          (templateData || []).forEach((t: any) => {
+            creatorMap[t.slug] = t.creator_shop_id || null;
+          });
+
+          // Insert download records for new templates only
+          const downloadRecords = newSlugs.map((itemSlug: string) => ({
+            user_id: userId,
+            template_slug: itemSlug,
+            creator_shop_id: creatorMap[itemSlug] || null,
+            downloaded_at: now,
+          }));
+          await admin.from('downloads').insert(downloadRecords);
+        }
       }
     } catch (e) {
       console.error('Failed to insert download records:', e);
