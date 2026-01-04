@@ -85,7 +85,6 @@ export async function GET(
     if (isFullUrl) {
       // Legacy: For external URLs, redirect (but record download first)
       try {
-        const subscriptionId = sub?.id || null;
         const now = new Date().toISOString();
 
         // Track free templates in free_downloads
@@ -103,7 +102,6 @@ export async function GET(
           await admin.from('downloads').insert({
             user_id: userId,
             template_slug: slug,
-            subscription_id: null,
             downloaded_at: now,
           });
         }
@@ -165,7 +163,7 @@ export async function GET(
 
     // Record download BEFORE returning the signed URL
     try {
-      console.log(`[Download] Recording download for template: ${slug}, user: ${userId}, isFree: ${isFreeTemplate}, hasActiveSubscription: ${active}`);
+      console.log(`[Download] Recording download for template: ${slug}, user: ${userId}, isFree: ${isFreeTemplate}, hasPurchase: ${hasPurchase}`);
 
       const now = new Date().toISOString();
 
@@ -193,7 +191,6 @@ export async function GET(
         const { error: purchaseErr } = await admin.from('downloads').insert({
           user_id: userId,
           template_slug: slug,
-          subscription_id: null,
           downloaded_at: now,
         });
         if (purchaseErr) {
