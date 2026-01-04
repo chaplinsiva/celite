@@ -125,13 +125,12 @@ function DashboardContent() {
       setCreatorShop(null);
     }
 
-    // Load recent downloads (subscription-based) for this user
+    // Load recent downloads (pay-per-product) for this user
     try {
       const { data: dl } = await supabase
         .from('downloads')
         .select('template_slug, downloaded_at')
         .eq('user_id', (user as any).id)
-        .is('subscription_id', null)
         .order('downloaded_at', { ascending: false })
         .limit(10);
 

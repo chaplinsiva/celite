@@ -88,8 +88,7 @@ export default async function CreatorShopPage(props: PageProps) {
     const { data: dl } = await supabase
       .from('downloads')
       .select('template_slug')
-      .in('template_slug', slugs)
-      .is('subscription_id', null);
+      .in('template_slug', slugs);
     (dl || []).forEach((d: any) => {
       if (d.template_slug) {
         downloadCounts[d.template_slug] = (downloadCounts[d.template_slug] || 0) + 1;

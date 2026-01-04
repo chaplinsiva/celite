@@ -83,8 +83,7 @@ export async function GET(req: Request) {
             .select('slug')
             .eq('creator_shop_id', shop.id)
             .then(res => (res.data || []).map((t: any) => t.slug))
-        )
-        .is('subscription_id', null),
+        ),
       admin
         .from('order_items')
         .select('slug, price, quantity, orders!inner(status,created_at)')
@@ -108,8 +107,7 @@ export async function GET(req: Request) {
             .select('slug')
             .eq('creator_shop_id', shop.id)
             .then(res => (res.data || []).map((t: any) => t.slug))
-        )
-        .is('subscription_id', null),
+        ),
       admin
         .from('creator_payout_requests')
         .select('amount,status')

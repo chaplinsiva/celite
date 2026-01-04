@@ -1473,14 +1473,52 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
     );
   }
 
-  // For non-subscribed users, show pay-per-product purchase card
+  // If user has already purchased, show ONLY download button (no buy/cart)
+  if (hasPurchase) {
+    return (
+      <div className={cn("bg-green-50/50 rounded-2xl p-6 border border-green-100", className)}>
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h3 className="text-2xl font-bold text-green-900">Item Owned</h3>
+            <p className="text-xs text-green-700 mt-1">You own this item, download anytime</p>
+          </div>
+          <span className="bg-green-900 text-white text-[10px] uppercase font-bold px-2 py-1 rounded shadow-sm shadow-green-900/20 flex items-center gap-1">
+            <Gift className="w-3 h-3 fill-current" /> Owned
+          </span>
+        </div>
+
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          className="w-full py-3 rounded-lg bg-green-700 text-white font-bold text-sm shadow-xl shadow-green-700/10 hover:bg-green-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+        >
+          {downloading ? (
+            <>
+              <div className="relative w-5 h-5">
+                <div className="absolute inset-0 rounded-full border-2 border-white/30"></div>
+                <div className="absolute inset-0 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+              </div>
+              <span className="animate-pulse">Downloading...</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4" />
+              Download Now
+            </>
+          )}
+        </button>
+        {downloading && (
+          <p className="text-xs text-green-600 text-center mt-2 animate-pulse">
+            Preparing your file for download...
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // For users who haven't purchased, show pay-per-product purchase card
   return (
     <div className={cn("bg-blue-50/50 rounded-2xl p-6 border border-blue-100", className)}>
-      {hasPurchase && (
-        <div className="mb-3 text-sm text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
-          You own this item. Download anytime.
-        </div>
-      )}
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-2xl font-bold text-blue-900">Buy this template</h3>
@@ -1508,29 +1546,19 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
         ))}
       </ul>
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
-        <button
-          onClick={() => {
-            const next = `/checkout?product=${productSlug}`;
-            if (!user) {
-              router.push(`/login?return=${encodeURIComponent(next)}`);
-              return;
-            }
-            router.push(next);
-          }}
-          className="w-full py-3 rounded-lg bg-blue-900 text-white font-bold text-sm shadow-xl shadow-blue-900/10 hover:bg-blue-800 active:scale-[0.98] transition-all sm:flex-1"
-        >
-          Buy for ₹{Math.round(price || 0)}
-        </button>
-        {hasPurchase && (
-          <button
-            onClick={handleDownload}
-            className="w-full mt-2 sm:mt-0 py-3 rounded-lg border border-green-700 text-green-800 font-semibold text-sm hover:bg-green-50 active:scale-[0.98] transition-all sm:w-auto sm:px-4"
-          >
-            Download now
-          </button>
-        )}
-      </div>
+      <button
+        onClick={() => {
+          const next = `/checkout?product=${productSlug}`;
+          if (!user) {
+            router.push(`/login?return=${encodeURIComponent(next)}`);
+            return;
+          }
+          router.push(next);
+        }}
+        className="w-full py-3 rounded-lg bg-blue-900 text-white font-bold text-sm shadow-xl shadow-blue-900/10 hover:bg-blue-800 active:scale-[0.98] transition-all"
+      >
+        Buy for ₹{Math.round(price || 0)}
+      </button>
       <button
         onClick={handleAddToCart}
         disabled={addingCart}

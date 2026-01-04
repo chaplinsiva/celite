@@ -166,8 +166,7 @@ export default async function ProductPage(props: PageProps) {
   const { count: downloadCount } = await supabase
     .from('downloads')
     .select('id', { count: 'exact', head: true })
-    .eq('template_slug', params.slug)
-    .is('subscription_id', null);
+    .eq('template_slug', params.slug);
   const { count: followerCountReal } = row.creator_shop_id
     ? await supabase
         .from('creator_followers')

@@ -62,8 +62,7 @@ export default function TopDownloadedShowcase() {
         const { data: dl } = await supabase
           .from('downloads')
           .select('template_slug')
-          .in('template_slug', slugs)
-          .is('subscription_id', null);
+          .in('template_slug', slugs);
 
         const downloadCounts: Record<string, number> = {};
         (dl || []).forEach((d: any) => {

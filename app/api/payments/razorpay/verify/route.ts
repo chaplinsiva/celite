@@ -169,6 +169,30 @@ export async function POST(req: Request) {
     const slug = notes.slug as string | undefined;
     const name = notes.name as string | undefined;
     
+    // Insert download records for purchased items (so download count is immediately reflected)
+    try {
+      const now = new Date().toISOString();
+      if (cartItems && Array.isArray(cartItems) && cartItems.length > 0) {
+        // Multiple items - insert a download record for each
+        const downloadRecords = cartItems.map((item: any) => ({
+          user_id: userId,
+          template_slug: item.slug,
+          downloaded_at: now,
+        }));
+        await admin.from('downloads').insert(downloadRecords);
+      } else if (slug) {
+        // Single item
+        await admin.from('downloads').insert({
+          user_id: userId,
+          template_slug: slug,
+          downloaded_at: now,
+        });
+      }
+    } catch (e) {
+      console.error('Failed to insert download records:', e);
+      // Don't fail the payment verification if download record insert fails
+    }
+
     // Send order email to user and bcc admin
     try {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://celite.netlify.app';
