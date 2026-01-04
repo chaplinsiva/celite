@@ -494,7 +494,7 @@ function DashboardContent() {
                         <p className="text-xs text-zinc-500">₹{Math.round(o.price).toLocaleString('en-IN')}</p>
                       </div>
                       <Link
-                        href={`/product/${o.slug}?payment=success`}
+                        href={`/product/${o.slug}`}
                         className="text-xs font-semibold text-blue-600 hover:underline"
                       >
                         Download now

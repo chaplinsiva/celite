@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Share2, Check, Download, AlertCircle, PlayCircle, Star, Shield, Clock, Layers, Zap, HardDrive, Music2, Copy, Gift } from 'lucide-react';
 import { useAppContext } from '../../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
@@ -67,7 +67,6 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   const { user, addToCart } = useAppContext();
   const { openLoginModal } = useLoginModal();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isSubActive, setIsSubActive] = useState<boolean>(false);
   const [downloading, setDownloading] = useState<boolean>(false);
@@ -79,7 +78,6 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   const [loadingYouMayAlsoLike, setLoadingYouMayAlsoLike] = useState(true);
   const [promptCopied, setPromptCopied] = useState(false);
   const [addingCart, setAddingCart] = useState(false);
-  const [justPurchased, setJustPurchased] = useState(false);
   const [hasPurchase, setHasPurchase] = useState(false);
   const displayDownloadCount = (product as any).displayDownloadCount ?? (product as any).downloadCount ?? stableMockCount(product.slug);
   const followerCount = (product as any).followerCount ?? stableMockFollowers((product as any).vendor_name || product.slug);
@@ -176,11 +174,6 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   useEffect(() => {
     loadSubscriptionStatus();
   }, [loadSubscriptionStatus, product.slug]);
-
-  useEffect(() => {
-    const flag = searchParams?.get('payment');
-    setJustPurchased(flag === 'success');
-  }, [searchParams]);
 
   useEffect(() => {
     const checkPurchase = async () => {
@@ -888,8 +881,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               productSlug={product.slug}
               price={Number(product.price ?? 400)}
               handleAddToCart={handleAddToCart}
-              addingCart={addingCart}
-            justPurchased={justPurchased}
+            addingCart={addingCart}
             hasPurchase={hasPurchase}
             />
 
@@ -990,7 +982,6 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 price={Number(product.price ?? 400)}
                 handleAddToCart={handleAddToCart}
                 addingCart={addingCart}
-                justPurchased={justPurchased}
                 hasPurchase={hasPurchase}
               />
 
@@ -1346,7 +1337,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   );
 }
 
-function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className, isPrompt, handleCopyPrompt, promptCopied, user, isFree, productSlug, price, handleAddToCart, addingCart, justPurchased, hasPurchase }: {
+function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className, isPrompt, handleCopyPrompt, promptCopied, user, isFree, productSlug, price, handleAddToCart, addingCart, hasPurchase }: {
   isSubActive: boolean;
   downloading: boolean;
   handleDownload: () => void;
@@ -1361,7 +1352,6 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
   price: number;
   handleAddToCart: () => void;
   addingCart: boolean;
-  justPurchased?: boolean;
   hasPurchase?: boolean;
 }) {
   // For prompts: show Copy Prompt button (no login required)
@@ -1486,9 +1476,9 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
   // For non-subscribed users, show pay-per-product purchase card
   return (
     <div className={cn("bg-blue-50/50 rounded-2xl p-6 border border-blue-100", className)}>
-      {(justPurchased || hasPurchase) && (
+      {hasPurchase && (
         <div className="mb-3 text-sm text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
-          {justPurchased ? 'Payment successful! Click download now to get your files.' : 'You own this item. Download anytime.'}
+          You own this item. Download anytime.
         </div>
       )}
       <div className="flex justify-between items-start mb-4">
@@ -1532,7 +1522,7 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
         >
           Buy for ₹{Math.round(price || 0)}
         </button>
-        {(justPurchased || hasPurchase) && (
+        {hasPurchase && (
           <button
             onClick={handleDownload}
             className="w-full mt-2 sm:mt-0 py-3 rounded-lg border border-green-700 text-green-800 font-semibold text-sm hover:bg-green-50 active:scale-[0.98] transition-all sm:w-auto sm:px-4"

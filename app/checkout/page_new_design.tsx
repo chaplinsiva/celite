@@ -289,7 +289,7 @@ function CheckoutContent() {
                                 });
 
                                 // Redirect to dashboard
-                                router.push("/dashboard?payment=success");
+                                router.push("/dashboard");
                             } else {
                                 // Update checkout details status to failed
                                 if (checkoutDetailIdRef.current) {

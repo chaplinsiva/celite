@@ -314,7 +314,7 @@ export const emailTemplates = {
 
   orderSuccess: (
     userName: string,
-    items: Array<{ item_id: string; item_name: string; price: number; quantity: number }>,
+    items: Array<{ item_id: string; item_name: string; price: number; quantity: number; thumbnail_url?: string | null }>,
     total: number,
     siteUrl: string
   ) => {
@@ -322,10 +322,20 @@ export const emailTemplates = {
       .map(
         (item) => `
         <div class="details-row">
-          <span class="label">${item.item_name}</span>
-          <span class="value">₹${Number(item.price || 0).toLocaleString('en-IN')} • Qty ${item.quantity}</span>
+          <div style="display:flex; gap:12px; align-items:center;">
+            ${item.thumbnail_url
+              ? `<div style="width:64px; height:48px; border-radius:6px; overflow:hidden; background:#f4f4f5; border:1px solid #e5e7eb;">
+                  <img src="${item.thumbnail_url}" alt="${item.item_name}" style="width:100%; height:100%; object-fit:cover;" />
+                </div>`
+              : `<div style="width:64px; height:48px; border-radius:6px; background:#eef2ff; display:flex; align-items:center; justify-content:center; color:#4f46e5; font-weight:700;">DL</div>`
+            }
+            <div>
+              <span class="label" style="display:block;">${item.item_name}</span>
+              <span class="value">₹${Number(item.price || 0).toLocaleString('en-IN')} • Qty ${item.quantity}</span>
+            </div>
+          </div>
           <div style="margin-top:6px;">
-            <a href="${siteUrl}/product/${item.item_id}?payment=success" class="button">Download now</a>
+            <a href="${siteUrl}/product/${item.item_id}" class="button">Download now</a>
           </div>
         </div>
       `

@@ -307,7 +307,7 @@ function CheckoutContent() {
                 });
 
                 // Redirect to dashboard
-                router.push("/dashboard?payment=success");
+                router.push("/dashboard");
               } else {
                 // Update checkout details status to failed
                 if (checkoutDetailIdRef.current) {
@@ -510,16 +510,16 @@ function CheckoutContent() {
 
                 // Clear cart
                 await resetCart();
-                // If single item, send user back to product page with success flag for download
+                // If single item, send user back to product page
                 if (cartItems.length === 1) {
                   const slug = cartItems[0]?.slug;
                   if (slug) {
-                    router.push(`/product/${slug}?payment=success`);
+                    router.push(`/product/${slug}`);
                     return;
                   }
                 }
-                // Otherwise go to dashboard success
-                router.push("/dashboard?payment=success");
+                // Otherwise go to dashboard
+                router.push("/dashboard");
               } else {
                 // Update checkout details status to failed
                 if (checkoutDetailIdRef.current) {
