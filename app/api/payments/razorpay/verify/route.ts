@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseAdminClient } from '../../../../../lib/supabaseAdmin';
 import { getRazorpayCreds, razorpayRequest } from '../../../../../lib/razorpay';
+import { sendEmail, emailTemplates } from '../../../../../lib/emailService';
 
 export async function POST(req: Request) {
   try {
@@ -68,11 +69,15 @@ export async function POST(req: Request) {
     if (!userId) return NextResponse.json({ ok: false, error: 'Unable to identify user' }, { status: 401 });
 
     // Verify user exists in auth.users before inserting order
+    let userEmail: string | null = null;
+    let userName: string | null = null;
     try {
       const { data: userData, error: userErr } = await admin.auth.admin.getUserById(userId);
       if (userErr || !userData?.user) {
         return NextResponse.json({ ok: false, error: `User ${userId} does not exist` }, { status: 400 });
       }
+      userEmail = userData.user.email ?? null;
+      userName = userData.user.user_metadata?.first_name || userData.user.user_metadata?.name || userData.user.email || null;
     } catch (e: any) {
       return NextResponse.json({ ok: false, error: `Failed to verify user: ${e?.message}` }, { status: 400 });
     }
@@ -119,6 +124,8 @@ export async function POST(req: Request) {
     }
 
     // Insert order items - handle multiple cart items
+    let emailItems: { item_id: string; item_name: string; price: number; quantity: number; }[] = [];
+
     if (cartItems && Array.isArray(cartItems) && cartItems.length > 0) {
       const orderItems = cartItems.map((item: any) => ({
         order_id: dbOrder.id,
@@ -129,12 +136,18 @@ export async function POST(req: Request) {
         img: item.img || '',
       }));
       await admin.from('order_items').insert(orderItems);
+      emailItems = orderItems.map((i) => ({
+        item_id: i.slug,
+        item_name: i.name,
+        price: i.price,
+        quantity: i.quantity || 1,
+      }));
     } else {
       // Fallback for single product
       const slug = notes.slug as string | undefined;
       const name = notes.name as string | undefined;
       const img = notes.img as string | undefined;
-    if (slug && name) {
+      if (slug && name) {
         await admin.from('order_items').insert({ 
           order_id: dbOrder.id, 
           slug, 
@@ -143,12 +156,34 @@ export async function POST(req: Request) {
           quantity: 1, 
           img: img || '' 
         });
-    }
+        emailItems = [{
+          item_id: slug,
+          item_name: name,
+          price: totalAmount,
+          quantity: 1,
+        }];
+      }
     }
     
     // Extract slug and name from notes for single product fallback
     const slug = notes.slug as string | undefined;
     const name = notes.name as string | undefined;
+    
+    // Send order email to user and bcc admin
+    try {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://celite.netlify.app';
+      const template = emailTemplates.orderSuccess(
+        userName || 'Creator',
+        emailItems,
+        totalAmount,
+        siteUrl
+      );
+      if (userEmail) {
+        await sendEmail(userEmail, template.subject, template.html, 'celiteproofficial@gmail.com');
+      }
+    } catch (e) {
+      console.error('Failed to send order email:', e);
+    }
     
     return NextResponse.json({ 
       ok: true, 

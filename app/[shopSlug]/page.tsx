@@ -64,7 +64,7 @@ export default async function CreatorShopPage(props: PageProps) {
 
   const { data: shop } = await supabase
     .from("creator_shops")
-    .select("id, user_id, name, description, slug")
+    .select("id, user_id, name, description, slug, created_at")
     .eq("slug", params.shopSlug)
     .maybeSingle();
 
@@ -88,7 +88,8 @@ export default async function CreatorShopPage(props: PageProps) {
     const { data: dl } = await supabase
       .from('downloads')
       .select('template_slug')
-      .in('template_slug', slugs);
+      .in('template_slug', slugs)
+      .is('subscription_id', null);
     (dl || []).forEach((d: any) => {
       if (d.template_slug) {
         downloadCounts[d.template_slug] = (downloadCounts[d.template_slug] || 0) + 1;
@@ -106,13 +107,23 @@ export default async function CreatorShopPage(props: PageProps) {
   };
 
   const NEW_MS = 3 * 24 * 60 * 60 * 1000;
+  const MODERN_CUTOFF = new Date("2026-01-01T00:00:00.000Z").getTime();
+  const isModernCreator =
+    !!shop.created_at &&
+    new Date(shop.created_at).getTime() >= MODERN_CUTOFF;
   const now = Date.now();
 
   const enrichedTemplates: CreatorTemplate[] = creatorTemplates.map((t) => {
     const real = downloadCounts[t.slug] || 0;
     const createdAt = t.created_at ? new Date(t.created_at).getTime() : 0;
     const isNew = createdAt ? (now - createdAt) < NEW_MS : false;
-    const display = real > 0 ? real : (isNew ? 0 : stableMockCount(t.slug));
+    const display = isModernCreator
+      ? real
+      : real > 0
+        ? real
+        : isNew
+          ? 0
+          : stableMockCount(t.slug);
     return {
       ...t,
       downloadCount: real,
@@ -154,7 +165,9 @@ export default async function CreatorShopPage(props: PageProps) {
     .select("id", { count: "exact", head: true })
     .eq("creator_shop_id", shop.id);
 
-  const followers = (followerCount ?? 0) || stableMockCount(shop.slug);
+  const followers = isModernCreator
+    ? (followerCount ?? 0)
+    : (followerCount ?? 0) || stableMockCount(shop.slug);
 
   const totalDisplayDownloads = enrichedTemplates.reduce(
     (sum, t) => sum + (t.displayDownloadCount ?? 0),

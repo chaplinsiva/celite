@@ -19,7 +19,7 @@ async function getCreatorContext(req: Request) {
 
   const { data: shop, error: shopErr } = await admin
     .from('creator_shops')
-    .select('id, slug, name, description, bank_account_name, bank_account_number, bank_ifsc, bank_upi_id, direct_upload_enabled, profile_image_url')
+    .select('id, slug, name, description, bank_account_name, bank_account_number, bank_ifsc, bank_upi_id, direct_upload_enabled, profile_image_url, created_at')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -37,6 +37,9 @@ export async function GET(req: Request) {
     const { admin, shop } = ctx;
 
     const now = Date.now();
+    const MODERN_CUTOFF = new Date("2026-01-01T00:00:00.000Z").getTime();
+    const isModernCreator =
+      !!shop.created_at && new Date(shop.created_at).getTime() >= MODERN_CUTOFF;
     const NEW_MS = 3 * 24 * 60 * 60 * 1000;
     const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
     const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
@@ -80,7 +83,8 @@ export async function GET(req: Request) {
             .select('slug')
             .eq('creator_shop_id', shop.id)
             .then(res => (res.data || []).map((t: any) => t.slug))
-        ),
+        )
+        .is('subscription_id', null),
       admin
         .from('order_items')
         .select('slug, price, quantity, orders!inner(status,created_at)')
@@ -104,7 +108,8 @@ export async function GET(req: Request) {
             .select('slug')
             .eq('creator_shop_id', shop.id)
             .then(res => (res.data || []).map((t: any) => t.slug))
-        ),
+        )
+        .is('subscription_id', null),
       admin
         .from('creator_payout_requests')
         .select('amount,status')
@@ -154,8 +159,18 @@ export async function GET(req: Request) {
 
     // Payouts
     const payoutRows = payoutResult.data || [];
-    const approvedPayouts = payoutRows.filter((p: any) => p.status === 'approved').reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
-    const pendingPayouts = payoutRows.filter((p: any) => p.status === 'pending').reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+    const approvedPayouts = payoutRows
+      .filter((p: any) => p.status === 'approved' || p.status === 'completed')
+      .reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+    const pendingPayouts = payoutRows
+      .filter((p: any) => p.status === 'pending' || p.status === 'processing')
+      .reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+
+    // Follower count (real)
+    const { count: followerCountReal } = await admin
+      .from('creator_followers')
+      .select('id', { count: 'exact', head: true })
+      .eq('creator_shop_id', shop.id);
 
     // Build template results
     const results = templates.map((tpl: any) => {
@@ -165,8 +180,10 @@ export async function GET(req: Request) {
       const mockCount = isLegacy ? stableMockCount(tpl.slug) : realDownloads;
       const gross = templateRevenue[tpl.slug] || 0;
       const vendorShare = gross * 0.65;
-      const followerCount = stableMockFollowers(shop.slug || shop.id || tpl.slug);
-      const isMockFollower = isLegacy;
+      const followerCount = isModernCreator
+        ? (followerCountReal ?? 0)
+        : stableMockFollowers(shop.slug || shop.id || tpl.slug);
+      const isMockFollower = !isModernCreator;
 
       return {
         ...tpl,
@@ -174,8 +191,8 @@ export async function GET(req: Request) {
         vendor_name: tpl.vendor_name || shop.name || 'Creator',
         profile_image_url: shop.profile_image_url || null,
         downloadCount: realDownloads,
-        displayDownloadCount: isLegacy ? mockCount : realDownloads,
-        isMockDownloadCount: isLegacy,
+        displayDownloadCount: isModernCreator ? realDownloads : (isLegacy ? mockCount : realDownloads),
+        isMockDownloadCount: isModernCreator ? false : isLegacy,
         followerCount,
         isMockFollower,
         grossRevenue: gross,
@@ -185,7 +202,9 @@ export async function GET(req: Request) {
 
     const totalDownloads = results.reduce((sum, t) => sum + (t.downloadCount || 0), 0);
     const vendorShareTotal = totalGross * 0.65;
-    const followerCount = stableMockFollowers(shop.slug || shop.id || 'shop');
+    const followerCount = isModernCreator
+      ? (followerCountReal ?? 0)
+      : stableMockFollowers(shop.slug || shop.id || 'shop');
 
     // Timeframe aggregates
     const aggregateSince = (sinceIso: string) => {

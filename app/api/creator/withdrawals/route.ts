@@ -58,10 +58,10 @@ async function computeVendorBalance(admin: any, shopId: string) {
   const vendorShare = totalGross * 0.65;
 
   const approvedPayouts = (payoutsRes.data || [])
-    .filter((p: any) => p.status === 'approved')
+    .filter((p: any) => p.status === 'approved' || p.status === 'completed')
     .reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
   const pendingPayouts = (payoutsRes.data || [])
-    .filter((p: any) => p.status === 'pending')
+    .filter((p: any) => p.status === 'pending' || p.status === 'processing')
     .reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
 
   return { totalGross, vendorShare, approvedPayouts, pendingPayouts };

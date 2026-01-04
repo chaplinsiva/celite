@@ -1134,8 +1134,11 @@ export default function CreatorDashboardPage() {
                       target="_blank"
                       className="inline-flex items-center rounded-full bg-zinc-900 text-white px-4 py-2 text-xs font-semibold hover:bg-zinc-800 transition-colors"
                     >
-                      celite.in/{shop.slug}
+                      View your shop
                     </Link>
+                    <p className="text-[11px] text-zinc-500 font-mono">
+                      celite.in/{shop.slug}
+                    </p>
                     <div className="pt-2">
                       <button
                         type="button"

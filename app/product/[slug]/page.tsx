@@ -159,18 +159,37 @@ export default async function ProductPage(props: PageProps) {
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video_path,thumbnail_path,audio_preview_path,model_3d_path,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name,category_id,subcategory_id,is_free,price,creator_shop_id,created_at,creator_shops(slug,profile_image_url),categories(id,slug,name)')
+    .select('slug,name,subtitle,description,img,video_path,thumbnail_path,audio_preview_path,model_3d_path,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name,category_id,subcategory_id,is_free,price,creator_shop_id,created_at,creator_shops(slug,profile_image_url,created_at),categories(id,slug,name)')
     .eq('slug', params.slug)
     .maybeSingle();
   if (!row) return notFound();
   const { count: downloadCount } = await supabase
     .from('downloads')
     .select('id', { count: 'exact', head: true })
-    .eq('template_slug', params.slug);
+    .eq('template_slug', params.slug)
+    .is('subscription_id', null);
+  const { count: followerCountReal } = row.creator_shop_id
+    ? await supabase
+        .from('creator_followers')
+        .select('id', { count: 'exact', head: true })
+        .eq('creator_shop_id', row.creator_shop_id)
+    : { count: 0 };
+  const creatorCreatedAt = Array.isArray((row as any)?.creator_shops)
+    ? (row as any)?.creator_shops?.[0]?.created_at
+    : (row as any)?.creator_shops?.created_at;
+  const creatorCreatedAtMs = creatorCreatedAt ? new Date(creatorCreatedAt).getTime() : 0;
+  const MODERN_CUTOFF = new Date("2026-01-01T00:00:00.000Z").getTime();
+  const isModernCreator = creatorCreatedAtMs >= MODERN_CUTOFF;
   const createdAtMs = row.created_at ? new Date(row.created_at as any).getTime() : 0;
   const isNew = createdAtMs ? (Date.now() - createdAtMs) < (3 * 24 * 60 * 60 * 1000) : false;
-  const displayDownloadCount = (downloadCount ?? 0) > 0 ? (downloadCount ?? 0) : (isNew ? 0 : stableMockCount(row.slug));
-  const followerCount = stableMockFollowers((row as any).vendor_name || row.slug);
+  const displayDownloadCount = isModernCreator
+    ? (downloadCount ?? 0)
+    : (downloadCount ?? 0) > 0
+      ? (downloadCount ?? 0)
+      : (isNew ? 0 : stableMockCount(row.slug));
+  const followerCount = isModernCreator
+    ? (followerCountReal ?? 0)
+    : stableMockFollowers((row as any).vendor_name || row.slug);
   const category = (row as any)?.categories ? (Array.isArray((row as any).categories) ? (row as any).categories[0] : (row as any).categories) : null;
   const categorySlug = category?.slug || '';
   const categoryName = category?.name || '';

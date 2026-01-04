@@ -170,12 +170,13 @@ export async function GET(req: Request) {
     let uniqueDownloadUsers = 0;
     let uniqueDownloadedTemplates = 0;
     try {
-      // 1. Fetch paid downloads
+      // Fetch pay-per-product downloads only (exclude subscription-based)
       let paidDownloads: any[] = [];
       try {
         const pdRes = await admin
           .from('downloads')
           .select('id,user_id,template_slug,subscription_id,downloaded_at')
+          .is('subscription_id', null)
           .order('downloaded_at', { ascending: false })
           .limit(500);
         if (!pdRes.error && pdRes.data) paidDownloads = pdRes.data;
@@ -183,24 +184,8 @@ export async function GET(req: Request) {
         console.log('Paid downloads table not available');
       }
 
-      // 2. Fetch free downloads
-      let freeDownloads: any[] = [];
-      try {
-        const fdRes = await admin
-          .from('free_downloads')
-          .select('id,user_id,template_slug,downloaded_at')
-          .order('downloaded_at', { ascending: false })
-          .limit(500);
-        if (!fdRes.error && fdRes.data) {
-          // Add a flag or null subscription_id for free downloads
-          freeDownloads = fdRes.data.map((d: any) => ({ ...d, subscription_id: null, is_free: true }));
-        }
-      } catch (e) {
-        console.log('Free downloads table not available');
-      }
-
-      // Merge and sort
-      downloads = [...paidDownloads, ...freeDownloads]
+      // Do not merge subscription or free download counts into paid metrics
+      downloads = paidDownloads
         .sort((a, b) => new Date(b.downloaded_at).getTime() - new Date(a.downloaded_at).getTime())
         .slice(0, 500);
 

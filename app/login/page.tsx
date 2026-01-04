@@ -88,19 +88,42 @@ function LoginContent() {
     try {
       const supabase = getSupabaseBrowserClient();
       const redirectTo = `${window.location.origin}/auth/callback${returnUrl ? `?return=${encodeURIComponent(returnUrl)}` : ''}`;
-      
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+
+      // Request a popup URL instead of redirecting this page
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: redirectTo,
+          redirectTo,
+          skipBrowserRedirect: true,
         },
       });
 
-      if (oauthError) {
-        setError(oauthError.message);
+      if (oauthError || !data?.url) {
+        setError(oauthError?.message || 'Failed to start Google sign-in');
         setIsSubmitting(false);
+        return;
       }
-      // If successful, user will be redirected to Google OAuth page
+
+      const popup = window.open(
+        data.url,
+        'celite-google-auth',
+        'width=480,height=720,top=80,left=120'
+      );
+
+      // If popup blocked, fallback to direct redirect
+      if (!popup) {
+        window.location.href = data.url;
+        return;
+      }
+
+      // Listen for auth state change and close popup when signed in
+      const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_IN') {
+          popup.close();
+          listener?.subscription.unsubscribe();
+          router.push(returnUrl || '/dashboard');
+        }
+      });
     } catch (err: any) {
       setError(err.message || 'An error occurred');
       setIsSubmitting(false);

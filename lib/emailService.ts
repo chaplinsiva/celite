@@ -311,6 +311,71 @@ export const emailTemplates = {
       </html>
     `,
   }),
+
+  orderSuccess: (
+    userName: string,
+    items: Array<{ item_id: string; item_name: string; price: number; quantity: number }>,
+    total: number,
+    siteUrl: string
+  ) => {
+    const itemsHtml = items
+      .map(
+        (item) => `
+        <div class="details-row">
+          <span class="label">${item.item_name}</span>
+          <span class="value">₹${Number(item.price || 0).toLocaleString('en-IN')} • Qty ${item.quantity}</span>
+          <div style="margin-top:6px;">
+            <a href="${siteUrl}/product/${item.item_id}?payment=success" class="button">Download now</a>
+          </div>
+        </div>
+      `
+      )
+      .join('');
+
+    return {
+      subject: 'Your Celite purchase is ready to download',
+      html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 640px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; padding: 26px; text-align: center; border-radius: 14px 14px 0 0; }
+          .content { background: #f9fafb; padding: 28px; border-radius: 0 0 14px 14px; }
+          .details { background: #fff; padding: 16px; border-radius: 10px; margin: 18px 0; border-left: 4px solid #2563eb; }
+          .details-row { margin: 10px 0; padding: 10px 0; border-bottom: 1px solid #eee; }
+          .details-row:last-child { border-bottom: none; }
+          .label { font-weight: 600; color: #111827; display:block; }
+          .value { color: #374151; }
+          .button { display: inline-block; padding: 10px 18px; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Thanks for your purchase!</h1>
+          </div>
+          <div class="content">
+            <p>Hi ${userName || 'there'},</p>
+            <p>Your payment was successful. Your downloads are ready:</p>
+            <div class="details">
+              ${itemsHtml}
+              <div class="details-row">
+                <span class="label">Total Paid</span>
+                <span class="value">₹${Number(total || 0).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+            <p>If the button doesn't work, open your items from your dashboard or directly at ${siteUrl}.</p>
+            <p style="margin-top: 24px; color: #6b7280; font-size: 13px;">Need help? Reply to this email and we’ll assist you.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    };
+  },
 };
 
 // Admin email for notifications

@@ -510,7 +510,15 @@ function CheckoutContent() {
 
                 // Clear cart
                 await resetCart();
-                // Redirect to dashboard
+                // If single item, send user back to product page with success flag for download
+                if (cartItems.length === 1) {
+                  const slug = cartItems[0]?.slug;
+                  if (slug) {
+                    router.push(`/product/${slug}?payment=success`);
+                    return;
+                  }
+                }
+                // Otherwise go to dashboard success
                 router.push("/dashboard?payment=success");
               } else {
                 // Update checkout details status to failed

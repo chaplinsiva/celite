@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Share2, Check, Download, AlertCircle, PlayCircle, Star, Shield, Clock, Layers, Zap, HardDrive, Music2, Copy, Gift } from 'lucide-react';
 import { useAppContext } from '../../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
@@ -67,6 +67,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   const { user, addToCart } = useAppContext();
   const { openLoginModal } = useLoginModal();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isSubActive, setIsSubActive] = useState<boolean>(false);
   const [downloading, setDownloading] = useState<boolean>(false);
@@ -78,6 +79,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   const [loadingYouMayAlsoLike, setLoadingYouMayAlsoLike] = useState(true);
   const [promptCopied, setPromptCopied] = useState(false);
   const [addingCart, setAddingCart] = useState(false);
+  const [justPurchased, setJustPurchased] = useState(false);
   const displayDownloadCount = (product as any).displayDownloadCount ?? (product as any).downloadCount ?? stableMockCount(product.slug);
   const followerCount = (product as any).followerCount ?? stableMockFollowers((product as any).vendor_name || product.slug);
   const vendorAvatar = (product as any).profile_image_url || null;
@@ -197,6 +199,11 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   useEffect(() => {
     loadSubscriptionStatus();
   }, [loadSubscriptionStatus, product.slug]);
+
+  useEffect(() => {
+    const flag = searchParams?.get('payment');
+    setJustPurchased(flag === 'success');
+  }, [searchParams]);
 
   // Fetch "More in This Style" templates based on keyword matching
   useEffect(() => {
@@ -1467,6 +1474,11 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
   // For non-subscribed users, show pay-per-product purchase card
   return (
     <div className={cn("bg-blue-50/50 rounded-2xl p-6 border border-blue-100", className)}>
+      {justPurchased && (
+        <div className="mb-3 text-sm text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+          Payment successful! Click download now to get your files.
+        </div>
+      )}
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-2xl font-bold text-blue-900">Buy this template</h3>
@@ -1494,18 +1506,35 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
         ))}
       </ul>
 
-      <button
-        onClick={() => router.push(`/checkout?product=${productSlug}`)}
-        className="w-full py-3 rounded-lg bg-blue-900 text-white font-bold text-sm shadow-xl shadow-blue-900/10 hover:bg-blue-800 active:scale-[0.98] transition-all"
-      >
-        Buy for ₹{Math.round(price || 0)}
-      </button>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
+        <button
+          onClick={() => {
+            const next = `/checkout?product=${productSlug}`;
+            if (!user) {
+              router.push(`/login?return=${encodeURIComponent(next)}`);
+              return;
+            }
+            router.push(next);
+          }}
+          className="w-full py-3 rounded-lg bg-blue-900 text-white font-bold text-sm shadow-xl shadow-blue-900/10 hover:bg-blue-800 active:scale-[0.98] transition-all sm:flex-1"
+        >
+          Buy for ₹{Math.round(price || 0)}
+        </button>
+        {justPurchased && (
+          <button
+            onClick={handleDownload}
+            className="w-full mt-2 sm:mt-0 py-3 rounded-lg border border-green-700 text-green-800 font-semibold text-sm hover:bg-green-50 active:scale-[0.98] transition-all sm:w-auto sm:px-4"
+          >
+            Download now
+          </button>
+        )}
+      </div>
       <button
         onClick={handleAddToCart}
         disabled={addingCart}
         className="w-full py-2.5 mt-2 rounded-lg border border-blue-900 text-blue-900 font-semibold text-sm hover:bg-blue-50 active:scale-[0.98] transition-all disabled:opacity-60"
       >
-        {addingCart ? 'Adding...' : 'Add to cart'}
+        {addingCart ? 'Adding...' : user ? 'Add to cart' : 'Sign in to add to cart'}
       </button>
     </div>
   );

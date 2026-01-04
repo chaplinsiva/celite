@@ -24,6 +24,13 @@ type CreatorShop = {
   description: string | null;
 };
 
+type OrderItem = {
+  slug: string;
+  name: string;
+  price: number;
+  created_at: string;
+};
+
 // Component that uses search params (needs to be in Suspense)
 function DashboardContent() {
   const { user, logout } = useAppContext();
@@ -34,7 +41,7 @@ function DashboardContent() {
   const [yearlyPrice, setYearlyPrice] = useState<number | null>(null);
   const [recentDownloads, setRecentDownloads] = useState<DownloadItemRow[]>([]);
   const [creatorShop, setCreatorShop] = useState<CreatorShop | null>(null);
-  const [viewMode, setViewMode] = useState<"buyer" | "seller">("buyer");
+  const [orders, setOrders] = useState<OrderItem[]>([]);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showManageSubscription, setShowManageSubscription] = useState(false);
@@ -124,6 +131,7 @@ function DashboardContent() {
         .from('downloads')
         .select('template_slug, downloaded_at')
         .eq('user_id', (user as any).id)
+        .is('subscription_id', null)
         .order('downloaded_at', { ascending: false })
         .limit(10);
 
@@ -151,6 +159,30 @@ function DashboardContent() {
     } catch (e) {
       console.error('Failed to load recent downloads', e);
       setRecentDownloads([]);
+    }
+
+    // Load recent orders (pay-per-product)
+    try {
+      const { data: orderItems, error: orderErr } = await supabase
+        .from('order_items')
+        .select('slug,name,price,orders!inner(created_at,user_id,status)')
+        .order('orders(created_at)', { ascending: false })
+        .limit(10);
+
+      if (orderErr) throw orderErr;
+
+      const filtered = (orderItems || []).filter((oi: any) => oi.orders?.user_id === (user as any).id && oi.orders?.status === 'paid');
+      setOrders(
+        filtered.map((oi: any) => ({
+          slug: oi.slug,
+          name: oi.name,
+          price: Number(oi.price || 0),
+          created_at: oi.orders?.created_at || new Date().toISOString(),
+        }))
+      );
+    } catch (e) {
+      console.error('Failed to load orders', e);
+      setOrders([]);
     }
   }, [user]);
 
@@ -367,32 +399,6 @@ function DashboardContent() {
             </div>
           </div>
 
-          {/* Buyer / Seller mode toggle (only if user has a creator shop) */}
-          {creatorShop && (
-            <div className="mt-6 inline-flex rounded-full bg-zinc-100 p-1 text-xs">
-              <button
-                type="button"
-                onClick={() => setViewMode("buyer")}
-                className={`px-4 py-1.5 rounded-full font-medium transition-colors ${viewMode === "buyer"
-                  ? "bg-white text-zinc-900 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-900"
-                  }`}
-              >
-                Buyer mode
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("seller")}
-                className={`px-4 py-1.5 rounded-full font-medium transition-colors ${viewMode === "seller"
-                  ? "bg-white text-zinc-900 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-900"
-                  }`}
-              >
-                Seller mode
-              </button>
-            </div>
-          )}
-
           {/* Action Buttons */}
           <div className="mt-6 flex flex-wrap gap-2 text-xs">
             {!isActuallyActive && !isPaused && !hasExpiredPlan && (
@@ -414,138 +420,145 @@ function DashboardContent() {
           </div>
         </section>
 
-        {viewMode === "buyer" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Recent Downloads (Main Column) */}
-            <section className="lg:col-span-2 bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm h-fit">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-zinc-900">Recent Downloads</h2>
-                <Link href="/video-templates" className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline">Browse templates</Link>
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Recent Downloads (Main Column) */}
+          <section className="lg:col-span-2 bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm h-fit">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-zinc-900">Recent Downloads</h2>
+              <Link href="/video-templates" className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline">Browse templates</Link>
+            </div>
 
-              {recentDownloads.length === 0 ? (
-                <div className="text-center py-12 bg-zinc-50 rounded-2xl border border-zinc-100 border-dashed">
-                  <p className="text-zinc-500 mb-4">You haven't downloaded any templates yet.</p>
-                  <Link href="/video-templates" className="text-sm font-semibold text-blue-600 hover:underline">
-                    Explore Collection
-                  </Link>
-                </div>
+            {recentDownloads.length === 0 ? (
+              <div className="text-center py-12 bg-zinc-50 rounded-2xl border border-zinc-100 border-dashed">
+                <p className="text-zinc-500 mb-4">You haven't downloaded any templates yet.</p>
+                <Link href="/video-templates" className="text-sm font-semibold text-blue-600 hover:underline">
+                  Explore Collection
+                </Link>
+              </div>
+            ) : (
+              <ul className="space-y-3">
+                {recentDownloads.map((d) => (
+                  <li key={`${d.slug}-${d.downloaded_at}`} className="group flex items-center justify-between p-3 rounded-2xl hover:bg-zinc-50 transition-colors border border-transparent hover:border-zinc-100">
+                    <div className="flex items-center gap-4">
+                      <div className="h-14 w-20 overflow-hidden rounded-xl bg-zinc-100 border border-zinc-200 shadow-sm relative">
+                        {d.img ? (
+                          <img src={d.img} alt={d.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-zinc-300">
+                            <span className="text-xs">No img</span>
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <Link
+                          href={`/product/${d.slug}`}
+                          className="text-base font-semibold text-zinc-900 hover:text-blue-600 transition-colors"
+                        >
+                          {d.name}
+                        </Link>
+                        <p className="text-xs text-zinc-500 mt-1">
+                          Downloaded on {new Date(d.downloaded_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      href={`/product/${d.slug}`}
+                      className="px-4 py-2 rounded-xl bg-white border border-zinc-200 text-xs font-semibold text-zinc-700 shadow-sm hover:border-zinc-300 transition-all opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0"
+                    >
+                      View
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Sidebar: Account & Subscription Info */}
+          <div className="space-y-6">
+            {/* Orders */}
+            <section className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-zinc-900">Your orders</h2>
+                {orders.length > 0 && (
+                  <span className="text-xs text-zinc-500">Pay-per-product</span>
+                )}
+              </div>
+              {orders.length === 0 ? (
+                <p className="text-sm text-zinc-500">No purchases yet.</p>
               ) : (
                 <ul className="space-y-3">
-                  {recentDownloads.map((d) => (
-                    <li key={`${d.slug}-${d.downloaded_at}`} className="group flex items-center justify-between p-3 rounded-2xl hover:bg-zinc-50 transition-colors border border-transparent hover:border-zinc-100">
-                      <div className="flex items-center gap-4">
-                        <div className="h-14 w-20 overflow-hidden rounded-xl bg-zinc-100 border border-zinc-200 shadow-sm relative">
-                          {d.img ? (
-                            <img src={d.img} alt={d.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-zinc-300">
-                              <span className="text-xs">No img</span>
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <Link
-                            href={`/product/${d.slug}`}
-                            className="text-base font-semibold text-zinc-900 hover:text-blue-600 transition-colors"
-                          >
-                            {d.name}
-                          </Link>
-                          <p className="text-xs text-zinc-500 mt-1">
-                            Downloaded on {new Date(d.downloaded_at).toLocaleDateString()}
-                          </p>
-                        </div>
+                  {orders.map((o) => (
+                    <li key={`${o.slug}-${o.created_at}`} className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-zinc-900">{o.name}</p>
+                        <p className="text-xs text-zinc-500">₹{Math.round(o.price).toLocaleString('en-IN')}</p>
                       </div>
                       <Link
-                        href={`/product/${d.slug}`}
-                        className="px-4 py-2 rounded-xl bg-white border border-zinc-200 text-xs font-semibold text-zinc-700 shadow-sm hover:border-zinc-300 transition-all opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0"
+                        href={`/product/${o.slug}?payment=success`}
+                        className="text-xs font-semibold text-blue-600 hover:underline"
                       >
-                        View
+                        Download now
                       </Link>
                     </li>
                   ))}
                 </ul>
               )}
             </section>
+            {/* Account Settings */}
+            <section className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
+              <h2 className="text-xl font-bold text-zinc-900 mb-2">Account Settings</h2>
+              <p className="text-sm text-zinc-500 mb-6">Manage your profile and security.</p>
 
-            {/* Sidebar: Account & Subscription Info */}
-            <div className="space-y-6">
-              {/* Account Settings */}
-              <section className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
-                <h2 className="text-xl font-bold text-zinc-900 mb-2">Account Settings</h2>
-                <p className="text-sm text-zinc-500 mb-6">Manage your profile and security.</p>
+              <div className="flex flex-col gap-3">
+                <button onClick={() => setShowEditProfile(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
+                  Edit Profile
+                  <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
+                </button>
+                <button onClick={() => setShowChangePassword(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
+                  Change Password
+                  <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
+                </button>
+                <button onClick={() => setShowManageSubscription(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
+                  Manage Subscription
+                  <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
+                </button>
+                <button
+                  onClick={logout}
+                  className="w-full text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 border border-transparent hover:border-red-100 text-sm font-medium transition-colors mt-2"
+                >
+                  Log Out
+                </button>
+              </div>
+            </section>
 
-                <div className="flex flex-col gap-3">
-                  <button onClick={() => setShowEditProfile(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
-                    Edit Profile
-                    <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
-                  </button>
-                  <button onClick={() => setShowChangePassword(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
-                    Change Password
-                    <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
-                  </button>
-                  <button onClick={() => setShowManageSubscription(true)} className="w-full text-left px-4 py-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-sm font-medium text-zinc-700 transition-colors flex justify-between group">
-                    Manage Subscription
-                    <span className="text-zinc-400 group-hover:text-zinc-600">→</span>
-                  </button>
-                  <button
-                    onClick={logout}
-                    className="w-full text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 border border-transparent hover:border-red-100 text-sm font-medium transition-colors mt-2"
-                  >
-                    Log Out
-                  </button>
-                </div>
-              </section>
-
-              {/* Quick Sub Details */}
-              <section className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
-                <h2 className="text-lg font-bold text-zinc-900 mb-4">Subscription Details</h2>
-                {!sub ? (
-                  <p className="text-sm text-zinc-500">No active subscription.</p>
-                ) : (
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between py-2 border-b border-zinc-100">
-                      <span className="text-zinc-500">Status</span>
-                      <span className={`font-semibold ${isActuallyActive ? 'text-green-600' : 'text-zinc-900'}`}>{subscriptionTier}</span>
-                    </div>
-                    {sub.valid_until && (
-                      <div className="flex justify-between py-2 border-b border-zinc-100">
-                        <span className="text-zinc-500">Renews</span>
-                        <span className="text-zinc-900 font-medium">{new Date(sub.valid_until).toLocaleDateString()}</span>
-                      </div>
-                    )}
-                    {sub.autopay_enabled !== null && (
-                      <div className="flex justify-between py-2 border-b border-zinc-100">
-                        <span className="text-zinc-500">Autopay</span>
-                        <span className="text-zinc-900 font-medium">{sub.autopay_enabled ? 'On' : 'Off'}</span>
-                      </div>
-                    )}
+            {/* Quick Sub Details */}
+            <section className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
+              <h2 className="text-lg font-bold text-zinc-900 mb-4">Subscription Details</h2>
+              {!sub ? (
+                <p className="text-sm text-zinc-500">No active subscription.</p>
+              ) : (
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between py-2 border-b border-zinc-100">
+                    <span className="text-zinc-500">Status</span>
+                    <span className={`font-semibold ${isActuallyActive ? 'text-green-600' : 'text-zinc-900'}`}>{subscriptionTier}</span>
                   </div>
-                )}
-              </section>
-            </div>
+                  {sub.valid_until && (
+                    <div className="flex justify-between py-2 border-b border-zinc-100">
+                      <span className="text-zinc-500">Renews</span>
+                      <span className="text-zinc-900 font-medium">{new Date(sub.valid_until).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {sub.autopay_enabled !== null && (
+                    <div className="flex justify-between py-2 border-b border-zinc-100">
+                      <span className="text-zinc-500">Autopay</span>
+                      <span className="text-zinc-900 font-medium">{sub.autopay_enabled ? 'On' : 'Off'}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
           </div>
-        )}
-
-        {viewMode === "seller" && creatorShop && (
-          <section className="mt-6 bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
-            <h2 className="text-xl font-bold text-zinc-900 mb-2">Seller mode</h2>
-            <p className="text-sm text-zinc-500 mb-4">
-              This is your creator hub view. Your public page is live at:
-            </p>
-            <a
-              href={`/${creatorShop.slug}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline"
-            >
-              celite.in/{creatorShop.slug}
-            </a>
-            <div className="mt-8 rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 px-6 py-10 text-center text-sm text-zinc-400">
-              Blank seller page for now. We&apos;ll add uploads and stats here later.
-            </div>
-          </section>
-        )}
+        </div>
       </div>
 
       {/* Edit Profile Modal */}
