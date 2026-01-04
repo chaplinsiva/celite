@@ -48,7 +48,7 @@ export async function GET(
     // Get template from database
     const { data: template, error: templateErr } = await admin
       .from('templates')
-      .select('slug, name, source_path, is_free')
+      .select('slug, name, source_path, is_free, creator_shop_id')
       .eq('slug', slug)
       .maybeSingle();
 
@@ -102,6 +102,7 @@ export async function GET(
           await admin.from('downloads').insert({
             user_id: userId,
             template_slug: slug,
+            creator_shop_id: template?.creator_shop_id || null,
             downloaded_at: now,
           });
         }
@@ -191,6 +192,7 @@ export async function GET(
         const { error: purchaseErr } = await admin.from('downloads').insert({
           user_id: userId,
           template_slug: slug,
+          creator_shop_id: template?.creator_shop_id || null,
           downloaded_at: now,
         });
         if (purchaseErr) {

@@ -172,11 +172,25 @@ export async function POST(req: Request) {
     // Insert download records for purchased items (so download count is immediately reflected)
     try {
       const now = new Date().toISOString();
+      const slugsToLookup = cartItems && Array.isArray(cartItems) && cartItems.length > 0
+        ? cartItems.map((item: any) => item.slug)
+        : slug ? [slug] : [];
+      
+      // Fetch creator_shop_id for each template
+      const { data: templateData } = slugsToLookup.length > 0
+        ? await admin.from('templates').select('slug, creator_shop_id').in('slug', slugsToLookup)
+        : { data: [] };
+      const creatorMap: Record<string, string | null> = {};
+      (templateData || []).forEach((t: any) => {
+        creatorMap[t.slug] = t.creator_shop_id || null;
+      });
+
       if (cartItems && Array.isArray(cartItems) && cartItems.length > 0) {
         // Multiple items - insert a download record for each
         const downloadRecords = cartItems.map((item: any) => ({
           user_id: userId,
           template_slug: item.slug,
+          creator_shop_id: creatorMap[item.slug] || null,
           downloaded_at: now,
         }));
         await admin.from('downloads').insert(downloadRecords);
@@ -185,6 +199,7 @@ export async function POST(req: Request) {
         await admin.from('downloads').insert({
           user_id: userId,
           template_slug: slug,
+          creator_shop_id: creatorMap[slug] || null,
           downloaded_at: now,
         });
       }
