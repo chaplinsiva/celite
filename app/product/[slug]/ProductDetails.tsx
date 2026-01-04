@@ -200,19 +200,40 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         return;
       }
       try {
-        const { data, error } = await supabase
-          .from('order_items')
-          .select('slug, orders!inner(user_id,status)')
-          .eq('slug', product.slug)
-          .eq('orders.user_id', (user as any).id)
-          .eq('orders.status', 'paid')
-          .maybeSingle();
-        if (error) {
-          console.error('Failed to check purchase', error);
+        // First get user's paid orders
+        const { data: userOrders, error: ordersError } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('user_id', (user as any).id)
+          .eq('status', 'paid');
+        
+        if (ordersError) {
+          console.error('Failed to fetch orders', ordersError);
           setHasPurchase(false);
           return;
         }
-        setHasPurchase(!!data);
+
+        if (!userOrders || userOrders.length === 0) {
+          setHasPurchase(false);
+          return;
+        }
+
+        // Then check if any of those orders contain this product
+        const orderIds = userOrders.map((o: any) => o.id);
+        const { data: orderItem, error: itemError } = await supabase
+          .from('order_items')
+          .select('id')
+          .eq('slug', product.slug)
+          .in('order_id', orderIds)
+          .maybeSingle();
+
+        if (itemError) {
+          console.error('Failed to check order items', itemError);
+          setHasPurchase(false);
+          return;
+        }
+
+        setHasPurchase(!!orderItem);
       } catch (e) {
         console.error('Failed to check purchase', e);
         setHasPurchase(false);
