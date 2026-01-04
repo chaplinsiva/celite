@@ -64,7 +64,7 @@ const isMusicItem = (item: any) => {
 };
 
 export default function ProductDetails({ product, related, reviews }: ProductDetailsProps) {
-  const { user, addToCart } = useAppContext();
+  const { user, addToCart, isAuthLoading } = useAppContext();
   const { openLoginModal } = useLoginModal();
   const router = useRouter();
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -79,6 +79,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   const [promptCopied, setPromptCopied] = useState(false);
   const [addingCart, setAddingCart] = useState(false);
   const [hasPurchase, setHasPurchase] = useState(false);
+  const [checkingPurchase, setCheckingPurchase] = useState(true);
   const [liveDownloadCount, setLiveDownloadCount] = useState<number | null>(null);
   const serverDownloadCount = (product as any).displayDownloadCount ?? (product as any).downloadCount ?? stableMockCount(product.slug);
   const displayDownloadCount = liveDownloadCount !== null ? liveDownloadCount : serverDownloadCount;
@@ -194,24 +195,37 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         console.error('Failed to fetch download count', e);
       }
 
+      // Wait for auth to finish loading before checking purchase
+      if (isAuthLoading) {
+        setCheckingPurchase(true);
+        return; // Will re-run when isAuthLoading changes to false
+      }
+
       // Check purchase status (requires auth)
       if (!user) {
         setHasPurchase(false);
+        setCheckingPurchase(false);
         return;
       }
+
+      console.log('[ProductDetails] Checking purchase for user:', user.id, 'product:', product.slug);
+      setCheckingPurchase(true);
+
       try {
         // First get user's paid orders
         const { data: userOrders, error: ordersError } = await supabase
           .from('orders')
           .select('id')
-          .eq('user_id', (user as any).id)
+          .eq('user_id', user.id)
           .eq('status', 'paid');
         
         if (ordersError) {
-          console.error('Failed to fetch orders', ordersError);
+          console.error('[ProductDetails] Failed to fetch orders', ordersError);
           setHasPurchase(false);
           return;
         }
+
+        console.log('[ProductDetails] User orders:', userOrders?.length || 0);
 
         if (!userOrders || userOrders.length === 0) {
           setHasPurchase(false);
@@ -228,19 +242,22 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
           .maybeSingle();
 
         if (itemError) {
-          console.error('Failed to check order items', itemError);
+          console.error('[ProductDetails] Failed to check order items', itemError);
           setHasPurchase(false);
           return;
         }
 
+        console.log('[ProductDetails] Has purchase:', !!orderItem);
         setHasPurchase(!!orderItem);
+        setCheckingPurchase(false);
       } catch (e) {
-        console.error('Failed to check purchase', e);
+        console.error('[ProductDetails] Failed to check purchase', e);
         setHasPurchase(false);
+        setCheckingPurchase(false);
       }
     };
     checkPurchaseAndDownloads();
-  }, [user, product.slug]);
+  }, [user, product.slug, isAuthLoading]);
 
   // Fetch "More in This Style" templates based on keyword matching
   useEffect(() => {
