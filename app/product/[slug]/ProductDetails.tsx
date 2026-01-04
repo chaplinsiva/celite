@@ -79,7 +79,9 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   const [promptCopied, setPromptCopied] = useState(false);
   const [addingCart, setAddingCart] = useState(false);
   const [hasPurchase, setHasPurchase] = useState(false);
-  const displayDownloadCount = (product as any).displayDownloadCount ?? (product as any).downloadCount ?? stableMockCount(product.slug);
+  const [liveDownloadCount, setLiveDownloadCount] = useState<number | null>(null);
+  const serverDownloadCount = (product as any).displayDownloadCount ?? (product as any).downloadCount ?? stableMockCount(product.slug);
+  const displayDownloadCount = liveDownloadCount !== null ? liveDownloadCount : serverDownloadCount;
   const followerCount = (product as any).followerCount ?? stableMockFollowers((product as any).vendor_name || product.slug);
   const vendorAvatar = (product as any).profile_image_url || null;
 
@@ -176,13 +178,28 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   }, [loadSubscriptionStatus, product.slug]);
 
   useEffect(() => {
-    const checkPurchase = async () => {
+    const checkPurchaseAndDownloads = async () => {
+      const supabase = getSupabaseBrowserClient();
+      
+      // Always fetch live download count (public data)
+      try {
+        const { count } = await supabase
+          .from('downloads')
+          .select('id', { count: 'exact', head: true })
+          .eq('template_slug', product.slug);
+        if (typeof count === 'number') {
+          setLiveDownloadCount(count);
+        }
+      } catch (e) {
+        console.error('Failed to fetch download count', e);
+      }
+
+      // Check purchase status (requires auth)
       if (!user) {
         setHasPurchase(false);
         return;
       }
       try {
-        const supabase = getSupabaseBrowserClient();
         const { data, error } = await supabase
           .from('order_items')
           .select('slug, orders!inner(user_id,status)')
@@ -201,7 +218,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         setHasPurchase(false);
       }
     };
-    checkPurchase();
+    checkPurchaseAndDownloads();
   }, [user, product.slug]);
 
   // Fetch "More in This Style" templates based on keyword matching
