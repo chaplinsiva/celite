@@ -48,11 +48,8 @@ export default function Hero() {
                 transition={{ delay: 0.1 }}
                 className="max-w-lg"
               >
-                <p className="text-base sm:text-lg md:text-xl font-bold text-white leading-tight mb-2">
+                <p className="text-base sm:text-lg md:text-xl font-bold text-white leading-tight">
                   Unlimited After Effects templates, stock music, sfx, stock images, 3d models all like that
-                </p>
-                <p className="text-white/60 text-[10px]">
-                  ^2026 New Year Gift Try Remo After Effects Template as Free
                 </p>
               </motion.div>
             </div>
@@ -69,7 +66,7 @@ export default function Hero() {
               <div className="mb-4">
                 <p className="text-zinc-500 text-xs font-medium mb-1">From</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl md:text-4xl font-black text-zinc-900">₹599</span>
+                  <span className="text-3xl md:text-4xl font-black text-zinc-900">₹799</span>
                   <span className="text-zinc-500 font-medium text-sm">/month</span>
                 </div>
               </div>

@@ -1386,7 +1386,7 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
 
       <div className="flex items-baseline gap-2 mb-2">
         <span className="text-sm text-blue-400 line-through font-medium">₹899</span>
-        <span className="text-3xl font-bold text-blue-700">₹599</span>
+        <span className="text-3xl font-bold text-blue-700">₹799</span>
         <span className="text-sm text-blue-600/80 font-medium">/ month</span>
       </div>
       <p className="text-xs text-blue-600/70 mb-6 leading-relaxed">

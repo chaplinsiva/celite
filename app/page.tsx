@@ -4,6 +4,8 @@ import LatestTemplatesCarousel from '../components/LatestTemplatesCarousel';
 import WebsiteShowcaseCarousel from '../components/WebsiteShowcaseCarousel';
 import CategoriesSection from '../components/CategoriesSection';
 import VideoCollectionsCarousel from '../components/VideoCollectionsCarousel';
+import CinemaTemplatesCarousel from '../components/CinemaTemplatesCarousel';
+import MusicShowcase from '../components/MusicShowcase';
 import FAQAndSubscribe from '../components/FAQAndSubscribe';
 
 export const metadata: Metadata = {
@@ -20,7 +22,9 @@ export default function Home() {
   return (
     <main className="bg-background min-h-screen">
       <Hero />
+      <CinemaTemplatesCarousel />
       <CategoriesSection />
+      <MusicShowcase />
       <VideoCollectionsCarousel />
       <WebsiteShowcaseCarousel />
       <FAQAndSubscribe />

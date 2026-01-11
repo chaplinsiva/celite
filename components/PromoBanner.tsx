@@ -10,7 +10,7 @@ export default function PromoBanner() {
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center">
                     <span className="whitespace-nowrap">Limited offer</span>
                     <span className="line-through opacity-70 whitespace-nowrap">₹899</span>
-                    <span className="font-bold whitespace-nowrap">₹599</span>
+                    <span className="font-bold whitespace-nowrap">₹799</span>
                     <span className="hidden xs:inline whitespace-nowrap">for monthly</span>
                     <span className="xs:hidden whitespace-nowrap">monthly</span>
                 </div>
