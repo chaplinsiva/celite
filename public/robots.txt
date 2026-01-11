@@ -1,0 +1,10 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
+Disallow: /checkout
+
+# Sitemaps
+Sitemap: https://celite.in/sitemap.xml
