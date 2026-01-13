@@ -48,7 +48,7 @@ export async function GET(
     // Get template from database
     const { data: template, error: templateErr } = await admin
       .from('templates')
-      .select('slug, name, source_path, is_free')
+      .select('slug, name, source_path, is_free, creator_shop_id')
       .eq('slug', slug)
       .maybeSingle();
 
@@ -84,13 +84,17 @@ export async function GET(
     if (isFullUrl) {
       // Legacy: For external URLs, redirect (but record download first)
       try {
-        const subscriptionId = sub?.id || null;
-        await admin.from('downloads').insert({
+        const downloadRecord: any = {
           user_id: userId,
           template_slug: slug,
           downloaded_at: new Date().toISOString(),
-          ...(subscriptionId && { subscription_id: subscriptionId }),
-        });
+        };
+        
+        if (template.creator_shop_id) {
+          downloadRecord.creator_shop_id = template.creator_shop_id;
+        }
+        
+        await admin.from('downloads').insert(downloadRecord);
       } catch (err) {
         console.error('Failed to record download:', err);
       }
@@ -170,16 +174,15 @@ export async function GET(
         }
       } else {
         // For paid templates, use the downloads table (requires subscription)
-        const subscriptionId = sub?.id || null;
         const downloadRecord: any = {
           user_id: userId,
           template_slug: slug,
           downloaded_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
         };
 
-        if (subscriptionId) {
-          downloadRecord.subscription_id = subscriptionId;
+        // Add creator_shop_id if the template has one
+        if (template.creator_shop_id) {
+          downloadRecord.creator_shop_id = template.creator_shop_id;
         }
 
         const { error: downloadErr } = await admin.from('downloads').insert(downloadRecord);

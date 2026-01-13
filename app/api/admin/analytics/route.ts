@@ -175,7 +175,7 @@ export async function GET(req: Request) {
       try {
         const pdRes = await admin
           .from('downloads')
-          .select('id,user_id,template_slug,subscription_id,downloaded_at')
+          .select('id,user_id,template_slug,creator_shop_id,downloaded_at')
           .order('downloaded_at', { ascending: false })
           .limit(500);
         if (!pdRes.error && pdRes.data) paidDownloads = pdRes.data;
@@ -192,8 +192,8 @@ export async function GET(req: Request) {
           .order('downloaded_at', { ascending: false })
           .limit(500);
         if (!fdRes.error && fdRes.data) {
-          // Add a flag or null subscription_id for free downloads
-          freeDownloads = fdRes.data.map((d: any) => ({ ...d, subscription_id: null, is_free: true }));
+          // Add a flag for free downloads
+          freeDownloads = fdRes.data.map((d: any) => ({ ...d, is_free: true }));
         }
       } catch (e) {
         console.log('Free downloads table not available');
