@@ -360,12 +360,14 @@ export async function POST(req: Request) {
 
                   const amountPaise = finalPlan === 'monthly'
                     ? Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '59900')
-                    : Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
+                    : finalPlan === 'pongal_weekly'
+                      ? Number(settingsMap.PONGAL_WEEKLY_PRICE || '49900')
+                      : Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
                   const amount = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
 
                   if (userEmail) {
                     const { sendSubscriptionPaymentEmail } = await import('../../../../lib/emailService');
-                    await sendSubscriptionPaymentEmail(userEmail, userName, finalPlan as 'monthly' | 'yearly', Math.round(amount), validUntil.toISOString());
+                    await sendSubscriptionPaymentEmail(userEmail, userName, finalPlan as 'monthly' | 'yearly' | 'pongal_weekly', Math.round(amount), validUntil.toISOString());
                     console.log(`Payment email sent to ${userEmail} for renewal. Next billing: ${validUntil.toISOString()}`);
                   }
                 }
