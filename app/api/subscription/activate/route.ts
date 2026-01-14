@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       if (body && (body.plan === 'monthly' || body.plan === 'yearly' || body.plan === 'pongal_weekly')) plan = body.plan;
       if (body?.razorpay_subscription_id) razorpaySubscriptionId = body.razorpay_subscription_id;
       if (typeof body?.autopay_enabled === 'boolean') autopayEnabled = body.autopay_enabled;
-    } catch {}
+    } catch { }
 
     // Cancel any existing Razorpay subscription before creating a new one
     const { data: existingSub } = await admin
@@ -60,13 +60,13 @@ export async function POST(req: Request) {
       expiresAt = new Date(now + 30 * 24 * 60 * 60 * 1000);
     }
 
-    const updateData: any = { 
-      user_id: userId, 
-      is_active: true, 
-      plan, 
-      valid_until: expiresAt.toISOString() 
+    const updateData: any = {
+      user_id: userId,
+      is_active: true,
+      plan,
+      valid_until: expiresAt.toISOString()
     };
-    
+
     // Store Razorpay subscription ID if provided
     if (razorpaySubscriptionId) {
       updateData.razorpay_subscription_id = razorpaySubscriptionId;
@@ -88,21 +88,21 @@ export async function POST(req: Request) {
       .single();
     if (upErr) return NextResponse.json({ ok: false, error: upErr.message }, { status: 500 });
 
-    // Create pongal_weekly_subscriptions record if plan is pongal_weekly
+    // Create or update pongal_weekly_subscriptions record if plan is pongal_weekly
     if (plan === 'pongal_weekly' && subscriptionData) {
       // Get settings for Pongal subscription
       const { data: settings } = await admin.from('settings').select('key,value');
       const settingsMap: Record<string, string> = {};
       (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
-      
+
       const durationWeeks = Number(settingsMap.PONGAL_WEEKLY_DURATION_WEEKS || '3');
       const downloadsPerWeek = Number(settingsMap.PONGAL_WEEKLY_DOWNLOADS_PER_WEEK || '3');
-      
+
       const weekStartDate = new Date();
       const expiresAtDate = new Date(now + durationWeeks * 7 * 24 * 60 * 60 * 1000);
-      
-      // Create pongal_weekly_subscriptions record
-      const { data: pongalSub } = await admin.from('pongal_weekly_subscriptions').insert({
+
+      // Use upsert to prevent duplicate records (update existing if user_id + subscription_id exists)
+      const { data: pongalSub } = await admin.from('pongal_weekly_subscriptions').upsert({
         user_id: userId,
         subscription_id: subscriptionData.id,
         downloads_used: 0,
@@ -110,11 +110,12 @@ export async function POST(req: Request) {
         week_start_date: weekStartDate.toISOString(),
         current_week_start: weekStartDate.toISOString(),
         expires_at: expiresAtDate.toISOString(),
-      }).select().single();
-      
-      // Create comprehensive tracking record
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,subscription_id' }).select().single();
+
+      // Use upsert for comprehensive tracking record to prevent duplicates
       if (pongalSub) {
-        await admin.from('pongal_tracking').insert({
+        await admin.from('pongal_tracking').upsert({
           user_id: userId,
           subscription_id: subscriptionData.id,
           pongal_subscription_id: pongalSub.id,
@@ -131,7 +132,8 @@ export async function POST(req: Request) {
           autopay_status: 'disabled',
           weekly_limit: downloadsPerWeek,
           limit_reached_count: 0,
-        });
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,subscription_id' });
       }
     }
 
@@ -143,12 +145,12 @@ export async function POST(req: Request) {
       } else {
         const userEmail = userData.user.email;
         const userName = userData.user.email?.split('@')[0] || 'User';
-        
+
         // Get subscription amount from settings
         const { data: settings } = await admin.from('settings').select('key,value');
         const settingsMap: Record<string, string> = {};
         (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
-        
+
         let amountPaise: number;
         if (plan === 'pongal_weekly') {
           amountPaise = 49900; // ₹499 in paise
