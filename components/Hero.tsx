@@ -69,7 +69,7 @@ export default function Hero() {
               <div className="mb-4">
                 <p className="text-zinc-500 text-xs font-medium mb-1">From</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl md:text-4xl font-black text-zinc-900">₹599</span>
+                  <span className="text-3xl md:text-4xl font-black text-zinc-900">₹799</span>
                   <span className="text-zinc-500 font-medium text-sm">/month</span>
                 </div>
               </div>
