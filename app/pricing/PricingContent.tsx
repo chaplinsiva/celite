@@ -99,7 +99,7 @@ export default function PricingContent() {
         {/* Pricing Cards */}
         <section className="relative max-w-5xl mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
-            
+
             {/* Pongal Weekly Plan - Left */}
             <div className="relative group">
               <div className="relative bg-white rounded-2xl md:rounded-3xl p-6 sm:p-8 shadow-lg border-2 border-rose-200 hover:border-rose-300 transition-all hover:shadow-xl">
@@ -147,10 +147,6 @@ export default function PricingContent() {
                   <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
                     <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
                     <span className="text-xs sm:text-sm">Commercial License</span>
-                  </li>
-                  <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
-                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-xs sm:text-sm">Premium Stock Music & SFX</span>
                   </li>
                   <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
                     <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />

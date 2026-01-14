@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { convertR2UrlToCdn } from '@/lib/utils';
-import VideoThumbnailPlayer from './VideoThumbnailPlayer';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Play } from 'lucide-react';
 
 type CinemaTemplate = {
   slug: string;
@@ -17,6 +16,90 @@ type CinemaTemplate = {
   category?: { id: string; name: string; slug: string } | null;
 };
 
+type VideoCardProps = {
+  template: CinemaTemplate;
+  videoUrl: string | null;
+  thumbnail: string;
+};
+
+function VideoCard({ template, videoUrl, thumbnail }: VideoCardProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+    if (videoRef.current && videoUrl) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play().catch(() => { });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  };
+
+  return (
+    <Link
+      href={`/product/${template.slug}`}
+      className="group relative overflow-hidden rounded-2xl bg-zinc-900 aspect-[16/9] shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-[1.03]"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {/* Thumbnail Image */}
+      <img
+        src={thumbnail}
+        alt={template.name}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovered && isLoaded && videoUrl ? 'opacity-0' : 'opacity-100'
+          }`}
+      />
+
+      {/* Video Element */}
+      {videoUrl && (
+        <video
+          ref={videoRef}
+          src={videoUrl}
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          onLoadedData={() => setIsLoaded(true)}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovered && isLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+        />
+      )}
+
+      {/* Play Icon when not hovered */}
+      {videoUrl && !isHovered && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30 group-hover:scale-110 transition-transform">
+            <Play className="w-6 h-6 text-white fill-white ml-1" />
+          </div>
+        </div>
+      )}
+
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+
+      {/* Title */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
+        <h3 className="text-base md:text-lg font-bold text-white line-clamp-2 drop-shadow-lg">
+          {template.name}
+        </h3>
+        {template.subtitle && (
+          <p className="text-xs md:text-sm text-zinc-300 line-clamp-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            {template.subtitle}
+          </p>
+        )}
+      </div>
+    </Link>
+  );
+}
+
 export default function CinemaTemplatesShowcase() {
   const [templates, setTemplates] = useState<CinemaTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,8 +108,8 @@ export default function CinemaTemplatesShowcase() {
     const loadTemplates = async () => {
       try {
         const supabase = getSupabaseBrowserClient();
-        
-        // Fetch recent templates and filter for cinema-related content
+
+        // Fetch only from Video Templates category
         const { data, error } = await supabase
           .from('templates')
           .select(`
@@ -36,45 +119,47 @@ export default function CinemaTemplatesShowcase() {
             img,
             video_path,
             thumbnail_path,
-            tags,
             category_id,
             categories(id, name, slug)
           `)
           .eq('status', 'approved')
+          .eq('categories.slug', 'video-templates')
+          .not('video_path', 'is', null)
           .order('created_at', { ascending: false })
-          .limit(50); // Fetch more to filter
+          .limit(20);
 
         if (error) {
           console.error('Error loading cinema templates:', error);
-          setTemplates([]);
+          // Fallback: try fetching by category slug
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('templates')
+            .select(`
+              slug,
+              name,
+              subtitle,
+              img,
+              video_path,
+              thumbnail_path,
+              category_id,
+              categories!inner(id, name, slug)
+            `)
+            .eq('status', 'approved')
+            .eq('categories.slug', 'video-templates')
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+          if (fallbackError) {
+            console.error('Fallback error:', fallbackError);
+            setTemplates([]);
+          } else {
+            // Filter to only those with video_path
+            const videoTemplates = (fallbackData || []).filter(t => t.video_path);
+            setTemplates(videoTemplates.slice(0, 20));
+          }
         } else {
-          // Filter for cinema-related templates
-          const cinemaKeywords = ['cinema', 'cinematic', 'film', 'movie', 'cinematic', 'cinematography'];
-          const filtered = (data || [])
-            .filter((template) => {
-              const name = template.name?.toLowerCase() || '';
-              const subtitle = template.subtitle?.toLowerCase() || '';
-              
-              // Check tags if it's an array or JSON string
-              let tags: string[] = [];
-              if (Array.isArray(template.tags)) {
-                tags = template.tags.map(t => String(t).toLowerCase());
-              } else if (typeof template.tags === 'string') {
-                try {
-                  const parsed = JSON.parse(template.tags);
-                  tags = Array.isArray(parsed) ? parsed.map(t => String(t).toLowerCase()) : [];
-                } catch {
-                  tags = [template.tags.toLowerCase()];
-                }
-              }
-              
-              // Check if any keyword matches
-              const allText = [name, subtitle, ...tags].join(' ');
-              return cinemaKeywords.some(keyword => allText.includes(keyword));
-            })
-            .slice(0, 6); // Take first 6 matches
-          
-          setTemplates(filtered);
+          // Filter to only those with video_path
+          const videoTemplates = (data || []).filter(t => t.video_path);
+          setTemplates(videoTemplates.slice(0, 20));
         }
       } catch (err) {
         console.error('Error:', err);
@@ -88,7 +173,17 @@ export default function CinemaTemplatesShowcase() {
   }, []);
 
   if (loading) {
-    return null;
+    return (
+      <section className="relative w-full py-8 md:py-14 px-4 sm:px-6 bg-zinc-950">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="aspect-[16/9] bg-zinc-800 rounded-2xl animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
   }
 
   if (templates.length === 0) {
@@ -96,67 +191,60 @@ export default function CinemaTemplatesShowcase() {
   }
 
   return (
-    <section className="relative w-full py-6 md:py-10 px-4 sm:px-6 bg-background">
+    <section className="relative w-full py-8 md:py-14 px-4 sm:px-6 bg-zinc-950">
       <div className="max-w-[1400px] mx-auto">
-        <div className="flex items-end justify-between mb-6">
+        {/* Header */}
+        <div className="flex items-end justify-between mb-8">
           <div>
-            <h2 className="text-3xl md:text-4xl font-black text-black tracking-tight mb-2">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight mb-2">
               Cinema Templates
             </h2>
-            <p className="text-zinc-600 text-sm md:text-base">
-              Professional cinematic templates for your next project
+            <p className="text-zinc-400 text-sm md:text-base max-w-lg">
+              Premium video templates for filmmakers and creators. Hover to preview.
             </p>
           </div>
           <Link
-            href="/video-templates?search=cinema"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors group"
+            href="/video-templates"
+            className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors group"
           >
-            View all
+            View all templates
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+        {/* Grid - Larger Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
           {templates.map((template) => {
-            const thumbnail = template.thumbnail_path 
+            const thumbnail = template.thumbnail_path
               ? convertR2UrlToCdn(template.thumbnail_path)
-              : template.img 
-              ? convertR2UrlToCdn(template.img)
-              : '/placeholder.jpg';
-            
+              : template.img
+                ? convertR2UrlToCdn(template.img)
+                : '/placeholder.jpg';
+
             const videoUrl = template.video_path ? convertR2UrlToCdn(template.video_path) : null;
 
             return (
-              <Link
+              <VideoCard
                 key={template.slug}
-                href={`/product/${template.slug}`}
-                className="group relative overflow-hidden rounded-xl bg-zinc-900 aspect-[16/9] hover:scale-[1.02] transition-transform duration-300"
-              >
-                {videoUrl ? (
-                  <VideoThumbnailPlayer
-                    videoUrl={videoUrl}
-                    thumbnailUrl={thumbnail || '/placeholder.jpg'}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <img
-                    src={thumbnail || '/placeholder.jpg'}
-                    alt={template.name}
-                    className="w-full h-full object-cover"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <div className="absolute bottom-0 left-0 right-0 p-3 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                  <h3 className="text-sm font-bold text-white line-clamp-2">
-                    {template.name}
-                  </h3>
-                </div>
-              </Link>
+                template={template}
+                videoUrl={videoUrl}
+                thumbnail={thumbnail}
+              />
             );
           })}
+        </div>
+
+        {/* Mobile View All Link */}
+        <div className="sm:hidden mt-6 text-center">
+          <Link
+            href="/video-templates"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            View all templates
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
       </div>
     </section>
   );
 }
-
