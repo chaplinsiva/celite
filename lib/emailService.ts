@@ -114,7 +114,7 @@ export const emailTemplates = {
             <p>We've successfully processed your payment for your Celite subscription.</p>
             <p><strong>Payment Details:</strong></p>
             <ul>
-              <li>Plan: ${plan === 'monthly' ? 'Monthly' : 'Yearly'} Pro</li>
+              <li>Plan: ${plan === 'monthly' ? 'Monthly' : plan === 'yearly' ? 'Yearly' : 'Pongal Weekly'} Pro</li>
               <li>Amount: ₹${amount.toLocaleString('en-IN')}</li>
               <li>Next billing date: ${new Date(nextBillingDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</li>
             </ul>
@@ -311,6 +311,48 @@ export const emailTemplates = {
       </html>
     `,
   }),
+
+  subscriptionCancelled: (userName: string, plan: string, reason?: string) => ({
+    subject: '😢 Your Celite Subscription Has Been Cancelled',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Subscription Cancelled</h1>
+          </div>
+          <div class="content">
+            <p>Hi ${userName},</p>
+            <p>We're sorry to see you go. Your <strong>${plan === 'monthly' ? 'Monthly' : plan === 'yearly' ? 'Yearly' : 'Pongal Weekly'}</strong> subscription has been cancelled.</p>
+            ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+            <p>You will no longer have access to:</p>
+            <ul>
+              <li>Premium After Effects templates</li>
+              <li>Full source file downloads</li>
+              <li>Commercial license</li>
+              <li>Priority support</li>
+            </ul>
+            <p>We'd love to have you back! If you change your mind, you can resubscribe anytime:</p>
+            <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://celite.netlify.app'}/pricing" class="button">Resubscribe Now</a>
+            <p style="margin-top: 30px; color: #666; font-size: 14px;">If you have any questions or feedback, please don't hesitate to reach out to our support team.</p>
+            <p style="color: #666; font-size: 14px;">Best regards,<br>The Celite Team</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  }),
 };
 
 // Admin email for notifications
@@ -357,7 +399,7 @@ export async function sendSubscriptionSuccessEmail(
 ) {
   const template = emailTemplates.subscriptionSuccess(userName, plan, amount);
   const result = await sendEmail(userEmail, template.subject, template.html);
-  
+
   // Send admin notification copy
   try {
     const adminTemplate = emailTemplates.adminNotificationSubscription(userEmail, userName, plan, amount);
@@ -367,20 +409,20 @@ export async function sendSubscriptionSuccessEmail(
     console.error('Failed to send admin notification for subscription success:', adminError);
     // Don't fail the main email if admin notification fails
   }
-  
+
   return result;
 }
 
 export async function sendSubscriptionPaymentEmail(
   userEmail: string,
   userName: string,
-  plan: 'monthly' | 'yearly',
+  plan: 'monthly' | 'yearly' | 'pongal_weekly',
   amount: number,
   nextBillingDate: string
 ) {
   const template = emailTemplates.subscriptionPaymentTaken(userName, plan, amount, nextBillingDate);
   const result = await sendEmail(userEmail, template.subject, template.html);
-  
+
   // Send admin notification copy
   try {
     const adminTemplate = emailTemplates.adminNotificationPayment(userEmail, userName, plan, amount, nextBillingDate);
@@ -390,7 +432,7 @@ export async function sendSubscriptionPaymentEmail(
     console.error('Failed to send admin notification for payment:', adminError);
     // Don't fail the main email if admin notification fails
   }
-  
+
   return result;
 }
 
@@ -414,3 +456,33 @@ export async function sendMarketingEmail(
   return sendEmail(userEmail, template.subject, template.html);
 }
 
+export async function sendSubscriptionCancelledEmail(
+  userEmail: string,
+  userName: string,
+  plan: 'monthly' | 'yearly' | 'pongal_weekly',
+  reason?: string
+) {
+  const template = emailTemplates.subscriptionCancelled(userName, plan, reason);
+  const result = await sendEmail(userEmail, template.subject, template.html);
+
+  // Send admin notification copy
+  try {
+    const adminSubject = `[Admin] Subscription Cancelled - ${userEmail} - ${plan === 'monthly' ? 'Monthly' : plan === 'yearly' ? 'Yearly' : 'Pongal Weekly'} Plan`;
+    const adminHtml = `
+      <p>A subscription has been cancelled:</p>
+      <ul>
+        <li><strong>Email:</strong> ${userEmail}</li>
+        <li><strong>Name:</strong> ${userName}</li>
+        <li><strong>Plan:</strong> ${plan === 'monthly' ? 'Monthly' : plan === 'yearly' ? 'Yearly' : 'Pongal Weekly'}</li>
+        ${reason ? `<li><strong>Reason:</strong> ${reason}</li>` : ''}
+        <li><strong>Date:</strong> ${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</li>
+      </ul>
+    `;
+    await sendEmail(ADMIN_EMAIL, adminSubject, adminHtml);
+    console.log(`Admin notification sent for subscription cancellation: ${userEmail}`);
+  } catch (adminError) {
+    console.error('Failed to send admin notification for cancellation:', adminError);
+  }
+
+  return result;
+}

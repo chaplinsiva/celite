@@ -59,7 +59,7 @@ export async function GET(
     // Check subscription (skip for free templates)
     const { data: sub } = await admin
       .from('subscriptions')
-      .select('id, is_active, valid_until, plan')
+      .select('id, is_active, valid_until, plan, autopay_enabled')
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -77,7 +77,7 @@ export async function GET(
       const settingsMap: Record<string, string> = {};
       (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
       const weeklyLimit = Number(settingsMap.PONGAL_WEEKLY_DOWNLOADS_PER_WEEK || '3');
-      
+
       const { data: pongalSub } = await admin
         .from('pongal_weekly_subscriptions')
         .select('*')
@@ -118,32 +118,44 @@ export async function GET(
       const currentWeekStart = new Date(pongalSub.current_week_start).getTime();
       const weekInMs = 7 * 24 * 60 * 60 * 1000;
       const now = Date.now();
-      
+
       let downloadsUsed = pongalSub.downloads_used;
       let weekNumber = pongalSub.week_number;
       let newWeekStart = new Date(pongalSub.current_week_start);
+      let currentWeekPaid = pongalSub.current_week_paid ?? true;
 
-      // If a new week has started, reset downloads
+      // If a new week has started, check payment and reset downloads
       if (now - currentWeekStart >= weekInMs) {
         // Calculate which week we're in
         const weeksElapsed = Math.floor((now - new Date(pongalSub.week_start_date).getTime()) / weekInMs);
         weekNumber = Math.min(weeksElapsed + 1, 3);
-        
+
+        // Check if payment for this week has been made
+        // Week 1 is always paid (initial payment), Week 2 and 3 require autopay
+        if (weekNumber === 2) {
+          currentWeekPaid = pongalSub.week2_paid === true;
+        } else if (weekNumber === 3) {
+          currentWeekPaid = pongalSub.week3_paid === true;
+        } else {
+          currentWeekPaid = pongalSub.week1_paid === true;
+        }
+
         // Reset downloads for new week
         downloadsUsed = 0;
         newWeekStart = new Date(Math.floor(now / weekInMs) * weekInMs); // Start of current week
-        
-        // Update both tables
+
+        // Update both tables with payment status
         await admin
           .from('pongal_weekly_subscriptions')
           .update({
             downloads_used: 0,
             week_number: weekNumber,
             current_week_start: newWeekStart.toISOString(),
+            current_week_paid: currentWeekPaid,
             updated_at: new Date().toISOString(),
           })
           .eq('id', pongalSub.id);
-        
+
         // Update tracking
         if (tracking) {
           await admin
@@ -152,9 +164,53 @@ export async function GET(
               downloads_this_week: 0,
               current_week_number: weekNumber,
               subscription_weeks_remaining: Math.max(0, 3 - weekNumber + 1),
+              current_week_paid: currentWeekPaid,
               updated_at: new Date().toISOString(),
             })
             .eq('id', tracking.id);
+        }
+      }
+
+      // Check if autopay is enabled (required for weeks 2 and 3)
+      const autopayEnabled = sub.autopay_enabled === true;
+
+      // For weeks 2 and 3, verify payment has been received
+      if (weekNumber >= 2) {
+        // Check if current week payment received
+        if (!currentWeekPaid) {
+          // Update tracking
+          if (tracking) {
+            await admin
+              .from('pongal_tracking')
+              .update({
+                payment_status: `week${weekNumber}_payment_pending`,
+                subscription_status: 'payment_required',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', tracking.id);
+          }
+
+          return NextResponse.json({
+            error: 'Payment required for this week.',
+            paymentRequired: true,
+            message: autopayEnabled
+              ? 'Your weekly payment is being processed. Please try again shortly.'
+              : 'Your autopay is disabled. Please enable autopay or make a manual payment to continue downloading.',
+            weekNumber,
+            expired: true,
+          }, { status: 403 });
+        }
+
+        // Check if autopay is off - block downloads if no payment for upcoming weeks
+        if (!autopayEnabled && weekNumber < 3) {
+          // Check if next week's payment will fail
+          await admin
+            .from('pongal_tracking')
+            .update({
+              autopay_status: 'disabled_by_user',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', tracking?.id);
         }
       }
 
@@ -163,7 +219,7 @@ export async function GET(
         // Calculate next week reset time
         const nextWeekStart = new Date(newWeekStart.getTime() + weekInMs);
         const daysUntilReset = Math.ceil((nextWeekStart.getTime() - now) / (24 * 60 * 60 * 1000));
-        
+
         // Update tracking - limit reached
         if (tracking) {
           await admin
@@ -175,11 +231,11 @@ export async function GET(
             })
             .eq('id', tracking.id);
         }
-        
-        return NextResponse.json({ 
+
+        return NextResponse.json({
           error: 'You have reached your weekly download limit.',
           limitReached: true,
-          message: daysUntilReset > 0 
+          message: daysUntilReset > 0
             ? `Your credits will reset in ${daysUntilReset} day${daysUntilReset > 1 ? 's' : ''}. Check next week.`
             : 'Your credits will reset next week. Check next week.',
           downloadsUsed: weeklyLimit,
@@ -307,7 +363,7 @@ export async function GET(
           console.error('[Download] Download record was:', downloadRecord);
         } else {
           console.log(`[Download] ✅ Paid download recorded successfully for user ${userId}, template ${slug}`);
-          
+
           // Update pongal_weekly download count if applicable
           if (sub?.plan === 'pongal_weekly') {
             const { data: pongalSub } = await admin
@@ -316,10 +372,10 @@ export async function GET(
               .eq('user_id', userId)
               .eq('subscription_id', subscriptionId)
               .maybeSingle();
-            
+
             if (pongalSub) {
               const newDownloadCount = (pongalSub.downloads_used || 0) + 1;
-              
+
               // Update pongal_weekly_subscriptions
               await admin
                 .from('pongal_weekly_subscriptions')
@@ -329,7 +385,7 @@ export async function GET(
                 })
                 .eq('user_id', userId)
                 .eq('subscription_id', subscriptionId);
-              
+
               // Update comprehensive tracking table
               const { data: tracking } = await admin
                 .from('pongal_tracking')
@@ -337,7 +393,7 @@ export async function GET(
                 .eq('user_id', userId)
                 .eq('subscription_id', subscriptionId)
                 .maybeSingle();
-              
+
               if (tracking) {
                 await admin
                   .from('pongal_tracking')

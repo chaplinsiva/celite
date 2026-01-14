@@ -17,18 +17,18 @@ export async function GET(req: Request) {
     const settingsMap: Record<string, string> = {};
     (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
     const weeklyLimit = Number(settingsMap.PONGAL_WEEKLY_DOWNLOADS_PER_WEEK || '3');
-    
+
     // Get pongal subscription
     const { data: sub } = await admin
       .from('subscriptions')
-      .select('id, plan, is_active, valid_until')
+      .select('id, plan, is_active, valid_until, autopay_enabled')
       .eq('user_id', userId)
       .eq('plan', 'pongal_weekly')
       .maybeSingle();
 
     if (!sub || !sub.is_active) {
-      return NextResponse.json({ 
-        ok: true, 
+      return NextResponse.json({
+        ok: true,
         hasSubscription: false,
         downloadsUsed: 0,
         downloadsAvailable: 0,
@@ -40,8 +40,8 @@ export async function GET(req: Request) {
     // Check if expired
     const expiresAt = new Date(sub.valid_until).getTime();
     if (Date.now() > expiresAt) {
-      return NextResponse.json({ 
-        ok: true, 
+      return NextResponse.json({
+        ok: true,
         hasSubscription: false,
         expired: true,
         downloadsUsed: 0,
@@ -60,14 +60,16 @@ export async function GET(req: Request) {
       .maybeSingle();
 
     if (!pongalSub) {
-      return NextResponse.json({ 
-        ok: true, 
+      return NextResponse.json({
+        ok: true,
         hasSubscription: true,
         downloadsUsed: 0,
         downloadsAvailable: weeklyLimit,
         weekNumber: 1,
         expiresAt: sub.valid_until,
         weeklyLimit,
+        currentWeekPaid: true,
+        autopayEnabled: sub.autopay_enabled,
       });
     }
 
@@ -75,21 +77,31 @@ export async function GET(req: Request) {
     const currentWeekStart = new Date(pongalSub.current_week_start).getTime();
     const weekInMs = 7 * 24 * 60 * 60 * 1000;
     const now = Date.now();
-    
+
     let downloadsUsed = pongalSub.downloads_used;
     let weekNumber = pongalSub.week_number;
     let newWeekStart = new Date(pongalSub.current_week_start);
+    let currentWeekPaid = pongalSub.current_week_paid ?? true;
 
-    // If a new week has started, reset downloads
+    // If a new week has started, check payment status and reset downloads
     if (now - currentWeekStart >= weekInMs) {
       // Calculate which week we're in
       const weeksElapsed = Math.floor((now - new Date(pongalSub.week_start_date).getTime()) / weekInMs);
       weekNumber = Math.min(weeksElapsed + 1, 3);
-      
+
+      // Check if payment for this week has been made
+      if (weekNumber === 2) {
+        currentWeekPaid = pongalSub.week2_paid === true;
+      } else if (weekNumber === 3) {
+        currentWeekPaid = pongalSub.week3_paid === true;
+      } else {
+        currentWeekPaid = pongalSub.week1_paid === true;
+      }
+
       // Reset downloads for new week
       downloadsUsed = 0;
       newWeekStart = new Date(Math.floor(now / weekInMs) * weekInMs); // Start of current week
-      
+
       // Update the record
       await admin
         .from('pongal_weekly_subscriptions')
@@ -97,17 +109,18 @@ export async function GET(req: Request) {
           downloads_used: 0,
           week_number: weekNumber,
           current_week_start: newWeekStart.toISOString(),
+          current_week_paid: currentWeekPaid,
           updated_at: new Date().toISOString(),
         })
         .eq('id', pongalSub.id);
     }
 
-    const downloadsAvailable = Math.max(0, weeklyLimit - downloadsUsed);
+    const downloadsAvailable = currentWeekPaid ? Math.max(0, weeklyLimit - downloadsUsed) : 0;
     const nextWeekStart = new Date(newWeekStart.getTime() + weekInMs);
     const daysUntilReset = Math.ceil((nextWeekStart.getTime() - now) / (24 * 60 * 60 * 1000));
 
-    return NextResponse.json({ 
-      ok: true, 
+    return NextResponse.json({
+      ok: true,
       hasSubscription: true,
       downloadsUsed,
       downloadsAvailable,
@@ -116,6 +129,20 @@ export async function GET(req: Request) {
       nextWeekReset: nextWeekStart.toISOString(),
       daysUntilReset: Math.max(0, daysUntilReset),
       weeklyLimit,
+      // Payment status
+      currentWeekPaid,
+      autopayEnabled: sub.autopay_enabled,
+      week1Paid: pongalSub.week1_paid ?? true,
+      week2Paid: pongalSub.week2_paid ?? false,
+      week3Paid: pongalSub.week3_paid ?? false,
+      paymentStatus: pongalSub.payment_status,
+      // If payment required, show message
+      paymentRequired: weekNumber >= 2 && !currentWeekPaid,
+      paymentMessage: weekNumber >= 2 && !currentWeekPaid
+        ? (sub.autopay_enabled
+          ? 'Your weekly payment is being processed. Please try again shortly.'
+          : 'Your autopay is disabled. Please enable autopay to continue.')
+        : null,
     });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || 'Unknown error' }, { status: 500 });
