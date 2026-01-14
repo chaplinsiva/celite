@@ -100,49 +100,7 @@ export default function PricingContent() {
         <section className="relative max-w-5xl mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
             
-            {/* Monthly Plan */}
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl md:rounded-3xl opacity-75 group-hover:opacity-100 blur transition duration-500"></div>
-              <div className="relative bg-white rounded-2xl md:rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-blue-100">
-                {/* Popular Badge */}
-                <div className="absolute -top-3 md:-top-4 left-1/2 -translate-x-1/2">
-                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-lg flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    Most Popular
-                  </div>
-                </div>
-
-                <div className="text-center mb-4 sm:mb-6 mt-2 sm:mt-4">
-                  <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 mb-3 sm:mb-4">Monthly</h2>
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <span className="text-lg sm:text-xl text-zinc-400 line-through">₹899</span>
-                    <span className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                      ₹{monthlyPrice}
-                    </span>
-                  </div>
-                  <p className="text-zinc-600 text-sm">per month</p>
-                  <p className="text-blue-600 text-xs font-semibold mt-1">Limited offer - Save 33%</p>
-                </div>
-
-                <Link
-                  href="/checkout?subscription=monthly"
-                  className="block w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 sm:py-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl text-center mb-4 sm:mb-6 text-sm sm:text-base"
-                >
-                  Subscribe Now
-                </Link>
-
-                <ul className="space-y-2 sm:space-y-3">
-                  {features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2 sm:gap-3 text-zinc-700">
-                      <Check className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-xs sm:text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Pongal Weekly Plan - Center */}
+            {/* Pongal Weekly Plan - Left */}
             <div className="relative group">
               <div className="relative bg-white rounded-2xl md:rounded-3xl p-6 sm:p-8 shadow-lg border-2 border-rose-200 hover:border-rose-300 transition-all hover:shadow-xl">
                 <div className="text-center mb-4 sm:mb-6">
@@ -198,6 +156,48 @@ export default function PricingContent() {
                     <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
                     <span className="text-xs sm:text-sm">Priority Support</span>
                   </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Monthly Plan - Center */}
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl md:rounded-3xl opacity-75 group-hover:opacity-100 blur transition duration-500"></div>
+              <div className="relative bg-white rounded-2xl md:rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-blue-100">
+                {/* Popular Badge */}
+                <div className="absolute -top-3 md:-top-4 left-1/2 -translate-x-1/2">
+                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-lg flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    Most Popular
+                  </div>
+                </div>
+
+                <div className="text-center mb-4 sm:mb-6 mt-2 sm:mt-4">
+                  <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 mb-3 sm:mb-4">Monthly</h2>
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <span className="text-lg sm:text-xl text-zinc-400 line-through">₹899</span>
+                    <span className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                      ₹{monthlyPrice}
+                    </span>
+                  </div>
+                  <p className="text-zinc-600 text-sm">per month</p>
+                  <p className="text-blue-600 text-xs font-semibold mt-1">Limited offer - Save 33%</p>
+                </div>
+
+                <Link
+                  href="/checkout?subscription=monthly"
+                  className="block w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 sm:py-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl text-center mb-4 sm:mb-6 text-sm sm:text-base"
+                >
+                  Subscribe Now
+                </Link>
+
+                <ul className="space-y-2 sm:space-y-3">
+                  {features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2 sm:gap-3 text-zinc-700">
+                      <Check className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <span className="text-xs sm:text-sm">{feature}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>

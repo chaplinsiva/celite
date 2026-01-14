@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseAdminClient } from '../../../../../lib/supabaseAdmin';
-import { razorpayRequest } from '../../../../../lib/razorpay';
+import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
+import { razorpayRequest } from '../../../../lib/razorpay';
 
 /**
  * This endpoint should be called by a cron job to auto-cancel expired Pongal weekly subscriptions

@@ -69,7 +69,7 @@ export const emailTemplates = {
             <p>Thank you for subscribing to Celite! Your <strong>${plan}</strong> subscription is now active.</p>
             <p><strong>Subscription Details:</strong></p>
             <ul>
-              <li>Plan: ${plan === 'monthly' ? 'Monthly' : 'Yearly'} Pro</li>
+              <li>Plan: ${plan === 'monthly' ? 'Monthly' : plan === 'yearly' ? 'Yearly' : 'Pongal Weekly'} Pro</li>
               <li>Amount: ₹${amount.toLocaleString('en-IN')}</li>
               <li>Status: Active</li>
             </ul>
@@ -165,7 +165,7 @@ export const emailTemplates = {
               </div>
               <div class="details-row">
                 <span class="label">Plan:</span>
-                <span class="value">${plan === 'monthly' ? 'Monthly' : 'Yearly'} Pro</span>
+                <span class="value">${plan === 'monthly' ? 'Monthly' : plan === 'yearly' ? 'Yearly' : 'Pongal Weekly'} Pro</span>
               </div>
               <div class="details-row">
                 <span class="label">Amount:</span>
@@ -225,7 +225,7 @@ export const emailTemplates = {
               </div>
               <div class="details-row">
                 <span class="label">Plan:</span>
-                <span class="value">${plan === 'monthly' ? 'Monthly' : 'Yearly'} Pro</span>
+                <span class="value">${plan === 'monthly' ? 'Monthly' : plan === 'yearly' ? 'Yearly' : 'Pongal Weekly'} Pro</span>
               </div>
               <div class="details-row">
                 <span class="label">Amount:</span>
@@ -352,7 +352,7 @@ export async function sendEmail(
 export async function sendSubscriptionSuccessEmail(
   userEmail: string,
   userName: string,
-  plan: 'monthly' | 'yearly',
+  plan: 'monthly' | 'yearly' | 'pongal_weekly',
   amount: number
 ) {
   const template = emailTemplates.subscriptionSuccess(userName, plan, amount);
