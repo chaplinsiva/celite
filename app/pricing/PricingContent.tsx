@@ -10,6 +10,7 @@ import LoadingSpinner from '@/components/ui/loading-spinner';
 export default function PricingContent() {
   const [monthlyPrice, setMonthlyPrice] = useState<number | null>(null);
   const [yearlyPrice, setYearlyPrice] = useState<number | null>(null);
+  const [pongalPrice, setPongalPrice] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,6 +24,7 @@ export default function PricingContent() {
         // Get amounts in paise from backend only
         const monthlyPaiseStr = settingsMap.RAZORPAY_MONTHLY_AMOUNT;
         const yearlyPaiseStr = settingsMap.RAZORPAY_YEARLY_AMOUNT;
+        const pongalPaiseStr = settingsMap.PONGAL_WEEKLY_PRICE;
 
         if (!monthlyPaiseStr || !yearlyPaiseStr) {
           throw new Error('Subscription prices not found in database');
@@ -30,6 +32,7 @@ export default function PricingContent() {
 
         let monthlyPaise = Number(monthlyPaiseStr);
         let yearlyPaise = Number(yearlyPaiseStr);
+        let pongalPaise = pongalPaiseStr ? Number(pongalPaiseStr) : 49900; // Default ₹499
 
         // Convert from paise to INR
         if (monthlyPaise >= 10000) {
@@ -38,9 +41,13 @@ export default function PricingContent() {
         if (yearlyPaise >= 100000) {
           yearlyPaise = yearlyPaise / 100;
         }
+        if (pongalPaise >= 1000) {
+          pongalPaise = pongalPaise / 100;
+        }
 
         setMonthlyPrice(Math.round(monthlyPaise));
         setYearlyPrice(Math.round(yearlyPaise));
+        setPongalPrice(Math.round(pongalPaise));
       } catch (error) {
         console.error('Error loading prices:', error);
       } finally {
@@ -55,7 +62,7 @@ export default function PricingContent() {
     return <LoadingSpinner message="Loading pricing..." />;
   }
 
-  if (monthlyPrice === null || yearlyPrice === null) {
+  if (monthlyPrice === null || yearlyPrice === null || pongalPrice === null) {
     return (
       <div className="text-center py-12">
         <p className="text-red-600">Unable to load pricing information. Please try again later.</p>
@@ -91,8 +98,8 @@ export default function PricingContent() {
 
         {/* Pricing Cards */}
         <section className="relative max-w-5xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
-
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
+            
             {/* Monthly Plan */}
             <div className="relative group">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl md:rounded-3xl opacity-75 group-hover:opacity-100 blur transition duration-500"></div>
@@ -131,6 +138,66 @@ export default function PricingContent() {
                       <span className="text-xs sm:text-sm">{feature}</span>
                     </li>
                   ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Pongal Weekly Plan - Center */}
+            <div className="relative group">
+              <div className="relative bg-white rounded-2xl md:rounded-3xl p-6 sm:p-8 shadow-lg border-2 border-rose-200 hover:border-rose-300 transition-all hover:shadow-xl">
+                <div className="text-center mb-4 sm:mb-6">
+                  <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 mb-3 sm:mb-4">Weekly</h2>
+                  <div className="mb-2">
+                    <span className="text-4xl sm:text-5xl font-bold text-zinc-900">
+                      ₹{pongalPrice}
+                    </span>
+                  </div>
+                  <p className="text-zinc-600 text-sm">for 3 weeks</p>
+                  <p className="text-rose-600 text-xs font-semibold mt-1">
+                    🎉 Pongal Offer - 3 downloads per week
+                  </p>
+                </div>
+
+                <Link
+                  href="/checkout?subscription=pongal_weekly"
+                  className="block w-full bg-gradient-to-r from-blue-500 via-rose-400 to-blue-600 text-white py-3 sm:py-4 rounded-xl font-semibold hover:from-blue-600 hover:via-rose-500 hover:to-blue-700 transition-all shadow-md hover:shadow-lg text-center mb-4 sm:mb-6 text-sm sm:text-base"
+                >
+                  Subscribe Now
+                </Link>
+
+                <ul className="space-y-2 sm:space-y-3">
+                  <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
+                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">3 Downloads per week</span>
+                  </li>
+                  <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
+                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Valid for 3 weeks</span>
+                  </li>
+                  <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
+                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">All Premium Templates</span>
+                  </li>
+                  <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
+                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Full Source File Access</span>
+                  </li>
+                  <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
+                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Commercial License</span>
+                  </li>
+                  <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
+                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Auto-cancels after 3 weeks</span>
+                  </li>
+                  <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
+                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Premium Stock Music & SFX</span>
+                  </li>
+                  <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
+                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Priority Support</span>
+                  </li>
                 </ul>
               </div>
             </div>

@@ -35,17 +35,32 @@ function CheckoutContent() {
   const addedProductRef = useRef<string | null>(null); // Track if we've already added a product
   const checkoutDetailIdRef = useRef<string | null>(null); // Track checkout details ID
 
-  const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'yearly' | null>(null);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'yearly' | 'pongal_weekly' | null>(null);
   const [subscriptionPrice, setSubscriptionPrice] = useState<number | null>(null);
   const [countryCode, setCountryCode] = useState("+91"); // Default to India
 
   // Handle subscription checkout (from Pricing page)
   useEffect(() => {
-    const subscriptionType = searchParams?.get('subscription') as 'monthly' | 'yearly' | null;
-    if (subscriptionType && (subscriptionType === 'monthly' || subscriptionType === 'yearly')) {
+    const subscriptionType = searchParams?.get('subscription') as 'monthly' | 'yearly' | 'pongal_weekly' | null;
+    if (subscriptionType && (subscriptionType === 'monthly' || subscriptionType === 'yearly' || subscriptionType === 'pongal_weekly')) {
       setSubscriptionPlan(subscriptionType);
       // Load subscription price from database
       const loadSubscriptionPrice = async () => {
+        if (subscriptionType === 'pongal_weekly') {
+          const supabase = getSupabaseBrowserClient();
+          const { data: settings } = await supabase.from('settings').select('key,value');
+          const settingsMap: Record<string, string> = {};
+          (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
+          
+          const pongalPaiseStr = settingsMap.PONGAL_WEEKLY_PRICE || '49900';
+          let pongalPaise = Number(pongalPaiseStr);
+          if (pongalPaise >= 1000) {
+            pongalPaise = pongalPaise / 100;
+          }
+          setSubscriptionPrice(Math.round(pongalPaise));
+          return;
+        }
+        
         const supabase = getSupabaseBrowserClient();
         const { data: settings } = await supabase.from('settings').select('key,value');
         const settingsMap: Record<string, string> = {};
@@ -247,93 +262,256 @@ function CheckoutContent() {
 
       // Handle subscription payment
       if (subscriptionPlan && subscriptionPrice) {
-        // Create subscription
-        const subRes = await fetch('/api/payments/razorpay/subscription', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            plan: subscriptionPlan,
-            currency: 'INR',
-            billing: {
+        // Handle pongal_weekly as one-time payment
+        if (subscriptionPlan === 'pongal_weekly') {
+          const amountInPaise = Math.round(subscriptionPrice * 100);
+          
+          // Create Razorpay order for one-time payment
+          const res = await fetch('/api/payments/razorpay/order', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              amount: amountInPaise,
+              product: {
+                slug: 'pongal_weekly',
+                name: 'Pongal Weekly Offer - 3 Downloads/Week',
+                price: subscriptionPrice,
+                img: '',
+              },
+              billing: {
+                name: billing.name,
+                email: billing.email,
+                mobile: fullMobile,
+                company: billing.company || null,
+              },
+            }),
+          });
+
+          const json = await res.json();
+          if (!res.ok || !json.ok) {
+            throw new Error(json.error || 'Payment initialization failed');
+          }
+
+          // Open Razorpay checkout for one-time payment
+          // @ts-ignore
+          const rzp = new window.Razorpay({
+            key: json.key,
+            amount: json.order.amount,
+            currency: json.order.currency,
+            name: 'Celite',
+            description: 'Pongal Weekly Offer - 3 Downloads/Week',
+            image: '/PNG1.png',
+            order_id: json.order.id,
+            prefill: {
               name: billing.name,
               email: billing.email,
-              mobile: fullMobile,
-              company: billing.company || null,
+              contact: fullMobile,
             },
-          }),
-        });
-
-        const subJson = await subRes.json();
-        if (!subRes.ok || !subJson.ok) {
-          throw new Error(subJson.error || 'Subscription initialization failed');
-        }
-
-        const sub = subJson.subscription;
-        // Open Razorpay checkout for subscription
-        // @ts-ignore
-        const rzp = new window.Razorpay({
-          key: sub?.razorpay_key || '',
-          subscription_id: sub.id,
-          image: '/PNG1.png',
-          prefill: {
-            name: billing.name,
-            email: billing.email,
-            contact: fullMobile,
-          },
-          handler: async (resp: any) => {
-            try {
-              // Get Razorpay subscription ID from response or sub object
-              const razorpaySubscriptionId = resp.razorpay_subscription_id || sub?.id || null;
-
-              // Activate subscription in our DB with Razorpay subscription ID
-              const activateRes = await fetch('/api/subscription/activate', {
-                method: 'POST',
-                headers: {
-                  Authorization: `Bearer ${session.access_token}`,
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  plan: subscriptionPlan,
-                  razorpay_subscription_id: razorpaySubscriptionId
-                }),
-              });
-
-              if (activateRes.ok) {
-                // Update checkout details status to completed
-                if (checkoutDetailIdRef.current) {
-                  try {
-                    await fetch('/api/checkout/details', {
-                      method: 'PATCH',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${session.access_token}`,
-                      },
-                      body: JSON.stringify({
-                        checkout_detail_id: checkoutDetailIdRef.current,
-                        status: 'completed',
-                        razorpay_subscription_id: razorpaySubscriptionId,
-                      }),
-                    });
-                  } catch (e) {
-                    console.error('Failed to update checkout details:', e);
-                  }
-                }
-
-                // Track subscription event
-                trackSubscribe({
-                  method: 'razorpay',
-                  plan_id: subscriptionPlan,
-                  plan_name: subscriptionPlan === 'yearly' ? 'Yearly Pro Plan' : 'Monthly Pro Plan',
-                  value: subscriptionPrice || 0,
-                  currency: 'INR',
+            handler: async (resp: any) => {
+              try {
+                // Verify payment
+                const verifyRes = await fetch('/api/payments/razorpay/verify', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}`,
+                  },
+                  body: JSON.stringify({
+                    razorpay_order_id: resp.razorpay_order_id,
+                    razorpay_payment_id: resp.razorpay_payment_id,
+                    razorpay_signature: resp.razorpay_signature,
+                    billing: {
+                      name: billing.name,
+                      email: billing.email,
+                      mobile: fullMobile,
+                      company: billing.company || null,
+                    },
+                    cartItems: [],
+                    isPongalWeekly: true,
+                  }),
                 });
 
-                // Redirect to dashboard
-                router.push("/dashboard?payment=success");
-              } else {
+                const verifyJson = await verifyRes.json();
+                if (verifyRes.ok && verifyJson.ok) {
+                  // Activate pongal_weekly subscription
+                  const activateRes = await fetch('/api/subscription/activate', {
+                    method: 'POST',
+                    headers: {
+                      Authorization: `Bearer ${session.access_token}`,
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      plan: 'pongal_weekly',
+                    }),
+                  });
+
+                  if (activateRes.ok) {
+                    // Update checkout details
+                    if (checkoutDetailIdRef.current) {
+                      try {
+                        await fetch('/api/checkout/details', {
+                          method: 'PATCH',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${session.access_token}`,
+                          },
+                          body: JSON.stringify({
+                            checkout_detail_id: checkoutDetailIdRef.current,
+                            status: 'completed',
+                            razorpay_payment_id: resp.razorpay_payment_id,
+                          }),
+                        });
+                      } catch (e) {
+                        console.error('Failed to update checkout details:', e);
+                      }
+                    }
+
+                    // Track subscription event
+                    trackSubscribe({
+                      method: 'razorpay',
+                      plan_id: 'pongal_weekly',
+                      plan_name: 'Pongal Weekly Offer',
+                      value: subscriptionPrice || 0,
+                      currency: 'INR',
+                    });
+
+                    router.push("/dashboard?payment=success");
+                  } else {
+                    setPaymentError('Subscription activation failed');
+                    setProcessing(false);
+                  }
+                } else {
+                  setPaymentError(verifyJson.error || 'Payment verification failed');
+                  setProcessing(false);
+                }
+              } catch (e: any) {
+                setPaymentError(e?.message || 'Payment verification failed');
+                setProcessing(false);
+              }
+            },
+            theme: { color: '#ffffff' },
+            modal: {
+              ondismiss: () => {
+                setProcessing(false);
+              },
+            },
+          });
+
+          rzp.open();
+        } else {
+          // Handle monthly/yearly subscriptions
+          // Create subscription
+          const subRes = await fetch('/api/payments/razorpay/subscription', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              plan: subscriptionPlan,
+              currency: 'INR',
+              billing: {
+                name: billing.name,
+                email: billing.email,
+                mobile: fullMobile,
+                company: billing.company || null,
+              },
+            }),
+          });
+
+          const subJson = await subRes.json();
+          if (!subRes.ok || !subJson.ok) {
+            throw new Error(subJson.error || 'Subscription initialization failed');
+          }
+
+          const sub = subJson.subscription;
+          // Open Razorpay checkout for subscription
+          // @ts-ignore
+          const rzp = new window.Razorpay({
+            key: sub?.razorpay_key || '',
+            subscription_id: sub.id,
+            image: '/PNG1.png',
+            prefill: {
+              name: billing.name,
+              email: billing.email,
+              contact: fullMobile,
+            },
+            handler: async (resp: any) => {
+              try {
+                // Get Razorpay subscription ID from response or sub object
+                const razorpaySubscriptionId = resp.razorpay_subscription_id || sub?.id || null;
+
+                // Activate subscription in our DB with Razorpay subscription ID
+                const activateRes = await fetch('/api/subscription/activate', {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    plan: subscriptionPlan,
+                    razorpay_subscription_id: razorpaySubscriptionId
+                  }),
+                });
+
+                if (activateRes.ok) {
+                  // Update checkout details status to completed
+                  if (checkoutDetailIdRef.current) {
+                    try {
+                      await fetch('/api/checkout/details', {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: `Bearer ${session.access_token}`,
+                        },
+                        body: JSON.stringify({
+                          checkout_detail_id: checkoutDetailIdRef.current,
+                          status: 'completed',
+                          razorpay_subscription_id: razorpaySubscriptionId,
+                        }),
+                      });
+                    } catch (e) {
+                      console.error('Failed to update checkout details:', e);
+                    }
+                  }
+
+                  // Track subscription event
+                  trackSubscribe({
+                    method: 'razorpay',
+                    plan_id: subscriptionPlan,
+                    plan_name: subscriptionPlan === 'yearly' ? 'Yearly Pro Plan' : 'Monthly Pro Plan',
+                    value: subscriptionPrice || 0,
+                    currency: 'INR',
+                  });
+
+                  // Redirect to dashboard
+                  router.push("/dashboard?payment=success");
+                } else {
+                  // Update checkout details status to failed
+                  if (checkoutDetailIdRef.current) {
+                    try {
+                      await fetch('/api/checkout/details', {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: `Bearer ${session.access_token}`,
+                        },
+                        body: JSON.stringify({
+                          checkout_detail_id: checkoutDetailIdRef.current,
+                          status: 'failed',
+                        }),
+                      });
+                    } catch (e) {
+                      console.error('Failed to update checkout details:', e);
+                    }
+                  }
+                  setPaymentError('Subscription activation failed');
+                  setProcessing(false);
+                }
+              } catch (e: any) {
                 // Update checkout details status to failed
                 if (checkoutDetailIdRef.current) {
                   try {
@@ -348,45 +526,24 @@ function CheckoutContent() {
                         status: 'failed',
                       }),
                     });
-                  } catch (e) {
-                    console.error('Failed to update checkout details:', e);
+                  } catch (err) {
+                    console.error('Failed to update checkout details:', err);
                   }
                 }
-                setPaymentError('Subscription activation failed');
+                setPaymentError(e?.message || 'Subscription activation failed');
                 setProcessing(false);
               }
-            } catch (e: any) {
-              // Update checkout details status to failed
-              if (checkoutDetailIdRef.current) {
-                try {
-                  await fetch('/api/checkout/details', {
-                    method: 'PATCH',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      Authorization: `Bearer ${session.access_token}`,
-                    },
-                    body: JSON.stringify({
-                      checkout_detail_id: checkoutDetailIdRef.current,
-                      status: 'failed',
-                    }),
-                  });
-                } catch (err) {
-                  console.error('Failed to update checkout details:', err);
-                }
-              }
-              setPaymentError(e?.message || 'Subscription activation failed');
-              setProcessing(false);
-            }
-          },
-          theme: { color: '#ffffff' },
-          modal: {
-            ondismiss: () => {
-              setProcessing(false);
             },
-          },
-        });
+            theme: { color: '#ffffff' },
+            modal: {
+              ondismiss: () => {
+                setProcessing(false);
+              },
+            },
+          });
 
-        rzp.open();
+          rzp.open();
+        }
       } else {
         // Handle one-time product payment
         // Calculate total amount in paise
@@ -645,7 +802,7 @@ function CheckoutContent() {
           </h1>
           <p className="text-zinc-600">
             {subscriptionPlan
-              ? `Secure payment for ${subscriptionPlan === 'monthly' ? 'monthly' : 'yearly'} Pro subscription.`
+              ? `Secure payment for ${subscriptionPlan === 'pongal_weekly' ? 'Pongal Weekly Offer' : subscriptionPlan === 'monthly' ? 'monthly' : 'yearly'} Pro subscription.`
               : 'Secure payment for cinematic After Effects templates.'
             }
           </p>
@@ -789,11 +946,18 @@ function CheckoutContent() {
                 <div className="flex justify-between items-start py-3 border-b border-zinc-200">
                   <div className="flex-1">
                     <p className="font-semibold text-zinc-900">
-                      {subscriptionPlan === 'monthly' ? 'Monthly' : 'Yearly'} Pro
+                      {subscriptionPlan === 'pongal_weekly' ? 'Pongal Weekly Offer' : subscriptionPlan === 'monthly' ? 'Monthly' : 'Yearly'} Pro
                     </p>
                     <p className="text-sm text-zinc-600">
-                      Unlimited access to all templates
+                      {subscriptionPlan === 'pongal_weekly' ? '3 downloads per week for 3 weeks' : 'Unlimited access to all templates'}
                     </p>
+                    {subscriptionPlan === 'pongal_weekly' && (
+                      <div className="mt-2">
+                        <span className="inline-block px-2 py-1 bg-gradient-to-r from-yellow-100 to-amber-100 text-amber-700 text-xs font-semibold rounded border border-amber-200">
+                          🎉 Pongal Offer
+                        </span>
+                      </div>
+                    )}
                     {subscriptionPlan === 'monthly' && (
                       <div className="mt-2">
                         <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
@@ -813,15 +977,34 @@ function CheckoutContent() {
                 </div>
 
                 <div className="space-y-2 pt-2">
-                  <div className="flex items-start gap-2">
-                    <span className="text-sm text-zinc-600">Unlimited downloads</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-sm text-zinc-600">New templates weekly</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-sm text-zinc-600">Priority support</span>
-                  </div>
+                  {subscriptionPlan === 'pongal_weekly' ? (
+                    <>
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm text-zinc-600">3 Downloads per week</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm text-zinc-600">Valid for 3 weeks</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm text-zinc-600">Auto-cancels after 3 weeks</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm text-zinc-600">All Premium Templates</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm text-zinc-600">Unlimited downloads</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm text-zinc-600">New templates weekly</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm text-zinc-600">Priority support</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (

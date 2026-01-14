@@ -48,7 +48,7 @@ export async function GET(
     // Get template from database
     const { data: template, error: templateErr } = await admin
       .from('templates')
-      .select('slug, name, source_path, is_free, creator_shop_id')
+      .select('slug, name, source_path, is_free')
       .eq('slug', slug)
       .maybeSingle();
 
@@ -59,7 +59,7 @@ export async function GET(
     // Check subscription (skip for free templates)
     const { data: sub } = await admin
       .from('subscriptions')
-      .select('id, is_active, valid_until')
+      .select('id, is_active, valid_until, plan')
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -68,6 +68,124 @@ export async function GET(
 
     if (!active && !isFreeTemplate) {
       return NextResponse.json({ error: 'Access denied. Please subscribe to download.' }, { status: 403 });
+    }
+
+    // Check pongal_weekly download limits
+    if (sub?.plan === 'pongal_weekly' && !isFreeTemplate) {
+      // Get settings for download limits
+      const { data: settings } = await admin.from('settings').select('key,value');
+      const settingsMap: Record<string, string> = {};
+      (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
+      const weeklyLimit = Number(settingsMap.PONGAL_WEEKLY_DOWNLOADS_PER_WEEK || '3');
+      
+      const { data: pongalSub } = await admin
+        .from('pongal_weekly_subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('subscription_id', sub.id)
+        .maybeSingle();
+
+      if (!pongalSub) {
+        return NextResponse.json({ error: 'Pongal subscription not found.' }, { status: 403 });
+      }
+
+      // Get tracking record
+      const { data: tracking } = await admin
+        .from('pongal_tracking')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('subscription_id', sub.id)
+        .maybeSingle();
+
+      // Check if subscription has expired
+      const expiresAt = new Date(pongalSub.expires_at).getTime();
+      if (Date.now() > expiresAt) {
+        // Update tracking
+        if (tracking) {
+          await admin
+            .from('pongal_tracking')
+            .update({
+              subscription_status: 'expired',
+              autopay_status: 'expired',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', tracking.id);
+        }
+        return NextResponse.json({ error: 'Your Pongal subscription has expired.' }, { status: 403 });
+      }
+
+      // Check if we need to reset for a new week
+      const currentWeekStart = new Date(pongalSub.current_week_start).getTime();
+      const weekInMs = 7 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      
+      let downloadsUsed = pongalSub.downloads_used;
+      let weekNumber = pongalSub.week_number;
+      let newWeekStart = new Date(pongalSub.current_week_start);
+
+      // If a new week has started, reset downloads
+      if (now - currentWeekStart >= weekInMs) {
+        // Calculate which week we're in
+        const weeksElapsed = Math.floor((now - new Date(pongalSub.week_start_date).getTime()) / weekInMs);
+        weekNumber = Math.min(weeksElapsed + 1, 3);
+        
+        // Reset downloads for new week
+        downloadsUsed = 0;
+        newWeekStart = new Date(Math.floor(now / weekInMs) * weekInMs); // Start of current week
+        
+        // Update both tables
+        await admin
+          .from('pongal_weekly_subscriptions')
+          .update({
+            downloads_used: 0,
+            week_number: weekNumber,
+            current_week_start: newWeekStart.toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', pongalSub.id);
+        
+        // Update tracking
+        if (tracking) {
+          await admin
+            .from('pongal_tracking')
+            .update({
+              downloads_this_week: 0,
+              current_week_number: weekNumber,
+              subscription_weeks_remaining: Math.max(0, 3 - weekNumber + 1),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', tracking.id);
+        }
+      }
+
+      // Check download limit
+      if (downloadsUsed >= weeklyLimit) {
+        // Calculate next week reset time
+        const nextWeekStart = new Date(newWeekStart.getTime() + weekInMs);
+        const daysUntilReset = Math.ceil((nextWeekStart.getTime() - now) / (24 * 60 * 60 * 1000));
+        
+        // Update tracking - limit reached
+        if (tracking) {
+          await admin
+            .from('pongal_tracking')
+            .update({
+              limit_reached_count: (tracking.limit_reached_count || 0) + 1,
+              last_limit_reached_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', tracking.id);
+        }
+        
+        return NextResponse.json({ 
+          error: 'You have reached your weekly download limit.',
+          limitReached: true,
+          message: daysUntilReset > 0 
+            ? `Your credits will reset in ${daysUntilReset} day${daysUntilReset > 1 ? 's' : ''}. Check next week.`
+            : 'Your credits will reset next week. Check next week.',
+          downloadsUsed: weeklyLimit,
+          downloadsAvailable: 0,
+        }, { status: 403 });
+      }
     }
 
     const sourcePath = template.source_path;
@@ -84,17 +202,13 @@ export async function GET(
     if (isFullUrl) {
       // Legacy: For external URLs, redirect (but record download first)
       try {
-        const downloadRecord: any = {
+        const subscriptionId = sub?.id || null;
+        await admin.from('downloads').insert({
           user_id: userId,
           template_slug: slug,
           downloaded_at: new Date().toISOString(),
-        };
-        
-        if (template.creator_shop_id) {
-          downloadRecord.creator_shop_id = template.creator_shop_id;
-        }
-        
-        await admin.from('downloads').insert(downloadRecord);
+          ...(subscriptionId && { subscription_id: subscriptionId }),
+        });
       } catch (err) {
         console.error('Failed to record download:', err);
       }
@@ -174,15 +288,16 @@ export async function GET(
         }
       } else {
         // For paid templates, use the downloads table (requires subscription)
+        const subscriptionId = sub?.id || null;
         const downloadRecord: any = {
           user_id: userId,
           template_slug: slug,
           downloaded_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
         };
 
-        // Add creator_shop_id if the template has one
-        if (template.creator_shop_id) {
-          downloadRecord.creator_shop_id = template.creator_shop_id;
+        if (subscriptionId) {
+          downloadRecord.subscription_id = subscriptionId;
         }
 
         const { error: downloadErr } = await admin.from('downloads').insert(downloadRecord);
@@ -192,6 +307,50 @@ export async function GET(
           console.error('[Download] Download record was:', downloadRecord);
         } else {
           console.log(`[Download] ✅ Paid download recorded successfully for user ${userId}, template ${slug}`);
+          
+          // Update pongal_weekly download count if applicable
+          if (sub?.plan === 'pongal_weekly') {
+            const { data: pongalSub } = await admin
+              .from('pongal_weekly_subscriptions')
+              .select('downloads_used, id')
+              .eq('user_id', userId)
+              .eq('subscription_id', subscriptionId)
+              .maybeSingle();
+            
+            if (pongalSub) {
+              const newDownloadCount = (pongalSub.downloads_used || 0) + 1;
+              
+              // Update pongal_weekly_subscriptions
+              await admin
+                .from('pongal_weekly_subscriptions')
+                .update({
+                  downloads_used: newDownloadCount,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('user_id', userId)
+                .eq('subscription_id', subscriptionId);
+              
+              // Update comprehensive tracking table
+              const { data: tracking } = await admin
+                .from('pongal_tracking')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('subscription_id', subscriptionId)
+                .maybeSingle();
+              
+              if (tracking) {
+                await admin
+                  .from('pongal_tracking')
+                  .update({
+                    download_count: (tracking.download_count || 0) + 1,
+                    downloads_this_week: newDownloadCount,
+                    last_download_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', tracking.id);
+              }
+            }
+          }
         }
       }
     } catch (downloadErr: any) {

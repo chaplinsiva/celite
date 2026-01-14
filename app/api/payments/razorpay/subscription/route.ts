@@ -5,9 +5,23 @@ import { getRazorpayCreds, razorpayRequest } from '../../../../../lib/razorpay';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { plan, currency: reqCurrency, billing } = body; // { plan: 'monthly' | 'yearly', currency?: 'USD' | 'INR', billing?: {...} }
-    if (!plan || (plan !== 'monthly' && plan !== 'yearly')) {
-      return NextResponse.json({ ok: false, error: 'Invalid plan. Must be "monthly" or "yearly"' }, { status: 400 });
+    const { plan, currency: reqCurrency, billing } = body; // { plan: 'monthly' | 'yearly' | 'pongal_weekly', currency?: 'USD' | 'INR', billing?: {...} }
+    if (!plan || (plan !== 'monthly' && plan !== 'yearly' && plan !== 'pongal_weekly')) {
+      return NextResponse.json({ ok: false, error: 'Invalid plan. Must be "monthly", "yearly", or "pongal_weekly"' }, { status: 400 });
+    }
+    
+    // Handle pongal_weekly as a one-time payment (not recurring subscription)
+    if (plan === 'pongal_weekly') {
+      // For pongal_weekly, we'll create a one-time order instead of subscription
+      // This will be handled in the checkout page
+      const amount = 49900; // ₹499 in paise
+      return NextResponse.json({ 
+        ok: true, 
+        is_one_time: true,
+        amount,
+        currency: 'INR',
+        razorpay_key: (await getRazorpayCreds()).key_id
+      });
     }
     
     // Get user details for customer creation

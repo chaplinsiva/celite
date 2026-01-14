@@ -37,26 +37,23 @@ export async function GET(req: Request) {
     const { admin, shop } = ctx;
 
     // Fetch templates and download counts in parallel
-    const templateSlugs = await admin
-      .from('templates')
-      .select('slug')
-      .eq('creator_shop_id', shop.id)
-      .then(res => (res.data || []).map((t: any) => t.slug));
-
-    const [templatesResult, downloadsResult, freeDownloadsResult] = await Promise.all([
+    const [templatesResult, downloadsResult] = await Promise.all([
       admin
         .from('templates')
         .select('slug,name,subtitle,video,img,created_at,creator_shop_id,status')
         .eq('creator_shop_id', shop.id)
         .order('created_at', { ascending: false }),
-      templateSlugs.length > 0 ? admin
+      admin
         .from('downloads')
         .select('template_slug')
-        .in('template_slug', templateSlugs) : Promise.resolve({ data: [], error: null }),
-      templateSlugs.length > 0 ? admin
-        .from('free_downloads')
-        .select('template_slug')
-        .in('template_slug', templateSlugs) : Promise.resolve({ data: [], error: null })
+        .in('template_slug',
+          // We need slugs first, so use a subquery approach - fetch all downloads for this creator's templates
+          await admin
+            .from('templates')
+            .select('slug')
+            .eq('creator_shop_id', shop.id)
+            .then(res => (res.data || []).map((t: any) => t.slug))
+        )
     ]);
 
     if (templatesResult.error) {
@@ -65,16 +62,10 @@ export async function GET(req: Request) {
 
     const templates = templatesResult.data || [];
     const downloads = downloadsResult.data || [];
-    const freeDownloads = freeDownloadsResult.data || [];
 
     // Count downloads per template in memory (much faster than N queries)
-    // Combine both paid and free downloads
     const downloadCounts: Record<string, number> = {};
     for (const d of downloads) {
-      const slug = d.template_slug;
-      downloadCounts[slug] = (downloadCounts[slug] || 0) + 1;
-    }
-    for (const d of freeDownloads) {
       const slug = d.template_slug;
       downloadCounts[slug] = (downloadCounts[slug] || 0) + 1;
     }
@@ -93,22 +84,11 @@ export async function GET(req: Request) {
     try {
       const slugs = templates.map(t => t.slug).filter(Boolean);
       if (slugs.length > 0) {
-        // Fetch both paid and free downloads for accurate user period calculation
-        const [paidDl, freeDl] = await Promise.all([
-          admin
-            .from('downloads')
-            .select('user_id, downloaded_at')
-            .in('template_slug', slugs)
-            .order('downloaded_at', { ascending: true }),
-          admin
-            .from('free_downloads')
-            .select('user_id, downloaded_at')
-            .in('template_slug', slugs)
-            .order('downloaded_at', { ascending: true })
-        ]);
-        
-        // Combine both download types
-        const dl = [...(paidDl.data || []), ...(freeDl.data || [])];
+        const { data: dl } = await admin
+          .from('downloads')
+          .select('user_id, downloaded_at')
+          .in('template_slug', slugs)
+          .order('downloaded_at', { ascending: true });
 
         if (dl && dl.length > 0) {
           const byUser = new Map<string, Date[]>();

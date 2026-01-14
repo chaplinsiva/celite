@@ -14,13 +14,13 @@ export async function POST(req: Request) {
     if (error || !userRes.user) return NextResponse.json({ ok: false, error: 'Invalid session' }, { status: 401 });
     const userId = userRes.user.id;
 
-    // optional body: { plan: 'monthly' | 'yearly', razorpay_subscription_id?: string, autopay_enabled?: boolean }
-    let plan: 'monthly' | 'yearly' = 'monthly';
+    // optional body: { plan: 'monthly' | 'yearly' | 'pongal_weekly', razorpay_subscription_id?: string, autopay_enabled?: boolean }
+    let plan: 'monthly' | 'yearly' | 'pongal_weekly' = 'monthly';
     let razorpaySubscriptionId: string | null = null;
     let autopayEnabled: boolean | null = null;
     try {
       const body = await req.json();
-      if (body && (body.plan === 'monthly' || body.plan === 'yearly')) plan = body.plan;
+      if (body && (body.plan === 'monthly' || body.plan === 'yearly' || body.plan === 'pongal_weekly')) plan = body.plan;
       if (body?.razorpay_subscription_id) razorpaySubscriptionId = body.razorpay_subscription_id;
       if (typeof body?.autopay_enabled === 'boolean') autopayEnabled = body.autopay_enabled;
     } catch {}
@@ -48,11 +48,17 @@ export async function POST(req: Request) {
       }
     }
 
-    // compute valid_until for monthly/yearly
+    // compute valid_until for monthly/yearly/pongal_weekly
     const now = Date.now();
-    const expiresAt = plan === 'yearly'
-      ? new Date(now + 365 * 24 * 60 * 60 * 1000)
-      : new Date(now + 30 * 24 * 60 * 60 * 1000);
+    let expiresAt: Date;
+    if (plan === 'pongal_weekly') {
+      // 3 weeks from now
+      expiresAt = new Date(now + 3 * 7 * 24 * 60 * 60 * 1000);
+    } else if (plan === 'yearly') {
+      expiresAt = new Date(now + 365 * 24 * 60 * 60 * 1000);
+    } else {
+      expiresAt = new Date(now + 30 * 24 * 60 * 60 * 1000);
+    }
 
     const updateData: any = { 
       user_id: userId, 
@@ -71,13 +77,63 @@ export async function POST(req: Request) {
     if (typeof autopayEnabled === 'boolean') {
       updateData.autopay_enabled = autopayEnabled;
     } else {
-      updateData.autopay_enabled = true;
+      // For pongal_weekly, disable autopay (auto-cancels after 3 weeks)
+      updateData.autopay_enabled = plan === 'pongal_weekly' ? false : true;
     }
 
-    const { error: upErr } = await admin
+    const { data: subscriptionData, error: upErr } = await admin
       .from('subscriptions')
-      .upsert(updateData, { onConflict: 'user_id' });
+      .upsert(updateData, { onConflict: 'user_id' })
+      .select()
+      .single();
     if (upErr) return NextResponse.json({ ok: false, error: upErr.message }, { status: 500 });
+
+    // Create pongal_weekly_subscriptions record if plan is pongal_weekly
+    if (plan === 'pongal_weekly' && subscriptionData) {
+      // Get settings for Pongal subscription
+      const { data: settings } = await admin.from('settings').select('key,value');
+      const settingsMap: Record<string, string> = {};
+      (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
+      
+      const durationWeeks = Number(settingsMap.PONGAL_WEEKLY_DURATION_WEEKS || '3');
+      const downloadsPerWeek = Number(settingsMap.PONGAL_WEEKLY_DOWNLOADS_PER_WEEK || '3');
+      
+      const weekStartDate = new Date();
+      const expiresAtDate = new Date(now + durationWeeks * 7 * 24 * 60 * 60 * 1000);
+      
+      // Create pongal_weekly_subscriptions record
+      const { data: pongalSub } = await admin.from('pongal_weekly_subscriptions').insert({
+        user_id: userId,
+        subscription_id: subscriptionData.id,
+        downloads_used: 0,
+        week_number: 1,
+        week_start_date: weekStartDate.toISOString(),
+        current_week_start: weekStartDate.toISOString(),
+        expires_at: expiresAtDate.toISOString(),
+      }).select().single();
+      
+      // Create comprehensive tracking record
+      if (pongalSub) {
+        await admin.from('pongal_tracking').insert({
+          user_id: userId,
+          subscription_id: subscriptionData.id,
+          pongal_subscription_id: pongalSub.id,
+          download_count: 0,
+          download_limit: downloadsPerWeek * durationWeeks,
+          downloads_this_week: 0,
+          subscription_status: 'active',
+          subscription_plan: 'pongal_weekly',
+          subscription_start_date: weekStartDate.toISOString(),
+          subscription_expires_at: expiresAtDate.toISOString(),
+          subscription_weeks_remaining: durationWeeks,
+          current_week_number: 1,
+          autopay_enabled: false,
+          autopay_status: 'disabled',
+          weekly_limit: downloadsPerWeek,
+          limit_reached_count: 0,
+        });
+      }
+    }
 
     // Send subscription success email
     try {
@@ -93,9 +149,14 @@ export async function POST(req: Request) {
         const settingsMap: Record<string, string> = {};
         (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
         
-        const amountPaise = plan === 'monthly' 
-          ? Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '59900')
-          : Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
+        let amountPaise: number;
+        if (plan === 'pongal_weekly') {
+          amountPaise = 49900; // ₹499 in paise
+        } else if (plan === 'monthly') {
+          amountPaise = Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '59900');
+        } else {
+          amountPaise = Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
+        }
         const amount = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
 
         if (userEmail) {

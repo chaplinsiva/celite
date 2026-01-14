@@ -10,6 +10,7 @@ import PurchaseDownloadButton from "./PurchaseDownloadButton";
 import { GlowingEffect } from "../../components/ui/glowing-effect";
 import { cn } from "../../lib/utils";
 import LoadingSpinner from "../../components/ui/loading-spinner";
+import PongalProgressBar from "../../components/PongalProgressBar";
 
 type DownloadItemRow = {
   slug: string;
@@ -505,6 +506,9 @@ function DashboardContent() {
                 </div>
               </section>
 
+              {/* Pongal Progress Bar */}
+              {sub?.plan === 'pongal_weekly' && <PongalProgressBar />}
+
               {/* Quick Sub Details */}
               <section className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm">
                 <h2 className="text-lg font-bold text-zinc-900 mb-4">Subscription Details</h2>
@@ -518,7 +522,7 @@ function DashboardContent() {
                     </div>
                     {sub.valid_until && (
                       <div className="flex justify-between py-2 border-b border-zinc-100">
-                        <span className="text-zinc-500">Renews</span>
+                        <span className="text-zinc-500">{sub.plan === 'pongal_weekly' ? 'Expires' : 'Renews'}</span>
                         <span className="text-zinc-900 font-medium">{new Date(sub.valid_until).toLocaleDateString()}</span>
                       </div>
                     )}
