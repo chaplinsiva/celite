@@ -26,7 +26,7 @@ export default function CinemaTemplatesShowcase() {
       try {
         const supabase = getSupabaseBrowserClient();
         
-        // Search for cinema-related templates by tags or name
+        // Fetch recent templates and filter for cinema-related content
         const { data, error } = await supabase
           .from('templates')
           .select(`
@@ -36,21 +36,49 @@ export default function CinemaTemplatesShowcase() {
             img,
             video_path,
             thumbnail_path,
+            tags,
             category_id,
             categories(id, name, slug)
           `)
           .eq('status', 'approved')
-          .or('tags.ilike.%cinema%,tags.ilike.%cinematic%,tags.ilike.%film%,name.ilike.%cinema%,name.ilike.%cinematic%,name.ilike.%film%')
           .order('created_at', { ascending: false })
-          .limit(6);
+          .limit(50); // Fetch more to filter
 
         if (error) {
           console.error('Error loading cinema templates:', error);
+          setTemplates([]);
         } else {
-          setTemplates(data || []);
+          // Filter for cinema-related templates
+          const cinemaKeywords = ['cinema', 'cinematic', 'film', 'movie', 'cinematic', 'cinematography'];
+          const filtered = (data || [])
+            .filter((template) => {
+              const name = template.name?.toLowerCase() || '';
+              const subtitle = template.subtitle?.toLowerCase() || '';
+              
+              // Check tags if it's an array or JSON string
+              let tags: string[] = [];
+              if (Array.isArray(template.tags)) {
+                tags = template.tags.map(t => String(t).toLowerCase());
+              } else if (typeof template.tags === 'string') {
+                try {
+                  const parsed = JSON.parse(template.tags);
+                  tags = Array.isArray(parsed) ? parsed.map(t => String(t).toLowerCase()) : [];
+                } catch {
+                  tags = [template.tags.toLowerCase()];
+                }
+              }
+              
+              // Check if any keyword matches
+              const allText = [name, subtitle, ...tags].join(' ');
+              return cinemaKeywords.some(keyword => allText.includes(keyword));
+            })
+            .slice(0, 6); // Take first 6 matches
+          
+          setTemplates(filtered);
         }
       } catch (err) {
         console.error('Error:', err);
+        setTemplates([]);
       } finally {
         setLoading(false);
       }
