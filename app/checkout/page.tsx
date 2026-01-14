@@ -262,149 +262,9 @@ function CheckoutContent() {
 
       // Handle subscription payment
       if (subscriptionPlan && subscriptionPrice) {
-        // Handle pongal_weekly as one-time payment
-        if (subscriptionPlan === 'pongal_weekly') {
-          const amountInPaise = Math.round(subscriptionPrice * 100);
-          
-          // Create Razorpay order for one-time payment
-          const res = await fetch('/api/payments/razorpay/order', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({
-              amount: amountInPaise,
-              product: {
-                slug: 'pongal_weekly',
-                name: 'Pongal Weekly Offer - 3 Downloads/Week',
-                price: subscriptionPrice,
-                img: '',
-              },
-              billing: {
-                name: billing.name,
-                email: billing.email,
-                mobile: fullMobile,
-                company: billing.company || null,
-              },
-            }),
-          });
-
-          const json = await res.json();
-          if (!res.ok || !json.ok) {
-            throw new Error(json.error || 'Payment initialization failed');
-          }
-
-          // Open Razorpay checkout for one-time payment
-          // @ts-ignore
-          const rzp = new window.Razorpay({
-            key: json.key,
-            amount: json.order.amount,
-            currency: json.order.currency,
-            name: 'Celite',
-            description: 'Pongal Weekly Offer - 3 Downloads/Week',
-            image: '/PNG1.png',
-            order_id: json.order.id,
-            prefill: {
-              name: billing.name,
-              email: billing.email,
-              contact: fullMobile,
-            },
-            handler: async (resp: any) => {
-              try {
-                // Verify payment
-                const verifyRes = await fetch('/api/payments/razorpay/verify', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${session.access_token}`,
-                  },
-                  body: JSON.stringify({
-                    razorpay_order_id: resp.razorpay_order_id,
-                    razorpay_payment_id: resp.razorpay_payment_id,
-                    razorpay_signature: resp.razorpay_signature,
-                    billing: {
-                      name: billing.name,
-                      email: billing.email,
-                      mobile: fullMobile,
-                      company: billing.company || null,
-                    },
-                    cartItems: [],
-                    isPongalWeekly: true,
-                  }),
-                });
-
-                const verifyJson = await verifyRes.json();
-                if (verifyRes.ok && verifyJson.ok) {
-                  // Activate pongal_weekly subscription
-                  const activateRes = await fetch('/api/subscription/activate', {
-                    method: 'POST',
-                    headers: {
-                      Authorization: `Bearer ${session.access_token}`,
-                      'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                      plan: 'pongal_weekly',
-                    }),
-                  });
-
-                  if (activateRes.ok) {
-                    // Update checkout details
-                    if (checkoutDetailIdRef.current) {
-                      try {
-                        await fetch('/api/checkout/details', {
-                          method: 'PATCH',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            Authorization: `Bearer ${session.access_token}`,
-                          },
-                          body: JSON.stringify({
-                            checkout_detail_id: checkoutDetailIdRef.current,
-                            status: 'completed',
-                            razorpay_payment_id: resp.razorpay_payment_id,
-                          }),
-                        });
-                      } catch (e) {
-                        console.error('Failed to update checkout details:', e);
-                      }
-                    }
-
-                    // Track subscription event
-                    trackSubscribe({
-                      method: 'razorpay',
-                      plan_id: 'pongal_weekly',
-                      plan_name: 'Pongal Weekly Offer',
-                      value: subscriptionPrice || 0,
-                      currency: 'INR',
-                    });
-
-                    router.push("/dashboard?payment=success");
-                  } else {
-                    setPaymentError('Subscription activation failed');
-                    setProcessing(false);
-                  }
-                } else {
-                  setPaymentError(verifyJson.error || 'Payment verification failed');
-                  setProcessing(false);
-                }
-              } catch (e: any) {
-                setPaymentError(e?.message || 'Payment verification failed');
-                setProcessing(false);
-              }
-            },
-            theme: { color: '#ffffff' },
-            modal: {
-              ondismiss: () => {
-                setProcessing(false);
-              },
-            },
-          });
-
-          rzp.open();
-        } else {
-          // Handle monthly/yearly subscriptions
-          // Create subscription
-          const subRes = await fetch('/api/payments/razorpay/subscription', {
+        // Handle all subscriptions (monthly, yearly, pongal_weekly) as recurring
+        // Create subscription
+        const subRes = await fetch('/api/payments/razorpay/subscription', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -453,7 +313,8 @@ function CheckoutContent() {
                   },
                   body: JSON.stringify({
                     plan: subscriptionPlan,
-                    razorpay_subscription_id: razorpaySubscriptionId
+                    razorpay_subscription_id: razorpaySubscriptionId,
+                    autopay_enabled: true, // Enable autopay for all subscriptions including pongal_weekly
                   }),
                 });
 
@@ -479,10 +340,16 @@ function CheckoutContent() {
                   }
 
                   // Track subscription event
+                  const planName = subscriptionPlan === 'pongal_weekly' 
+                    ? 'Pongal Weekly Offer' 
+                    : subscriptionPlan === 'yearly' 
+                    ? 'Yearly Pro Plan' 
+                    : 'Monthly Pro Plan';
+                  
                   trackSubscribe({
                     method: 'razorpay',
                     plan_id: subscriptionPlan,
-                    plan_name: subscriptionPlan === 'yearly' ? 'Yearly Pro Plan' : 'Monthly Pro Plan',
+                    plan_name: planName,
                     value: subscriptionPrice || 0,
                     currency: 'INR',
                   });
@@ -543,7 +410,6 @@ function CheckoutContent() {
           });
 
           rzp.open();
-        }
       } else {
         // Handle one-time product payment
         // Calculate total amount in paise
@@ -980,13 +846,13 @@ function CheckoutContent() {
                   {subscriptionPlan === 'pongal_weekly' ? (
                     <>
                       <div className="flex items-start gap-2">
-                        <span className="text-sm text-zinc-600">3 Downloads per week</span>
+                        <span className="text-sm text-zinc-600">3 Downloads per week (limit)</span>
                       </div>
                       <div className="flex items-start gap-2">
                         <span className="text-sm text-zinc-600">Valid for 3 weeks</span>
                       </div>
                       <div className="flex items-start gap-2">
-                        <span className="text-sm text-zinc-600">Auto-cancels after 3 weeks</span>
+                        <span className="text-sm text-zinc-600">Auto-renewal with autopay</span>
                       </div>
                       <div className="flex items-start gap-2">
                         <span className="text-sm text-zinc-600">All Premium Templates</span>

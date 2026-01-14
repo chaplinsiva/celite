@@ -126,11 +126,15 @@ export default function PricingContent() {
                 <ul className="space-y-2 sm:space-y-3">
                   <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
                     <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-xs sm:text-sm">3 Downloads per week</span>
+                    <span className="text-xs sm:text-sm">3 Downloads per week (limit)</span>
                   </li>
                   <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
                     <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
                     <span className="text-xs sm:text-sm">Valid for 3 weeks</span>
+                  </li>
+                  <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
+                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Auto-renewal with autopay</span>
                   </li>
                   <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
                     <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
@@ -146,7 +150,7 @@ export default function PricingContent() {
                   </li>
                   <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
                     <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-xs sm:text-sm">Auto-cancels after 3 weeks</span>
+                    <span className="text-xs sm:text-sm">Premium Stock Music & SFX</span>
                   </li>
                   <li className="flex items-start gap-2 sm:gap-3 text-zinc-700">
                     <Check className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0 mt-0.5" />

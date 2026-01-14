@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Hero from '../components/Hero';
+import CinemaTemplatesShowcase from '../components/CinemaTemplatesShowcase';
 import LatestTemplatesCarousel from '../components/LatestTemplatesCarousel';
 import WebsiteShowcaseCarousel from '../components/WebsiteShowcaseCarousel';
 import CategoriesSection from '../components/CategoriesSection';
@@ -20,6 +21,7 @@ export default function Home() {
   return (
     <main className="bg-background min-h-screen">
       <Hero />
+      <CinemaTemplatesShowcase />
       <CategoriesSection />
       <VideoCollectionsCarousel />
       <WebsiteShowcaseCarousel />

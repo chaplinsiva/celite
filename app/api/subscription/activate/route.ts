@@ -77,8 +77,8 @@ export async function POST(req: Request) {
     if (typeof autopayEnabled === 'boolean') {
       updateData.autopay_enabled = autopayEnabled;
     } else {
-      // For pongal_weekly, disable autopay (auto-cancels after 3 weeks)
-      updateData.autopay_enabled = plan === 'pongal_weekly' ? false : true;
+      // For pongal_weekly, enable autopay (recurring for 3 weeks)
+      updateData.autopay_enabled = true;
     }
 
     const { data: subscriptionData, error: upErr } = await admin

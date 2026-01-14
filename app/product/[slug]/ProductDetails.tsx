@@ -454,8 +454,8 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
         if (errorJson.limitReached) {
           setFeedback(errorJson.message || 'You have reached your weekly download limit. Your credits will reset next week.');
         } else {
-          router.push('/pricing');
-          setFeedback('Please subscribe to download this template.');
+        router.push('/pricing');
+        setFeedback('Please subscribe to download this template.');
         }
         setDownloading(false);
         return;
