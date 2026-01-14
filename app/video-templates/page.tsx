@@ -71,12 +71,38 @@ export default async function TemplatesPage() {
     const uniqueTemplates = Array.from(
       new Map(allTemplates.map(t => [t.slug, t])).values()
     );
-    templates = uniqueTemplates.sort((a, b) => 
+    
+    // Filter for cinema/movie templates only
+    const cinemaKeywords = ['cinema', 'cinematic', 'film', 'movie', 'cinematography', 'cinematic'];
+    const filteredTemplates = uniqueTemplates.filter((template) => {
+      const name = template.name?.toLowerCase() || '';
+      const subtitle = template.subtitle?.toLowerCase() || '';
+      const description = template.description?.toLowerCase() || '';
+      
+      // Check tags if it's an array or JSON string
+      let tags: string[] = [];
+      if (Array.isArray(template.tags)) {
+        tags = template.tags.map((t: any) => String(t).toLowerCase());
+      } else if (typeof template.tags === 'string') {
+        try {
+          const parsed = JSON.parse(template.tags);
+          tags = Array.isArray(parsed) ? parsed.map((t: any) => String(t).toLowerCase()) : [];
+        } catch {
+          tags = [template.tags.toLowerCase()];
+        }
+      }
+      
+      // Check if any keyword matches
+      const allText = [name, subtitle, description, ...tags].join(' ');
+      return cinemaKeywords.some(keyword => allText.includes(keyword));
+    });
+    
+    templates = filteredTemplates.sort((a, b) => 
       new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
     );
     error = catError;
   } else {
-    // Fallback: fetch all approved templates if category not found
+    // Fallback: fetch all approved templates if category not found, then filter for cinema
     const { data: allTemplates, error: allError } = await supabase
       .from('templates')
       .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id')
@@ -84,7 +110,32 @@ export default async function TemplatesPage() {
       .order('created_at', { ascending: false })
       .limit(500);
     
-    templates = allTemplates || [];
+    // Filter for cinema/movie templates only
+    const cinemaKeywords = ['cinema', 'cinematic', 'film', 'movie', 'cinematography', 'cinematic'];
+    const filteredTemplates = (allTemplates || []).filter((template) => {
+      const name = template.name?.toLowerCase() || '';
+      const subtitle = template.subtitle?.toLowerCase() || '';
+      const description = template.description?.toLowerCase() || '';
+      
+      // Check tags if it's an array or JSON string
+      let tags: string[] = [];
+      if (Array.isArray(template.tags)) {
+        tags = template.tags.map((t: any) => String(t).toLowerCase());
+      } else if (typeof template.tags === 'string') {
+        try {
+          const parsed = JSON.parse(template.tags);
+          tags = Array.isArray(parsed) ? parsed.map((t: any) => String(t).toLowerCase()) : [];
+        } catch {
+          tags = [template.tags.toLowerCase()];
+        }
+      }
+      
+      // Check if any keyword matches
+      const allText = [name, subtitle, description, ...tags].join(' ');
+      return cinemaKeywords.some(keyword => allText.includes(keyword));
+    });
+    
+    templates = filteredTemplates;
     error = allError;
   }
 
@@ -104,9 +155,9 @@ export default async function TemplatesPage() {
     <Suspense fallback={<LoadingSpinnerServer message="Loading templates..." />}>
       <VideoTemplatesClient 
         initialTemplates={mappedTemplates as any}
-        pageTitle="Video Templates"
-        pageSubtitle="Discover professional, ready-to-edit video templates including After Effects and Mobile templates for openers, promos, logos, and more."
-        breadcrumbLabel="Video Templates"
+        pageTitle="Cinema Templates"
+        pageSubtitle="Discover professional cinematic and movie templates for your film projects. High-quality After Effects templates for cinematic intros, trailers, and more."
+        breadcrumbLabel="Cinema Templates"
         basePath="/video-templates"
       />
     </Suspense>
