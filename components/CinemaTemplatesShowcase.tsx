@@ -215,11 +215,11 @@ export default function CinemaTemplatesShowcase() {
         {/* Grid - Larger Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
           {templates.map((template) => {
-            const thumbnail = template.thumbnail_path
+            const thumbnail = (template.thumbnail_path
               ? convertR2UrlToCdn(template.thumbnail_path)
               : template.img
                 ? convertR2UrlToCdn(template.img)
-                : '/placeholder.jpg';
+                : null) || '/placeholder.jpg';
 
             const videoUrl = template.video_path ? convertR2UrlToCdn(template.video_path) : null;
 
