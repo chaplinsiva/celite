@@ -15,6 +15,7 @@ import MarketingPanel from './components/MarketingPanel';
 import VendorApprovalPanel from './components/VendorApprovalPanel';
 import BulkSfxPanel from './components/BulkSfxPanel';
 import FreeGiftsPanel from './components/FreeGiftsPanel';
+import ProductAlertsPanel from './components/ProductAlertsPanel';
 
 type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null };
 
@@ -32,7 +33,7 @@ export default function AdminClient() {
     celiteAmount?: number;
   } | null>(null);
   const [active, setActive] = useState<
-    'overview' | 'products' | 'vendorApproval' | 'categories' | 'analytics' | 'freeGifts' | 'users' | 'settings' | 'marketing' | 'bulkSfx'
+    'overview' | 'products' | 'vendorApproval' | 'categories' | 'analytics' | 'freeGifts' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx'
   >('overview');
 
 
@@ -119,6 +120,7 @@ export default function AdminClient() {
 
             {active === 'users' && (<UsersPanel />)}
             {active === 'marketing' && (<MarketingPanel />)}
+            {active === 'productAlerts' && (<ProductAlertsPanel />)}
             {active === 'bulkSfx' && (<BulkSfxPanel />)}
             {active === 'settings' && (<SettingsPanel />)}
           </section>

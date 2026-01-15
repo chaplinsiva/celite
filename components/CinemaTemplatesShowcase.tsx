@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { convertR2UrlToCdn } from '@/lib/utils';
-import { ArrowRight, Play } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 type CinemaTemplate = {
   slug: string;
@@ -73,21 +73,12 @@ function VideoCard({ template, videoUrl, thumbnail }: VideoCardProps) {
         />
       )}
 
-      {/* Play Icon when not hovered */}
-      {videoUrl && !isHovered && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30 group-hover:scale-110 transition-transform">
-            <Play className="w-6 h-6 text-white fill-white ml-1" />
-          </div>
-        </div>
-      )}
-
       {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
 
       {/* Title */}
       <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
-        <h3 className="text-base md:text-lg font-bold text-white line-clamp-2 drop-shadow-lg">
+        <h3 className="text-sm md:text-base font-bold text-white line-clamp-2 drop-shadow-lg">
           {template.name}
         </h3>
         {template.subtitle && (
@@ -215,11 +206,10 @@ export default function CinemaTemplatesShowcase() {
         {/* Grid - Larger Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
           {templates.map((template) => {
-            const thumbnail = (template.thumbnail_path
-              ? convertR2UrlToCdn(template.thumbnail_path)
-              : template.img
-                ? convertR2UrlToCdn(template.img)
-                : null) || '/placeholder.jpg';
+            const thumbnail: string =
+              (template.thumbnail_path && convertR2UrlToCdn(template.thumbnail_path)) ||
+              (template.img && convertR2UrlToCdn(template.img)) ||
+              '/placeholder.jpg';
 
             const videoUrl = template.video_path ? convertR2UrlToCdn(template.video_path) : null;
 

@@ -10,6 +10,7 @@ type TabKey =
   | 'users'
   | 'settings'
   | 'marketing'
+  | 'productAlerts'
   | 'bulkSfx';
 
 const TABS: { key: TabKey; label: string }[] = [
@@ -21,6 +22,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'freeGifts', label: 'Free Gift Analytics' },
   { key: 'users', label: 'Users' },
   { key: 'marketing', label: 'Marketing' },
+  { key: 'productAlerts', label: 'Product Alerts' },
   { key: 'bulkSfx', label: 'Bulk SFX Generator' },
   { key: 'settings', label: 'Settings' },
 ];
@@ -43,8 +45,8 @@ export default function AdminSidebar({
             key={tab.key}
             onClick={() => onChange(tab.key)}
             className={`text-left rounded-lg px-3 py-2.5 transition-all outline-none ${active === tab.key
-                ? 'bg-blue-50 text-blue-600'
-                : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
               }`}
           >
             {tab.label}
