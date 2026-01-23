@@ -190,8 +190,7 @@ export async function POST(req: Request) {
             })
             .eq('id', targetUserId);
 
-          // Determine valid_until based on Razorpay data when available
-          // Prefer Razorpay's cycle end timestamps to avoid double-extending
+          // Determine valid_until based on Razorpay data or our own logic
           const now = new Date();
           let validUntil: Date | null = null;
           const cycleEndSeconds =
@@ -201,30 +200,27 @@ export async function POST(req: Request) {
             invoiceEntity?.due_date ||
             null;
 
-          if (cycleEndSeconds) {
+          // SPECIAL CASE: Pongal weekly FORCE 7 DAYS
+          if (finalPlan === 'pongal_weekly') {
+            // Force exactly 7 days from now (the payment date)
+            validUntil = new Date(now);
+            validUntil.setDate(validUntil.getDate() + 7);
+            console.log(`Pongal weekly extension (FORCED 7 DAYS): ${validUntil.toISOString()}`);
+          } else if (cycleEndSeconds) {
             validUntil = new Date(cycleEndSeconds * 1000);
             console.log(`Using Razorpay cycle end for subscription: ${validUntil.toISOString()}`);
           }
 
-          // Fallback to calculated duration if Razorpay data is unavailable
-          // IMPORTANT: For renewals, always start from NOW (current payment date), not the old subscription end date
-          // This ensures the billing period starts from when the payment was actually processed
+          // Fallback to calculated duration if data is unavailable (monthly/yearly only)
           if (!validUntil) {
-            // Always use current date as base for renewals to get correct next billing date
-            const effectiveBase = now;
-            validUntil = new Date(effectiveBase);
-
+            validUntil = new Date(now);
             if (finalPlan === 'yearly') {
               validUntil.setFullYear(validUntil.getFullYear() + 1);
-            } else if (finalPlan === 'pongal_weekly') {
-              // Pongal weekly: extend by 7 days per weekly payment
-              validUntil.setDate(validUntil.getDate() + 7);
             } else {
-              // Monthly
+              // Monthly fallback
               validUntil.setMonth(validUntil.getMonth() + 1);
             }
-
-            console.log(`${isRenewal ? 'Renewal' : 'New subscription'} fallback: ${effectiveBase.toISOString()} → ${validUntil.toISOString()}`);
+            console.log(`Renewal fallback: ${now.toISOString()} → ${validUntil.toISOString()}`);
           }
 
           // Update subscription - but be very careful not to override cancelled subscriptions

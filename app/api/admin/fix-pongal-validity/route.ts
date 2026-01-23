@@ -111,7 +111,12 @@ export async function POST(req: Request) {
                             const razorpayExpectedValidUntil = new Date(weekStartDate);
                             razorpayExpectedValidUntil.setDate(razorpayExpectedValidUntil.getDate() + (razorpayBasedWeeks * 7));
 
-                            if (!currentValidUntil || currentValidUntil < razorpayExpectedValidUntil) {
+                            // Synchronization logic: The validity should match exactly (weeksPaid * 7) from weekStartDate
+                            // We use a 1-hour tolerance to avoid minor timestamp differences
+                            const diffMs = Math.abs(currentValidUntil ? currentValidUntil.getTime() - razorpayExpectedValidUntil.getTime() : 0);
+                            const toleranceMs = 60 * 60 * 1000; // 1 hour
+
+                            if (!currentValidUntil || diffMs > toleranceMs) {
                                 // Update subscription validity
                                 const { error: updateError } = await admin
                                     .from('subscriptions')
@@ -145,12 +150,12 @@ export async function POST(req: Request) {
                                         user_id: userId,
                                         old_valid_until: currentValidUntil?.toISOString() || 'null',
                                         new_valid_until: razorpayExpectedValidUntil.toISOString(),
-                                        reason: `Razorpay shows ${paidCount} payments, updated to week ${razorpayBasedWeeks}`,
+                                        reason: `Sync with Razorpay payments (${paidCount}). Expected weeks: ${razorpayBasedWeeks}`,
                                     });
-                                    console.log(`Fixed pongal subscription for user ${userId}: ${currentValidUntil?.toISOString() || 'null'} -> ${razorpayExpectedValidUntil.toISOString()}`);
+                                    console.log(`Synced pongal subscription for user ${userId}: ${currentValidUntil?.toISOString() || 'null'} -> ${razorpayExpectedValidUntil.toISOString()}`);
                                 }
                             } else {
-                                skipped.push({ user_id: userId, reason: 'Validity already correct based on Razorpay data' });
+                                skipped.push({ user_id: userId, reason: 'Validity is already synchronized with Razorpay' });
                             }
                         } else {
                             skipped.push({ user_id: userId, reason: `Razorpay paid_count (${paidCount}) matches tracked weeks (${weeksPaid})` });

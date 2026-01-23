@@ -52,8 +52,8 @@ export async function POST(req: Request) {
     const now = Date.now();
     let expiresAt: Date;
     if (plan === 'pongal_weekly') {
-      // 3 weeks from now
-      expiresAt = new Date(now + 3 * 7 * 24 * 60 * 60 * 1000);
+      // Pongal weekly: First payment covers 1 week
+      expiresAt = new Date(now + 7 * 24 * 60 * 60 * 1000);
     } else if (plan === 'yearly') {
       expiresAt = new Date(now + 365 * 24 * 60 * 60 * 1000);
     } else {
