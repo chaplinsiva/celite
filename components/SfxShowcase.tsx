@@ -100,8 +100,8 @@ function SfxCard({ template, index, currentlyPlaying, onPlay }: SfxCardProps) {
         <div className="group relative">
             {/* Main Card */}
             <div className={`relative rounded-2xl overflow-hidden transition-all duration-300 ${isPlaying
-                    ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 ring-2 ring-cyan-500/50 shadow-lg shadow-cyan-500/20'
-                    : 'bg-zinc-800/50 hover:bg-zinc-800'
+                ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 ring-2 ring-cyan-500/50 shadow-lg shadow-cyan-500/20'
+                : 'bg-zinc-800/50 hover:bg-zinc-800'
                 }`}>
                 <div className="p-4 flex items-center gap-4">
                     {/* Play Button */}
@@ -109,10 +109,10 @@ function SfxCard({ template, index, currentlyPlaying, onPlay }: SfxCardProps) {
                         onClick={handlePlayClick}
                         disabled={!audioUrl}
                         className={`relative w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 flex-shrink-0 ${isPlaying
-                                ? 'bg-gradient-to-br ' + waveformColor + ' text-white shadow-lg'
-                                : audioUrl
-                                    ? 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600 group-hover:text-white'
-                                    : 'bg-zinc-700/50 text-zinc-500 cursor-not-allowed'
+                            ? 'bg-gradient-to-br ' + waveformColor + ' text-white shadow-lg'
+                            : audioUrl
+                                ? 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600 group-hover:text-white'
+                                : 'bg-zinc-700/50 text-zinc-500 cursor-not-allowed'
                             }`}
                     >
                         {isLoading ? (

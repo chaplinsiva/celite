@@ -11,6 +11,8 @@ export default function SettingsPanel() {
   const [fixResults, setFixResults] = useState<any>(null);
   const [fixingTimestamps, setFixingTimestamps] = useState(false);
   const [fixTimestampResults, setFixTimestampResults] = useState<any>(null);
+  const [fixingPongal, setFixingPongal] = useState(false);
+  const [fixPongalResults, setFixPongalResults] = useState<any>(null);
   const [maintenanceOn, setMaintenanceOn] = useState(false);
   const [updatingMaintenance, setUpdatingMaintenance] = useState(false);
 
@@ -166,6 +168,45 @@ export default function SettingsPanel() {
     }
   };
 
+  const fixPongalValidity = async () => {
+    if (!confirm('This will check all Pongal weekly subscriptions and fix any where autopay payments were deducted but validity was not extended. Continue?')) {
+      return;
+    }
+
+    try {
+      setFixingPongal(true);
+      setFixPongalResults(null);
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setMessage('Session expired. Please refresh the page.');
+        return;
+      }
+
+      const res = await fetch('/api/admin/fix-pongal-validity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`
+        },
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error || 'Fix failed');
+      }
+
+      setFixPongalResults(json);
+      setMessage(`Processed ${json.details?.fixed?.length || 0} Pongal subscriptions. Fixed: ${json.fixed}, Skipped: ${json.skipped}, Errors: ${json.errors}`);
+      setTimeout(() => setMessage(null), 10000);
+    } catch (e: any) {
+      setMessage(e?.message || 'Error fixing Pongal validity');
+      setTimeout(() => setMessage(null), 5000);
+    } finally {
+      setFixingPongal(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-zinc-900">Settings</h2>
@@ -218,8 +259,8 @@ export default function SettingsPanel() {
             onClick={() => toggleMaintenance(!maintenanceOn)}
             disabled={updatingMaintenance}
             className={`rounded-lg px-6 py-2 text-sm font-semibold transition-all shadow-sm ${maintenanceOn
-                ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
-                : 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+              ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
+              : 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
               } disabled:opacity-60 disabled:cursor-not-allowed`}
           >
             {updatingMaintenance
@@ -278,6 +319,62 @@ export default function SettingsPanel() {
                     <p className="text-xs font-semibold text-red-600 mb-2">Errors:</p>
                     <div className="space-y-1 max-h-40 overflow-y-auto">
                       {fixResults.details.errors.map((error: any, idx: number) => (
+                        <div key={idx} className="text-xs text-red-500">
+                          <span className="font-mono">{error.user_id.slice(0, 8)}...</span>: {error.error}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Fix Pongal Weekly Validity */}
+          <div className="p-4 rounded-lg bg-orange-50 border border-orange-100">
+            <p className="text-xs text-zinc-600 mb-3 leading-relaxed">
+              Fix Pongal weekly subscriptions where autopay payments were deducted but validity was not extended.
+              This checks Razorpay payment counts and updates valid_until for affected users.
+            </p>
+            <button
+              onClick={fixPongalValidity}
+              disabled={fixingPongal}
+              className="rounded-lg bg-gradient-to-r from-orange-600 to-amber-600 px-4 py-2 text-sm font-semibold text-white hover:from-orange-700 hover:to-amber-700 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm transition-all"
+            >
+              {fixingPongal ? 'Processing...' : 'Fix Pongal Weekly Validity'}
+            </button>
+
+            {fixPongalResults && (
+              <div className="mt-4 p-4 rounded-lg bg-white border border-zinc-200 shadow-sm">
+                <p className="text-xs font-semibold text-zinc-900 mb-2">Results:</p>
+                <div className="space-y-1 text-xs">
+                  <p className="text-green-600 font-medium">✓ Fixed: {fixPongalResults.fixed}</p>
+                  <p className="text-amber-600 font-medium">⊘ Skipped: {fixPongalResults.skipped}</p>
+                  {fixPongalResults.errors > 0 && <p className="text-red-600 font-medium">✗ Errors: {fixPongalResults.errors}</p>}
+                </div>
+
+                {fixPongalResults.details?.fixed && fixPongalResults.details.fixed.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-zinc-100">
+                    <p className="text-xs font-semibold text-zinc-900 mb-2">Fixed Users:</p>
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {fixPongalResults.details.fixed.map((fix: any, idx: number) => (
+                        <div key={idx} className="text-xs text-zinc-600">
+                          <span className="font-mono text-zinc-900">{fix.user_id.slice(0, 8)}...</span>
+                          <span className="text-zinc-400 ml-2">
+                            ({fix.old_valid_until === 'null' ? 'null' : new Date(fix.old_valid_until).toLocaleDateString()} → {new Date(fix.new_valid_until).toLocaleDateString()})
+                          </span>
+                          <span className="text-zinc-500 ml-2 italic">{fix.reason}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {fixPongalResults.details?.errors && fixPongalResults.details.errors.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-zinc-100">
+                    <p className="text-xs font-semibold text-red-600 mb-2">Errors:</p>
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {fixPongalResults.details.errors.map((error: any, idx: number) => (
                         <div key={idx} className="text-xs text-red-500">
                           <span className="font-mono">{error.user_id.slice(0, 8)}...</span>: {error.error}
                         </div>

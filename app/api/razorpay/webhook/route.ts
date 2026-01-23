@@ -216,8 +216,11 @@ export async function POST(req: Request) {
 
             if (finalPlan === 'yearly') {
               validUntil.setFullYear(validUntil.getFullYear() + 1);
+            } else if (finalPlan === 'pongal_weekly') {
+              // Pongal weekly: extend by 7 days per weekly payment
+              validUntil.setDate(validUntil.getDate() + 7);
             } else {
-              // Monthly (weekly subscriptions converted to monthly)
+              // Monthly
               validUntil.setMonth(validUntil.getMonth() + 1);
             }
 
@@ -309,6 +312,19 @@ export async function POST(req: Request) {
                   .from('pongal_weekly_subscriptions')
                   .update(weekUpdateData)
                   .eq('id', pongalSub.id);
+
+                // Also extend subscription validity by 7 days for the weekly payment
+                const newValidUntil = new Date();
+                newValidUntil.setDate(newValidUntil.getDate() + 7);
+
+                await admin
+                  .from('subscriptions')
+                  .update({
+                    valid_until: newValidUntil.toISOString(),
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('user_id', targetUserId)
+                  .eq('plan', 'pongal_weekly');
 
                 // Also update pongal_tracking
                 await admin
