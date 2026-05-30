@@ -5,15 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '../context/AppContext';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
-import { Menu, X, Search, ChevronDown } from 'lucide-react';
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from '@/components/ui/navigation-menu';
+import { Menu, X, Search, ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 type Category = {
@@ -353,94 +345,160 @@ export default function Header() {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden absolute top-20 left-0 w-full bg-background border-b border-zinc-100 shadow-xl py-6 px-6 flex flex-col gap-4 animate-in slide-in-from-top-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
-            {/* Mobile nav in specific order */}
-            {[
-              { name: 'Video Templates', route: '/video-templates', slug: 'video-templates' },
-              { name: 'Save Date', route: '/save-date', slug: 'save-date' },
-              { name: 'Photos', route: '/stock-photos', slug: 'stock-images' },
-              { name: 'Music', route: '/stock-musics', slug: 'stock-musics' },
-              { name: 'SFX', route: '/sound-effects', slug: 'sound-effects' },
-              { name: 'Web', route: '/web-templates', slug: 'website-templates' },
-              { name: 'Graphics', route: '/graphics', slug: 'psd-templates' },
-              { name: '3D', route: '/3d-models', slug: '3d-models' },
-              { name: 'Prompts', route: '/prompts', slug: 'prompts' },
-            ].map((navItem) => {
-              const category = categories.find(cat =>
-                cat.slug === navItem.slug ||
-                cat.name.toLowerCase() === navItem.name.toLowerCase()
-              );
-
-              if (!category) return null;
-
-              const categorySubcategories = subcategories.filter(
-                sub => sub.category_id === category.id
-              );
-
-              return (
-                <div key={navItem.slug} className="border-b border-zinc-50 pb-2">
-                  <Link
-                    href={navItem.route}
-                    className="text-lg font-semibold text-zinc-900 py-2 block"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    {navItem.name}
-                  </Link>
-                  {categorySubcategories.length > 0 && (
-                    <div className="ml-4 mt-2 space-y-1">
-                      {categorySubcategories.map((subcategory) => (
-                        <Link
-                          key={subcategory.id}
-                          href={`${navItem.route}?subcategory=${subcategory.slug}`}
-                          className="text-xs text-zinc-600 py-0.5 block hover:text-zinc-900"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          {subcategory.name}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            {!isAuthLoading && user && !hasCreatorShop && (
-              <Link
-                href="/start-selling"
-                className="text-lg font-medium text-zinc-500 py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Start Selling
-              </Link>
-            )}
-            {!isAuthLoading && user && hasCreatorShop && (
-              <Link
-                href="/creator/dashboard"
-                className="text-lg font-medium text-zinc-500 py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Creator Dashboard
-              </Link>
-            )}
-            <Link
-              href="/video-templates"
-              className="text-lg font-medium text-zinc-800 py-2 border-b border-zinc-50"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Search Templates
-            </Link>
-            {!isAuthLoading && !user && (
-              <Link
-                href="/login"
-                className="text-lg font-medium text-zinc-800 py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Log in
-              </Link>
-            )}
-          </div>
+          <MobileMenu
+            categories={categories}
+            subcategories={subcategories}
+            isAuthLoading={isAuthLoading}
+            user={user}
+            hasCreatorShop={hasCreatorShop}
+            onClose={() => setIsMobileMenuOpen(false)}
+          />
         )}
       </header>
     </>
   );
 }
 
+// Helper to get category route (reuse from Header)
+const getMobileCategoryRoute = (categorySlug: string): string => {
+  const routeMap: Record<string, string> = {
+    'video-templates': '/video-templates',
+    'save-date': '/save-date',
+    'stock-images': '/stock-photos',
+    'stock-musics': '/stock-musics',
+    'sound-effects': '/sound-effects',
+    'website-templates': '/web-templates',
+    'psd-templates': '/graphics',
+    '3d-models': '/3d-models',
+    'prompts': '/prompts',
+    'stock-photos': '/stock-photos',
+  };
+  return routeMap[categorySlug] || `/video-templates?category=${categorySlug}`;
+};
+
+type MobileNavItem = { name: string; route: string; slug: string };
+
+const mobileNavItems: MobileNavItem[] = [
+  { name: 'Video Templates', route: '/video-templates', slug: 'video-templates' },
+  { name: 'Save Date', route: '/save-date', slug: 'save-date' },
+  { name: 'Photos', route: '/stock-photos', slug: 'stock-images' },
+  { name: 'Music', route: '/stock-musics', slug: 'stock-musics' },
+  { name: 'SFX', route: '/sound-effects', slug: 'sound-effects' },
+  { name: 'Web', route: '/web-templates', slug: 'website-templates' },
+  { name: 'Graphics', route: '/graphics', slug: 'psd-templates' },
+  { name: '3D', route: '/3d-models', slug: '3d-models' },
+  { name: 'Prompts', route: '/prompts', slug: 'prompts' },
+];
+
+function MobileMenu({
+  categories,
+  subcategories,
+  isAuthLoading,
+  user,
+  hasCreatorShop,
+  onClose,
+}: {
+  categories: Category[];
+  subcategories: Subcategory[];
+  isAuthLoading: boolean;
+  user: any;
+  hasCreatorShop: boolean;
+  onClose: () => void;
+}) {
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+
+  return (
+    <div className="lg:hidden absolute top-20 left-0 w-full bg-white border-b border-zinc-100 shadow-xl py-4 px-5 flex flex-col gap-1 animate-in slide-in-from-top-4 duration-200 max-h-[calc(100vh-5rem)] overflow-y-auto">
+      {mobileNavItems.map((navItem) => {
+        const category = categories.find(
+          (cat) =>
+            cat.slug === navItem.slug ||
+            cat.name.toLowerCase() === navItem.name.toLowerCase()
+        );
+        if (!category) return null;
+
+        const catSubcategories = subcategories.filter(
+          (sub) => sub.category_id === category.id
+        );
+        const hasSubcats = catSubcategories.length > 0;
+        const isExpanded = expandedCategory === category.id;
+
+        return (
+          <div key={navItem.slug} className="border-b border-zinc-100 last:border-0">
+            <div className="flex items-center">
+              <Link
+                href={navItem.route}
+                className="flex-1 text-[15px] font-semibold text-zinc-900 py-3 block"
+                onClick={onClose}
+              >
+                {navItem.name}
+              </Link>
+              {hasSubcats && (
+                <button
+                  onClick={() =>
+                    setExpandedCategory(isExpanded ? null : category.id)
+                  }
+                  className="p-2 text-zinc-400 hover:text-zinc-700 transition-colors"
+                >
+                  <ChevronDown
+                    className={cn(
+                      'w-4 h-4 transition-transform duration-200',
+                      isExpanded && 'rotate-180'
+                    )}
+                  />
+                </button>
+              )}
+            </div>
+
+            {/* Collapsible subcategories */}
+            {hasSubcats && isExpanded && (
+              <div className="ml-3 pl-3 border-l-2 border-zinc-100 pb-3 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                {catSubcategories.map((subcategory) => (
+                  <Link
+                    key={subcategory.id}
+                    href={`${navItem.route}?subcategory=${subcategory.slug}`}
+                    className="block text-[13px] text-zinc-600 py-1.5 px-2 rounded-md hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
+                    onClick={onClose}
+                  >
+                    {subcategory.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Divider */}
+      <div className="h-px bg-zinc-200 my-2" />
+
+      {!isAuthLoading && user && !hasCreatorShop && (
+        <Link
+          href="/start-selling"
+          className="text-[15px] font-medium text-zinc-600 py-2.5 hover:text-zinc-900 transition-colors"
+          onClick={onClose}
+        >
+          Start Selling
+        </Link>
+      )}
+      {!isAuthLoading && user && hasCreatorShop && (
+        <Link
+          href="/creator/dashboard"
+          className="text-[15px] font-medium text-zinc-600 py-2.5 hover:text-zinc-900 transition-colors"
+          onClick={onClose}
+        >
+          Creator Dashboard
+        </Link>
+      )}
+      {!isAuthLoading && !user && (
+        <Link
+          href="/login"
+          className="text-[15px] font-medium text-zinc-900 py-2.5"
+          onClick={onClose}
+        >
+          Log in
+        </Link>
+      )}
+    </div>
+  );
+}
