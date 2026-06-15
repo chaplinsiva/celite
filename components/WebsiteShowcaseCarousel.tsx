@@ -14,17 +14,23 @@ type WebsiteTemplate = Template & {
 
 const WEBSITE_CATEGORY_SLUG = 'website-templates';
 
-export default function WebsiteShowcaseCarousel() {
-  const [websites, setWebsites] = useState<WebsiteTemplate[]>([]);
+export default function WebsiteShowcaseCarousel({ initialTemplates }: { initialTemplates?: WebsiteTemplate[] } = {}) {
+  const [websites, setWebsites] = useState<WebsiteTemplate[]>(initialTemplates || []);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
+    if (initialTemplates && initialTemplates.length > 0) {
+      setWebsites(initialTemplates);
+      setCurrentIndex(0);
+      return;
+    }
+
     const loadWebsites = async () => {
       const supabase = getSupabaseBrowserClient();
       const { data, error } = await supabase
         .from('templates')
         .select(`
-          slug,name,subtitle,description,img,video,features,tags,created_at,
+          slug,name,subtitle,description,img,video,video_path,thumbnail_path,features,tags,created_at,
           categories(id,name,slug)
         `)
         .order('created_at', { ascending: false })
@@ -54,6 +60,8 @@ export default function WebsiteShowcaseCarousel() {
             price: 0,
             img: tpl.img,
             video: tpl.video,
+            video_path: tpl.video_path,
+            thumbnail_path: tpl.thumbnail_path,
             features: tpl.features ?? [],
             software: tpl.software ?? [],
             plugins: tpl.plugins ?? [],
@@ -67,7 +75,7 @@ export default function WebsiteShowcaseCarousel() {
     };
 
     loadWebsites();
-  }, []);
+  }, [initialTemplates]);
 
   if (!websites.length) return null;
 

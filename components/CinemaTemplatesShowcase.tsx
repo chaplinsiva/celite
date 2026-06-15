@@ -91,11 +91,17 @@ function VideoCard({ template, videoUrl, thumbnail }: VideoCardProps) {
   );
 }
 
-export default function CinemaTemplatesShowcase() {
-  const [templates, setTemplates] = useState<CinemaTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function CinemaTemplatesShowcase({ initialTemplates }: { initialTemplates?: CinemaTemplate[] } = {}) {
+  const [templates, setTemplates] = useState<CinemaTemplate[]>(initialTemplates || []);
+  const [loading, setLoading] = useState(!initialTemplates || initialTemplates.length === 0);
 
   useEffect(() => {
+    if (initialTemplates && initialTemplates.length > 0) {
+      setTemplates(initialTemplates);
+      setLoading(false);
+      return;
+    }
+
     const loadTemplates = async () => {
       try {
         const supabase = getSupabaseBrowserClient();
@@ -161,7 +167,7 @@ export default function CinemaTemplatesShowcase() {
     };
 
     loadTemplates();
-  }, []);
+  }, [initialTemplates]);
 
   if (loading) {
     return (

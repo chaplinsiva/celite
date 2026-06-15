@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
-import { formatPriceWithDecimal } from "../../lib/currency";
+import { formatPriceWithDecimal, type Currency } from "../../lib/currency";
 import { trackBeginCheckout, trackPurchase, trackSubscribe } from "../../lib/gtag";
 import LoadingSpinner from "../../components/ui/loading-spinner";
 import { GlowingEffect } from "../../components/ui/glowing-effect";
@@ -38,6 +38,7 @@ function CheckoutContent() {
   const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'yearly' | 'pongal_weekly' | null>(null);
   const [subscriptionPrice, setSubscriptionPrice] = useState<number | null>(null);
   const [countryCode, setCountryCode] = useState("+91"); // Default to India
+  const [currency, setCurrency] = useState<Currency>((searchParams?.get('currency') as Currency) || 'INR');
 
   // Handle subscription checkout (from Pricing page)
   useEffect(() => {
@@ -46,26 +47,29 @@ function CheckoutContent() {
       setSubscriptionPlan(subscriptionType);
       // Load subscription price from database
       const loadSubscriptionPrice = async () => {
-        if (subscriptionType === 'pongal_weekly') {
-          const supabase = getSupabaseBrowserClient();
-          const { data: settings } = await supabase.from('settings').select('key,value');
-          const settingsMap: Record<string, string> = {};
-          (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
-          
-          const pongalPaiseStr = settingsMap.PONGAL_WEEKLY_PRICE || '49900';
-          let pongalPaise = Number(pongalPaiseStr);
-          if (pongalPaise >= 1000) {
-            pongalPaise = pongalPaise / 100;
-          }
-          setSubscriptionPrice(Math.round(pongalPaise));
-          return;
-        }
-        
+        const { paiseToINR, centsToDollars } = await import('../../lib/priceUtils');
         const supabase = getSupabaseBrowserClient();
         const { data: settings } = await supabase.from('settings').select('key,value');
         const settingsMap: Record<string, string> = {};
         (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
 
+        if (subscriptionType === 'pongal_weekly') {
+          const pongalPaiseStr = settingsMap.PONGAL_WEEKLY_PRICE || '49900';
+          setSubscriptionPrice(paiseToINR(Number(pongalPaiseStr)));
+          return;
+        }
+
+        // For USD, use USD amounts if available
+        if (currency === 'USD') {
+          const usdKey = subscriptionType === 'monthly' ? 'RAZORPAY_MONTHLY_AMOUNT_USD' : 'RAZORPAY_YEARLY_AMOUNT_USD';
+          const usdCents = settingsMap[usdKey];
+          if (usdCents) {
+            setSubscriptionPrice(centsToDollars(Number(usdCents)));
+            return;
+          }
+        }
+
+        // INR pricing (default)
         let amountPaise = 0;
         if (subscriptionType === 'monthly') {
           const monthlyAmount = settingsMap.RAZORPAY_MONTHLY_AMOUNT;
@@ -77,13 +81,11 @@ function CheckoutContent() {
           amountPaise = Number(yearlyAmount);
         }
 
-        // Convert from paise to INR
-        const amountINR = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
-        setSubscriptionPrice(Math.round(amountINR));
+        setSubscriptionPrice(paiseToINR(amountPaise));
       };
       loadSubscriptionPrice();
     }
-  }, [searchParams]);
+  }, [searchParams, currency]);
 
   // Handle direct product checkout (from Buy Now)
   useEffect(() => {
@@ -138,7 +140,7 @@ function CheckoutContent() {
           item_id: item.slug,
           item_name: item.name,
           price: item.price,
-          quantity: 1,
+          quantity: 1 as const,
         })),
         subtotal,
         'INR'
@@ -272,7 +274,7 @@ function CheckoutContent() {
             },
             body: JSON.stringify({
               plan: subscriptionPlan,
-              currency: 'INR',
+              currency: currency,
               billing: {
                 name: billing.name,
                 email: billing.email,
@@ -288,12 +290,28 @@ function CheckoutContent() {
           }
 
           const sub = subJson.subscription;
+          
+          // Build subscription plan display name
+          const planDisplayName = subscriptionPlan === 'pongal_weekly' 
+            ? 'Pongal Weekly Offer' 
+            : subscriptionPlan === 'yearly' 
+            ? 'Yearly Pro Plan' 
+            : 'Monthly Pro Plan';
+
           // Open Razorpay checkout for subscription
           // @ts-ignore
           const rzp = new window.Razorpay({
             key: sub?.razorpay_key || '',
             subscription_id: sub.id,
+            name: 'Celite',
+            description: planDisplayName,
             image: '/PNG1.png',
+            // Currency is important: PayPal only shows for USD/international currencies
+            currency: currency,
+            notes: {
+              plan: subscriptionPlan,
+              currency: currency,
+            },
             prefill: {
               name: billing.name,
               email: billing.email,
@@ -351,10 +369,11 @@ function CheckoutContent() {
                     plan_id: subscriptionPlan,
                     plan_name: planName,
                     value: subscriptionPrice || 0,
-                    currency: 'INR',
+                    currency: currency,
                   });
 
                   // Redirect to dashboard
+                  setProcessing(false);
                   router.push("/dashboard?payment=success");
                 } else {
                   // Update checkout details status to failed
@@ -412,8 +431,8 @@ function CheckoutContent() {
           rzp.open();
       } else {
         // Handle one-time product payment
-        // Calculate total amount in paise
-        const amountInPaise = Math.round(subtotal * 100);
+        // Calculate total amount in paise/cents
+        const amountInSmallestUnit = Math.round(subtotal * 100);
 
         // Create Razorpay order for all cart items
         // For multiple items, we'll create a combined order
@@ -428,7 +447,8 @@ function CheckoutContent() {
             Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
-            amount: amountInPaise,
+            amount: amountInSmallestUnit,
+            currency: currency,
             product: productInfo,
             billing: {
               name: billing.name,
@@ -492,6 +512,10 @@ function CheckoutContent() {
           description: cartItems.length === 1 ? cartItems[0].name : `${cartItems.length} Templates`,
           image: '/PNG1.png',
           order_id: json.order.id,
+          notes: {
+            currency: currency,
+            items: cartItems.map((i: any) => i.slug).join(','),
+          },
           prefill: {
             name: billing.name,
             email: billing.email,
@@ -547,7 +571,7 @@ function CheckoutContent() {
                 trackPurchase({
                   transaction_id: verifyJson.order_id || resp.razorpay_order_id,
                   value: subtotal,
-                  currency: 'INR',
+                  currency: currency,
                   items: cartItems.map((item) => ({
                     item_id: item.slug,
                     item_name: item.name,
@@ -559,6 +583,7 @@ function CheckoutContent() {
                 // Clear cart
                 await resetCart();
                 // Redirect to dashboard
+                setProcessing(false);
                 router.push("/dashboard?payment=success");
               } else {
                 // Update checkout details status to failed
@@ -762,6 +787,38 @@ function CheckoutContent() {
                     </div>
                   </div>
                 </div>
+
+                {/* Currency Toggle */}
+                <div className="mt-4">
+                  <label className="block text-sm font-semibold text-zinc-700 mb-2">Payment Currency</label>
+                  <div className="bg-zinc-100 p-1 rounded-xl flex items-center border border-zinc-200 w-fit">
+                    <button
+                      type="button"
+                      onClick={() => setCurrency('INR')}
+                      className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${currency === 'INR'
+                        ? 'bg-white text-zinc-900 shadow-sm'
+                        : 'text-zinc-500 hover:text-zinc-700'
+                        }`}
+                    >
+                      🇮🇳 INR (₹)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrency('USD')}
+                      className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${currency === 'USD'
+                        ? 'bg-white text-zinc-900 shadow-sm'
+                        : 'text-zinc-500 hover:text-zinc-700'
+                        }`}
+                    >
+                      🌍 USD ($)
+                    </button>
+                  </div>
+                  {currency === 'USD' && (
+                    <p className="text-xs text-green-600 mt-2 font-medium flex items-center gap-1">
+                      <span>✓</span> PayPal & international cards available with USD
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Terms */}
@@ -796,7 +853,7 @@ function CheckoutContent() {
                 disabled={processing}
                 className="w-full bg-blue-600 text-white px-6 py-4 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl text-base"
               >
-                {processing ? 'Processing…' : `Pay ${formatPriceWithDecimal(subtotal)}`}
+                {processing ? 'Processing…' : `Pay ${formatPriceWithDecimal(subtotal, currency)}`}
               </button>
             </form>
           </section>
@@ -884,7 +941,7 @@ function CheckoutContent() {
                     />
                     <div className="flex-1">
                       <p className="font-semibold text-zinc-900 text-sm">{item.name}</p>
-                      <p className="text-sm text-zinc-600 mt-1">{formatPriceWithDecimal(item.price)}</p>
+                      <p className="text-sm text-zinc-600 mt-1">{formatPriceWithDecimal(item.price, currency)}</p>
                     </div>
                   </div>
                 ))}
@@ -896,7 +953,7 @@ function CheckoutContent() {
               <div className="flex justify-between items-center">
                 <span className="text-lg font-bold text-zinc-900">Total</span>
                 <span className="text-2xl font-bold text-blue-600">
-                  {formatPriceWithDecimal(subtotal)}
+                  {formatPriceWithDecimal(subtotal, currency)}
                 </span>
               </div>
             </div>

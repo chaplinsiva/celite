@@ -95,15 +95,16 @@ function DashboardContent() {
       settings.forEach((row: any) => {
         map[row.key] = row.value;
       });
-      const parsePrice = (value?: string, threshold = 10000) => {
+      // Use canonical conversion: all DB values are in paise (smallest unit)
+      const { paiseToINR } = await import('../../lib/priceUtils');
+      const parsePaiseAmount = (value?: string): number | null => {
         if (!value) return null;
-        let amount = Number(value);
+        const amount = Number(value);
         if (Number.isNaN(amount) || amount <= 0) return null;
-        if (amount >= threshold) amount = amount / 100;
-        return Math.round(amount);
+        return paiseToINR(amount);
       };
-      setMonthlyPrice(parsePrice(map.RAZORPAY_MONTHLY_AMOUNT, 10000));
-      setYearlyPrice(parsePrice(map.RAZORPAY_YEARLY_AMOUNT, 100000));
+      setMonthlyPrice(parsePaiseAmount(map.RAZORPAY_MONTHLY_AMOUNT));
+      setYearlyPrice(parsePaiseAmount(map.RAZORPAY_YEARLY_AMOUNT));
     }
 
     // Load creator shop (if any)

@@ -270,7 +270,7 @@ export const emailTemplates = {
           </div>
           <div class="content">
             <p>Hi ${userName},</p>
-            <p>This is a friendly reminder that your Celite <strong>${plan === 'monthly' ? 'Monthly' : 'Yearly'}</strong> subscription will expire on <strong>${new Date(expiryDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.</p>
+            <p>This is a friendly reminder that your Celite <strong>${plan === 'monthly' ? 'Monthly' : plan === 'yearly' ? 'Yearly' : 'Pongal Weekly'}</strong> subscription will expire on <strong>${new Date(expiryDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.</p>
             <p>To continue enjoying unlimited access to premium templates, please renew your subscription before it expires.</p>
             <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://celite.netlify.app'}/pricing" class="button">Renew Subscription</a>
             <p style="margin-top: 30px; color: #666; font-size: 14px;">If you have any questions, feel free to reach out to our support team.</p>
@@ -439,7 +439,7 @@ export async function sendSubscriptionPaymentEmail(
 export async function sendSubscriptionExpiringEmail(
   userEmail: string,
   userName: string,
-  plan: 'monthly' | 'yearly',
+  plan: 'monthly' | 'yearly' | 'pongal_weekly',
   expiryDate: string
 ) {
   const template = emailTemplates.subscriptionExpiring(userName, plan, expiryDate);

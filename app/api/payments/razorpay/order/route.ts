@@ -44,8 +44,11 @@ export async function POST(req: Request) {
     
     const { key_id } = await getRazorpayCreds();
     const body = await req.json();
-    const { amount, product, billing } = body;
+    const { amount, product, billing, currency: reqCurrency } = body;
     if (!amount || !product?.slug) return NextResponse.json({ ok: false, error: 'Missing amount or product' }, { status: 400 });
+
+    // Support INR and USD currencies (Razorpay supports both)
+    const orderCurrency = reqCurrency === 'USD' ? 'USD' : 'INR';
 
     // Use billing info from request if provided, otherwise fallback to user data
     const billingName = billing?.name || userName || '';
@@ -59,8 +62,8 @@ export async function POST(req: Request) {
     if (receipt.length > 40) receipt = receipt.slice(0, 40);
 
     const payload: any = {
-      amount: Math.round(Number(amount)), // amount in paise (INR * 100)
-      currency: 'INR', // Always use INR
+      amount: Math.round(Number(amount)), // amount in smallest currency unit (paise/cents)
+      currency: orderCurrency,
       receipt,
       notes: {
         slug: product.slug,

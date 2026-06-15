@@ -692,7 +692,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
           <div className="w-full lg:w-2/3">
 
             {/* Video Player / 3D Model / Stock Photo / Music Preview */}
-            <div className="w-full h-[500px] rounded-xl overflow-hidden bg-black shadow-lg mb-8 relative group flex items-center justify-center">
+            <div className="w-full h-[300px] sm:h-[400px] md:h-[500px] rounded-xl overflow-hidden bg-black shadow-lg mb-8 relative group flex items-center justify-center">
               {(() => {
                 const categorySlug = (product as any).category_slug?.toLowerCase() || '';
                 const categoryId = (product as any).category_id;
@@ -753,6 +753,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                       thumbnailUrl={(product as any).thumbnail_path || product.img || undefined}
                       title={product.name}
                       className="w-full h-full"
+                      isProductPage={true}
                     />
                   );
                 }

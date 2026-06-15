@@ -87,11 +87,17 @@ function VideoCard({ template, videoUrl, thumbnail }: VideoCardProps) {
   );
 }
 
-export default function SaveDateTemplatesShowcase() {
-  const [templates, setTemplates] = useState<SaveDateTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function SaveDateTemplatesShowcase({ initialTemplates }: { initialTemplates?: SaveDateTemplate[] } = {}) {
+  const [templates, setTemplates] = useState<SaveDateTemplate[]>(initialTemplates || []);
+  const [loading, setLoading] = useState(!initialTemplates || initialTemplates.length === 0);
 
   useEffect(() => {
+    if (initialTemplates && initialTemplates.length > 0) {
+      setTemplates(initialTemplates);
+      setLoading(false);
+      return;
+    }
+
     const loadTemplates = async () => {
       try {
         const supabase = getSupabaseBrowserClient();
@@ -128,7 +134,7 @@ export default function SaveDateTemplatesShowcase() {
     };
 
     loadTemplates();
-  }, []);
+  }, [initialTemplates]);
 
   if (loading) {
     return (

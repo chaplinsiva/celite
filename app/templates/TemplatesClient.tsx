@@ -111,11 +111,11 @@ const is3DModel = (template: Template): boolean => {
     return template.model_3d_path !== null && template.model_3d_path !== undefined;
 };
 
-export default function TemplatesClient() {
+export default function TemplatesClient({ initialCategoryGroups }: { initialCategoryGroups?: CategoryGroup[] } = {}) {
     const searchParams = useSearchParams();
     const searchQuery = searchParams.get('search') || '';
-    const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>(initialCategoryGroups || []);
+    const [loading, setLoading] = useState(!initialCategoryGroups || searchQuery !== '');
     const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
 
     useEffect(() => {
@@ -123,8 +123,15 @@ export default function TemplatesClient() {
     }, [searchQuery]);
 
     useEffect(() => {
+        if (!searchQuery.trim() && initialCategoryGroups) {
+            setCategoryGroups(initialCategoryGroups);
+            setLoading(false);
+            return;
+        }
+
         const loadTemplates = async () => {
             try {
+                setLoading(true);
                 const supabase = getSupabaseBrowserClient();
 
                 // Fetch all categories from the database
@@ -137,13 +144,14 @@ export default function TemplatesClient() {
                     console.error('Error loading categories:', categoryError);
                 }
 
-                // Fetch templates with category relation and all asset paths
+                // Fetch templates filtered by search query from database directly
                 const { data: templates, error } = await supabase
                     .from('templates')
                     .select('slug, name, img, video, video_path, thumbnail_path, audio_preview_path, model_3d_path, category_id, categories(id, name, slug)')
                     .eq('status', 'approved')
+                    .ilike('name', `%${searchQuery.trim()}%`)
                     .order('created_at', { ascending: false })
-                    .limit(2000);
+                    .limit(200);
 
                 if (error) {
                     console.error('Error loading templates:', error);
@@ -164,17 +172,7 @@ export default function TemplatesClient() {
                     const groupsByCategory = new Map<string, Template[]>();
                     const categoryCounts = new Map<string, number>();
 
-                    // Filter templates by search query if provided
-                    let filteredTemplates = templates;
-                    if (searchQuery.trim()) {
-                        const q = searchQuery.toLowerCase().trim();
-                        filteredTemplates = templates.filter((t: any) => {
-                            const nameMatch = t.name?.toLowerCase().includes(q);
-                            return nameMatch;
-                        });
-                    }
-
-                    filteredTemplates.forEach((t: any) => {
+                    templates.forEach((t: any) => {
                         let categoryId = t.category_id;
 
                         if (categoryId && categoryMap.has(categoryId)) {
@@ -238,7 +236,7 @@ export default function TemplatesClient() {
         };
 
         loadTemplates();
-    }, [searchQuery]);
+    }, [searchQuery, initialCategoryGroups]);
 
     const renderTemplatePreview = (template: Template) => {
         if (isMusicItem(template) && template.audio_preview_path) {

@@ -9,9 +9,7 @@ export const metadata: Metadata = {
     description: 'Browse our collection of professional AI prompts for ChatGPT, Midjourney, DALL-E, Stable Diffusion and more. Find the perfect prompt templates for your creative projects.',
 };
 
-// Force dynamic rendering so new prompts appear immediately
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 60;
 
 export default async function PromptsPage() {
     const supabase = getSupabaseServerClient();

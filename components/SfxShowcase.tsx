@@ -200,12 +200,18 @@ function SfxCard({ template, index, currentlyPlaying, onPlay }: SfxCardProps) {
     );
 }
 
-export default function SfxShowcase() {
-    const [templates, setTemplates] = useState<SfxTemplate[]>([]);
-    const [loading, setLoading] = useState(true);
+export default function SfxShowcase({ initialTemplates }: { initialTemplates?: SfxTemplate[] } = {}) {
+    const [templates, setTemplates] = useState<SfxTemplate[]>(initialTemplates || []);
+    const [loading, setLoading] = useState(!initialTemplates || initialTemplates.length === 0);
     const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
 
     useEffect(() => {
+        if (initialTemplates && initialTemplates.length > 0) {
+            setTemplates(initialTemplates);
+            setLoading(false);
+            return;
+        }
+
         const loadTemplates = async () => {
             try {
                 const supabase = getSupabaseBrowserClient();
@@ -244,7 +250,7 @@ export default function SfxShowcase() {
         };
 
         loadTemplates();
-    }, []);
+    }, [initialTemplates]);
 
     // Stop playing when component unmounts
     useEffect(() => {

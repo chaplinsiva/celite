@@ -9,9 +9,7 @@ export const metadata: Metadata = {
   description: 'Browse and download professional graphics templates, PSD templates, and design assets for your creative projects.',
 };
 
-// Force dynamic rendering so new templates appear immediately
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 60;
 
 export default async function GraphicsPage() {
   const supabase = getSupabaseServerClient();

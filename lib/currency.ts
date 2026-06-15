@@ -1,11 +1,24 @@
 // Currency utility functions
-// Note: Prices in database are already in INR, so we just format them
+// Supports both INR (₹) and USD ($) formatting
 
-export function formatPrice(amount: number): string {
-  return `₹${Math.round(amount).toLocaleString('en-IN')}`;
+export type Currency = 'INR' | 'USD';
+
+export function getCurrencySymbol(currency: Currency = 'INR'): string {
+  return currency === 'USD' ? '$' : '₹';
 }
 
-export function formatPriceWithDecimal(amount: number): string {
-  return `₹${amount.toFixed(2)}`;
+export function formatPrice(amount: number, currency: Currency = 'INR'): string {
+  const symbol = getCurrencySymbol(currency);
+  if (currency === 'USD') {
+    return `${symbol}${Math.round(amount).toLocaleString('en-US')}`;
+  }
+  return `${symbol}${Math.round(amount).toLocaleString('en-IN')}`;
 }
 
+export function formatPriceWithDecimal(amount: number, currency: Currency = 'INR'): string {
+  const symbol = getCurrencySymbol(currency);
+  if (currency === 'USD') {
+    return `${symbol}${amount.toFixed(2)}`;
+  }
+  return `${symbol}${amount.toFixed(2)}`;
+}

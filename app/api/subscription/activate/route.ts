@@ -48,6 +48,22 @@ export async function POST(req: Request) {
       });
     }
 
+    // Verify the Razorpay subscription is actually paid/active before activating
+    if (razorpaySubscriptionId) {
+      try {
+        const rzSub = await razorpayRequest(`/subscriptions/${razorpaySubscriptionId}`);
+        const validStatuses = ['active', 'authenticated', 'completed'];
+        if (!validStatuses.includes(rzSub.status)) {
+          console.error(`Razorpay subscription ${razorpaySubscriptionId} has invalid status: ${rzSub.status}`);
+          return NextResponse.json({ ok: false, error: `Subscription not active (status: ${rzSub.status})` }, { status: 400 });
+        }
+      } catch (verifyError: any) {
+        console.error('Failed to verify Razorpay subscription:', verifyError?.message);
+        // Don't block activation if Razorpay API is temporarily unavailable
+        // The webhook will also handle activation
+      }
+    }
+
     // Only cancel existing Razorpay subscription if it's a DIFFERENT one
     if (
       existingSub?.razorpay_subscription_id &&
@@ -173,13 +189,14 @@ export async function POST(req: Request) {
 
         let amountPaise: number;
         if (plan === 'pongal_weekly') {
-          amountPaise = 49900; // ₹499 in paise
+          amountPaise = Number(settingsMap.PONGAL_WEEKLY_PRICE || settingsMap.RAZORPAY_PONGAL_WEEKLY_AMOUNT || '49900');
         } else if (plan === 'monthly') {
-          amountPaise = Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '59900');
+          amountPaise = Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '79900');
         } else {
           amountPaise = Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
         }
-        const amount = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
+        const { paiseToINR } = await import('../../../../lib/priceUtils');
+        const amount = paiseToINR(amountPaise);
 
         if (userEmail) {
           await sendSubscriptionSuccessEmail(userEmail, userName, plan, Math.round(amount));

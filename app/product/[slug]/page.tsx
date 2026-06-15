@@ -129,9 +129,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   };
 }
 
-// Force dynamic rendering so new templates appear immediately
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 60;
 
 // Optional: Pre-generate some common pages for SEO (but allow dynamic generation for new ones)
 export async function generateStaticParams() {

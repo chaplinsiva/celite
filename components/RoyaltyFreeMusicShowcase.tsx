@@ -166,12 +166,18 @@ function MusicCard({ template, index, currentlyPlaying, onPlay }: MusicCardProps
     );
 }
 
-export default function RoyaltyFreeMusicShowcase() {
-    const [templates, setTemplates] = useState<MusicTemplate[]>([]);
-    const [loading, setLoading] = useState(true);
+export default function RoyaltyFreeMusicShowcase({ initialTemplates }: { initialTemplates?: MusicTemplate[] } = {}) {
+    const [templates, setTemplates] = useState<MusicTemplate[]>(initialTemplates || []);
+    const [loading, setLoading] = useState(!initialTemplates || initialTemplates.length === 0);
     const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
 
     useEffect(() => {
+        if (initialTemplates && initialTemplates.length > 0) {
+            setTemplates(initialTemplates);
+            setLoading(false);
+            return;
+        }
+
         const loadTemplates = async () => {
             try {
                 const supabase = getSupabaseBrowserClient();
@@ -209,7 +215,7 @@ export default function RoyaltyFreeMusicShowcase() {
         };
 
         loadTemplates();
-    }, []);
+    }, [initialTemplates]);
 
     // Stop playing when component unmounts
     useEffect(() => {

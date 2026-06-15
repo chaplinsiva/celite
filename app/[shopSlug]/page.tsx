@@ -4,6 +4,8 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import CreatorFollowButton from "@/components/CreatorFollowButton";
 import CreatorShopClient from "./CreatorShopClient";
 
+export const revalidate = 60;
+
 interface PageProps {
   params: Promise<{ shopSlug: string }>;
 }

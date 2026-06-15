@@ -124,7 +124,7 @@ export async function POST(req: Request) {
             await sendSubscriptionExpiringEmail(
               userEmail,
               userName,
-              subscription.plan as 'monthly' | 'yearly',
+              subscription.plan as 'monthly' | 'yearly' | 'pongal_weekly',
               subscription.valid_until
             );
 
