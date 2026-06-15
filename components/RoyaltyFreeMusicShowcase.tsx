@@ -90,6 +90,7 @@ function MusicCard({ template, index, currentlyPlaying, onPlay }: MusicCardProps
                 <img
                     src={thumbnail || albumCover}
                     alt={template.name}
+                    loading="lazy"
                     className="w-full h-full object-cover"
                 />
 

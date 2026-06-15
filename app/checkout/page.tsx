@@ -891,10 +891,12 @@ function CheckoutContent() {
                   </div>
                   <div className="text-right">
                     {subscriptionPlan === 'monthly' && (
-                      <p className="text-sm text-zinc-500 line-through mb-1">₹899</p>
+                      <p className="text-sm text-zinc-500 line-through mb-1">
+                        {currency === 'USD' ? '$14.99' : '₹899'}
+                      </p>
                     )}
                     <p className="font-bold text-zinc-900">
-                      {formatPriceWithDecimal(subscriptionPrice || 0)}
+                      {formatPriceWithDecimal(subscriptionPrice || 0, currency)}
                     </p>
                   </div>
                 </div>

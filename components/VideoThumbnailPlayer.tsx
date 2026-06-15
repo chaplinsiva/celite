@@ -337,6 +337,7 @@ export default function VideoThumbnailPlayer({
       <img
         src={displayThumbnail}
         alt={title || 'Video thumbnail'}
+        loading="lazy"
         className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 z-10 ${
           showVideo && currentTime > 0.1 ? 'opacity-0 pointer-events-none' : 'opacity-100'
         }`}
@@ -346,6 +347,7 @@ export default function VideoThumbnailPlayer({
       <video
         ref={videoRef}
         src={convertedVideoUrl || undefined}
+        preload={isProductPage ? 'metadata' : 'none'}
         className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 z-0 cursor-pointer ${
           showVideo ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}

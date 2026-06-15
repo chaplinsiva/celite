@@ -53,6 +53,7 @@ function VideoCard({ template, videoUrl, thumbnail }: VideoCardProps) {
       <img
         src={thumbnail}
         alt={template.name}
+        loading="lazy"
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovered && isLoaded && videoUrl ? 'opacity-0' : 'opacity-100'
           }`}
       />
@@ -64,7 +65,7 @@ function VideoCard({ template, videoUrl, thumbnail }: VideoCardProps) {
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="none"
           onLoadedData={() => setIsLoaded(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovered && isLoaded ? 'opacity-100' : 'opacity-0'
             }`}
