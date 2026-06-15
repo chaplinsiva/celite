@@ -87,41 +87,75 @@ export async function GET(req: Request) {
     const countRes = await countQuery;
     const totalCount = countRes.count || 0;
 
-    // Get all subscriptions for aggregate calculations (without filters)
-    const allSubsRes = await admin.from('subscriptions')
-      .select('id,user_id,is_active,plan,valid_until,autopay_enabled')
-      .order('created_at', { ascending: false });
-    const allSubs = allSubsRes.data ?? [];
+    const nowIso = new Date().toISOString();
 
-    // Calculate aggregates
-    const now = Date.now();
-    const activeList = allSubs.filter((s: any) => {
-      const isActive = s.is_active === true;
-      const isValid = !s.valid_until || new Date(s.valid_until).getTime() > now;
-      return isActive && isValid;
-    });
-    const expiredList = allSubs.filter((s: any) => {
-      const isActive = s.is_active === true;
-      const isValid = !s.valid_until || new Date(s.valid_until).getTime() > now;
-      return isActive && !isValid; // Active but expired
-    });
-    const cancelledList = allSubs.filter((s: any) => s.is_active === false);
+    // 1. Active subscribers count (is_active = true and not expired)
+    const { count: activeSubscribersCount } = await admin
+      .from('subscriptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_active', true)
+      .or(`valid_until.is.null,valid_until.gt.${nowIso}`);
+    const activeSubscribers = activeSubscribersCount || 0;
 
-    const activeSubscribers = activeList.length;
+    // 2. Active monthly/weekly count
+    const { count: activeMonthlyCount } = await admin
+      .from('subscriptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_active', true)
+      .or(`valid_until.is.null,valid_until.gt.${nowIso}`)
+      .in('plan', ['monthly', 'weekly']);
+    const activeMonthly = activeMonthlyCount || 0;
+
+    // 3. Active yearly count
+    const { count: activeYearlyCount } = await admin
+      .from('subscriptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_active', true)
+      .or(`valid_until.is.null,valid_until.gt.${nowIso}`)
+      .eq('plan', 'yearly');
+    const activeYearly = activeYearlyCount || 0;
+
+    // 4. Expired subscribers count (is_active = true and expired)
+    const { count: expiredSubscribersCount } = await admin
+      .from('subscriptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_active', true)
+      .lt('valid_until', nowIso);
+    const expiredSubscribers = expiredSubscribersCount || 0;
+
+    // 5. Cancelled subscribers count (is_active = false)
+    const { count: cancelledSubscribersCount } = await admin
+      .from('subscriptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_active', false);
+    const cancelledSubscribers = cancelledSubscribersCount || 0;
+
+    // 6. Autopay enabled count (among active & valid)
+    const { count: autopayEnabledCount } = await admin
+      .from('subscriptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_active', true)
+      .or(`valid_until.is.null,valid_until.gt.${nowIso}`)
+      .eq('autopay_enabled', true);
+    const autopayEnabled = autopayEnabledCount || 0;
+
+    // 7. Autopay disabled count (among active & valid)
+    const { count: autopayDisabledCount } = await admin
+      .from('subscriptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_active', true)
+      .or(`valid_until.is.null,valid_until.gt.${nowIso}`)
+      .eq('autopay_enabled', false);
+    const autopayDisabled = autopayDisabledCount || 0;
+
+    // 8. Total subscriptions count
+    const { count: totalSubscriptionsCount } = await admin
+      .from('subscriptions')
+      .select('id', { count: 'exact', head: true });
+    const totalSubscriptions = totalSubscriptionsCount || 0;
+
     // Weekly subscriptions are treated as monthly (legacy support)
     const activeWeekly = 0; // No new weekly subscriptions
-    const activeMonthly = activeList.filter((s: any) => s.plan === 'monthly' || s.plan === 'weekly').length;
-    const activeYearly = activeList.filter((s: any) => s.plan === 'yearly').length;
-    const expiredSubscribers = expiredList.length;
-    const cancelledSubscribers = cancelledList.length;
-    const autopayEnabled = activeList.filter((s: any) => s.autopay_enabled === true).length;
-    const autopayDisabled = activeList.filter((s: any) => s.autopay_enabled === false).length;
-
-    // Map subscriptions by id for download enrichment
-    const subsById: Record<string, any> = {};
-    (allSubs || []).forEach((s: any) => {
-      if (s.id) subsById[s.id] = s;
-    });
 
     // Get actual subscription prices from settings
     let monthlyPrice = 799; // Default
@@ -222,34 +256,36 @@ export async function GET(req: Request) {
     const userNames: Record<string, string> = {};
     if (userIds.size > 0) {
       try {
-        const { data: users } = await admin.auth.admin.listUsers();
-        if (users) {
-          users.users.forEach((u: any) => {
-            if (userIds.has(u.id)) {
-              if (u.email) userEmails[u.id] = u.email;
-              if (u.phone) userPhones[u.id] = u.phone;
-              const meta = u.user_metadata || {};
-              const name = meta.full_name || meta.name || 
-                (meta.first_name ? `${meta.first_name} ${meta.last_name || ''}`.trim() : '') ||
-                (u.email ? u.email.split('@')[0] : '');
-              if (name) userNames[u.id] = name;
-            }
+        const { data: usersData } = await admin
+          .from('users_view')
+          .select('id,email,phone,raw_user_meta_data')
+          .in('id', Array.from(userIds));
+
+        if (usersData) {
+          usersData.forEach((u: any) => {
+            if (u.email) userEmails[u.id] = u.email;
+            if (u.phone) userPhones[u.id] = u.phone;
+            const meta = u.raw_user_meta_data || {};
+            const name = meta.full_name || meta.name || 
+              (meta.first_name ? `${meta.first_name} ${meta.last_name || ''}`.trim() : '') ||
+              (u.email ? u.email.split('@')[0] : '');
+            if (name) userNames[u.id] = name;
           });
         }
       } catch (e) {
-        // If we can't get user emails, continue without them
-        console.log('Could not fetch user emails');
+        console.log('Could not fetch user emails from users_view:', e);
       }
     }
 
     // Enrich subscription data with user emails
+    const nowTime = Date.now();
     const enrichedSubs = (subsRes.data ?? []).map((s: any) => ({
       ...s,
       user_email: userEmails[s.user_id] || null,
       user_phone: userPhones[s.user_id] || null,
       user_name: userNames[s.user_id] || null,
-      is_actually_active: s.is_active && (!s.valid_until || new Date(s.valid_until).getTime() > now),
-      days_remaining: s.valid_until ? Math.ceil((new Date(s.valid_until).getTime() - now) / (1000 * 60 * 60 * 24)) : null,
+      is_actually_active: s.is_active && (!s.valid_until || new Date(s.valid_until).getTime() > nowTime),
+      days_remaining: s.valid_until ? Math.ceil((new Date(s.valid_until).getTime() - nowTime) / (1000 * 60 * 60 * 24)) : null,
     }));
 
     // Get template names for downloads
@@ -266,6 +302,23 @@ export async function GET(req: Request) {
         });
       } catch (e) {
         console.log('Could not fetch template names for downloads');
+      }
+    }
+
+    // Map subscriptions by id for download enrichment (lazy loaded for referenced IDs)
+    const subsById: Record<string, any> = {};
+    const downloadSubIds = Array.from(new Set(downloads.map((d: any) => d.subscription_id).filter(Boolean)));
+    if (downloadSubIds.length > 0) {
+      try {
+        const { data: subData } = await admin
+          .from('subscriptions')
+          .select('id,plan')
+          .in('id', downloadSubIds);
+        (subData || []).forEach((s: any) => {
+          subsById[s.id] = s;
+        });
+      } catch (e) {
+        console.log('Could not fetch subscriptions for download mapping:', e);
       }
     }
 
@@ -304,7 +357,7 @@ export async function GET(req: Request) {
         cancelledSubscribers,
         autopayEnabled,
         autopayDisabled,
-        totalSubscriptions: allSubs.length,
+        totalSubscriptions,
         totalDownloads,
         uniqueDownloadUsers,
         uniqueDownloadedTemplates,

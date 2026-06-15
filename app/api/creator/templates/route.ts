@@ -36,24 +36,18 @@ export async function GET(req: Request) {
     if ('error' in ctx) return ctx.error;
     const { admin, shop } = ctx;
 
-    // Fetch templates and download counts in parallel
+    // Fetch templates and downloads details in parallel
     const [templatesResult, downloadsResult] = await Promise.all([
       admin
         .from('templates')
-        .select('slug,name,subtitle,video,img,created_at,creator_shop_id,status')
+        .select('slug,name,subtitle,video,img,created_at,creator_shop_id,status,downloads(count)')
         .eq('creator_shop_id', shop.id)
         .order('created_at', { ascending: false }),
       admin
         .from('downloads')
-        .select('template_slug')
-        .in('template_slug',
-          // We need slugs first, so use a subquery approach - fetch all downloads for this creator's templates
-          await admin
-            .from('templates')
-            .select('slug')
-            .eq('creator_shop_id', shop.id)
-            .then(res => (res.data || []).map((t: any) => t.slug))
-        )
+        .select('user_id, downloaded_at')
+        .eq('creator_shop_id', shop.id)
+        .order('downloaded_at', { ascending: true })
     ]);
 
     if (templatesResult.error) {
@@ -63,70 +57,54 @@ export async function GET(req: Request) {
     const templates = templatesResult.data || [];
     const downloads = downloadsResult.data || [];
 
-    // Count downloads per template in memory (much faster than N queries)
-    const downloadCounts: Record<string, number> = {};
-    for (const d of downloads) {
-      const slug = d.template_slug;
-      downloadCounts[slug] = (downloadCounts[slug] || 0) + 1;
-    }
-
     // Build results with download counts
-    const results = templates.map(tpl => ({
-      ...tpl,
-      downloadCount: downloadCounts[tpl.slug] || 0
-    }));
+    const results = templates.map((tpl: any) => {
+      const { downloads: dls, ...rest } = tpl;
+      return {
+        ...rest,
+        downloadCount: dls?.[0]?.count || 0
+      };
+    });
 
     // Calculate total downloads
     const totalDownloads = results.reduce((sum, t) => sum + t.downloadCount, 0);
 
-    // Calculate unique user periods (simplified - don't need all creator comparison)
+    // Calculate unique user periods
     let uniqueUserPeriods = 0;
     try {
-      const slugs = templates.map(t => t.slug).filter(Boolean);
-      if (slugs.length > 0) {
-        const { data: dl } = await admin
-          .from('downloads')
-          .select('user_id, downloaded_at')
-          .in('template_slug', slugs)
-          .order('downloaded_at', { ascending: true });
-
-        if (dl && dl.length > 0) {
-          const byUser = new Map<string, Date[]>();
-          for (const d of dl as any[]) {
-            if (!d.user_id || !d.downloaded_at) continue;
-            const arr = byUser.get(d.user_id) || [];
-            arr.push(new Date(d.downloaded_at));
-            byUser.set(d.user_id, arr);
-          }
-
-          const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-
-          byUser.forEach((dates) => {
-            dates.sort((a, b) => a.getTime() - b.getTime());
-            let lastCounted: Date | null = null;
-            for (const dt of dates) {
-              if (!lastCounted) {
-                uniqueUserPeriods += 1;
-                lastCounted = dt;
-              } else if (dt.getTime() - lastCounted.getTime() > THIRTY_DAYS_MS) {
-                uniqueUserPeriods += 1;
-                lastCounted = dt;
-              }
-            }
-          });
+      if (downloads.length > 0) {
+        const byUser = new Map<string, Date[]>();
+        for (const d of downloads as any[]) {
+          if (!d.user_id || !d.downloaded_at) continue;
+          const arr = byUser.get(d.user_id) || [];
+          arr.push(new Date(d.downloaded_at));
+          byUser.set(d.user_id, arr);
         }
+
+        const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+        byUser.forEach((dates) => {
+          dates.sort((a, b) => a.getTime() - b.getTime());
+          let lastCounted: Date | null = null;
+          for (const dt of dates) {
+            if (!lastCounted) {
+              uniqueUserPeriods += 1;
+              lastCounted = dt;
+            } else if (dt.getTime() - lastCounted.getTime() > THIRTY_DAYS_MS) {
+              uniqueUserPeriods += 1;
+              lastCounted = dt;
+            }
+          }
+        });
       }
     } catch (e) {
       console.error('Failed to compute unique user periods for creator', e);
       uniqueUserPeriods = 0;
     }
 
-    // Simplified revenue calculation (cached/estimated instead of full computation)
-    // Full revenue calculation moved to a separate background job or cached
+    // Simplified revenue calculation
     let creatorRevenue = 0;
     try {
-      // Simple estimate: ~40 INR per unique user period (rough average)
-      // This is a placeholder - real calculation should be done in background
       creatorRevenue = uniqueUserPeriods * 40;
     } catch (e) {
       console.error('Failed to calculate creator revenue', e);

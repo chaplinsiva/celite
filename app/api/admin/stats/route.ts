@@ -32,32 +32,29 @@ export async function GET() {
         yearlyPrice = yearlyPaise >= 100000 ? yearlyPaise / 100 : yearlyPaise;
       }
       
-      // Get all active subscriptions
-      const { data: allSubs } = await admin
-        .from('subscriptions')
-        .select('plan, is_active, valid_until')
-        .eq('is_active', true);
+      const nowIso = new Date().toISOString();
       
-      if (allSubs && allSubs.length > 0) {
-        const now = Date.now();
-        
-        allSubs.forEach((s: any) => {
-          const validUntil = s.valid_until ? new Date(s.valid_until as any).getTime() : null;
-          const isValid = !validUntil || validUntil > now;
-          
-          if (isValid) {
-            if (s.plan === 'monthly' || s.plan === 'weekly') {
-              totalSubscriptionRevenue += monthlyPrice;
-            } else if (s.plan === 'yearly') {
-              totalSubscriptionRevenue += yearlyPrice;
-            }
-          }
-        });
-        
-        // Calculate revenue distribution: 40% to vendors, 60% to Celite
-        vendorPoolAmount = totalSubscriptionRevenue * 0.4;
-        celiteAmount = totalSubscriptionRevenue * 0.6;
-      }
+      // Count active monthly/weekly subscriptions
+      const { count: activeMonthly } = await admin
+        .from('subscriptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_active', true)
+        .or(`valid_until.is.null,valid_until.gt.${nowIso}`)
+        .in('plan', ['monthly', 'weekly']);
+      
+      // Count active yearly subscriptions
+      const { count: activeYearly } = await admin
+        .from('subscriptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_active', true)
+        .or(`valid_until.is.null,valid_until.gt.${nowIso}`)
+        .eq('plan', 'yearly');
+
+      totalSubscriptionRevenue = (activeMonthly || 0) * monthlyPrice + (activeYearly || 0) * yearlyPrice;
+      
+      // Calculate revenue distribution: 40% to vendors, 60% to Celite
+      vendorPoolAmount = totalSubscriptionRevenue * 0.4;
+      celiteAmount = totalSubscriptionRevenue * 0.6;
     } catch (e) {
       console.log('Could not calculate subscription revenue distribution', e);
     }

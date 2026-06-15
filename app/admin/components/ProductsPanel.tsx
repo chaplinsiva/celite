@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import VideoThumbnailPlayer from '../../../components/VideoThumbnailPlayer';
 
@@ -14,6 +14,27 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   const [tab, setTab] = useState<'list' | 'add'>('list');
   const [creating, setCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 24;
+
+  const filteredTemplates = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return templates || [];
+    return (templates || []).filter((t) => 
+      (t.name || '').toLowerCase().includes(q) || (t.slug || '').toLowerCase().includes(q)
+    );
+  }, [templates, searchTerm]);
+
+  const totalPages = Math.ceil(filteredTemplates.length / itemsPerPage);
+
+  const paginatedTemplates = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredTemplates.slice(start, start + itemsPerPage);
+  }, [filteredTemplates, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
   const [form, setForm] = useState({
     slug: '', name: '', subtitle: '', description: '', img: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', meta_title: '', meta_description: '',
   });
@@ -237,13 +258,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
             />
           </div>
           <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {(templates || [])
-              .filter((t) => {
-                const q = searchTerm.trim().toLowerCase();
-                if (!q) return true;
-                return (t.name || '').toLowerCase().includes(q) || (t.slug || '').toLowerCase().includes(q);
-              })
-              .map((t) => {
+            {paginatedTemplates.map((t) => {
                 const thumbnail = t.thumbnail_path || t.img || null;
                 const isVendorTemplate = !!t.creator_shop_id || !!t.vendor_name;
                 const status = t.status || 'approved';
@@ -347,6 +362,30 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                 );
               })}
           </ul>
+
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-between border-t border-zinc-200 pt-6">
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+              >
+                Previous
+              </button>
+              <span className="text-sm font-medium text-zinc-500">
+                Page {currentPage} of {totalPages} <span className="text-xs text-zinc-400 font-normal">({filteredTemplates.length} total products)</span>
+              </span>
+              <button
+                type="button"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </>
       )}
 

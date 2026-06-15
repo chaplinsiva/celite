@@ -13,37 +13,36 @@ export async function GET(req: Request) {
     const { data: isAdmin } = await admin.from('admins').select('user_id').eq('user_id', userId).maybeSingle();
     if (!isAdmin) return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 });
 
-    // List users using admin service-role with pagination to get all users
-    let allUsers: any[] = [];
-    let page = 1;
-    const perPage = 1000; // Max per page
-    
-    while (true) {
-      const { data, error } = await admin.auth.admin.listUsers({
-        page,
-        perPage,
-      });
-      
-      if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-      
-      if (!data?.users || data.users.length === 0) break;
-      
-      allUsers = allUsers.concat(data.users);
-      
-      // If we got fewer users than perPage, we've reached the end
-      if (data.users.length < perPage) break;
-      
-      page++;
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const search = searchParams.get('search') || '';
+
+    const offset = (page - 1) * limit;
+
+    let query = admin
+      .from('users_view')
+      .select('id,email,raw_user_meta_data,created_at', { count: 'exact' });
+
+    if (search) {
+      query = query.or(`email.ilike.%${search}%,raw_user_meta_data->>first_name.ilike.%${search}%,raw_user_meta_data->>last_name.ilike.%${search}%`);
     }
-    
-    const users = allUsers.map((u) => ({
+
+    const { data: allUsersData, count, error: queryErr } = await query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (queryErr) return NextResponse.json({ ok: false, error: queryErr.message }, { status: 500 });
+
+    const users = (allUsersData || []).map((u) => ({
       id: u.id,
       email: u.email,
-      first_name: (u.user_metadata as any)?.first_name ?? null,
-      last_name: (u.user_metadata as any)?.last_name ?? null,
+      first_name: (u.raw_user_meta_data as any)?.first_name ?? null,
+      last_name: (u.raw_user_meta_data as any)?.last_name ?? null,
       created_at: u.created_at,
     }));
-    return NextResponse.json({ ok: true, users });
+
+    return NextResponse.json({ ok: true, users, total: count || 0 });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || 'Unknown error' }, { status: 500 });
   }

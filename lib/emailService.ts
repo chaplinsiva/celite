@@ -26,20 +26,17 @@ const getEmailConfig = () => {
   };
 };
 
-// Create transporter
-let transporter: nodemailer.Transporter | null = null;
-
 const getTransporter = () => {
-  if (!transporter) {
-    const config = getEmailConfig();
-    transporter = nodemailer.createTransport({
-      host: config.host,
-      port: config.port,
-      secure: config.secure,
-      auth: config.auth,
-    });
-  }
-  return transporter;
+  const config = getEmailConfig();
+  return nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    auth: config.auth,
+    connectionTimeout: 10000, // 10 seconds connection timeout
+    greetingTimeout: 10000,   // 10 seconds greeting timeout
+    socketTimeout: 10000,     // 10 seconds socket inactivity timeout
+  });
 };
 
 // Email templates
