@@ -250,6 +250,12 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} antialiased bg-background text-zinc-900 group/body`} style={{ fontStyle: 'normal', fontSynthesis: 'none' }}>
         <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5327132249014590"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+        <Script
           strategy="afterInteractive"
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
         />
