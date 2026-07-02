@@ -1,0 +1,795 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useRef, Suspense } from "react";
+import { useAppContext } from "../../context/AppContext";
+import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
+import { formatPriceWithDecimal } from "../../lib/currency";
+import { trackBeginCheckout, trackPurchase, trackSubscribe } from "../../lib/gtag";
+import LoadingSpinner from "../../components/ui/loading-spinner";
+import { ShoppingCart, CreditCard, Lock, CheckCircle } from "lucide-react";
+
+type BillingDetails = {
+    name: string;
+    email: string;
+    mobile: string;
+    company?: string;
+};
+
+// Component to handle search params (needs to be in Suspense)
+function CheckoutContent() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const { user, cartItems, cartCount, resetCart, addToCart } = useAppContext();
+    const [billing, setBilling] = useState<BillingDetails>({
+        name: user?.email.split("@")[0] ?? "",
+        email: user?.email ?? "",
+        mobile: "",
+        company: "",
+    });
+    const [processing, setProcessing] = useState(false);
+    const [paymentError, setPaymentError] = useState<string | null>(null);
+    const addedProductRef = useRef<string | null>(null);
+    const checkoutDetailIdRef = useRef<string | null>(null);
+
+    const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'yearly' | null>(null);
+    const [subscriptionPrice, setSubscriptionPrice] = useState<number | null>(null);
+
+    // Handle subscription checkout (from Pricing page)
+    useEffect(() => {
+        const subscriptionType = searchParams?.get('subscription') as 'monthly' | 'yearly' | null;
+        if (subscriptionType && (subscriptionType === 'monthly' || subscriptionType === 'yearly')) {
+            setSubscriptionPlan(subscriptionType);
+            // Load subscription price from database
+            const loadSubscriptionPrice = async () => {
+                const supabase = getSupabaseBrowserClient();
+                const { data: settings } = await supabase.from('settings').select('key,value');
+                const settingsMap: Record<string, string> = {};
+                (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
+
+                let amountPaise = 0;
+                if (subscriptionType === 'monthly') {
+                    const monthlyAmount = settingsMap.RAZORPAY_MONTHLY_AMOUNT;
+                    if (!monthlyAmount) throw new Error('Monthly subscription price not found');
+                    amountPaise = Number(monthlyAmount);
+                } else {
+                    const yearlyAmount = settingsMap.RAZORPAY_YEARLY_AMOUNT;
+                    if (!yearlyAmount) throw new Error('Yearly subscription price not found');
+                    amountPaise = Number(yearlyAmount);
+                }
+
+                // Convert from paise to INR
+                const amountINR = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
+                setSubscriptionPrice(Math.round(amountINR));
+            };
+            loadSubscriptionPrice();
+        }
+    }, [searchParams]);
+
+    // Handle direct product checkout (from Buy Now)
+    useEffect(() => {
+        const productSlug = searchParams?.get('product');
+        if (productSlug && cartCount === 0 && !subscriptionPlan) {
+            // Don't add if we've already processed this product
+            if (addedProductRef.current === productSlug) return;
+
+            // Check if item is already in cart to avoid duplicate adds
+            const alreadyInCart = cartItems.some(item => item.slug === productSlug);
+            if (alreadyInCart) {
+                addedProductRef.current = productSlug;
+                return;
+            }
+
+            // Fetch product and add to cart
+            const fetchProduct = async () => {
+                const supabase = getSupabaseBrowserClient();
+                const { data } = await supabase
+                    .from('templates')
+                    .select('slug, name, price, img')
+                    .eq('slug', productSlug)
+                    .maybeSingle();
+                if (data) {
+                    // Double-check cartItems haven't changed during async operation
+                    const stillNotInCart = !cartItems.some(item => item.slug === data.slug);
+                    if (stillNotInCart && addedProductRef.current !== productSlug) {
+                        addedProductRef.current = productSlug;
+                        addToCart({
+                            slug: data.slug,
+                            name: data.name,
+                            price: Number(data.price),
+                            img: data.img,
+                        });
+                    }
+                }
+            };
+            fetchProduct();
+        }
+    }, [searchParams, cartCount, addToCart, cartItems, subscriptionPlan]);
+
+    // Calculate subtotal
+    const subtotal = subscriptionPlan && subscriptionPrice
+        ? subscriptionPrice
+        : cartItems.reduce((sum, item) => sum + item.price, 0);
+
+    // Track begin_checkout event when checkout page loads with items
+    useEffect(() => {
+        // Only track if not subscription and has cart items
+        if (!subscriptionPlan && cartItems.length > 0) {
+            trackBeginCheckout(
+                cartItems.map((item) => ({
+                    item_id: item.slug,
+                    item_name: item.name,
+                    price: item.price,
+                    quantity: 1,
+                })),
+                subtotal,
+                'INR'
+            );
+        }
+    }, [subscriptionPlan, cartItems.length]); // Track when cart items change or subscription plan is set
+
+    const loadRazorpay = (): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+            if (existing) return resolve();
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load Razorpay'));
+            document.body.appendChild(script);
+        });
+    };
+
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        // Validate mobile number (Indian format: 10 digits, optionally with +91)
+        const mobileRegex = /^(\+91)?[6-9]\d{9}$/;
+        const cleanMobile = billing.mobile.replace(/\s+/g, '').replace(/\+91/g, '');
+        if (!mobileRegex.test(cleanMobile)) {
+            setPaymentError('Please enter a valid 10-digit mobile number');
+            return;
+        }
+
+        setProcessing(true);
+        setPaymentError(null);
+
+        try {
+            const supabase = getSupabaseBrowserClient();
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                setPaymentError('Session expired. Please log in again.');
+                setProcessing(false);
+                return;
+            }
+
+            // Store checkout details in database
+            checkoutDetailIdRef.current = null;
+            try {
+                const checkoutDetailsRes = await fetch('/api/checkout/details', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({
+                        checkout_type: subscriptionPlan ? 'subscription' : 'product',
+                        billing_name: billing.name,
+                        billing_email: billing.email,
+                        billing_mobile: cleanMobile,
+                        billing_company: billing.company || null,
+                        subscription_plan: subscriptionPlan || null,
+                        cart_items: subscriptionPlan ? [] : cartItems.map(item => ({
+                            slug: item.slug,
+                            name: item.name,
+                            price: item.price,
+                            img: item.img,
+                        })),
+                        total_amount: subtotal,
+                    }),
+                });
+
+                const checkoutDetailsJson = await checkoutDetailsRes.json();
+                if (checkoutDetailsRes.ok && checkoutDetailsJson.ok) {
+                    checkoutDetailIdRef.current = checkoutDetailsJson.checkout_detail_id;
+                }
+                // Don't fail the checkout if storing details fails, just log it
+            } catch (e) {
+                console.error('Failed to store checkout details:', e);
+            }
+
+            // Load Razorpay
+            await loadRazorpay();
+
+            // Handle subscription payment
+            if (subscriptionPlan && subscriptionPrice) {
+                // Create subscription
+                const subRes = await fetch('/api/payments/razorpay/subscription', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({
+                        plan: subscriptionPlan,
+                        currency: 'INR',
+                        billing: {
+                            name: billing.name,
+                            email: billing.email,
+                            mobile: cleanMobile,
+                            company: billing.company || null,
+                        },
+                    }),
+                });
+
+                const subJson = await subRes.json();
+                if (!subRes.ok || !subJson.ok) {
+                    throw new Error(subJson.error || 'Subscription initialization failed');
+                }
+
+                const sub = subJson.subscription;
+                // Open Razorpay checkout for subscription
+                // @ts-ignore
+                const rzp = new window.Razorpay({
+                    key: sub?.razorpay_key || '',
+                    subscription_id: sub.id,
+                    image: '/PNG1.png',
+                    prefill: {
+                        name: billing.name,
+                        email: billing.email,
+                        contact: `+91${cleanMobile}`,
+                    },
+                    handler: async (resp: any) => {
+                        try {
+                            // Get Razorpay subscription ID from response or sub object
+                            const razorpaySubscriptionId = resp.razorpay_subscription_id || sub?.id || null;
+
+                            // Activate subscription in our DB with Razorpay subscription ID
+                            const activateRes = await fetch('/api/subscription/activate', {
+                                method: 'POST',
+                                headers: {
+                                    Authorization: `Bearer ${session.access_token}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    plan: subscriptionPlan,
+                                    razorpay_subscription_id: razorpaySubscriptionId
+                                }),
+                            });
+
+                            if (activateRes.ok) {
+                                // Update checkout details status to completed
+                                if (checkoutDetailIdRef.current) {
+                                    try {
+                                        await fetch('/api/checkout/details', {
+                                            method: 'PATCH',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                Authorization: `Bearer ${session.access_token}`,
+                                            },
+                                            body: JSON.stringify({
+                                                checkout_detail_id: checkoutDetailIdRef.current,
+                                                status: 'completed',
+                                                razorpay_subscription_id: razorpaySubscriptionId,
+                                            }),
+                                        });
+                                    } catch (e) {
+                                        console.error('Failed to update checkout details:', e);
+                                    }
+                                }
+
+                                // Track subscription event
+                                trackSubscribe({
+                                    method: 'razorpay',
+                                    plan_id: subscriptionPlan,
+                                    plan_name: subscriptionPlan === 'yearly' ? 'Yearly Pro Plan' : 'Monthly Pro Plan',
+                                    value: subscriptionPrice || 0,
+                                    currency: 'INR',
+                                });
+
+                                // Redirect to dashboard
+                                router.push("/dashboard?payment=success");
+                            } else {
+                                // Update checkout details status to failed
+                                if (checkoutDetailIdRef.current) {
+                                    try {
+                                        await fetch('/api/checkout/details', {
+                                            method: 'PATCH',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                Authorization: `Bearer ${session.access_token}`,
+                                            },
+                                            body: JSON.stringify({
+                                                checkout_detail_id: checkoutDetailIdRef.current,
+                                                status: 'failed',
+                                            }),
+                                        });
+                                    } catch (e) {
+                                        console.error('Failed to update checkout details:', e);
+                                    }
+                                }
+                                setPaymentError('Subscription activation failed');
+                                setProcessing(false);
+                            }
+                        } catch (e: any) {
+                            // Update checkout details status to failed
+                            if (checkoutDetailIdRef.current) {
+                                try {
+                                    await fetch('/api/checkout/details', {
+                                        method: 'PATCH',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            Authorization: `Bearer ${session.access_token}`,
+                                        },
+                                        body: JSON.stringify({
+                                            checkout_detail_id: checkoutDetailIdRef.current,
+                                            status: 'failed',
+                                        }),
+                                    });
+                                } catch (err) {
+                                    console.error('Failed to update checkout details:', err);
+                                }
+                            }
+                            setPaymentError(e?.message || 'Subscription activation failed');
+                            setProcessing(false);
+                        }
+                    },
+                    theme: { color: '#ffffff' },
+                    modal: {
+                        ondismiss: () => {
+                            setProcessing(false);
+                        },
+                    },
+                });
+
+                rzp.open();
+            } else {
+                // Handle one-time product payment
+                // Calculate total amount in paise
+                const amountInPaise = Math.round(subtotal * 100);
+
+                // Create Razorpay order for all cart items
+                // For multiple items, we'll create a combined order
+                const productInfo = cartItems.length === 1
+                    ? cartItems[0]
+                    : { slug: 'multiple', name: `${cartItems.length} Templates`, price: subtotal, img: cartItems[0]?.img || '' };
+
+                const res = await fetch('/api/payments/razorpay/order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({
+                        amount: amountInPaise,
+                        product: productInfo,
+                        billing: {
+                            name: billing.name,
+                            email: billing.email,
+                            mobile: cleanMobile,
+                            company: billing.company || null,
+                        },
+                    }),
+                });
+
+                const json = await res.json();
+                if (!res.ok || !json.ok) {
+                    // Update checkout details status to failed
+                    if (checkoutDetailIdRef.current) {
+                        try {
+                            await fetch('/api/checkout/details', {
+                                method: 'PATCH',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    Authorization: `Bearer ${session.access_token}`,
+                                },
+                                body: JSON.stringify({
+                                    checkout_detail_id: checkoutDetailIdRef.current,
+                                    status: 'failed',
+                                }),
+                            });
+                        } catch (e) {
+                            console.error('Failed to update checkout details:', e);
+                        }
+                    }
+                    throw new Error(json.error || 'Payment initialization failed');
+                }
+
+                // Update checkout details with Razorpay order ID
+                if (checkoutDetailIdRef.current && json.order?.id) {
+                    try {
+                        await fetch('/api/checkout/details', {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${session.access_token}`,
+                            },
+                            body: JSON.stringify({
+                                checkout_detail_id: checkoutDetailIdRef.current,
+                                status: 'payment_pending',
+                                razorpay_order_id: json.order.id,
+                            }),
+                        });
+                    } catch (e) {
+                        console.error('Failed to update checkout details:', e);
+                    }
+                }
+
+                // Open Razorpay checkout
+                // @ts-ignore
+                const rzp = new window.Razorpay({
+                    key: json.key,
+                    amount: json.order.amount,
+                    currency: json.order.currency,
+                    name: 'Celite',
+                    description: cartItems.length === 1 ? cartItems[0].name : `${cartItems.length} Templates`,
+                    image: '/PNG1.png',
+                    order_id: json.order.id,
+                    prefill: {
+                        name: billing.name,
+                        email: billing.email,
+                        contact: `+91${cleanMobile}`,
+                    },
+                    handler: async (resp: any) => {
+                        try {
+                            // Verify payment
+                            const verifyRes = await fetch('/api/payments/razorpay/verify', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    Authorization: `Bearer ${session.access_token}`,
+                                },
+                                body: JSON.stringify({
+                                    razorpay_order_id: resp.razorpay_order_id,
+                                    razorpay_payment_id: resp.razorpay_payment_id,
+                                    razorpay_signature: resp.razorpay_signature,
+                                }),
+                            });
+
+                            const verifyJson = await verifyRes.json();
+                            if (!verifyRes.ok || !verifyJson.ok) {
+                                throw new Error(verifyJson.error || 'Payment verification failed');
+                            }
+
+                            // Update checkout details status to completed
+                            if (checkoutDetailIdRef.current) {
+                                try {
+                                    await fetch('/api/checkout/details', {
+                                        method: 'PATCH',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            Authorization: `Bearer ${session.access_token}`,
+                                        },
+                                        body: JSON.stringify({
+                                            checkout_detail_id: checkoutDetailIdRef.current,
+                                            status: 'completed',
+                                            razorpay_payment_id: resp.razorpay_payment_id,
+                                        }),
+                                    });
+                                } catch (e) {
+                                    console.error('Failed to update checkout details:', e);
+                                }
+                            }
+
+                            // Track purchase event
+                            trackPurchase({
+                                transaction_id: resp.razorpay_payment_id,
+                                value: subtotal,
+                                currency: 'INR',
+                                items: cartItems.map((item) => ({
+                                    item_id: item.slug,
+                                    item_name: item.name,
+                                    price: item.price,
+                                    quantity: 1,
+                                })),
+                            });
+
+                            // Clear cart
+                            resetCart();
+
+                            // Redirect to success page
+                            router.push(`/checkout/success?payment_id=${resp.razorpay_payment_id}`);
+                        } catch (e: any) {
+                            // Update checkout details status to failed
+                            if (checkoutDetailIdRef.current) {
+                                try {
+                                    await fetch('/api/checkout/details', {
+                                        method: 'PATCH',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            Authorization: `Bearer ${session.access_token}`,
+                                        },
+                                        body: JSON.stringify({
+                                            checkout_detail_id: checkoutDetailIdRef.current,
+                                            status: 'failed',
+                                        }),
+                                    });
+                                } catch (err) {
+                                    console.error('Failed to update checkout details:', err);
+                                }
+                            }
+                            setPaymentError(e?.message || 'Payment verification failed');
+                            setProcessing(false);
+                        }
+                    },
+                    theme: { color: '#ffffff' },
+                    modal: {
+                        ondismiss: () => {
+                            setProcessing(false);
+                        },
+                    },
+                });
+
+                rzp.open();
+            }
+        } catch (e: any) {
+            setPaymentError(e?.message || 'Payment initialization failed');
+            setProcessing(false);
+        }
+    };
+
+    if (!user) {
+        return (
+            <main className="bg-white min-h-screen flex items-center justify-center py-12 px-4">
+                <div className="w-full max-w-md text-center">
+                    <div className="bg-white rounded-xl border-2 border-zinc-200 p-8 shadow-lg">
+                        <Lock className="w-16 h-16 text-blue-600 mx-auto mb-4" />
+                        <h1 className="text-2xl font-bold text-zinc-900 mb-2">Sign in to checkout</h1>
+                        <p className="text-zinc-600 mb-6">Please log in to complete your purchase</p>
+                        <Link
+                            href="/login"
+                            className="inline-flex items-center justify-center rounded-lg bg-blue-600 text-white px-6 py-3 font-semibold hover:bg-blue-700 transition-colors"
+                        >
+                            Sign in
+                        </Link>
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
+    if (cartCount === 0 && !subscriptionPlan) {
+        return (
+            <main className="bg-white min-h-screen flex items-center justify-center py-12 px-4">
+                <div className="w-full max-w-md text-center">
+                    <div className="bg-white rounded-xl border-2 border-zinc-200 p-8 shadow-lg">
+                        <ShoppingCart className="w-16 h-16 text-blue-600 mx-auto mb-4" />
+                        <h1 className="text-2xl font-bold text-zinc-900 mb-2">Your cart is empty</h1>
+                        <p className="text-zinc-600 mb-6">Add templates to begin checkout</p>
+                        <Link
+                            href="/"
+                            className="inline-flex items-center justify-center rounded-lg bg-blue-600 text-white px-6 py-3 font-semibold hover:bg-blue-700 transition-colors"
+                        >
+                            Browse templates
+                        </Link>
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
+    return (
+        <main className="bg-white min-h-screen pt-24 pb-24 px-4 sm:px-6">
+            <div className="max-w-6xl mx-auto">
+                {/* Header */}
+                <div className="mb-8">
+                    <h1 className="text-3xl sm:text-4xl font-bold text-blue-600 mb-2">
+                        {subscriptionPlan ? 'Subscribe' : 'Checkout'}
+                    </h1>
+                    <p className="text-zinc-600">
+                        {subscriptionPlan
+                            ? `Secure payment for ${subscriptionPlan === 'monthly' ? 'monthly' : 'yearly'} Pro subscription.`
+                            : 'Secure payment for cinematic After Effects templates.'
+                        }
+                    </p>
+                </div>
+
+                <div className="grid gap-8 lg:grid-cols-[1.7fr_1fr]">
+                    {/* Billing Form */}
+                    <section className="bg-white rounded-xl border-2 border-zinc-200 p-6 sm:p-8">
+                        <form onSubmit={handleSubmit} className="space-y-8">
+                            {/* Billing Details */}
+                            <div>
+                                <h2 className="text-xl font-bold text-zinc-900 mb-4">Billing Details</h2>
+                                <div className="grid gap-5 sm:grid-cols-2">
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-sm font-semibold text-zinc-700 mb-2">
+                                            Full Name
+                                        </label>
+                                        <input
+                                            value={billing.name}
+                                            onChange={(evt) => setBilling((prev) => ({ ...prev, name: evt.target.value }))}
+                                            className="w-full px-4 py-3 border-2 border-zinc-200 rounded-lg focus:border-blue-500 focus:ring-0 outline-none transition-colors"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-zinc-700 mb-2">
+                                            Email Address
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={billing.email}
+                                            onChange={(evt) => setBilling((prev) => ({ ...prev, email: evt.target.value }))}
+                                            className="w-full px-4 py-3 border-2 border-zinc-200 rounded-lg focus:border-blue-500 focus:ring-0 outline-none transition-colors"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-zinc-700 mb-2">
+                                            Mobile Number
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            value={billing.mobile}
+                                            onChange={(evt) => {
+                                                const value = evt.target.value.replace(/\D/g, '');
+                                                if (value.length <= 10) {
+                                                    setBilling((prev) => ({ ...prev, mobile: value }));
+                                                }
+                                            }}
+                                            className="w-full px-4 py-3 border-2 border-zinc-200 rounded-lg focus:border-blue-500 focus:ring-0 outline-none transition-colors"
+                                            placeholder="9876543210"
+                                            maxLength={10}
+                                            required
+                                        />
+                                        <p className="text-xs text-zinc-500 mt-1">10-digit mobile number</p>
+                                    </div>
+
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-sm font-semibold text-zinc-700 mb-2">
+                                            Company / Studio (optional)
+                                        </label>
+                                        <input
+                                            value={billing.company}
+                                            onChange={(evt) => setBilling((prev) => ({ ...prev, company: evt.target.value }))}
+                                            className="w-full px-4 py-3 border-2 border-zinc-200 rounded-lg focus:border-blue-500 focus:ring-0 outline-none transition-colors"
+                                            placeholder="Celite Productions"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Payment Info */}
+                            <div>
+                                <h2 className="text-xl font-bold text-zinc-900 mb-4 flex items-center gap-2">
+                                    <CreditCard className="w-5 h-5 text-blue-600" />
+                                    Payment
+                                </h2>
+                                <div className="bg-blue-50 border-2 border-blue-100 rounded-lg p-4">
+                                    <div className="flex items-start gap-3">
+                                        <Lock className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-sm text-zinc-700 font-medium mb-1">Secure Payment</p>
+                                            <p className="text-sm text-zinc-600">
+                                                Payment will be processed securely through Razorpay. You'll be redirected to a secure payment gateway.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Terms */}
+                            <div className="space-y-3">
+                                <label className="flex items-start gap-3 text-sm text-zinc-700">
+                                    <input
+                                        type="checkbox"
+                                        className="mt-0.5 w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                                        required
+                                    />
+                                    <span>I agree to the Celite license and understand templates include one brand deployment.</span>
+                                </label>
+                                <label className="flex items-start gap-3 text-sm text-zinc-700">
+                                    <input
+                                        type="checkbox"
+                                        className="mt-0.5 w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span>Email me about new template drops.</span>
+                                </label>
+                            </div>
+
+                            {/* Error Message */}
+                            {paymentError && (
+                                <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-sm text-red-600">
+                                    {paymentError}
+                                </div>
+                            )}
+
+                            {/* Submit Button */}
+                            <button
+                                type="submit"
+                                disabled={processing}
+                                className="w-full bg-blue-600 text-white px-6 py-4 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl text-base"
+                            >
+                                {processing ? 'Processing…' : `Pay ${formatPriceWithDecimal(subtotal)}`}
+                            </button>
+                        </form>
+                    </section>
+
+                    {/* Order Summary */}
+                    <aside className="bg-white rounded-xl border-2 border-zinc-200 p-6 sm:p-8 h-fit">
+                        <h2 className="text-xl font-bold text-zinc-900 mb-4">
+                            {subscriptionPlan ? 'Subscription Summary' : 'Order Summary'}
+                        </h2>
+
+                        {subscriptionPlan ? (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center py-3 border-b border-zinc-200">
+                                    <div>
+                                        <p className="font-semibold text-zinc-900">
+                                            {subscriptionPlan === 'monthly' ? 'Monthly' : 'Yearly'} Pro
+                                        </p>
+                                        <p className="text-sm text-zinc-600">
+                                            Unlimited access to all templates
+                                        </p>
+                                    </div>
+                                    <p className="font-bold text-zinc-900">
+                                        {formatPriceWithDecimal(subscriptionPrice || 0)}
+                                    </p>
+                                </div>
+
+                                <div className="space-y-2 pt-2">
+                                    <div className="flex items-start gap-2">
+                                        <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                                        <span className="text-sm text-zinc-600">Unlimited downloads</span>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                                        <span className="text-sm text-zinc-600">New templates weekly</span>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                                        <span className="text-sm text-zinc-600">Priority support</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {cartItems.map((item) => (
+                                    <div key={item.slug} className="flex gap-4 py-3 border-b border-zinc-200">
+                                        <img
+                                            src={item.img}
+                                            alt={item.name}
+                                            className="w-20 h-20 object-cover rounded-lg"
+                                        />
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-zinc-900 text-sm">{item.name}</p>
+                                            <p className="text-sm text-zinc-600 mt-1">{formatPriceWithDecimal(item.price)}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Total */}
+                        <div className="mt-6 pt-4 border-t-2 border-zinc-300">
+                            <div className="flex justify-between items-center">
+                                <span className="text-lg font-bold text-zinc-900">Total</span>
+                                <span className="text-2xl font-bold text-blue-600">
+                                    {formatPriceWithDecimal(subtotal)}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Security Badge */}
+                        <div className="mt-6 flex items-center gap-2 text-xs text-zinc-500">
+                            <Lock className="w-4 h-4" />
+                            <span>Secured by Razorpay</span>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </main>
+    );
+}
+
+export default function CheckoutPage() {
+    return (
+        <Suspense fallback={<LoadingSpinner message="Loading checkout..." />}>
+            <CheckoutContent />
+        </Suspense>
+    );
+}

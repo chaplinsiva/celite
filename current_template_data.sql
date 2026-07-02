@@ -1,0 +1,300 @@
+-- ============================================================================
+-- CURRENT TEMPLATE DATA FROM DATABASE
+-- ============================================================================
+-- This file contains the actual template data currently in the database
+-- Generated from live database query
+-- ============================================================================
+
+BEGIN;
+
+-- Template 1: Tiger 3D Model
+INSERT INTO public.templates (
+  slug, name, subtitle, description, img, video, source_path,
+  features, software, plugins, tags, category_id, subcategory_id,
+  meta_title, meta_description, feature, creator_shop_id, vendor_name,
+  status, review_note, reviewed_at, preview_path, video_path, thumbnail_path,
+  audio_preview_path, model_3d_path, sub_subcategory_id,
+  created_at, updated_at
+) VALUES (
+  'tiger-3d-model',
+  'Tiger 3D Model',
+  NULL,
+  'A highly detailed and realistic 3D tiger model designed for animations, games, VFX, AR/VR, and cinematic projects. Featuring accurate anatomy, powerful body structure, and clean topology, this tiger model is ideal for wildlife scenes, jungle environments, educational visuals, and creative storytelling. Optimized for rendering and real-time use, it integrates smoothly into professional 3D workflows.',
+  NULL,
+  NULL,
+  '3d-models/animals/tiger-3d-model/tiger-3d-model.rar',
+  '["GLB"]'::jsonb,
+  '["Blender"]'::jsonb,
+  '[]'::jsonb,
+  '["tiger glb", "3d tiger glb", "glb animal model", "wildlife glb", "realistic tiger glb", "animal glb asset", "web 3d model", "threejs model", "webgl asset", "ar vr glb", "game ready glb", "3d wildlife glb"]'::jsonb,
+  '949b35e2-6588-4e84-a65d-99bd7d3c5a4c'::uuid,
+  'd05d09de-3048-4e00-8f79-080dcfb80deb'::uuid,
+  NULL,
+  NULL,
+  false,
+  '54297974-d7e7-4b59-9f91-89800be0b3f5'::uuid,
+  'ChaplinStudios',
+  'approved',
+  NULL,
+  '2025-12-16 10:49:03.501+00'::timestamptz,
+  NULL,
+  NULL,
+  'https://preview.celite.in/preview/thumbnail/3d-models/animals/tiger-3d-model/tiger-3d-model.jpg',
+  NULL,
+  'https://preview.celite.in/preview/model/3d-models/animals/tiger-3d-model/tiger-3d-model.glb',
+  NULL,
+  '2025-12-16 10:48:48.810183+00'::timestamptz,
+  '2025-12-16 10:48:48.810183+00'::timestamptz
+) ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  subtitle = EXCLUDED.subtitle,
+  description = EXCLUDED.description,
+  img = EXCLUDED.img,
+  video = EXCLUDED.video,
+  source_path = EXCLUDED.source_path,
+  features = EXCLUDED.features,
+  software = EXCLUDED.software,
+  plugins = EXCLUDED.plugins,
+  tags = EXCLUDED.tags,
+  category_id = EXCLUDED.category_id,
+  subcategory_id = EXCLUDED.subcategory_id,
+  meta_title = EXCLUDED.meta_title,
+  meta_description = EXCLUDED.meta_description,
+  feature = EXCLUDED.feature,
+  creator_shop_id = EXCLUDED.creator_shop_id,
+  vendor_name = EXCLUDED.vendor_name,
+  status = EXCLUDED.status,
+  review_note = EXCLUDED.review_note,
+  reviewed_at = EXCLUDED.reviewed_at,
+  preview_path = EXCLUDED.preview_path,
+  video_path = EXCLUDED.video_path,
+  thumbnail_path = EXCLUDED.thumbnail_path,
+  audio_preview_path = EXCLUDED.audio_preview_path,
+  model_3d_path = EXCLUDED.model_3d_path,
+  sub_subcategory_id = EXCLUDED.sub_subcategory_id,
+  updated_at = EXCLUDED.updated_at;
+
+-- Template 2: Christmas Titles
+INSERT INTO public.templates (
+  slug, name, subtitle, description, img, video, source_path,
+  features, software, plugins, tags, category_id, subcategory_id,
+  meta_title, meta_description, feature, creator_shop_id, vendor_name,
+  status, review_note, reviewed_at, preview_path, video_path, thumbnail_path,
+  audio_preview_path, model_3d_path, sub_subcategory_id,
+  created_at, updated_at
+) VALUES (
+  'christmas-titles',
+  'Christmas Titles',
+  '',
+  'A festive and elegant Christmas titles pack designed to add instant holiday charm to your videos. Featuring smooth animations, warm Christmas colors, and joyful typography, this After Effects template is perfect for holiday greetings, YouTube intros, social media posts, ads, and seasonal promotions. Easy to customize with your own text and colors, it helps you create professional-looking Christmas videos in minutes without complex editing.',
+  NULL,
+  NULL,
+  'video-templates/after-effects/fes/christmas-titles/christmas-titles.rar',
+  '["No Plugins", "6 Text", "1 Logo"]'::jsonb,
+  '["After Effects CC 2018 and Above"]'::jsonb,
+  '["No Plugins"]'::jsonb,
+  '["christmas titles", "christmas typography", "holiday titles", "festive titles", "xmas text animation", "after effects christmas", "holiday typography", "seasonal titles", "merry christmas text", "new year titles", "winter titles", "festive typography", "animated titles", "ae text animation", "christmas opener"]'::jsonb,
+  '448b09c7-addb-4875-83d9-a207e213f6d0'::uuid,
+  '3fcb4e8b-2886-4dab-97eb-6bf009a9edad'::uuid,
+  NULL,
+  NULL,
+  false,
+  '54297974-d7e7-4b59-9f91-89800be0b3f5'::uuid,
+  'ChaplinStudios',
+  'approved',
+  NULL,
+  '2025-12-16 10:36:19.943+00'::timestamptz,
+  NULL,
+  'https://preview.celite.in/preview/video/video-templates/after-effects/fes/christmas-titles/christmas-titles.mp4',
+  'https://preview.celite.in/preview/thumbnail/video-templates/after-effects/fes/christmas-titles/christmas-titles.jpg',
+  NULL,
+  NULL,
+  NULL,
+  '2025-12-16 10:35:58.345636+00'::timestamptz,
+  '2025-12-16 10:35:58.345636+00'::timestamptz
+) ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  subtitle = EXCLUDED.subtitle,
+  description = EXCLUDED.description,
+  img = EXCLUDED.img,
+  video = EXCLUDED.video,
+  source_path = EXCLUDED.source_path,
+  features = EXCLUDED.features,
+  software = EXCLUDED.software,
+  plugins = EXCLUDED.plugins,
+  tags = EXCLUDED.tags,
+  category_id = EXCLUDED.category_id,
+  subcategory_id = EXCLUDED.subcategory_id,
+  meta_title = EXCLUDED.meta_title,
+  meta_description = EXCLUDED.meta_description,
+  feature = EXCLUDED.feature,
+  creator_shop_id = EXCLUDED.creator_shop_id,
+  vendor_name = EXCLUDED.vendor_name,
+  status = EXCLUDED.status,
+  review_note = EXCLUDED.review_note,
+  reviewed_at = EXCLUDED.reviewed_at,
+  preview_path = EXCLUDED.preview_path,
+  video_path = EXCLUDED.video_path,
+  thumbnail_path = EXCLUDED.thumbnail_path,
+  audio_preview_path = EXCLUDED.audio_preview_path,
+  model_3d_path = EXCLUDED.model_3d_path,
+  sub_subcategory_id = EXCLUDED.sub_subcategory_id,
+  updated_at = EXCLUDED.updated_at;
+
+-- Template 3: Kinetic Typography Animation After Effects
+INSERT INTO public.templates (
+  slug, name, subtitle, description, img, video, source_path,
+  features, software, plugins, tags, category_id, subcategory_id,
+  meta_title, meta_description, feature, creator_shop_id, vendor_name,
+  status, review_note, reviewed_at, preview_path, video_path, thumbnail_path,
+  audio_preview_path, model_3d_path, sub_subcategory_id,
+  created_at, updated_at
+) VALUES (
+  'kinetic-typography-animation-after-effects',
+  'Kinetic Typography Animation After Effects',
+  '',
+  'Kinetic Typography Animation is a dynamic After Effects template designed to bring words to life through smooth motion, bold timing, and expressive text animation. Perfect for promos, social media videos, lyric videos, advertisements, presentations, and modern video content, it helps convey messages clearly with high visual impact and professional motion design.',
+  NULL,
+  NULL,
+  'video-templates/after-effects/typography/kinetic-typography-animation-after-effects/kinetic-typography-animation-after-effects.rar',
+  '["fully animated typography", "dynamic text motion", "clean and modern design", "smooth transitions", "customizable text", "modular scenes", "fast rendering", "professional motion graphics", "suitable for promos and ads", "social media ready", "lyric video support", "easy to edit", "high visual impact", "reusable animation"]'::jsonb,
+  '["After Effects 2023"]'::jsonb,
+  '["No Plugins"]'::jsonb,
+  '["kinetic typography", "typography animation", "after effects template", "motion graphics", "animated text", "text animation", "modern design", "promo video", "social media video", "lyric video", "titles", "dynamic typography", "video marketing", "creative text", "professional animation"]'::jsonb,
+  '448b09c7-addb-4875-83d9-a207e213f6d0'::uuid,
+  '3fcb4e8b-2886-4dab-97eb-6bf009a9edad'::uuid,
+  NULL,
+  NULL,
+  false,
+  '54297974-d7e7-4b59-9f91-89800be0b3f5'::uuid,
+  'ChaplinStudios',
+  'approved',
+  NULL,
+  '2025-12-16 06:45:23.324+00'::timestamptz,
+  NULL,
+  'https://preview.celite.in/preview/video/video-templates/after-effects/typography/kinetic-typography-animation-after-effects/kinetic-typography-animation-after-effects.mp4',
+  'https://preview.celite.in/preview/thumbnail/video-templates/after-effects/typography/kinetic-typography-animation-after-effects/kinetic-typography-animation-after-effects.jpg',
+  NULL,
+  NULL,
+  NULL,
+  '2025-12-16 06:44:55.377908+00'::timestamptz,
+  '2025-12-16 06:44:55.377908+00'::timestamptz
+) ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  subtitle = EXCLUDED.subtitle,
+  description = EXCLUDED.description,
+  img = EXCLUDED.img,
+  video = EXCLUDED.video,
+  source_path = EXCLUDED.source_path,
+  features = EXCLUDED.features,
+  software = EXCLUDED.software,
+  plugins = EXCLUDED.plugins,
+  tags = EXCLUDED.tags,
+  category_id = EXCLUDED.category_id,
+  subcategory_id = EXCLUDED.subcategory_id,
+  meta_title = EXCLUDED.meta_title,
+  meta_description = EXCLUDED.meta_description,
+  feature = EXCLUDED.feature,
+  creator_shop_id = EXCLUDED.creator_shop_id,
+  vendor_name = EXCLUDED.vendor_name,
+  status = EXCLUDED.status,
+  review_note = EXCLUDED.review_note,
+  reviewed_at = EXCLUDED.reviewed_at,
+  preview_path = EXCLUDED.preview_path,
+  video_path = EXCLUDED.video_path,
+  thumbnail_path = EXCLUDED.thumbnail_path,
+  audio_preview_path = EXCLUDED.audio_preview_path,
+  model_3d_path = EXCLUDED.model_3d_path,
+  sub_subcategory_id = EXCLUDED.sub_subcategory_id,
+  updated_at = EXCLUDED.updated_at;
+
+-- Template 4: Echoes of the Village
+INSERT INTO public.templates (
+  slug, name, subtitle, description, img, video, source_path,
+  features, software, plugins, tags, category_id, subcategory_id,
+  meta_title, meta_description, feature, creator_shop_id, vendor_name,
+  status, review_note, reviewed_at, preview_path, video_path, thumbnail_path,
+  audio_preview_path, model_3d_path, sub_subcategory_id,
+  created_at, updated_at
+) VALUES (
+  'echoes-of-the-village',
+  'Echoes of the Village',
+  NULL,
+  'Echoes of the Village is a warm, soulful celebration music track inspired by rural life, traditional gatherings, and festive village moments. It blends organic folk instruments with a joyful rhythm, creating an authentic atmosphere perfect for cultural events, celebrations, documentaries, weddings, and storytelling visuals that reflect tradition, unity, and nostalgia.',
+  NULL,
+  NULL,
+  'musics-and-sfx/celebration/echoes-of-the-village/echoes-of-the-village.rar',
+  '["traditional folk feel", "rural village vibe", "celebration mood", "organic instruments", "warm and joyful tone", "cultural atmosphere", "suitable for festivals", "wedding background music", "documentary friendly", "cinematic folk style", "emotional and nostalgic", "Indian traditional influence"]'::jsonb,
+  '[]'::jsonb,
+  '[]'::jsonb,
+  '["village", "rural life", "folk music", "traditional", "celebration", "indian culture", "festive", "cultural event", "wedding music", "documentary", "heritage", "nostalgia", "joyful", "emotional", "countryside", "ethnic music", "storytelling", "community", "festival vibe", "warm atmosphere"]'::jsonb,
+  '45456b94-cb11-449b-ab99-f0633d6e8848'::uuid,
+  '425cd948-6068-4cb5-a386-f72683f3870b'::uuid,
+  NULL,
+  NULL,
+  false,
+  '7ef5ebe9-15bc-4706-ba06-c4351787e4e2'::uuid,
+  'ShafiqStudio',
+  'approved',
+  NULL,
+  '2025-12-16 05:39:26.235+00'::timestamptz,
+  NULL,
+  NULL,
+  NULL,
+  'https://preview.celite.in/preview/audio/musics-and-sfx/celebration/echoes-of-the-village/echoes-of-the-village.mp3',
+  NULL,
+  NULL,
+  '2025-12-16 05:39:02.694341+00'::timestamptz,
+  '2025-12-16 05:39:02.694341+00'::timestamptz
+) ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  subtitle = EXCLUDED.subtitle,
+  description = EXCLUDED.description,
+  img = EXCLUDED.img,
+  video = EXCLUDED.video,
+  source_path = EXCLUDED.source_path,
+  features = EXCLUDED.features,
+  software = EXCLUDED.software,
+  plugins = EXCLUDED.plugins,
+  tags = EXCLUDED.tags,
+  category_id = EXCLUDED.category_id,
+  subcategory_id = EXCLUDED.subcategory_id,
+  meta_title = EXCLUDED.meta_title,
+  meta_description = EXCLUDED.meta_description,
+  feature = EXCLUDED.feature,
+  creator_shop_id = EXCLUDED.creator_shop_id,
+  vendor_name = EXCLUDED.vendor_name,
+  status = EXCLUDED.status,
+  review_note = EXCLUDED.review_note,
+  reviewed_at = EXCLUDED.reviewed_at,
+  preview_path = EXCLUDED.preview_path,
+  video_path = EXCLUDED.video_path,
+  thumbnail_path = EXCLUDED.thumbnail_path,
+  audio_preview_path = EXCLUDED.audio_preview_path,
+  model_3d_path = EXCLUDED.model_3d_path,
+  sub_subcategory_id = EXCLUDED.sub_subcategory_id,
+  updated_at = EXCLUDED.updated_at;
+
+COMMIT;
+
+-- ============================================================================
+-- VERIFICATION QUERIES
+-- ============================================================================
+
+-- Check inserted templates
+-- SELECT 
+--   slug, 
+--   name, 
+--   vendor_name,
+--   status,
+--   created_at
+-- FROM public.templates
+-- ORDER BY created_at DESC;
+
+-- Count templates by vendor
+-- SELECT 
+--   vendor_name,
+--   COUNT(slug) as template_count
+-- FROM public.templates
+-- GROUP BY vendor_name
+-- ORDER BY template_count DESC;
