@@ -107,7 +107,7 @@ export default function CinemaTemplatesShowcase({ initialTemplates }: { initialT
       try {
         const supabase = getSupabaseBrowserClient();
 
-        // Fetch only from Video Templates category
+        // Fetch only from "Movie Templates" sub-subcategory
         const { data, error } = await supabase
           .from('templates')
           .select(`
@@ -118,46 +118,19 @@ export default function CinemaTemplatesShowcase({ initialTemplates }: { initialT
             video_path,
             thumbnail_path,
             category_id,
-            categories(id, name, slug)
+            sub_subcategories!inner(id, name, slug)
           `)
           .eq('status', 'approved')
-          .eq('categories.slug', 'video-templates')
+          .eq('sub_subcategories.slug', 'movie-templates')
           .not('video_path', 'is', null)
           .order('created_at', { ascending: false })
           .limit(20);
 
         if (error) {
           console.error('Error loading cinema templates:', error);
-          // Fallback: try fetching by category slug
-          const { data: fallbackData, error: fallbackError } = await supabase
-            .from('templates')
-            .select(`
-              slug,
-              name,
-              subtitle,
-              img,
-              video_path,
-              thumbnail_path,
-              category_id,
-              categories!inner(id, name, slug)
-            `)
-            .eq('status', 'approved')
-            .eq('categories.slug', 'video-templates')
-            .order('created_at', { ascending: false })
-            .limit(20);
-
-          if (fallbackError) {
-            console.error('Fallback error:', fallbackError);
-            setTemplates([]);
-          } else {
-            // Filter to only those with video_path
-            const videoTemplates = (fallbackData || []).filter(t => t.video_path);
-            setTemplates(videoTemplates.slice(0, 20));
-          }
+          setTemplates([]);
         } else {
-          // Filter to only those with video_path
-          const videoTemplates = (data || []).filter(t => t.video_path);
-          setTemplates(videoTemplates.slice(0, 20));
+          setTemplates(data || []);
         }
       } catch (err) {
         console.error('Error:', err);

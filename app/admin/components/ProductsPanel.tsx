@@ -130,27 +130,41 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
     loadCategories();
   }, []);
 
+  // Track if the form was just populated for editing (to prevent cascading resets)
+  const [editFormLoaded, setEditFormLoaded] = useState(false);
+
   useEffect(() => {
     if (form.category_id) {
-      setFilteredSubcategories(subcategories.filter(s => s.category_id === form.category_id));
-      if (form.subcategory_id && !subcategories.find(s => s.id === form.subcategory_id && s.category_id === form.category_id)) {
+      const filtered = subcategories.filter(s => s.category_id === form.category_id);
+      setFilteredSubcategories(filtered);
+      // Only reset subcategory if it doesn't belong to the selected category
+      // AND we're not in the initial edit load phase
+      if (!editFormLoaded && form.subcategory_id && filtered.length > 0 && !filtered.find(s => s.id === form.subcategory_id)) {
         setForm(f => ({ ...f, subcategory_id: '', sub_subcategory_id: '' }));
       }
     } else {
       setFilteredSubcategories([]);
-      setForm(f => ({ ...f, subcategory_id: '', sub_subcategory_id: '' }));
+      if (!editFormLoaded) {
+        setForm(f => ({ ...f, subcategory_id: '', sub_subcategory_id: '' }));
+      }
     }
+    // Reset the flag after the first render cycle
+    if (editFormLoaded) setEditFormLoaded(false);
   }, [form.category_id, subcategories]);
 
   useEffect(() => {
     if (form.subcategory_id) {
-      setFilteredSubSubcategories(subSubcategories.filter(s => s.subcategory_id === form.subcategory_id));
-      if (form.sub_subcategory_id && !subSubcategories.find(s => s.id === form.sub_subcategory_id && s.subcategory_id === form.subcategory_id)) {
+      const filtered = subSubcategories.filter(s => s.subcategory_id === form.subcategory_id);
+      setFilteredSubSubcategories(filtered);
+      // Only reset sub-subcategory if it doesn't belong to the selected subcategory
+      if (!editFormLoaded && form.sub_subcategory_id && filtered.length > 0 && !filtered.find(s => s.id === form.sub_subcategory_id)) {
         setForm(f => ({ ...f, sub_subcategory_id: '' }));
       }
     } else {
       setFilteredSubSubcategories([]);
-      setForm(f => ({ ...f, sub_subcategory_id: '' }));
+      if (!editFormLoaded) {
+        setForm(f => ({ ...f, sub_subcategory_id: '' }));
+      }
     }
   }, [form.subcategory_id, subSubcategories]);
 
@@ -319,6 +333,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                               .eq('slug', t.slug)
                               .maybeSingle();
                             if (!data) return;
+                            setEditFormLoaded(true);
                             setForm({
                               slug: data.slug || '',
                               name: data.name || '',

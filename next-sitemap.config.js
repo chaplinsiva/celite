@@ -47,7 +47,6 @@ const STATIC_PAGES = [
 
   // Category landing pages - high priority for discoverability
   { loc: '/video-templates', changefreq: 'daily', priority: 0.9 },
-  { loc: '/save-date', changefreq: 'daily', priority: 0.95 },
   { loc: '/3d-models', changefreq: 'daily', priority: 0.9 },
   { loc: '/stock-photos', changefreq: 'daily', priority: 0.9 },
   { loc: '/music-sfx', changefreq: 'daily', priority: 0.9 },

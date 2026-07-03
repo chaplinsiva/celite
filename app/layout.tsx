@@ -201,7 +201,7 @@ export default function RootLayout({
                 {
                   "@type": "SiteNavigationElement",
                   "name": "Save the Date Templates",
-                  "url": "https://celite.in/save-date"
+                  "url": "https://celite.in/video-templates"
                 },
                 {
                   "@type": "SiteNavigationElement",

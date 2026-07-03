@@ -66,7 +66,7 @@ const getCategoryRoute = (categorySlug: string): string => {
         'ui-templates': '/web-templates',
         '3d-models': '/3d-models',
         'prompts': '/prompts',
-        'save-date': '/save-date',
+        'save-date': '/video-templates',
     };
 
     if (routeMap[normalizedSlug]) {

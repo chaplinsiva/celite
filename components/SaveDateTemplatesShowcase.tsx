@@ -113,10 +113,10 @@ export default function SaveDateTemplatesShowcase({ initialTemplates }: { initia
             video_path,
             thumbnail_path,
             category_id,
-            categories!inner(id, name, slug)
+            sub_subcategories!inner(id, name, slug)
           `)
           .eq('status', 'approved')
-          .eq('categories.slug', 'save-date')
+          .eq('sub_subcategories.slug', 'save-date')
           .order('created_at', { ascending: false })
           .limit(20);
 
@@ -168,7 +168,7 @@ export default function SaveDateTemplatesShowcase({ initialTemplates }: { initia
             </p>
           </div>
           <Link
-            href="/save-date"
+            href="/video-templates?sub_subcategory=save-date"
             className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-rose-300 hover:text-rose-200 transition-colors group"
           >
             View all
@@ -198,7 +198,7 @@ export default function SaveDateTemplatesShowcase({ initialTemplates }: { initia
 
         <div className="sm:hidden mt-6 text-center">
           <Link
-            href="/save-date"
+            href="/video-templates?sub_subcategory=save-date"
             className="inline-flex items-center gap-2 text-sm font-semibold text-rose-300 hover:text-rose-200 transition-colors"
           >
             View all

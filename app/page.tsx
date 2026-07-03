@@ -63,29 +63,46 @@ export default async function Home() {
   const getCategoryId = (slug: string) => categories?.find(c => c.slug === slug)?.id;
 
   const videoCatId = getCategoryId('video-templates');
-  const saveDateCatId = getCategoryId('save-date');
   const musicCatId = getCategoryId('stock-musics');
   const sfxCatId = getCategoryId('sound-effects');
   const webCatId = getCategoryId('website-templates');
 
+  // Fetch "Movie Templates" sub-subcategory ID for Cinema section
+  const { data: movieSubSubcat } = await supabase
+    .from('sub_subcategories')
+    .select('id')
+    .eq('slug', 'movie-templates')
+    .maybeSingle();
+  const movieSubSubcatId = movieSubSubcat?.id;
+
+  // Fetch "Save Date" sub-subcategory ID for Save Date section
+  const { data: saveDateSubSubcat } = await supabase
+    .from('sub_subcategories')
+    .select('id')
+    .eq('slug', 'save-date')
+    .maybeSingle();
+  const saveDateSubSubcatId = saveDateSubSubcat?.id;
+
   // Fetch in parallel
   const [cinemaRes, saveDateRes, musicRes, sfxRes, webRes] = await Promise.all([
-    videoCatId
+    // Cinema: Only fetch templates from "Movie Templates" sub-subcategory
+    movieSubSubcatId
       ? supabase
           .from('templates')
           .select('slug, name, subtitle, img, video_path, thumbnail_path, category_id')
           .eq('status', 'approved')
-          .eq('category_id', videoCatId)
+          .eq('sub_subcategory_id', movieSubSubcatId)
           .not('video_path', 'is', null)
           .order('created_at', { ascending: false })
           .limit(20)
       : Promise.resolve({ data: null }),
-    saveDateCatId
+    // Save Date: Only fetch templates from "Save Date" sub-subcategory
+    saveDateSubSubcatId
       ? supabase
           .from('templates')
           .select('slug, name, subtitle, img, video_path, thumbnail_path, category_id')
           .eq('status', 'approved')
-          .eq('category_id', saveDateCatId)
+          .eq('sub_subcategory_id', saveDateSubSubcatId)
           .order('created_at', { ascending: false })
           .limit(20)
       : Promise.resolve({ data: null }),
@@ -125,7 +142,7 @@ export default async function Home() {
   }));
   const saveDateTemplates = (saveDateRes.data || []).map((t: any) => ({
     ...t,
-    category: { id: saveDateCatId, name: 'Save Date', slug: 'save-date' }
+    category: { id: videoCatId, name: 'Video Templates', slug: 'video-templates' }
   }));
   const musicTemplates = (musicRes.data || []).map((t: any) => ({
     ...t,

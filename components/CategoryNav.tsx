@@ -15,7 +15,7 @@ type Category = {
 const categoryDisplayMap: Record<string, { label: string; route: string }> = {
     'video-templates': { label: 'Video Templates', route: '/video-templates' },
     'after-effects': { label: 'Video Templates', route: '/video-templates' },
-    'save-date': { label: 'Save Date', route: '/save-date' },
+
     'stock-images': { label: 'Photos', route: '/stock-photos' },
     'stock-photos': { label: 'Photos', route: '/stock-photos' },
     'stock-musics': { label: 'Music', route: '/stock-musics' },
@@ -31,6 +31,11 @@ const categoryDisplayMap: Record<string, { label: string; route: string }> = {
 // Desired display order
 const displayOrder = [
     'Video Templates', 'Save Date', 'Photos', 'Music', 'SFX', 'Web', 'Graphics', '3D', 'Prompts'
+];
+
+// Static nav items that aren't top-level categories (sub-subcategories with direct access)
+const staticNavItems: { label: string; route: string }[] = [
+    { label: 'Save Date', route: '/video-templates?sub_subcategory=save-date' },
 ];
 
 export default function CategoryNav() {
@@ -59,6 +64,14 @@ export default function CategoryNav() {
                         }
                     }
 
+                    // Add static nav items (sub-subcategory shortcuts)
+                    for (const staticItem of staticNavItems) {
+                        if (!seen.has(staticItem.label)) {
+                            seen.add(staticItem.label);
+                            items.push(staticItem);
+                        }
+                    }
+
                     // Sort by display order
                     items.sort((a, b) => {
                         const aIdx = displayOrder.indexOf(a.label);
@@ -75,8 +88,21 @@ export default function CategoryNav() {
         fetchCategories();
     }, []);
 
-    // Check if a route is active
-    const isActive = (route: string) => pathname === route;
+    // Check if a route is active (supports query params)
+    const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const isActive = (route: string) => {
+        if (route.includes('?')) {
+            const [routePath, routeQuery] = route.split('?');
+            if (pathname !== routePath) return false;
+            const routeParams = new URLSearchParams(routeQuery);
+            if (!searchParams) return false;
+            for (const [key, value] of routeParams.entries()) {
+                if (searchParams.get(key) !== value) return false;
+            }
+            return true;
+        }
+        return pathname === route;
+    };
 
     return (
         <div className="w-full bg-white border-b border-zinc-100 hidden lg:block fixed top-[80px] left-0 z-[90]">

@@ -88,6 +88,7 @@ export default function VideoTemplatesClient({
   const { openLoginModal } = useLoginModal();
 
   const subcategorySlugFromUrl = searchParams.get('subcategory') || null;
+  const subSubcategorySlugFromUrl = searchParams.get('sub_subcategory') || null;
 
   // State
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
@@ -124,8 +125,6 @@ export default function VideoTemplatesClient({
           cat.slug === 'video-templates' ||
           (cat.name.toLowerCase().includes('video') && cat.name.toLowerCase().includes('template'))
         );
-      } else if (basePath === '/save-date') {
-        filteredCats = filteredCats.filter(cat => cat.slug === 'save-date');
       }
 
       setCategories([{ id: 'featured', name: 'Featured Templates', slug: 'featured' }, ...filteredCats]);
@@ -140,13 +139,6 @@ export default function VideoTemplatesClient({
         );
         if (videoTemplatesCat) {
           setSelectedCategory(videoTemplatesCat.id);
-          setSelectedSubcategory('all');
-          setSelectedSubSubcategory('all');
-        }
-      } else if (basePath === '/save-date') {
-        const saveDateCat = filteredCats.find(cat => cat.slug === 'save-date');
-        if (saveDateCat) {
-          setSelectedCategory(saveDateCat.id);
           setSelectedSubcategory('all');
           setSelectedSubSubcategory('all');
         }
@@ -165,6 +157,22 @@ export default function VideoTemplatesClient({
       }
     }
   }, [subcategorySlugFromUrl, subcategories]);
+
+  // Sync sub-subcategory from URL (e.g. ?sub_subcategory=save-date)
+  useEffect(() => {
+    if (subSubcategorySlugFromUrl && subSubcategories.length > 0 && subcategories.length > 0) {
+      const subSubcat = subSubcategories.find(s => s.slug === subSubcategorySlugFromUrl);
+      if (subSubcat) {
+        setSelectedSubSubcategory(subSubcat.id);
+        // Also auto-select the parent subcategory and category
+        const parentSubcat = subcategories.find(s => s.id === subSubcat.subcategory_id);
+        if (parentSubcat) {
+          setSelectedSubcategory(parentSubcat.id);
+          setSelectedCategory(parentSubcat.category_id);
+        }
+      }
+    }
+  }, [subSubcategorySlugFromUrl, subSubcategories, subcategories]);
 
   // Fetch following creators
   useEffect(() => {

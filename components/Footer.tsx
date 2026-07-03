@@ -24,7 +24,7 @@ export default function Footer() {
             <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">Templates</h3>
             <ul className="space-y-2.5 text-sm">
               <li>
-                <Link href="/save-date" className="text-zinc-400 hover:text-white transition-colors">
+                <Link href="/video-templates" className="text-zinc-400 hover:text-white transition-colors">
                   Save the Date Templates
                 </Link>
               </li>

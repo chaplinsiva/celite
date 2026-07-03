@@ -56,7 +56,7 @@ const getCategoryRoute = (categorySlug: string): string => {
     'ui-templates': '/web-templates',
     '3d-models': '/3d-models',
     'prompts': '/prompts',
-    'save-date': '/save-date',
+
   };
 
   if (routeMap[normalizedSlug]) {
@@ -217,7 +217,7 @@ export default function Header() {
                     </button>
                     {[
                       { name: 'Video Templates', slug: 'video-templates' },
-                      { name: 'Save Date', slug: 'save-date' },
+
                       { name: 'Stock Photos', slug: 'stock-images' },
                       { name: 'Music & SFX', slug: 'stock-musics' },
                       { name: 'Web Templates', slug: 'website-templates' },
@@ -357,7 +357,6 @@ export default function Header() {
             {/* Mobile nav in specific order */}
             {[
               { name: 'Video Templates', route: '/video-templates', slug: 'video-templates' },
-              { name: 'Save Date', route: '/save-date', slug: 'save-date' },
               { name: 'Photos', route: '/stock-photos', slug: 'stock-images' },
               { name: 'Music', route: '/stock-musics', slug: 'stock-musics' },
               { name: 'SFX', route: '/sound-effects', slug: 'sound-effects' },

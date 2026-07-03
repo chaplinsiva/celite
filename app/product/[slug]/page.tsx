@@ -265,10 +265,7 @@ export default async function ProductPage(props: PageProps) {
   // Determine category info for breadcrumb
   let breadcrumbCategoryName = categoryName || 'Templates';
   let breadcrumbCategoryUrl = '/templates';
-  if (categorySlug === 'save-date') {
-    breadcrumbCategoryName = 'Save the Date Templates';
-    breadcrumbCategoryUrl = '/save-date';
-  } else if (categorySlug?.includes('video') || categorySlug?.includes('after-effects')) {
+  if (categorySlug?.includes('video') || categorySlug?.includes('after-effects')) {
     breadcrumbCategoryName = 'Video Templates';
     breadcrumbCategoryUrl = '/video-templates';
   } else if (categorySlug === '3d-models') {
