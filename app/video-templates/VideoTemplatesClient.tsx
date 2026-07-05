@@ -35,6 +35,7 @@ type Template = {
   meta_title?: string | null;
   meta_description?: string | null;
   vendor_name?: string | null;
+  is_free?: boolean | null;
 };
 
 type Category = {
@@ -89,6 +90,7 @@ export default function VideoTemplatesClient({
 
   const subcategorySlugFromUrl = searchParams.get('subcategory') || null;
   const subSubcategorySlugFromUrl = searchParams.get('sub_subcategory') || null;
+  const freeFilterFromUrl = searchParams.get('free') === 'true';
 
   // State
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
@@ -97,6 +99,7 @@ export default function VideoTemplatesClient({
   const [selectedSubSubcategory, setSelectedSubSubcategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest');
   const [viewMode, setViewMode] = useState<'discover' | 'following'>('discover');
+  const [showFreeOnly, setShowFreeOnly] = useState(freeFilterFromUrl);
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedSections, setExpandedSections] = useState({ categories: true, filters: false });
 
@@ -218,6 +221,11 @@ export default function VideoTemplatesClient({
       t.category_id !== STOCK_PHOTOS_CATEGORY_ID
     );
 
+    // Free filter
+    if (showFreeOnly) {
+      filtered = filtered.filter(t => t.is_free === true);
+    }
+
     // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -269,7 +277,7 @@ export default function VideoTemplatesClient({
     }
 
     return filtered;
-  }, [initialTemplates, searchQuery, selectedCategory, selectedSubcategory, selectedSubSubcategory, sortBy]);
+  }, [initialTemplates, searchQuery, selectedCategory, selectedSubcategory, selectedSubSubcategory, sortBy, showFreeOnly]);
 
   // View mode filter
   const viewTemplates = useMemo(() => {
@@ -283,7 +291,7 @@ export default function VideoTemplatesClient({
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedCategory, selectedSubcategory, selectedSubSubcategory, sortBy, viewMode]);
+  }, [searchQuery, selectedCategory, selectedSubcategory, selectedSubSubcategory, sortBy, viewMode, showFreeOnly]);
 
   const totalPages = Math.ceil(viewTemplates.length / ITEMS_PER_PAGE);
   const paginatedTemplates = viewTemplates.slice(
@@ -336,6 +344,17 @@ export default function VideoTemplatesClient({
                       Following
                     </button>
                   </div>
+                  <button
+                    onClick={() => setShowFreeOnly(!showFreeOnly)}
+                    className={cn(
+                      "px-4 py-1.5 text-sm font-medium rounded-lg transition-all border",
+                      showFreeOnly
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                        : "bg-white text-zinc-600 border-zinc-200 hover:border-emerald-400 hover:text-emerald-600"
+                    )}
+                  >
+                    🎁 Free
+                  </button>
                 </div>
               </div>
               <p className="text-zinc-600 mt-4 max-w-3xl">{pageSubtitle}</p>

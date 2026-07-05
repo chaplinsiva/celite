@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Hero from '../components/Hero';
 import CinemaTemplatesShowcase from '../components/CinemaTemplatesShowcase';
 import SaveDateTemplatesShowcase from '../components/SaveDateTemplatesShowcase';
+import FreeTemplatesShowcase from '../components/FreeTemplatesShowcase';
 import RoyaltyFreeMusicShowcase from '../components/RoyaltyFreeMusicShowcase';
 import SfxShowcase from '../components/SfxShowcase';
 import LatestTemplatesCarousel from '../components/LatestTemplatesCarousel';
@@ -84,7 +85,7 @@ export default async function Home() {
   const saveDateSubSubcatId = saveDateSubSubcat?.id;
 
   // Fetch in parallel
-  const [cinemaRes, saveDateRes, musicRes, sfxRes, webRes] = await Promise.all([
+  const [cinemaRes, saveDateRes, freeRes, musicRes, sfxRes, webRes] = await Promise.all([
     // Cinema: Only fetch templates from "Movie Templates" sub-subcategory
     movieSubSubcatId
       ? supabase
@@ -106,6 +107,45 @@ export default async function Home() {
           .order('created_at', { ascending: false })
           .limit(20)
       : Promise.resolve({ data: null }),
+    // Free templates: fetch all free templates, then sort by download count
+    (async () => {
+      const { data: templates } = await supabase
+        .from('templates')
+        .select('slug, name, subtitle, img, video_path, thumbnail_path, category_id, subcategory_id')
+        .eq('status', 'approved')
+        .eq('is_free', true);
+      
+      let videoFreeTemplates = templates || [];
+      if (videoCatId) {
+        const { data: subcats } = await supabase.from('subcategories').select('id').eq('category_id', videoCatId);
+        const videoSubcatIds = new Set((subcats || []).map((s: any) => s.id));
+        videoFreeTemplates = videoFreeTemplates.filter((t: any) => 
+          t.category_id === videoCatId || videoSubcatIds.has(t.subcategory_id)
+        );
+      }
+      
+      const freeSlugs = videoFreeTemplates.map((t: any) => t.slug);
+      
+      if (freeSlugs.length > 0) {
+        // Fetch download counts for these free templates
+        const [{ data: fDl }, { data: pDl }] = await Promise.all([
+          supabase.from('free_downloads').select('template_slug').in('template_slug', freeSlugs),
+          supabase.from('downloads').select('template_slug').in('template_slug', freeSlugs)
+        ]);
+        
+        const counts: Record<string, number> = {};
+        [...(fDl || []), ...(pDl || [])].forEach((d: any) => {
+          counts[d.template_slug] = (counts[d.template_slug] || 0) + 1;
+        });
+        
+        // Sort highest to lowest downloads, then take top 20
+        const sorted = videoFreeTemplates
+          .sort((a: any, b: any) => (counts[b.slug] || 0) - (counts[a.slug] || 0))
+          .slice(0, 20);
+        return { data: sorted };
+      }
+      return { data: [] };
+    })(),
     musicCatId
       ? supabase
           .from('templates')
@@ -140,6 +180,7 @@ export default async function Home() {
     ...t,
     category: { id: videoCatId, name: 'Video Templates', slug: 'video-templates' }
   }));
+  const freeTemplates = freeRes.data || [];
   const saveDateTemplates = (saveDateRes.data || []).map((t: any) => ({
     ...t,
     category: { id: videoCatId, name: 'Video Templates', slug: 'video-templates' }
@@ -177,6 +218,7 @@ export default async function Home() {
   return (
     <main className="bg-background min-h-screen">
       <Hero />
+      <FreeTemplatesShowcase initialTemplates={freeTemplates as any} />
       <CinemaTemplatesShowcase initialTemplates={cinemaTemplates as any} />
       <SaveDateTemplatesShowcase initialTemplates={saveDateTemplates as any} />
       <RoyaltyFreeMusicShowcase initialTemplates={musicTemplates as any} />

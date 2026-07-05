@@ -70,7 +70,7 @@ export default async function TemplatesPage() {
     // Fetch templates that belong to Video Templates category
     const { data: catTemplates, error: catError } = await supabase
       .from('templates')
-      .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id')
+      .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id,is_free')
       .eq('status', 'approved')
       .eq('category_id', videoTemplatesCategory.id)
       .order('created_at', { ascending: false });
@@ -80,7 +80,7 @@ export default async function TemplatesPage() {
     if (subcategoryIds.length > 0) {
       const { data: subTemplates, error: subError } = await supabase
     .from('templates')
-        .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id')
+        .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id,is_free')
     .eq('status', 'approved')
         .in('subcategory_id', subcategoryIds)
     .order('created_at', { ascending: false });
@@ -106,7 +106,7 @@ export default async function TemplatesPage() {
     // Fallback: fetch all approved templates if category not found
     const { data: allTemplates, error: allError } = await supabase
       .from('templates')
-      .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id')
+      .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id,is_free')
       .eq('status', 'approved')
       .order('created_at', { ascending: false })
       .limit(500);

@@ -699,7 +699,7 @@ function CheckoutContent() {
           </p>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[1.7fr_1fr]">
+        <div className="flex flex-col-reverse gap-8 lg:grid lg:grid-cols-[1.7fr_1fr]">
           {/* Billing Form */}
           <section className="bg-white rounded-xl border-2 border-zinc-200 p-6 sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-8">
@@ -751,7 +751,7 @@ function CheckoutContent() {
                             setBilling((prev) => ({ ...prev, mobile: value }));
                           }
                         }}
-                        className="flex-1 px-4 py-3 border-2 border-zinc-200 border-l-0 rounded-r-lg focus:border-blue-500 focus:ring-0 outline-none transition-colors"
+                        className="flex-1 min-w-0 px-4 py-3 border-2 border-zinc-200 border-l-0 rounded-r-lg focus:border-blue-500 focus:ring-0 outline-none transition-colors"
                         placeholder="9876543210"
                         maxLength={15}
                         required
@@ -826,7 +826,7 @@ function CheckoutContent() {
                 <label className="flex items-start gap-3 text-sm text-zinc-700">
                   <input
                     type="checkbox"
-                    className="mt-0.5 w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                    className="mt-0.5 shrink-0 w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
                     required
                   />
                   <span>I agree to the Celite license and understand templates include one brand deployment.</span>
@@ -834,7 +834,7 @@ function CheckoutContent() {
                 <label className="flex items-start gap-3 text-sm text-zinc-700">
                   <input
                     type="checkbox"
-                    className="mt-0.5 w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                    className="mt-0.5 shrink-0 w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
                   />
                   <span>Email me about new template drops.</span>
                 </label>
@@ -939,10 +939,10 @@ function CheckoutContent() {
                     <img
                       src={item.img}
                       alt={item.name}
-                      className="w-20 h-20 object-cover rounded-lg"
+                      className="w-20 h-20 shrink-0 object-cover rounded-lg"
                     />
-                    <div className="flex-1">
-                      <p className="font-semibold text-zinc-900 text-sm">{item.name}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-zinc-900 text-sm truncate">{item.name}</p>
                       <p className="text-sm text-zinc-600 mt-1">{formatPriceWithDecimal(item.price, currency)}</p>
                     </div>
                   </div>
