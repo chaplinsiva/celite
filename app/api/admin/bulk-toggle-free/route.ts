@@ -45,15 +45,17 @@ export async function POST(req: Request) {
       // Get only After Effects template slugs
       const { data: aeTemplates, error: tplErr } = await supabase
         .from('templates')
-        .select('slug')
+        .select('slug, created_at')
         .eq('category_id', VIDEO_TEMPLATES_CATEGORY_ID)
-        .eq('subcategory_id', AFTER_EFFECTS_SUBCATEGORY_ID);
+        .eq('subcategory_id', AFTER_EFFECTS_SUBCATEGORY_ID)
+        .order('created_at', { ascending: true });
 
       if (tplErr) throw tplErr;
 
       const zeroDownloadSlugs = (aeTemplates || [])
         .map(t => t.slug)
-        .filter(slug => !slugsWithDownloads.has(slug));
+        .filter(slug => !slugsWithDownloads.has(slug))
+        .slice(0, 20); // Cap at 20 oldest templates to protect new uploads
 
       if (zeroDownloadSlugs.length > 0) {
         // Update in batches of 200 to avoid query size limits
@@ -107,10 +109,13 @@ export async function GET() {
 
     const { data: aeTemplates } = await supabase
       .from('templates')
-      .select('slug, is_free')
+      .select('slug, is_free, created_at')
       .eq('category_id', VIDEO_TEMPLATES_CATEGORY_ID)
-      .eq('subcategory_id', AFTER_EFFECTS_SUBCATEGORY_ID);
-    const zeroDownloadTemplates = (aeTemplates || []).filter(t => !slugsWithDownloads.has(t.slug));
+      .eq('subcategory_id', AFTER_EFFECTS_SUBCATEGORY_ID)
+      .order('created_at', { ascending: true });
+    const zeroDownloadTemplates = (aeTemplates || [])
+      .filter(t => !slugsWithDownloads.has(t.slug))
+      .slice(0, 20); // Cap at 20 oldest templates to protect new uploads
     const lowTotal = zeroDownloadTemplates.length;
     const lowFree = zeroDownloadTemplates.filter(t => t.is_free).length;
 
