@@ -8,6 +8,7 @@ type TabKey =
   | 'analytics'
   | 'subscriptionLog'
   | 'freeGifts'
+  | 'specialOffer'
   | 'users'
   | 'settings'
   | 'marketing'
@@ -21,7 +22,8 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'categories', label: 'Categories' },
   { key: 'analytics', label: 'Analytics' },
   { key: 'subscriptionLog', label: 'Subscription Log' },
-  { key: 'freeGifts', label: 'Special Offer Analysis' },
+  { key: 'freeGifts', label: 'Free Gift Analytics' },
+  { key: 'specialOffer', label: '3rd Anniversary Offer' },
   { key: 'users', label: 'Users' },
   { key: 'marketing', label: 'Marketing' },
   { key: 'productAlerts', label: 'Product Alerts' },

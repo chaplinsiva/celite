@@ -16,6 +16,7 @@ import MarketingPanel from './components/MarketingPanel';
 import VendorApprovalPanel from './components/VendorApprovalPanel';
 import BulkSfxPanel from './components/BulkSfxPanel';
 import FreeGiftsPanel from './components/FreeGiftsPanel';
+import SpecialOfferPanel from './components/SpecialOfferPanel';
 import ProductAlertsPanel from './components/ProductAlertsPanel';
 
 type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null };
@@ -35,7 +36,7 @@ export default function AdminClient() {
     celiteAmount?: number;
   } | null>(null);
   const [active, setActive] = useState<
-    'overview' | 'products' | 'vendorApproval' | 'categories' | 'analytics' | 'subscriptionLog' | 'freeGifts' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx'
+    'overview' | 'products' | 'vendorApproval' | 'categories' | 'analytics' | 'subscriptionLog' | 'freeGifts' | 'specialOffer' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx'
   >('overview');
 
 
@@ -147,6 +148,7 @@ export default function AdminClient() {
             {active === 'analytics' && (<AnalyticsPanel />)}
             {active === 'subscriptionLog' && (<SubscriptionLogPanel />)}
             {active === 'freeGifts' && (<FreeGiftsPanel />)}
+            {active === 'specialOffer' && (<SpecialOfferPanel />)}
 
             {active === 'users' && (<UsersPanel />)}
             {active === 'marketing' && (<MarketingPanel />)}

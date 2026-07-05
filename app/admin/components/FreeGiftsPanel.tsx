@@ -46,8 +46,8 @@ export default function FreeGiftsPanel() {
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold text-zinc-900 tracking-tight">Special Offer Analysis</h2>
-                    <p className="text-zinc-500 mt-1">Track 3rd Anniversary Special Offer downloads and subscription conversion rates.</p>
+                    <h2 className="text-2xl font-bold text-zinc-900 tracking-tight">Free Templates Analytics</h2>
+                    <p className="text-zinc-500 mt-1">Track free template downloads and general engagement.</p>
                 </div>
                 <div className="p-3 bg-blue-50 rounded-xl">
                     <Gift className="w-6 h-6 text-blue-600" />
