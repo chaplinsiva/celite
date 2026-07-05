@@ -2,16 +2,29 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Check, Sparkles } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { formatPrice } from '@/lib/currency';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 
 export default function PricingContent() {
+  const searchParams = useSearchParams();
+  const planParam = searchParams.get('plan') || searchParams.get('subscription');
   const [monthlyPrice, setMonthlyPrice] = useState<number | null>(null);
   const [yearlyPrice, setYearlyPrice] = useState<number | null>(null);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>(
+    planParam === 'monthly' ? 'monthly' : 'yearly'
+  );
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (planParam === 'monthly') {
+      setBillingCycle('monthly');
+    } else if (planParam === 'yearly') {
+      setBillingCycle('yearly');
+    }
+  }, [planParam]);
 
   useEffect(() => {
     const loadPrices = async () => {

@@ -1297,7 +1297,7 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
         <div className="text-center mb-4">
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wider mb-2">
             <Gift className="w-3 h-3" />
-            Free New Year Gift
+            3rd Anniversary Gift
           </div>
           <h3 className="text-lg font-bold text-green-900">Download for Free</h3>
           <p className="text-xs text-green-600 mt-1">Sign in required to download</p>

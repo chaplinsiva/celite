@@ -31,6 +31,7 @@ export async function POST(req: Request) {
       sub_subcategory_id: t.sub_subcategory_id || null,
       meta_title: t.meta_title || null,
       meta_description: t.meta_description || null,
+      is_free: t.is_free ?? false,
     }));
     const { data, error } = await supabase
       .from('templates')

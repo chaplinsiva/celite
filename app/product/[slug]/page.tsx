@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { notFound } from 'next/navigation';
 import ProductDetails from './ProductDetails';
 import type { Template } from '../../../data/templateData';
@@ -291,11 +292,13 @@ export default async function ProductPage(props: PageProps) {
 
   return (
     <>
-      <script
+      <Script
+        id={`product-schema-${prod.slug}`}
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productStructuredData) }}
       />
-      <script
+      <Script
+        id={`breadcrumb-schema-${prod.slug}`}
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
       />

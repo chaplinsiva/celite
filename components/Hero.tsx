@@ -65,13 +65,24 @@ export default function Hero() {
             transition={{ delay: 0.2 }}
             className="flex-1 min-w-[280px]"
           >
-            <div className="h-full bg-white rounded-[1.5rem] p-6 md:p-8 shadow-xl border border-zinc-100 flex flex-col">
+            <div className="h-full bg-white rounded-[1.5rem] p-6 md:p-8 shadow-xl border border-zinc-100 flex flex-col relative overflow-hidden group">
+              {/* Premium top accent gradient line */}
+              <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-blue-600 to-purple-600" />
+              
               <div className="mb-4">
-                <p className="text-zinc-500 text-xs font-medium mb-1">From</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl md:text-4xl font-black text-zinc-900">₹458</span>
-                  <span className="text-zinc-500 font-medium text-sm">/month</span>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="bg-red-50 text-red-600 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                    Limited Offer
+                  </span>
+                  <span className="text-zinc-400 text-xs font-semibold line-through">₹899</span>
                 </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                    ₹499
+                  </span>
+                  <span className="text-zinc-500 font-semibold text-sm">/month</span>
+                </div>
+                <p className="text-[10px] text-zinc-500 mt-1 font-medium">3rd Anniversary Special Plan</p>
               </div>
 
               <ul className="space-y-3 mb-6 flex-1">
@@ -89,8 +100,8 @@ export default function Hero() {
               </ul>
 
               <Link
-                href="/pricing"
-                className="w-full bg-[#2563eb] text-white py-3 md:py-4 rounded-xl font-bold text-center text-sm hover:bg-blue-700 transition-all active:scale-[0.98] shadow-lg shadow-blue-600/20"
+                href="/pricing?plan=monthly"
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 md:py-4 rounded-xl font-bold text-center text-sm hover:from-blue-700 hover:to-purple-700 transition-all active:scale-[0.98] shadow-lg shadow-blue-600/20"
               >
                 Get unlimited downloads
               </Link>

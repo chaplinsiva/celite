@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { Gift, Download, TrendingUp, Users } from 'lucide-react';
 
 export default function FreeGiftsPanel() {
@@ -19,137 +18,15 @@ export default function FreeGiftsPanel() {
         const fetchStats = async () => {
             try {
                 setLoading(true);
-                const supabase = getSupabaseBrowserClient();
-
-                console.log('[FreeGifts] Starting to fetch analytics...');
-
-                // 1. Get all free templates
-                const { data: freeTemplates, error: templatesError } = await supabase
-                    .from('templates')
-                    .select('slug, name')
-                    .eq('is_free', true);
-
-                if (templatesError) {
-                    console.error('[FreeGifts] Error fetching free templates:', templatesError);
-                    setLoading(false);
-                    return;
+                const res = await fetch('/api/admin/free-gifts-stats');
+                const json = await res.json();
+                if (json.ok) {
+                    setStats(json.stats);
+                    setTopGifts(json.topGifts || []);
+                    setUserDownloads(json.userDownloads || []);
                 }
-
-                console.log('[FreeGifts] Found free templates:', freeTemplates);
-
-                const freeSlugs = freeTemplates?.map(t => t.slug) || [];
-
-                if (freeSlugs.length === 0) {
-                    console.log('[FreeGifts] No free templates found');
-                    setLoading(false);
-                    return;
-                }
-
-                // 2. Fetch ALL downloads for these slugs (no filtering)
-                const { data: downloads, error: dlError } = await supabase
-                    .from('free_downloads')
-                    .select('user_id, template_slug, downloaded_at')
-                    .in('template_slug', freeSlugs)
-                    .order('downloaded_at', { ascending: false });
-
-                if (dlError) {
-                    console.error('[FreeGifts] Error fetching downloads:', dlError);
-                    setLoading(false);
-                    return;
-                }
-
-                console.log('[FreeGifts] Total downloads found:', downloads?.length || 0);
-
-                const totalDownloads = downloads?.length || 0;
-
-                // 3. Get unique user IDs
-                const uniqueUserIds = Array.from(new Set((downloads || []).map(d => d.user_id).filter(Boolean)));
-                const uniqueUsersCount = uniqueUserIds.length;
-
-                console.log('[FreeGifts] Unique users:', uniqueUsersCount);
-
-                // 4. Check subscriptions
-                let uniqueSubscribedIds = new Set<string>();
-                if (uniqueUsersCount > 0) {
-                    const { data: subscriptions } = await supabase
-                        .from('subscriptions')
-                        .select('user_id')
-                        .eq('is_active', true)
-                        .in('user_id', uniqueUserIds);
-
-                    uniqueSubscribedIds = new Set((subscriptions || []).map(s => s.user_id));
-                    console.log('[FreeGifts] Converted users:', uniqueSubscribedIds.size);
-                }
-
-                const conversionRate = uniqueUsersCount > 0 ? (uniqueSubscribedIds.size / uniqueUsersCount) * 100 : 0;
-
-                // 5. Get user details for display
-                const { data: { session } } = await supabase.auth.getSession();
-                let userMap: Record<string, any> = {};
-
-                if (session) {
-                    try {
-                        const res = await fetch('/api/admin/users', {
-                            headers: { Authorization: `Bearer ${session.access_token}` }
-                        });
-                        const json = await res.json();
-                        if (json.ok && json.users) {
-                            json.users.forEach((u: any) => {
-                                userMap[u.id] = u;
-                            });
-                            console.log('[FreeGifts] Loaded user details for', Object.keys(userMap).length, 'users');
-                        }
-                    } catch (e) {
-                        console.error('[FreeGifts] Failed to load user details:', e);
-                    }
-                }
-
-                // 6. Process user downloads
-                const processedUserDownloads = (downloads || []).map(dl => {
-                    const userData = userMap[dl.user_id];
-                    const template = freeTemplates?.find(t => t.slug === dl.template_slug);
-                    return {
-                        id: dl.user_id,
-                        email: userData?.email || 'Unknown User',
-                        name: [userData?.first_name, userData?.last_name].filter(Boolean).join(' ') || 'Anonymous',
-                        templateName: template?.name || dl.template_slug,
-                        date: dl.downloaded_at,
-                        isConverted: uniqueSubscribedIds.has(dl.user_id)
-                    };
-                });
-
-                // 7. Group by template
-                const giftStatsMap: Record<string, { name: string, count: number }> = {};
-                freeTemplates?.forEach(t => {
-                    giftStatsMap[t.slug] = { name: t.name, count: 0 };
-                });
-                (downloads || []).forEach(d => {
-                    if (giftStatsMap[d.template_slug]) {
-                        giftStatsMap[d.template_slug].count++;
-                    }
-                });
-
-                const sortedGifts = Object.entries(giftStatsMap)
-                    .map(([slug, data]) => ({ slug, ...data }))
-                    .sort((a, b) => b.count - a.count);
-
-                console.log('[FreeGifts] Setting stats:', {
-                    totalDownloads,
-                    uniqueUsers: uniqueUsersCount,
-                    convertedUsers: uniqueSubscribedIds.size,
-                    conversionRate
-                });
-
-                setStats({
-                    totalDownloads,
-                    uniqueUsers: uniqueUsersCount,
-                    convertedUsers: uniqueSubscribedIds.size,
-                    conversionRate,
-                });
-                setTopGifts(sortedGifts);
-                setUserDownloads(processedUserDownloads);
             } catch (error) {
-                console.error('[FreeGifts] Unexpected error:', error);
+                console.error('[FreeGifts] Failed to load:', error);
             } finally {
                 setLoading(false);
             }
@@ -169,8 +46,8 @@ export default function FreeGiftsPanel() {
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold text-zinc-900 tracking-tight">Free Template Analytics</h2>
-                    <p className="text-zinc-500 mt-1">Track New Year Gift downloads and subscription conversion rates.</p>
+                    <h2 className="text-2xl font-bold text-zinc-900 tracking-tight">Special Offer Analysis</h2>
+                    <p className="text-zinc-500 mt-1">Track 3rd Anniversary Special Offer downloads and subscription conversion rates.</p>
                 </div>
                 <div className="p-3 bg-blue-50 rounded-xl">
                     <Gift className="w-6 h-6 text-blue-600" />
@@ -210,7 +87,7 @@ export default function FreeGiftsPanel() {
                 {/* Per Template Breakdown */}
                 <div className="xl:col-span-1 bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden h-fit">
                     <div className="px-6 py-4 border-b border-zinc-100">
-                        <h3 className="font-semibold text-zinc-900">Per Template</h3>
+                        <h3 className="font-semibold text-zinc-900">Top 10 Downloaded</h3>
                     </div>
                     <div className="divide-y divide-zinc-100">
                         {topGifts.map((gift) => (
@@ -225,6 +102,9 @@ export default function FreeGiftsPanel() {
                                 </div>
                             </div>
                         ))}
+                        {topGifts.length === 0 && (
+                            <div className="px-6 py-8 text-center text-zinc-400 text-sm italic">No downloads yet.</div>
+                        )}
                     </div>
                 </div>
 

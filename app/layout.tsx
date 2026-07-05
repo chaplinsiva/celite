@@ -110,7 +110,8 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/favicon/fav.png" />
 
         {/* Structured Data for Sitelinks */}
-        <script
+        <Script
+          id="schema-sitelinks"
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
@@ -144,7 +145,8 @@ export default function RootLayout({
         />
 
         {/* Organization Schema */}
-        <script
+        <Script
+          id="schema-organization"
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
@@ -192,7 +194,8 @@ export default function RootLayout({
         />
 
         {/* SiteNavigationElement for Sitelinks */}
-        <script
+        <Script
+          id="schema-navigation"
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({

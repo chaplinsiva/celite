@@ -36,7 +36,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
     setCurrentPage(1);
   }, [searchTerm]);
   const [form, setForm] = useState({
-    slug: '', name: '', subtitle: '', description: '', img: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', meta_title: '', meta_description: '',
+    slug: '', name: '', subtitle: '', description: '', img: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', meta_title: '', meta_description: '', is_free: false,
   });
   const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [subcategories, setSubcategories] = useState<Array<{ id: string; category_id: string; name: string; slug: string }>>([]);
@@ -329,7 +329,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                             const supabase = getSupabaseBrowserClient();
                             const { data } = await supabase
                               .from('templates')
-                              .select('slug,name,subtitle,description,img,video_path,thumbnail_path,audio_preview_path,model_3d_path,source_path,features,software,plugins,tags,category_id,subcategory_id,sub_subcategory_id,meta_title,meta_description')
+                              .select('slug,name,subtitle,description,img,video_path,thumbnail_path,audio_preview_path,model_3d_path,source_path,features,software,plugins,tags,category_id,subcategory_id,sub_subcategory_id,meta_title,meta_description,is_free')
                               .eq('slug', t.slug)
                               .maybeSingle();
                             if (!data) return;
@@ -354,6 +354,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                               sub_subcategory_id: data.sub_subcategory_id || '',
                               meta_title: data.meta_title || '',
                               meta_description: data.meta_description || '',
+                              is_free: !!data.is_free,
                             });
                             setSeo(null);
                             setIsEditing(true);
@@ -472,6 +473,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
                     sub_subcategory_id: form.sub_subcategory_id || null,
                     meta_title: form.meta_title.trim() || null,
                     meta_description: form.meta_description.trim() || null,
+                    is_free: form.is_free,
                   }
                 ]
               };
@@ -482,7 +484,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               }
               await onCreated();
               setTab('list');
-              setForm({ slug: '', name: '', subtitle: '', description: '', img: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', meta_title: '', meta_description: '' });
+              setForm({ slug: '', name: '', subtitle: '', description: '', img: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', meta_title: '', meta_description: '', is_free: false });
               setIsEditing(false);
               setOriginalSlug(null);
               setSlugManuallyEdited(false);
@@ -537,6 +539,27 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
               className="w-full px-4 py-2 rounded-lg bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
             />
           </div>
+
+          {/* Free Download Toggle */}
+          <div className="sm:col-span-2 flex items-center gap-4 p-4 rounded-xl border border-zinc-200 bg-zinc-50">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.is_free}
+                onChange={(e) => setForm({ ...form, is_free: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-zinc-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500" />
+            </label>
+            <div>
+              <p className="text-sm font-semibold text-zinc-900">Free Download</p>
+              <p className="text-xs text-zinc-500">Allow users to download this product without a subscription</p>
+            </div>
+            {form.is_free && (
+              <span className="ml-auto bg-green-100 text-green-700 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">Free</span>
+            )}
+          </div>
+
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Category</label>
             <select
