@@ -5,18 +5,43 @@ export async function GET() {
   try {
     const supabase = getSupabaseAdminClient();
 
-    // Only count subscriptions from today onwards (ignore old ones)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
+    // Get the offer start date from settings (configurable)
+    // This tracks subscriptions from when the 3rd Anniversary offer began
+    let offerStartISO: string | null = null;
+    try {
+      const { data: settings } = await supabase.from('settings').select('key,value');
+      if (settings) {
+        const settingsMap: Record<string, string> = {};
+        settings.forEach((row: any) => { settingsMap[row.key] = row.value; });
+        if (settingsMap.SPECIAL_OFFER_START_DATE) {
+          // Parse the configured start date
+          const startDate = new Date(settingsMap.SPECIAL_OFFER_START_DATE);
+          if (!isNaN(startDate.getTime())) {
+            offerStartISO = startDate.toISOString();
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Could not fetch SPECIAL_OFFER_START_DATE from settings');
+    }
 
-    // Fetch active subscriptions from today
-    const { data: subs, error: subsErr } = await supabase
+    const nowISO = new Date().toISOString();
+
+    // Fetch active subscriptions since the offer started
+    // If no start date is configured, show all active subscriptions
+    let subsQuery = supabase
       .from('subscriptions')
       .select('id, user_id, plan, created_at, valid_until, is_active')
       .eq('is_active', true)
-      .gte('created_at', todayISO)
+      .or(`valid_until.is.null,valid_until.gt.${nowISO}`)
       .order('created_at', { ascending: false });
+
+    // Only filter by offer start date if configured
+    if (offerStartISO) {
+      subsQuery = subsQuery.gte('created_at', offerStartISO);
+    }
+
+    const { data: subs, error: subsErr } = await subsQuery;
 
     if (subsErr) throw subsErr;
 
@@ -69,7 +94,8 @@ export async function GET() {
         yearlyCount: yearlySubs.length,
         totalRevenue
       },
-      recentSubscribers: recentSubscribersList
+      recentSubscribers: recentSubscribersList,
+      offerStartDate: offerStartISO || null,
     });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || 'Unknown error' }, { status: 500 });

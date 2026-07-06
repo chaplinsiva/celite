@@ -5,6 +5,7 @@ import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 
 export default function SettingsPanel() {
   const [geminiKey, setGeminiKey] = useState('');
+  const [offerStartDate, setOfferStartDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [fixingRenewals, setFixingRenewals] = useState(false);
@@ -26,6 +27,14 @@ export default function SettingsPanel() {
       if (res.ok && json.ok && json.settings) {
         setGeminiKey(json.settings.GEMINI_FLASH_API_KEY || '');
         setMaintenanceOn(json.settings.MAINTENANCE_MODE === 'on');
+        // Load campaign start date (stored as ISO string, display as date input value)
+        if (json.settings.SPECIAL_OFFER_START_DATE) {
+          const d = new Date(json.settings.SPECIAL_OFFER_START_DATE);
+          if (!isNaN(d.getTime())) {
+            // Format as YYYY-MM-DD for the date input
+            setOfferStartDate(d.toISOString().slice(0, 10));
+          }
+        }
       }
     };
     load();
@@ -45,6 +54,8 @@ export default function SettingsPanel() {
           settings: {
             GEMINI_FLASH_API_KEY: geminiKey,
             MAINTENANCE_MODE: maintenanceOn ? 'on' : 'off',
+            // Store as ISO string (start of day UTC) so the API can parse it
+            SPECIAL_OFFER_START_DATE: offerStartDate ? new Date(offerStartDate).toISOString() : '',
           }
         }),
       });
@@ -74,6 +85,7 @@ export default function SettingsPanel() {
           settings: {
             GEMINI_FLASH_API_KEY: geminiKey,
             MAINTENANCE_MODE: next ? 'on' : 'off',
+            SPECIAL_OFFER_START_DATE: offerStartDate ? new Date(offerStartDate).toISOString() : '',
           },
         }),
       });
@@ -214,25 +226,60 @@ export default function SettingsPanel() {
       {/* API Settings */}
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
         <h3 className="text-sm font-semibold text-zinc-900">APIs</h3>
-        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto] items-center">
-          <div>
-            <label className="block text-xs font-medium text-zinc-600 mb-1">Gemini 2.0 Flash API Key</label>
-            <input
-              type="password"
-              value={geminiKey}
-              onChange={(e) => setGeminiKey(e.target.value)}
-              placeholder="Enter API key"
-              className="w-full px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-            />
-            <p className="mt-1 text-[11px] text-zinc-500">Stored securely in the database (settings table). Used by server APIs.</p>
+        <div className="mt-3 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto] items-center">
+            <div>
+              <label className="block text-xs font-medium text-zinc-600 mb-1">Gemini 2.0 Flash API Key</label>
+              <input
+                type="password"
+                value={geminiKey}
+                onChange={(e) => setGeminiKey(e.target.value)}
+                placeholder="Enter API key"
+                className="w-full px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              />
+              <p className="mt-1 text-[11px] text-zinc-500">Stored securely in the database (settings table). Used by server APIs.</p>
+            </div>
           </div>
-          <button
-            onClick={save}
-            disabled={saving}
-            className="h-10 rounded-lg bg-blue-600 px-6 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm transition-all"
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
+
+          {/* 3rd Anniversary Campaign Start Date */}
+          <div className="pt-4 border-t border-zinc-100">
+            <label className="block text-xs font-medium text-zinc-600 mb-1">3rd Anniversary Offer — Campaign Start Date</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="date"
+                value={offerStartDate}
+                onChange={(e) => setOfferStartDate(e.target.value)}
+                className="px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+              />
+              {offerStartDate && (
+                <button
+                  onClick={() => setOfferStartDate('')}
+                  className="text-xs text-zinc-400 hover:text-red-500 transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <p className="mt-1 text-[11px] text-zinc-500">
+              The 3rd Anniversary Offer page will only show subscriptions created <strong>on or after</strong> this date.
+              Leave blank to show <em>all</em> active subscriptions on that page.
+            </p>
+            {!offerStartDate && (
+              <p className="mt-1 text-[11px] text-amber-600 font-medium">
+                ⚠ No campaign start date set — the 3rd Anniversary page currently shows all active subscriptions.
+              </p>
+            )}
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              onClick={save}
+              disabled={saving}
+              className="h-10 rounded-lg bg-blue-600 px-6 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm transition-all"
+            >
+              {saving ? 'Saving…' : 'Save Settings'}
+            </button>
+          </div>
         </div>
         {message && <p className="mt-3 text-sm font-medium text-green-600">{message}</p>}
       </div>

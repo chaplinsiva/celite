@@ -12,6 +12,7 @@ export default function SpecialOfferPanel() {
         totalRevenue: 0,
     });
     const [recentSubscribers, setRecentSubscribers] = useState<any[]>([]);
+    const [offerStartDate, setOfferStartDate] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -22,6 +23,7 @@ export default function SpecialOfferPanel() {
                 if (json.ok) {
                     setStats(json.stats);
                     setRecentSubscribers(json.recentSubscribers || []);
+                    setOfferStartDate(json.offerStartDate || null);
                 }
             } catch (error) {
                 console.error('[SpecialOffer] Failed to load:', error);
@@ -47,8 +49,22 @@ export default function SpecialOfferPanel() {
                     <h2 className="text-2xl font-bold text-zinc-900 tracking-tight">3rd Anniversary Special Offer</h2>
                     <p className="text-zinc-500 mt-1">Track active subscriptions and revenue from the special offer.</p>
                 </div>
-                <div className="p-3 bg-indigo-50 rounded-xl">
-                    <Gift className="w-6 h-6 text-indigo-600" />
+                <div className="flex items-center gap-3">
+                    {offerStartDate ? (
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                            <span className="text-xs font-semibold text-indigo-700">
+                                Campaign from {new Date(offerStartDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200">
+                            <span className="text-xs font-semibold text-amber-700">⚠ No start date — showing all active subs</span>
+                        </div>
+                    )}
+                    <div className="p-3 bg-indigo-50 rounded-xl">
+                        <Gift className="w-6 h-6 text-indigo-600" />
+                    </div>
                 </div>
             </div>
 
