@@ -1,54 +1,88 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const supabase = getSupabaseAdminClient();
 
-    // Only count downloads from today onwards (ignore old data)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
+    // --- Pagination params ---
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const pageSize = Math.min(100, Math.max(5, parseInt(searchParams.get('pageSize') || '20', 10)));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
 
-    // 1. Get free downloads from today onwards
-    const { data: downloads, error: dlErr } = await supabase
+    // --- Get campaign start date from settings (3rd Anniversary start date) ---
+    let campaignStartISO: string | null = null;
+    try {
+      const { data: settings } = await supabase.from('settings').select('key,value');
+      if (settings) {
+        const settingsMap: Record<string, string> = {};
+        settings.forEach((row: any) => { settingsMap[row.key] = row.value; });
+        if (settingsMap.SPECIAL_OFFER_START_DATE) {
+          const startDate = new Date(settingsMap.SPECIAL_OFFER_START_DATE);
+          if (!isNaN(startDate.getTime())) {
+            campaignStartISO = startDate.toISOString();
+          }
+        }
+      }
+    } catch (e) {
+      console.log('[free-gifts-stats] Could not fetch SPECIAL_OFFER_START_DATE from settings');
+    }
+
+    // Fall back to midnight today if no campaign start date is configured
+    if (!campaignStartISO) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      campaignStartISO = today.toISOString();
+    }
+
+    // ── QUERY A: Lightweight full-scan for stats (user_id + template_slug only) ──
+    // No row limit — stats must be accurate across the entire campaign period.
+    const { data: allDownloadsRaw, error: allErr } = await supabase
       .from('free_downloads')
-      .select('user_id, template_slug, downloaded_at')
-      .gte('downloaded_at', todayISO)
-      .order('downloaded_at', { ascending: false })
-      .limit(200);
+      .select('user_id, template_slug')
+      .gte('downloaded_at', campaignStartISO);
 
-    if (dlErr) throw dlErr;
+    if (allErr) throw allErr;
 
-    const allDownloads = downloads || [];
+    const allDownloads = allDownloadsRaw || [];
     const totalDownloads = allDownloads.length;
 
-    // 2. Unique users
+    // Unique users across full campaign
     const uniqueUserIds = Array.from(new Set(allDownloads.map(d => d.user_id).filter(Boolean)));
     const uniqueUsers = uniqueUserIds.length;
 
-    // 3. Check subscriptions (converted users)
+    // Conversion = user has EVER subscribed (any plan, any status).
+    // We don't filter by is_active / valid_until here because:
+    //   - A user who subscribed and then cancelled still counts as converted.
+    // For the per-row badge we separately track "active right now".
     let convertedUsers = 0;
-    const subscribedSet = new Set<string>();
+    const everSubscribedSet = new Set<string>(); // drives "Converted to Sub" count
+    const activeNowSet = new Set<string>();       // drives "Active Subscriber" badge per row
     if (uniqueUserIds.length > 0) {
-      const { data: subs } = await supabase
+      const { data: allSubs } = await supabase
         .from('subscriptions')
-        .select('user_id')
-        .eq('is_active', true)
+        .select('user_id, is_active, valid_until')
         .in('user_id', uniqueUserIds);
-      convertedUsers = subs?.length || 0;
-      subs?.forEach(s => subscribedSet.add(s.user_id));
+
+      const nowISO = new Date().toISOString();
+      allSubs?.forEach(s => {
+        everSubscribedSet.add(s.user_id);
+        const isActiveNow = s.is_active && (!s.valid_until || s.valid_until > nowISO);
+        if (isActiveNow) activeNowSet.add(s.user_id);
+      });
+      convertedUsers = everSubscribedSet.size;
     }
 
     const conversionRate = uniqueUsers > 0 ? (convertedUsers / uniqueUsers) * 100 : 0;
 
-    // 4. Top 10 templates by download count
+    // Top 10 templates by download count (from full scan)
     const templateCounts: Record<string, number> = {};
     allDownloads.forEach(d => {
       templateCounts[d.template_slug] = (templateCounts[d.template_slug] || 0) + 1;
     });
 
-    // Get template names for the slugs we have
     const slugsWithDownloads = Object.keys(templateCounts);
     let templateNameMap: Record<string, string> = {};
     if (slugsWithDownloads.length > 0) {
@@ -64,16 +98,28 @@ export async function GET() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    // 5. Recent downloads with user info (only fetch needed user IDs)
-    const recentDownloads = allDownloads.slice(0, 50);
-    const recentUserIds = Array.from(new Set(recentDownloads.map(d => d.user_id).filter(Boolean)));
+    // ── QUERY B: Paginated rows for the table (with timestamps) ──
+    const { data: pageDownloads, error: pageErr, count: exactCount } = await supabase
+      .from('free_downloads')
+      .select('user_id, template_slug, downloaded_at', { count: 'exact' })
+      .gte('downloaded_at', campaignStartISO)
+      .order('downloaded_at', { ascending: false })
+      .range(from, to);
 
+    if (pageErr) throw pageErr;
+
+    const pageRows = pageDownloads || [];
+    const totalRecords = exactCount ?? totalDownloads;
+    const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+
+    // Fetch user info only for this page's user IDs
+    const pageUserIds = Array.from(new Set(pageRows.map(d => d.user_id).filter(Boolean)));
     let userMap: Record<string, { email: string; name: string }> = {};
-    if (recentUserIds.length > 0) {
+    if (pageUserIds.length > 0) {
       const { data: users } = await supabase
         .from('users_view')
         .select('id, email, raw_user_meta_data')
-        .in('id', recentUserIds);
+        .in('id', pageUserIds);
       users?.forEach(u => {
         const meta = u.raw_user_meta_data as any;
         userMap[u.id] = {
@@ -83,13 +129,27 @@ export async function GET() {
       });
     }
 
-    const userDownloads = recentDownloads.map(dl => ({
-      id: dl.user_id,
+    // Fetch template names for page slugs not already in map
+    const pageSlugs = Array.from(
+      new Set(pageRows.map(d => d.template_slug).filter(s => !templateNameMap[s]))
+    );
+    if (pageSlugs.length > 0) {
+      const { data: extraTpls } = await supabase
+        .from('templates')
+        .select('slug, name')
+        .in('slug', pageSlugs);
+      extraTpls?.forEach(t => { templateNameMap[t.slug] = t.name; });
+    }
+
+    const userDownloads = pageRows.map(dl => ({
+      userId: dl.user_id,
       email: userMap[dl.user_id]?.email || 'Unknown User',
       name: userMap[dl.user_id]?.name || 'Anonymous',
       templateName: templateNameMap[dl.template_slug] || dl.template_slug,
+      templateSlug: dl.template_slug,
       date: dl.downloaded_at,
-      isConverted: subscribedSet.has(dl.user_id),
+      isConverted: everSubscribedSet.has(dl.user_id),
+      isActiveNow: activeNowSet.has(dl.user_id),
     }));
 
     return NextResponse.json({
@@ -97,6 +157,8 @@ export async function GET() {
       stats: { totalDownloads, uniqueUsers, convertedUsers, conversionRate },
       topGifts,
       userDownloads,
+      pagination: { page, pageSize, totalRecords, totalPages },
+      campaignStartDate: campaignStartISO,
     });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || 'Unknown error' }, { status: 500 });
