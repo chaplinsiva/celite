@@ -19,7 +19,7 @@ import FreeGiftsPanel from './components/FreeGiftsPanel';
 import SpecialOfferPanel from './components/SpecialOfferPanel';
 import ProductAlertsPanel from './components/ProductAlertsPanel';
 
-type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null };
+type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null; video_path?: string | null; thumbnail_path?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null; category_id?: string | null; subcategory_id?: string | null; sub_subcategory_id?: string | null };
 
 export default function AdminClient() {
   const router = useRouter();
@@ -83,7 +83,7 @@ export default function AdminClient() {
     try {
       setTemplatesLoading(true);
       const supabase = getSupabaseBrowserClient();
-      const { data } = await supabase.from('templates').select('slug,name,img,video,vendor_name,creator_shop_id,status').order('created_at', { ascending: false });
+      const { data } = await supabase.from('templates').select('slug,name,img,video,video_path,thumbnail_path,vendor_name,creator_shop_id,status,category_id,subcategory_id,sub_subcategory_id').order('created_at', { ascending: false });
       setTemplates((data as any) ?? []);
     } catch (e) {
       console.error('Failed to refresh templates:', e);

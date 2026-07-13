@@ -62,7 +62,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
 
   // Fallback to default image if no image or video
   // For relative URLs, we need to make them absolute
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://celite.com';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://celite.in';
   const finalImage = metaImage
     ? (metaImage.startsWith('http') ? metaImage : `${baseUrl}${metaImage}`)
     : `${baseUrl}/PNG1.png`;
@@ -243,24 +243,6 @@ export default async function ProductPage(props: PageProps) {
     },
     ...(prod.tags && prod.tags.length > 0 ? { "keywords": prod.tags.join(', ') } : {}),
     ...(prod.software && prod.software.length > 0 ? { "applicationCategory": prod.software.join(', ') } : {}),
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.7",
-      "reviewCount": reviews.length.toString(),
-      "bestRating": "5",
-      "worstRating": "1"
-    },
-    "review": reviews.map(r => ({
-      "@type": "Review",
-      "author": { "@type": "Person", "name": r.name },
-      "datePublished": r.date,
-      "reviewRating": {
-        "@type": "Rating",
-        "ratingValue": r.rating.toString(),
-        "bestRating": "5"
-      },
-      "reviewBody": r.comment
-    })),
   };
 
   // Determine category info for breadcrumb

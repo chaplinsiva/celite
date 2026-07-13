@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import VideoThumbnailPlayer from '../../../components/VideoThumbnailPlayer';
 
-type TemplateRow = { slug: string; name: string; img: string | null; video_path?: string | null; thumbnail_path?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null };
+type TemplateRow = { slug: string; name: string; img: string | null; video_path?: string | null; thumbnail_path?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null; category_id?: string | null; subcategory_id?: string | null; sub_subcategory_id?: string | null };
 
 export default function ProductsPanel({ templates, onDelete, onCreated }: {
   templates: TemplateRow[];
@@ -15,15 +15,30 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   const [creating, setCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterCategoryId, setFilterCategoryId] = useState('');
+  const [filterSubcategoryId, setFilterSubcategoryId] = useState('');
+  const [filterSubSubcategoryId, setFilterSubSubcategoryId] = useState('');
   const itemsPerPage = 24;
 
   const filteredTemplates = useMemo(() => {
+    let results = templates || [];
     const q = searchTerm.trim().toLowerCase();
-    if (!q) return templates || [];
-    return (templates || []).filter((t) => 
-      (t.name || '').toLowerCase().includes(q) || (t.slug || '').toLowerCase().includes(q)
-    );
-  }, [templates, searchTerm]);
+    if (q) {
+      results = results.filter((t) =>
+        (t.name || '').toLowerCase().includes(q) || (t.slug || '').toLowerCase().includes(q)
+      );
+    }
+    if (filterCategoryId) {
+      results = results.filter((t) => t.category_id === filterCategoryId);
+    }
+    if (filterSubcategoryId) {
+      results = results.filter((t) => t.subcategory_id === filterSubcategoryId);
+    }
+    if (filterSubSubcategoryId) {
+      results = results.filter((t) => t.sub_subcategory_id === filterSubSubcategoryId);
+    }
+    return results;
+  }, [templates, searchTerm, filterCategoryId, filterSubcategoryId, filterSubSubcategoryId]);
 
   const totalPages = Math.ceil(filteredTemplates.length / itemsPerPage);
 
@@ -34,7 +49,7 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, filterCategoryId, filterSubcategoryId, filterSubSubcategoryId]);
   const [form, setForm] = useState({
     slug: '', name: '', subtitle: '', description: '', img: '', video_path: '', thumbnail_path: '', audio_preview_path: '', model_3d_path: '', source_path: '', features: '', software: '', plugins: '', tags: '', category_id: '', subcategory_id: '', sub_subcategory_id: '', meta_title: '', meta_description: '', is_free: false,
   });
@@ -47,6 +62,18 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
   const [checkingSeo, setCheckingSeo] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [originalSlug, setOriginalSlug] = useState<string | null>(null);
+
+  // Subcategories filtered for the list filter dropdown (not the form)
+  const filterSubcategoriesForList = useMemo(() => {
+    if (!filterCategoryId) return [];
+    return subcategories.filter(s => s.category_id === filterCategoryId);
+  }, [filterCategoryId, subcategories]);
+
+  // Sub-subcategories filtered for the list filter dropdown (not the form)
+  const filterSubSubcategoriesForList = useMemo(() => {
+    if (!filterSubcategoryId) return [];
+    return subSubcategories.filter(s => s.subcategory_id === filterSubcategoryId);
+  }, [filterSubcategoryId, subSubcategories]);
 
   const sourceInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -263,13 +290,59 @@ export default function ProductsPanel({ templates, onDelete, onCreated }: {
 
       {tab === 'list' && (
         <>
-          <div className="mb-6">
+          <div className="mb-6 space-y-3">
             <input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by name or slug"
               className="w-full px-4 py-3 rounded-xl bg-white border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
             />
+            <div className="flex flex-wrap items-center gap-3">
+              <select
+                value={filterCategoryId}
+                onChange={(e) => { setFilterCategoryId(e.target.value); setFilterSubcategoryId(''); setFilterSubSubcategoryId(''); }}
+                className="px-3 py-2 rounded-lg bg-white border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm appearance-none min-w-[180px]"
+              >
+                <option value="">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+              <select
+                value={filterSubcategoryId}
+                onChange={(e) => { setFilterSubcategoryId(e.target.value); setFilterSubSubcategoryId(''); }}
+                disabled={!filterCategoryId}
+                className="px-3 py-2 rounded-lg bg-white border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm appearance-none min-w-[180px] disabled:bg-zinc-50 disabled:text-zinc-400 disabled:cursor-not-allowed"
+              >
+                <option value="">All Subcategories</option>
+                {filterSubcategoriesForList.map((sub) => (
+                  <option key={sub.id} value={sub.id}>{sub.name}</option>
+                ))}
+              </select>
+              <select
+                value={filterSubSubcategoryId}
+                onChange={(e) => setFilterSubSubcategoryId(e.target.value)}
+                disabled={!filterSubcategoryId}
+                className="px-3 py-2 rounded-lg bg-white border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm appearance-none min-w-[180px] disabled:bg-zinc-50 disabled:text-zinc-400 disabled:cursor-not-allowed"
+              >
+                <option value="">All Sub-Subcategories</option>
+                {filterSubSubcategoriesForList.map((subSub) => (
+                  <option key={subSub.id} value={subSub.id}>{subSub.name}</option>
+                ))}
+              </select>
+              {(filterCategoryId || filterSubcategoryId || filterSubSubcategoryId) && (
+                <button
+                  type="button"
+                  onClick={() => { setFilterCategoryId(''); setFilterSubcategoryId(''); setFilterSubSubcategoryId(''); }}
+                  className="px-3 py-2 rounded-lg border border-zinc-200 bg-white text-xs font-medium text-zinc-600 hover:bg-zinc-50 hover:border-zinc-300 transition-colors shadow-sm"
+                >
+                  Clear Filters
+                </button>
+              )}
+              <span className="text-xs text-zinc-400 ml-auto">
+                {filteredTemplates.length} product{filteredTemplates.length !== 1 ? 's' : ''}
+              </span>
+            </div>
           </div>
           <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {paginatedTemplates.map((t) => {

@@ -137,6 +137,8 @@ export default function VideoThumbnailPlayer({
   }, [convertedVideoUrl]);
 
   // Outside Hover Preview: Play on hover, stop & reset on leave (Does not apply to Product Page)
+  const playPromiseRef = useRef<Promise<void> | null>(null);
+
   useEffect(() => {
     if (isProductPage) return;
 
@@ -146,15 +148,28 @@ export default function VideoThumbnailPlayer({
     if (isHovered) {
       video.muted = true;
       setIsMuted(true);
-      video.play().catch((e) => {
-        console.error('Error playing preview:', e);
-      });
+      const promise = video.play();
+      playPromiseRef.current = promise;
+      if (promise) {
+        promise.catch(() => {
+          // Silently ignore AbortError from play/pause race
+        });
+      }
     } else {
-      video.pause();
-      video.currentTime = 0;
-      setCurrentTime(0);
-      setIsMuted(true);
-      video.muted = true;
+      const promise = playPromiseRef.current;
+      const doPause = () => {
+        video.pause();
+        video.currentTime = 0;
+        setCurrentTime(0);
+        setIsMuted(true);
+        video.muted = true;
+      };
+      if (promise) {
+        promise.then(doPause).catch(doPause);
+        playPromiseRef.current = null;
+      } else {
+        doPause();
+      }
     }
   }, [isHovered, convertedVideoUrl, isProductPage]);
 
