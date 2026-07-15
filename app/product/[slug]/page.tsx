@@ -219,6 +219,15 @@ export default async function ProductPage(props: PageProps) {
     ? (metaImage.startsWith('http') ? metaImage : `${baseUrl}${metaImage}`)
     : `${baseUrl}/PNG1.png`;
 
+  // Compute aggregateRating from reviews data
+  const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+  const roundedRating = Math.round(avgRating * 10) / 10;
+
+  // priceValidUntil: one year from now
+  const priceValidUntil = new Date();
+  priceValidUntil.setFullYear(priceValidUntil.getFullYear() + 1);
+  const priceValidUntilStr = priceValidUntil.toISOString().split('T')[0];
+
   const productStructuredData = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -232,15 +241,37 @@ export default async function ProductPage(props: PageProps) {
     },
     "offers": {
       "@type": "Offer",
-      "price": "0",
+      "price": prod.is_free ? "0" : "0",
       "priceCurrency": "INR",
+      "priceValidUntil": priceValidUntilStr,
       "availability": "https://schema.org/InStock",
+      "itemCondition": "https://schema.org/NewCondition",
       "seller": {
         "@type": "Organization",
-        "name": "Celite"
+        "name": "Celite",
+        "url": baseUrl
       },
       "url": `${baseUrl}/product/${prod.slug}`,
     },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": roundedRating.toFixed(1),
+      "reviewCount": reviews.length,
+      "bestRating": "5",
+      "worstRating": "1"
+    },
+    "review": reviews.map((r) => ({
+      "@type": "Review",
+      "author": { "@type": "Person", "name": r.name },
+      "reviewRating": {
+        "@type": "Rating",
+        "ratingValue": r.rating,
+        "bestRating": "5",
+        "worstRating": "1"
+      },
+      "reviewBody": r.comment,
+      "datePublished": r.date
+    })),
     ...(prod.tags && prod.tags.length > 0 ? { "keywords": prod.tags.join(', ') } : {}),
     ...(prod.software && prod.software.length > 0 ? { "applicationCategory": prod.software.join(', ') } : {}),
   };
