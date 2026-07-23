@@ -239,10 +239,16 @@ export async function POST(req: Request) {
       }
     }
     
-    let { key_id, currency, monthly_amount, yearly_amount } = await getRazorpayCreds();
+    const { key_id, currency, monthly_amount, yearly_amount, monthly_amount_usd, yearly_amount_usd } = await getRazorpayCreds();
     
     const isYearly = plan === 'yearly';
-    const amount = isYearly ? yearly_amount : monthly_amount;
+    const isUSD = reqCurrency === 'USD';
+    
+    // Select amount and currency based on request
+    const amount = isUSD 
+      ? (isYearly ? yearly_amount_usd : monthly_amount_usd)
+      : (isYearly ? yearly_amount : monthly_amount);
+    const planCurrency = isUSD ? 'USD' : currency;
     const period = isYearly ? 'yearly' : 'monthly';
     
     // Note: pongal_weekly is handled above, so we only reach here for monthly/yearly
@@ -276,13 +282,16 @@ export async function POST(req: Request) {
     (planSettings || []).forEach((row: any) => { planSettingsMap[row.key] = row.value; });
 
     // Get or reuse existing Razorpay plan for monthly/yearly
-    const planSettingsKey = isYearly ? 'RAZORPAY_YEARLY_PLAN_ID' : 'RAZORPAY_MONTHLY_PLAN_ID';
+    // Use separate plan IDs for INR and USD to avoid currency conflicts
+    const planSettingsKey = isUSD
+      ? (isYearly ? 'RAZORPAY_YEARLY_PLAN_ID_USD' : 'RAZORPAY_MONTHLY_PLAN_ID_USD')
+      : (isYearly ? 'RAZORPAY_YEARLY_PLAN_ID' : 'RAZORPAY_MONTHLY_PLAN_ID');
     const planId = await getOrCreatePlan(admin, planSettingsMap, planSettingsKey, {
       period,
       interval: 1,
-      name: `Celite ${plan} Plan`,
+      name: `Celite ${plan} Plan${isUSD ? ' (USD)' : ''}`,
       amount,
-      currency,
+      currency: planCurrency,
     });
 
     // Create subscription

@@ -39,11 +39,11 @@ export async function POST(req: Request) {
     const signature = req.headers.get('x-razorpay-signature');
 
     // Get webhook secret from database settings (fallback to env)
-    const supabase = getSupabaseAdminClient();
+    const admin = getSupabaseAdminClient();
     let secret: string | null = null;
 
     try {
-      const { data: settings } = await supabase.from('settings').select('key,value');
+      const { data: settings } = await admin.from('settings').select('key,value');
       const settingsMap: Record<string, string> = {};
       (settings ?? []).forEach((row: any) => { settingsMap[row.key] = row.value; });
       secret = settingsMap.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_WEBHOOK_SECRET || null;
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
 
     console.log('Received event:', event);
 
-    const admin = getSupabaseAdminClient();
+
 
     // ✅ SUBSCRIPTION LOGIC - Activation/Payment Success
     if (event === 'subscription.activated' || event === 'invoice.paid' || event === 'invoice.payment_succeeded') {
@@ -166,10 +166,18 @@ export async function POST(req: Request) {
         const isNewSubscription = !existingSub;
 
         // DO NOT reactivate if subscription is cancelled (is_active: false)
-        // This prevents cancelled subscriptions from being reactivated by delayed webhook events
+        // UNLESS this is a subscription.activated event with a NEW subscription ID
+        // (meaning the user has re-subscribed with a new payment)
         if (existingSub && existingSub.is_active === false) {
-          console.log(`Skipping reactivation: Subscription is cancelled for user ${resolvedUserId || existingSub.user_id}. Plan preserved: ${existingSub.plan}`);
-          return NextResponse.json({ status: 'ok', message: 'Subscription is cancelled, not reactivating' });
+          const isNewSubscription = event === 'subscription.activated' && 
+            razorpaySubscriptionId && 
+            razorpaySubscriptionId !== existingSub.razorpay_subscription_id;
+          
+          if (!isNewSubscription) {
+            console.log(`Skipping reactivation: Subscription is cancelled for user ${resolvedUserId || existingSub.user_id}. Event: ${event}. Plan preserved: ${existingSub.plan}`);
+            return NextResponse.json({ status: 'ok', message: 'Subscription is cancelled, not reactivating' });
+          }
+          console.log(`Re-activating cancelled subscription for user ${resolvedUserId || existingSub.user_id}: new Razorpay subscription ${razorpaySubscriptionId}`);
         }
 
         if ((isRenewal || isNewSubscription) && finalPlan) {
@@ -369,7 +377,8 @@ export async function POST(req: Request) {
                     : finalPlan === 'pongal_weekly'
                       ? Number(settingsMap.PONGAL_WEEKLY_PRICE || '49900')
                       : Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');
-                  const amount = amountPaise >= 1000 ? amountPaise / 100 : amountPaise;
+                  const { paiseToINR } = await import('../../../../lib/priceUtils');
+                  const amount = paiseToINR(amountPaise);
 
                   if (userEmail) {
                     const { sendSubscriptionPaymentEmail } = await import('../../../../lib/emailService');

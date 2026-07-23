@@ -9,9 +9,7 @@ export const metadata: Metadata = {
   description: 'Browse our collection of royalty-free stock music. Filter by genre, mood, tempo, instruments, and more. Find the perfect track for your project.',
 };
 
-// Force dynamic rendering so new templates appear immediately
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 60;
 
 export default async function StockMusicsPage() {
   const supabase = getSupabaseServerClient();

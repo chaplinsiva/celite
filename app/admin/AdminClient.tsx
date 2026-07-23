@@ -25,6 +25,7 @@ export default function AdminClient() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [templates, setTemplates] = useState<TemplateRow[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
   const [stats, setStats] = useState<{
     templates: number;
     orders: number;
@@ -48,27 +49,46 @@ export default function AdminClient() {
       const { data } = await supabase.from('admins').select('user_id').eq('user_id', (session.user as any).id).maybeSingle();
       if (!data) { router.replace('/'); return; }
       setIsAdmin(true);
-      await reload();
+      await loadStats();
     };
-    const reload = async () => {
-      const supabase = getSupabaseBrowserClient();
-      const { data } = await supabase.from('templates').select('slug,name,img,video,vendor_name,creator_shop_id,status').order('created_at', { ascending: false });
-      setTemplates((data as any) ?? []);
-      // stats via admin endpoint
-      const res = await fetch('/api/admin/stats');
-      const json = await res.json();
-      if (res.ok && json.ok) setStats(json.data);
-      setLoading(false);
+    const loadStats = async () => {
+      try {
+        // stats via admin endpoint
+        const res = await fetch('/api/admin/stats');
+        const json = await res.json();
+        if (res.ok && json.ok) setStats(json.data);
+      } catch (e) {
+        console.error('Failed to load stats:', e);
+      } finally {
+        setLoading(false);
+      }
     };
     check();
   }, [router]);
 
+  // Lazy load templates when products or vendorApproval tab is selected
+  useEffect(() => {
+    if (!isAdmin) return;
+    if (active === 'products' || active === 'vendorApproval') {
+      if (templates.length === 0) {
+        refreshTemplates();
+      }
+    }
+  }, [active, isAdmin]);
+
   const runSeed = async () => { await fetch('/api/admin/seed-templates', { method: 'POST' }); await refreshTemplates(); };
   const runUpload = async () => { await fetch('/api/admin/upload-assets', { method: 'POST' }); };
   const refreshTemplates = async () => {
-    const supabase = getSupabaseBrowserClient();
-    const { data } = await supabase.from('templates').select('slug,name,img,video,vendor_name,creator_shop_id,status').order('created_at', { ascending: false });
-    setTemplates((data as any) ?? []);
+    try {
+      setTemplatesLoading(true);
+      const supabase = getSupabaseBrowserClient();
+      const { data } = await supabase.from('templates').select('slug,name,img,video,vendor_name,creator_shop_id,status').order('created_at', { ascending: false });
+      setTemplates((data as any) ?? []);
+    } catch (e) {
+      console.error('Failed to refresh templates:', e);
+    } finally {
+      setTemplatesLoading(false);
+    }
   };
   const deleteTemplate = async (slug: string) => {
     if (!confirm(`Delete ${slug}?`)) return;
@@ -107,11 +127,19 @@ export default function AdminClient() {
             {active === 'overview' && (<OverviewPanel stats={stats} onSeed={runSeed} onUpload={runUpload} />)}
 
             {active === 'products' && (
-              <ProductsPanel templates={templates} onDelete={deleteTemplate} onCreated={refreshTemplates} />
+              templatesLoading ? (
+                <div className="text-sm text-zinc-500">Loading products…</div>
+              ) : (
+                <ProductsPanel templates={templates} onDelete={deleteTemplate} onCreated={refreshTemplates} />
+              )
             )}
 
             {active === 'vendorApproval' && (
-              <VendorApprovalPanel templates={templates} onReviewed={refreshTemplates} />
+              templatesLoading ? (
+                <div className="text-sm text-zinc-500">Loading templates for review…</div>
+              ) : (
+                <VendorApprovalPanel templates={templates} onReviewed={refreshTemplates} />
+              )
             )}
 
             {active === 'categories' && (<CategoriesPanel />)}

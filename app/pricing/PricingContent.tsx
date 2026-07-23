@@ -21,7 +21,7 @@ export default function PricingContent() {
         const settingsMap: Record<string, string> = {};
         (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
 
-        // Get amounts in paise from backend only
+        // Get amounts in paise/cents from backend
         const monthlyPaiseStr = settingsMap.RAZORPAY_MONTHLY_AMOUNT;
         const yearlyPaiseStr = settingsMap.RAZORPAY_YEARLY_AMOUNT;
 
@@ -29,19 +29,10 @@ export default function PricingContent() {
           throw new Error('Subscription prices not found in database');
         }
 
-        let monthlyPaise = Number(monthlyPaiseStr);
-        let yearlyPaise = Number(yearlyPaiseStr);
-
-        // Convert from paise to INR
-        if (monthlyPaise >= 10000) {
-          monthlyPaise = monthlyPaise / 100;
-        }
-        if (yearlyPaise >= 100000) {
-          yearlyPaise = yearlyPaise / 100;
-        }
-
-        setMonthlyPrice(Math.round(monthlyPaise));
-        setYearlyPrice(Math.round(yearlyPaise));
+        // All DB values are in smallest unit (paise). Use canonical conversion.
+        const { paiseToINR } = await import('@/lib/priceUtils');
+        setMonthlyPrice(paiseToINR(Number(monthlyPaiseStr)));
+        setYearlyPrice(paiseToINR(Number(yearlyPaiseStr)));
       } catch (error) {
         console.error('Error loading prices:', error);
       } finally {
@@ -183,13 +174,13 @@ export default function PricingContent() {
                   <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 mb-3 sm:mb-4">Yearly</h2>
                   <div className="mb-2">
                     <span className="text-4xl sm:text-5xl font-bold text-zinc-900">
-                      ₹{Math.floor(yearlyPrice / 12)}
+                      ₹{Math.floor(yearlyPrice! / 12)}
                     </span>
                     <span className="text-zinc-500 font-medium text-lg"> /mo</span>
                   </div>
-                  <p className="text-zinc-600 text-sm">billed ₹{yearlyPrice.toLocaleString()} yearly</p>
+                  <p className="text-zinc-600 text-sm">billed ₹{yearlyPrice!.toLocaleString('en-IN')} yearly</p>
                   <p className="text-green-600 text-xs font-semibold mt-1">
-                    Save ₹{((monthlyPrice * 12) - yearlyPrice).toLocaleString()} annually
+                    Save ₹{((monthlyPrice! * 12) - yearlyPrice!).toLocaleString('en-IN')} annually
                   </p>
                 </div>
 

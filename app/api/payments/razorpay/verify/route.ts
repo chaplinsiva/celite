@@ -23,14 +23,8 @@ export async function POST(req: Request) {
     const notes = order?.notes || {};
     let userId = notes.user_id as string | undefined;
     
-    // For multiple items, calculate total from cartItems
-    let totalAmount = 0;
-    if (cartItems && Array.isArray(cartItems) && cartItems.length > 0) {
-      totalAmount = cartItems.reduce((sum: number, item: any) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
-    } else {
-      // Single product fallback
-      totalAmount = Number(notes.price || 0);
-    }
+    // Use the authoritative amount from Razorpay order (in paise), convert to INR
+    const totalAmount = order.amount ? order.amount / 100 : 0;
 
     const admin = getSupabaseAdminClient();
 
@@ -118,6 +112,10 @@ export async function POST(req: Request) {
       }
     }
 
+    // Extract slug and name from notes for single product fallback
+    const slug = notes.slug as string | undefined;
+    const name = notes.name as string | undefined;
+
     // Insert order items - handle multiple cart items
     if (cartItems && Array.isArray(cartItems) && cartItems.length > 0) {
       const orderItems = cartItems.map((item: any) => ({
@@ -131,8 +129,6 @@ export async function POST(req: Request) {
       await admin.from('order_items').insert(orderItems);
     } else {
       // Fallback for single product
-      const slug = notes.slug as string | undefined;
-      const name = notes.name as string | undefined;
       const img = notes.img as string | undefined;
     if (slug && name) {
         await admin.from('order_items').insert({ 
@@ -145,10 +141,7 @@ export async function POST(req: Request) {
         });
     }
     }
-    
-    // Extract slug and name from notes for single product fallback
-    const slug = notes.slug as string | undefined;
-    const name = notes.name as string | undefined;
+
     
     return NextResponse.json({ 
       ok: true, 

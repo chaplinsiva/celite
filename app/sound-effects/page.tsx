@@ -9,9 +9,7 @@ export const metadata: Metadata = {
   description: 'Browse our collection of royalty-free sound effects. Download high-quality audio tracks for your projects.',
 };
 
-// Force dynamic rendering so new templates appear immediately
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 60;
 
 export default async function SoundEffectsPage() {
   const supabase = getSupabaseServerClient();

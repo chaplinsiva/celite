@@ -106,6 +106,7 @@ export default function VideoCollectionsCarousel() {
                             <img
                                 src={item.imageUrl}
                                 alt={item.name}
+                                loading="lazy"
                                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100"
                             />
                             {/* Artistic Overlay */}

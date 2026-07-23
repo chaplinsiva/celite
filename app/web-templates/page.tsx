@@ -9,9 +9,7 @@ export const metadata: Metadata = {
   description: 'Browse and download professional website templates. HTML, CSS, JavaScript templates for your next web project.',
 };
 
-// Force dynamic rendering so new templates appear immediately
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 60;
 
 export default async function WebTemplatesPage() {
   const supabase = getSupabaseServerClient();

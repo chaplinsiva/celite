@@ -36,13 +36,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: 'Subject and content are required' }, { status: 400 });
     }
 
-    // Get all users
-    const { data: allUsersData, error: usersError } = await admin.auth.admin.listUsers();
+    // Get all users from users_view
+    const { data: allUsersData, error: usersError } = await admin
+      .from('users_view')
+      .select('id,email,raw_user_meta_data');
+
     if (usersError) {
       return NextResponse.json({ ok: false, error: usersError.message }, { status: 500 });
     }
-
-    const allUserIds = new Set((allUsersData?.users || []).map(u => u.id));
 
     // Get active subscription user IDs
     const { data: subscriptions, error: subError } = await admin
@@ -57,19 +58,19 @@ export async function POST(req: Request) {
     const subscriberIds = new Set((subscriptions || []).map(s => s.user_id));
 
     // Filter user IDs based on target audience
-    let targetUserIds: string[] = [];
+    let targetUsers: any[] = [];
     
     if (targetAudience === 'subscribers') {
-      targetUserIds = Array.from(subscriberIds);
+      targetUsers = (allUsersData || []).filter(u => subscriberIds.has(u.id));
     } else if (targetAudience === 'non-subscribers') {
-      targetUserIds = Array.from(allUserIds).filter(id => !subscriberIds.has(id));
+      targetUsers = (allUsersData || []).filter(u => !subscriberIds.has(u.id));
     } else if (targetAudience === 'all') {
-      targetUserIds = Array.from(allUserIds);
+      targetUsers = allUsersData || [];
     } else {
       return NextResponse.json({ ok: false, error: 'Invalid target audience' }, { status: 400 });
     }
 
-    if (targetUserIds.length === 0) {
+    if (targetUsers.length === 0) {
       const audienceText = targetAudience === 'subscribers' ? 'subscribers' : targetAudience === 'non-subscribers' ? 'non-subscribers' : 'users';
       return NextResponse.json({ 
         ok: true, 
@@ -83,26 +84,24 @@ export async function POST(req: Request) {
     const errors: string[] = [];
 
     // Send email to each target user
-    for (const userId of targetUserIds) {
+    for (const u of targetUsers) {
       try {
-        const { data: userData } = await admin.auth.admin.getUserById(userId);
-        if (!userData || !userData.user) {
-          console.error(`User data not found for user ${userId}`);
-          failCount++;
-          continue;
-        }
-        
-        const userEmail = userData.user.email;
-        const userName = userData.user.email?.split('@')[0] || 'User';
+        const userEmail = u.email;
+        const meta = u.raw_user_meta_data || {};
+        const userName = meta.full_name || meta.name || 
+          (meta.first_name ? `${meta.first_name} ${meta.last_name || ''}`.trim() : '') ||
+          (userEmail ? userEmail.split('@')[0] : 'User');
 
         if (userEmail) {
           await sendMarketingEmail(userEmail, userName, subject, content);
           successCount++;
+        } else {
+          failCount++;
         }
       } catch (emailError: any) {
-        console.error(`Failed to send marketing email to user ${userId}:`, emailError);
+        console.error(`Failed to send marketing email to user ${u.id}:`, emailError);
         failCount++;
-        errors.push(`User ${userId}: ${emailError.message}`);
+        errors.push(`User ${u.id}: ${emailError.message}`);
       }
     }
 
@@ -112,7 +111,7 @@ export async function POST(req: Request) {
       message: `Marketing email sent to ${successCount} ${audienceText}`,
       sent: successCount,
       failed: failCount,
-      total: targetUserIds.length,
+      total: targetUsers.length,
       errors: errors.length > 0 ? errors : undefined,
     });
   } catch (e: any) {

@@ -9,8 +9,7 @@ export const metadata: Metadata = {
   description: 'Browse and download high-quality 3D models for your projects. Free GLB, GLTF, and OBJ files for game development, animation, and more.',
 };
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 60;
 
 export default async function Model3DPage() {
   const supabase = getSupabaseServerClient();

@@ -54,6 +54,7 @@ function VideoCard({ template, videoUrl, thumbnail }: VideoCardProps) {
       <img
         src={thumbnail}
         alt={template.name}
+        loading="lazy"
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovered && isLoaded && videoUrl ? 'opacity-0' : 'opacity-100'
           }`}
       />
@@ -66,7 +67,7 @@ function VideoCard({ template, videoUrl, thumbnail }: VideoCardProps) {
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="none"
           onLoadedData={() => setIsLoaded(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovered && isLoaded ? 'opacity-100' : 'opacity-0'
             }`}
@@ -91,11 +92,17 @@ function VideoCard({ template, videoUrl, thumbnail }: VideoCardProps) {
   );
 }
 
-export default function CinemaTemplatesShowcase() {
-  const [templates, setTemplates] = useState<CinemaTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function CinemaTemplatesShowcase({ initialTemplates }: { initialTemplates?: CinemaTemplate[] } = {}) {
+  const [templates, setTemplates] = useState<CinemaTemplate[]>(initialTemplates || []);
+  const [loading, setLoading] = useState(!initialTemplates || initialTemplates.length === 0);
 
   useEffect(() => {
+    if (initialTemplates && initialTemplates.length > 0) {
+      setTemplates(initialTemplates);
+      setLoading(false);
+      return;
+    }
+
     const loadTemplates = async () => {
       try {
         const supabase = getSupabaseBrowserClient();
@@ -161,7 +168,7 @@ export default function CinemaTemplatesShowcase() {
     };
 
     loadTemplates();
-  }, []);
+  }, [initialTemplates]);
 
   if (loading) {
     return (
