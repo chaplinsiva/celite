@@ -1,4 +1,5 @@
 
+/* agent-notes: { ctx: "Product details client view with DB subscription price", deps: ["lib/currency.ts"], state: active, last: "sato@2026-07-28" } */
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
@@ -15,6 +16,7 @@ import StockPhotoViewer from '../../../components/StockPhotoViewer';
 import MusicSfxPlayer from '../../../components/MusicSfxPlayer';
 import SimpleMusicPlayer from '../../../components/SimpleMusicPlayer';
 import { cn, convertR2UrlToCdn } from '../../../lib/utils';
+import { formatPrice } from '../../../lib/currency';
 import type { Template } from '../../../data/templateData';
 
 interface Review {
@@ -28,6 +30,7 @@ interface ProductDetailsProps {
   product: Template & { source_path?: string | null; vendor_name?: string | null; model_3d_path?: string | null; category_id?: string | null; subcategory_id?: string | null; category_slug?: string | null; category_name?: string | null };
   related: Template[];
   reviews: Review[];
+  monthlyPrice?: number | null;
 }
 
 const getThumbnail = (item: Template | (Template & { source_path?: string | null; thumbnail_path?: string | null })) => {
@@ -45,7 +48,7 @@ const isMusicItem = (item: any) => {
   return categoryId === MUSIC_SFX_CATEGORY_ID;
 };
 
-export default function ProductDetails({ product, related, reviews }: ProductDetailsProps) {
+export default function ProductDetails({ product, related, reviews, monthlyPrice }: ProductDetailsProps) {
   const { user } = useAppContext();
   const { openLoginModal } = useLoginModal();
   const router = useRouter();
@@ -795,6 +798,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
               promptCopied={promptCopied}
               user={user}
               isFree={!!product.is_free}
+              monthlyPrice={monthlyPrice}
             />
 
             {/* Description / Prompt */}
@@ -890,6 +894,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
                 promptCopied={promptCopied}
                 user={user}
                 isFree={!!product.is_free}
+                monthlyPrice={monthlyPrice}
               />
 
               {/* Features Table / Tech Specs - Hidden for Prompts */}
@@ -1244,7 +1249,7 @@ export default function ProductDetails({ product, related, reviews }: ProductDet
   );
 }
 
-function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className, isPrompt, handleCopyPrompt, promptCopied, user, isFree }: {
+function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className, isPrompt, handleCopyPrompt, promptCopied, user, isFree, monthlyPrice }: {
   isSubActive: boolean;
   downloading: boolean;
   handleDownload: () => void;
@@ -1255,6 +1260,7 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
   promptCopied?: boolean;
   user?: any;
   isFree?: boolean;
+  monthlyPrice?: number | null;
 }) {
   // For prompts: show Copy Prompt button (no login required)
   if (isPrompt) {
@@ -1392,7 +1398,7 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
 
       <div className="flex items-baseline gap-2 mb-2">
         <span className="text-sm text-blue-400 line-through font-medium">₹899</span>
-        <span className="text-3xl font-bold text-blue-700">₹799</span>
+        <span className="text-3xl font-bold text-blue-700">{formatPrice(monthlyPrice ?? 799)}</span>
         <span className="text-sm text-blue-600/80 font-medium">/ month</span>
       </div>
       <p className="text-xs text-blue-600/70 mb-6 leading-relaxed">
