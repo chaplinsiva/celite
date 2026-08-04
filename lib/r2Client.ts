@@ -10,6 +10,9 @@ const R2_PREVIEWS_DOMAIN = process.env.R2_PREVIEWS_DOMAIN || 'preview.celite.in'
 
 // Validate R2 configuration (only at runtime, not during build)
 function validateR2Config() {
+  if (!R2_ENDPOINT || R2_ENDPOINT.trim() === '') {
+    throw new Error('Cloudflare R2 is not configured. Please add R2_ACCOUNT_ID (or R2_ENDPOINT), R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY to your .env.local file.');
+  }
   // Validate that R2_ENDPOINT doesn't contain template strings
   if (R2_ENDPOINT && (R2_ENDPOINT.includes('${') || R2_ENDPOINT.includes('${r2_account_id}'))) {
     console.error('Invalid R2_ENDPOINT: contains template string. Please set the actual endpoint URL.');

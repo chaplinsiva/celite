@@ -4,9 +4,22 @@ import TemplatesClient from './TemplatesClient';
 import { getSupabaseServerClient } from '../../lib/supabaseServer';
 
 export const metadata: Metadata = {
-    title: "All Creative Templates | After Effects, Wedding, Video & More",
-    description: "Browse all creative templates and assets across multiple categories — After Effects templates, wedding save the date videos, cinematic intros, graphics, fonts, music, and more. Download free & premium templates.",
-    keywords: ['after effects templates', 'wedding templates', 'save the date template', 'video templates', 'creative templates', 'motion graphics', 'ae templates'],
+    title: "All Creative Digital Assets & Templates | Celite Marketplace",
+    description: "Explore the complete Celite digital assets marketplace. Download After Effects video templates, wedding save the date videos, cinematic intros, 3D models, stock photos, royalty-free music, sound effects, and AI prompts.",
+    keywords: ['after effects templates', 'wedding templates', 'save the date template', 'video templates', 'creative digital assets', '3d models', 'stock photos', 'royalty free music', 'ai prompts'],
+    openGraph: {
+        title: 'All Creative Digital Assets & Templates | Celite Marketplace',
+        description: 'Explore the complete Celite marketplace. Download After Effects video templates, wedding save the date videos, 3D models, stock photos, royalty-free music, and AI prompts.',
+        url: 'https://celite.in/templates',
+        type: 'website',
+        images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Celite Digital Assets Marketplace' }],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'All Creative Digital Assets & Templates | Celite',
+        description: 'Explore After Effects templates, wedding videos, 3D models, photos, music & AI prompts on Celite.',
+        images: ['/og-image.png'],
+    },
     alternates: {
         canonical: 'https://celite.in/templates',
     },

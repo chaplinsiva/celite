@@ -5,8 +5,32 @@ import StockMusicsClient from './StockMusicsClient';
 import LoadingSpinnerServer from '../../components/ui/loading-spinner-server';
 
 export const metadata: Metadata = {
-  title: 'Stock Music Library - Royalty-Free Tracks | Celite',
-  description: 'Browse our collection of royalty-free stock music. Filter by genre, mood, tempo, instruments, and more. Find the perfect track for your project.',
+  title: 'Royalty-Free Stock Music Library — Background Music for Videos | Celite',
+  description: 'Download royalty-free stock music for YouTube videos, films, podcasts, ads, and social media content. High-quality background tracks across all genres on Celite.',
+  keywords: [
+    'royalty free music',
+    'stock music',
+    'background music for videos',
+    'youtube background music',
+    'cinematic music tracks',
+    'royalty free audio',
+  ],
+  openGraph: {
+    title: 'Royalty-Free Stock Music Library | Celite',
+    description: 'Download royalty-free stock music for YouTube, films, podcasts, and advertising videos.',
+    url: 'https://celite.in/stock-musics',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Stock Music Library - Celite' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Stock Music Library | Celite',
+    description: 'Download royalty-free stock music for videos and films.',
+    images: ['/og-image.png'],
+  },
+  alternates: {
+    canonical: 'https://celite.in/stock-musics',
+  },
 };
 
 export const revalidate = 60;

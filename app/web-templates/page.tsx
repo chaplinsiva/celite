@@ -5,8 +5,33 @@ import VideoTemplatesClient from '../video-templates/VideoTemplatesClient';
 import LoadingSpinnerServer from '../../components/ui/loading-spinner-server';
 
 export const metadata: Metadata = {
-  title: 'Website Templates - HTML, CSS, JavaScript Templates | Celite',
-  description: 'Browse and download professional website templates. HTML, CSS, JavaScript templates for your next web project.',
+  title: 'Website Templates — HTML5, CSS3 & JavaScript Web Templates | Celite',
+  description: 'Download responsive website templates built with HTML5, CSS3, Tailwind CSS, and JavaScript. Clean, modern web themes for landing pages, portfolios, and business sites on Celite.',
+  keywords: [
+    'website templates',
+    'html templates',
+    'css templates',
+    'landing page templates',
+    'portfolio website template',
+    'tailwind css templates',
+    'web design templates',
+  ],
+  openGraph: {
+    title: 'Website Templates — HTML, CSS & JS Templates | Celite',
+    description: 'Download responsive website templates and landing page themes for developers and businesses.',
+    url: 'https://celite.in/web-templates',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Website Templates - Celite' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Website Templates | Celite',
+    description: 'Download responsive website templates for developers and web designers.',
+    images: ['/og-image.png'],
+  },
+  alternates: {
+    canonical: 'https://celite.in/web-templates',
+  },
 };
 
 export const revalidate = 60;

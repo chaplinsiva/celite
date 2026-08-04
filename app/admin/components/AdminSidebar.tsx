@@ -13,11 +13,13 @@ type TabKey =
   | 'settings'
   | 'marketing'
   | 'productAlerts'
-  | 'bulkSfx';
+  | 'bulkSfx'
+  | 'mediaCompressor';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'products', label: 'Products' },
+  { key: 'mediaCompressor', label: '⚡ Media Compressor' },
   { key: 'vendorApproval', label: 'Vendor Approval' },
   { key: 'categories', label: 'Categories' },
   { key: 'analytics', label: 'Analytics' },

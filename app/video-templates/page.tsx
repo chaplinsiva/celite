@@ -5,13 +5,14 @@ import VideoTemplatesClient from './VideoTemplatesClient';
 import LoadingSpinnerServer from '../../components/ui/loading-spinner-server';
 
 export const metadata: Metadata = {
-  title: 'After Effects Video Templates | Cinematic, Wedding & Motion Graphics Templates',
-  description: 'Download professional After Effects video templates — cinematic intros, wedding openers, logo reveals, slideshows, and motion graphics. Free & premium AE templates for filmmakers and creators.',
+  title: 'After Effects Video Templates | Wedding, Cinematic & Motion Graphics — Celite',
+  description: 'Download professional After Effects templates for wedding save the date videos, cinematic intros, logo reveals, slideshows, and motion graphics. Free & premium AE project files.',
   keywords: [
     'after effects templates',
     'video templates after effects',
     'cinematic template after effects',
     'wedding video template ae',
+    'save the date after effects',
     'motion graphics templates',
     'after effects intro template',
     'logo reveal after effects',
@@ -20,8 +21,8 @@ export const metadata: Metadata = {
     'movie trailer template',
   ],
   openGraph: {
-    title: 'After Effects Video Templates | Cinematic, Wedding & Motion Graphics',
-    description: 'Download professional After Effects video templates — cinematic intros, wedding openers, logo reveals, and motion graphics.',
+    title: 'After Effects Video Templates | Wedding & Cinematic Templates — Celite',
+    description: 'Download professional After Effects video templates for wedding save the date videos, cinematic intros, logo reveals, and motion graphics.',
     url: 'https://celite.in/video-templates',
     type: 'website',
     images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'After Effects Video Templates - Celite' }],
