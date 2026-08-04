@@ -199,9 +199,7 @@ module.exports = {
         crawlDelay: 1,
       },
     ],
-    additionalSitemaps: [
-      'https://celite.in/sitemap.xml',
-    ],
+
     transformRobotsTxt: async (_config, robotsTxt) =>
       robotsTxt
         .split('\n')
