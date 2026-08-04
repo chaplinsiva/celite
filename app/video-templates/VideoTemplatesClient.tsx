@@ -70,18 +70,26 @@ const ITEMS_PER_PAGE = 30;
 const MUSIC_SFX_CATEGORY_ID = '143d45f1-a55b-42be-9f51-aab507a20fac';
 const STOCK_PHOTOS_CATEGORY_ID = 'ba7f68c3-6f0f-4a29-a337-3b2cef7b4f47';
 
+type BreadcrumbItem = { label: string; href?: string };
+
 export default function VideoTemplatesClient({
   initialTemplates,
   pageTitle = 'Video Templates',
   pageSubtitle = 'Discover professional, ready-to-edit video templates for openers, promos, logos, and more.',
   breadcrumbLabel = 'Video Templates',
-  basePath = '/video-templates'
+  breadcrumbItems,
+  basePath = '/video-templates',
+  initialSubcategorySlug,
+  initialSubSubcategorySlug,
 }: {
   initialTemplates: Template[];
   pageTitle?: string;
   pageSubtitle?: string;
   breadcrumbLabel?: string;
+  breadcrumbItems?: BreadcrumbItem[];
   basePath?: string;
+  initialSubcategorySlug?: string;
+  initialSubSubcategorySlug?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -142,8 +150,35 @@ export default function VideoTemplatesClient({
         );
         if (videoTemplatesCat) {
           setSelectedCategory(videoTemplatesCat.id);
-          setSelectedSubcategory('all');
-          setSelectedSubSubcategory('all');
+
+          // If an initial subcategory slug was provided (from a landing page route), pre-select it
+          const allSubcats = subcatsResult.data || [];
+          const allSubSubcats = subSubcatsResult.data || [];
+          const slugToUse = initialSubcategorySlug || subcategorySlugFromUrl;
+          if (slugToUse) {
+            const matchedSub = allSubcats.find(s => s.slug === slugToUse);
+            if (matchedSub) {
+              setSelectedSubcategory(matchedSub.id);
+              // If an initial sub-subcategory slug was provided, pre-select it
+              const subSubSlug = initialSubSubcategorySlug || subSubcategorySlugFromUrl;
+              if (subSubSlug) {
+                const matchedSubSub = allSubSubcats.find(s => s.slug === subSubSlug && s.subcategory_id === matchedSub.id);
+                if (matchedSubSub) {
+                  setSelectedSubSubcategory(matchedSubSub.id);
+                } else {
+                  setSelectedSubSubcategory('all');
+                }
+              } else {
+                setSelectedSubSubcategory('all');
+              }
+            } else {
+              setSelectedSubcategory('all');
+              setSelectedSubSubcategory('all');
+            }
+          } else {
+            setSelectedSubcategory('all');
+            setSelectedSubSubcategory('all');
+          }
         }
       }
     };
@@ -313,8 +348,23 @@ export default function VideoTemplatesClient({
             <div>
               <div className="flex items-center gap-2 text-sm text-zinc-500 mb-2">
                 <Link href="/" className="hover:text-blue-600 transition-colors">Home</Link>
-                <span>/</span>
-                <span className="text-zinc-900">{breadcrumbLabel}</span>
+                {breadcrumbItems ? (
+                  breadcrumbItems.map((item, i) => (
+                    <span key={i} className="flex items-center gap-2">
+                      <span>/</span>
+                      {item.href ? (
+                        <Link href={item.href} className="hover:text-blue-600 transition-colors">{item.label}</Link>
+                      ) : (
+                        <span className="text-zinc-900">{item.label}</span>
+                      )}
+                    </span>
+                  ))
+                ) : (
+                  <>
+                    <span>/</span>
+                    <span className="text-zinc-900">{breadcrumbLabel}</span>
+                  </>
+                )}
               </div>
               <div className="flex items-center gap-4 flex-wrap">
                 <h1 className="text-3xl md:text-4xl font-bold text-zinc-900">{pageTitle}</h1>

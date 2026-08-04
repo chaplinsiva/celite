@@ -6,22 +6,24 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 async function getSupabaseData() {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     console.warn('[sitemap] Supabase env vars missing, skipping dynamic entries');
-    return { templates: [], categories: [], subcategories: [] };
+    return { templates: [], categories: [], subcategories: [], subSubcategories: [] };
   }
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
     });
-    const [templatesRes, categoriesRes, subcategoriesRes] = await Promise.all([
+    const [templatesRes, categoriesRes, subcategoriesRes, subSubcategoriesRes] = await Promise.all([
       supabase.from('templates').select('slug, updated_at').eq('status', 'approved').order('updated_at', { ascending: false }),
-      supabase.from('categories').select('slug, updated_at'),
-      supabase.from('subcategories').select('slug, updated_at, category_id'),
+      supabase.from('categories').select('id, slug, updated_at'),
+      supabase.from('subcategories').select('id, slug, updated_at, category_id'),
+      supabase.from('sub_subcategories').select('slug, updated_at, subcategory_id'),
     ]);
 
     const templates = templatesRes.error ? [] : templatesRes.data ?? [];
     const categories = categoriesRes.error ? [] : categoriesRes.data ?? [];
     const subcategories = subcategoriesRes.error ? [] : subcategoriesRes.data ?? [];
+    const subSubcategories = subSubcategoriesRes.error ? [] : subSubcategoriesRes.data ?? [];
 
     if (templatesRes.error) {
       console.warn('[sitemap] Failed to load templates:', templatesRes.error.message);
@@ -32,11 +34,14 @@ async function getSupabaseData() {
     if (subcategoriesRes.error) {
       console.warn('[sitemap] Failed to load subcategories:', subcategoriesRes.error.message);
     }
+    if (subSubcategoriesRes.error) {
+      console.warn('[sitemap] Failed to load sub-subcategories:', subSubcategoriesRes.error.message);
+    }
 
-    return { templates, categories, subcategories };
+    return { templates, categories, subcategories, subSubcategories };
   } catch (error) {
     console.warn('[sitemap] Unexpected Supabase error:', error?.message || error);
-    return { templates: [], categories: [], subcategories: [] };
+    return { templates: [], categories: [], subcategories: [], subSubcategories: [] };
   }
 }
 
@@ -90,7 +95,13 @@ module.exports = {
       lastmod: now,
     }));
 
-    const { templates, categories, subcategories } = await getSupabaseData();
+    const { templates, categories, subcategories, subSubcategories } = await getSupabaseData();
+
+    // Identify the Video Templates category for dedicated landing page URLs
+    const videoTemplatesCat = categories.find(
+      (cat) => cat.slug === 'video-templates'
+    );
+    const videoTemplatesCatId = videoTemplatesCat?.id || null;
 
     // Add all product pages
     templates.forEach((tpl) => {
@@ -103,24 +114,56 @@ module.exports = {
       });
     });
 
-    // Add category filter URLs (legacy support)
+    // Add dedicated subcategory landing pages under /video-templates/[slug]
+    // These are high-priority pages that Google should index as category pages
+    subcategories.forEach((subcat) => {
+      if (!subcat?.slug) return;
+      if (videoTemplatesCatId && subcat.category_id === videoTemplatesCatId) {
+        paths.push({
+          loc: `/video-templates/${subcat.slug}`,
+          changefreq: 'daily',
+          priority: 0.85,
+          lastmod: subcat.updated_at || now,
+        });
+      }
+    });
+
+    // Add dedicated sub-subcategory landing pages under /video-templates/[subcat]/[subsubcat]
+    // Only for subcategories that belong to the Video Templates category
+    const videoSubcats = subcategories.filter(
+      (s) => videoTemplatesCatId && s.category_id === videoTemplatesCatId
+    );
+    subSubcategories.forEach((subSubcat) => {
+      if (!subSubcat?.slug) return;
+      const parentSubcat = videoSubcats.find((s) => s.id === subSubcat.subcategory_id);
+      if (parentSubcat) {
+        paths.push({
+          loc: `/video-templates/${parentSubcat.slug}/${subSubcat.slug}`,
+          changefreq: 'daily',
+          priority: 0.8,
+          lastmod: subSubcat.updated_at || now,
+        });
+      }
+    });
+
+    // Add category filter URLs (legacy support — lower priority)
     categories.forEach((cat) => {
       if (!cat?.slug) return;
       paths.push({
         loc: `/templates?category=${encodeURIComponent(cat.slug)}`,
         changefreq: 'weekly',
-        priority: 0.6,
+        priority: 0.5,
         lastmod: cat.updated_at || now,
       });
     });
 
-    // Add subcategory URLs for deeper indexing
+    // Add subcategory query-param URLs (legacy — lower priority)
     subcategories.forEach((subcat) => {
       if (!subcat?.slug) return;
       paths.push({
         loc: `/templates?subcategory=${encodeURIComponent(subcat.slug)}`,
         changefreq: 'weekly',
-        priority: 0.6,
+        priority: 0.5,
         lastmod: subcat.updated_at || now,
       });
     });

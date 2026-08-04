@@ -126,7 +126,7 @@ export default function RootLayout({
                   "@type": "SearchAction",
                   "target": {
                     "@type": "EntryPoint",
-                    "urlTemplate": "https://celite.in/templates?search={search_term_string}"
+                    "urlTemplate": "https://celite.in/video-templates?search={search_term_string}"
                   },
                   "query-input": "required name=search_term_string"
                 }
@@ -174,17 +174,17 @@ export default function RootLayout({
                     "@type": "OfferCatalog",
                     "name": "Wedding & Save the Date Templates",
                     "itemListElement": [
-                      { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Save the Date After Effects Templates" } },
-                      { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Wedding Invitation Video Templates" } },
-                      { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Wedding Slideshow Templates" } }
+                      { "@type": "Offer", "name": "Save the Date After Effects Templates", "url": "https://celite.in/video-templates/after-effects/save-date" },
+                      { "@type": "Offer", "name": "Wedding Invitation Video Templates", "url": "https://celite.in/video-templates/after-effects" },
+                      { "@type": "Offer", "name": "Wedding Slideshow Templates", "url": "https://celite.in/video-templates/after-effects/slides" }
                     ]
                   },
                   {
                     "@type": "OfferCatalog",
                     "name": "Cinema & Video Templates",
                     "itemListElement": [
-                      { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Cinematic Intro Templates" } },
-                      { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Logo Reveal Templates" } }
+                      { "@type": "Offer", "name": "Cinematic Intro Templates", "url": "https://celite.in/video-templates/after-effects/movie-templates" },
+                      { "@type": "Offer", "name": "Logo Reveal Templates", "url": "https://celite.in/video-templates/after-effects/logo-reveal" }
                     ]
                   }
                 ]
@@ -204,7 +204,12 @@ export default function RootLayout({
                 {
                   "@type": "SiteNavigationElement",
                   "name": "Save the Date Templates",
-                  "url": "https://celite.in/video-templates"
+                  "url": "https://celite.in/video-templates/after-effects/save-date"
+                },
+                {
+                  "@type": "SiteNavigationElement",
+                  "name": "Wedding Templates",
+                  "url": "https://celite.in/video-templates/wedding"
                 },
                 {
                   "@type": "SiteNavigationElement",

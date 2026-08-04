@@ -5,8 +5,32 @@ import SfxClient from './SfxClient';
 import LoadingSpinnerServer from '../../components/ui/loading-spinner-server';
 
 export const metadata: Metadata = {
-  title: 'Sound Effects Library - Royalty-Free Audio | Celite',
-  description: 'Browse our collection of royalty-free sound effects. Download high-quality audio tracks for your projects.',
+  title: 'Sound Effects Library — Royalty-Free SFX for Video & Games | Celite',
+  description: 'Download royalty-free sound effects for video editing, game development, film production, and podcasts. High-quality Foley, impacts, transitions, and ambient SFX on Celite.',
+  keywords: [
+    'sound effects',
+    'royalty free sfx',
+    'sfx for video editing',
+    'foley sound effects',
+    'game sound effects',
+    'cinematic sfx',
+  ],
+  openGraph: {
+    title: 'Sound Effects Library — Royalty-Free SFX | Celite',
+    description: 'Download royalty-free sound effects for video editing, game development, and film production.',
+    url: 'https://celite.in/sound-effects',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Sound Effects Library - Celite' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Sound Effects Library | Celite',
+    description: 'Download royalty-free sound effects for video editing and games.',
+    images: ['/og-image.png'],
+  },
+  alternates: {
+    canonical: 'https://celite.in/sound-effects',
+  },
 };
 
 export const revalidate = 60;

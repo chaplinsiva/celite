@@ -5,8 +5,33 @@ import VideoTemplatesClient from '../video-templates/VideoTemplatesClient';
 import LoadingSpinnerServer from '../../components/ui/loading-spinner-server';
 
 export const metadata: Metadata = {
-  title: 'Graphics Templates - PSD Templates & Design Assets | Celite',
-  description: 'Browse and download professional graphics templates, PSD templates, and design assets for your creative projects.',
+  title: 'Graphics Templates — PSD Templates & Design Assets | Celite',
+  description: 'Download professional graphics templates, Photoshop PSD templates, social media post designs, banners, and vector assets for creative projects on Celite.',
+  keywords: [
+    'graphics templates',
+    'psd templates',
+    'photoshop templates',
+    'design assets',
+    'social media graphics',
+    'banner templates',
+    'vector templates',
+  ],
+  openGraph: {
+    title: 'Graphics Templates — PSD Templates & Design Assets | Celite',
+    description: 'Download professional graphics templates, Photoshop PSD files, and vector design assets.',
+    url: 'https://celite.in/graphics',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Graphics Templates - Celite' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Graphics Templates | Celite',
+    description: 'Download professional Photoshop PSD templates and design assets.',
+    images: ['/og-image.png'],
+  },
+  alternates: {
+    canonical: 'https://celite.in/graphics',
+  },
 };
 
 export const revalidate = 60;

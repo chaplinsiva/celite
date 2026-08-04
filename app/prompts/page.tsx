@@ -5,8 +5,33 @@ import PromptsClient from './PromptsClient';
 import LoadingSpinnerServer from '../../components/ui/loading-spinner-server';
 
 export const metadata: Metadata = {
-    title: 'AI Prompts - Professional ChatGPT, Midjourney & DALL-E Prompts | Celite',
-    description: 'Browse our collection of professional AI prompts for ChatGPT, Midjourney, DALL-E, Stable Diffusion and more. Find the perfect prompt templates for your creative projects.',
+    title: 'AI Prompts — ChatGPT, Midjourney & DALL-E Prompt Templates | Celite',
+    description: 'Download professional AI prompts for ChatGPT, Midjourney, DALL-E, and Stable Diffusion. High-quality prompt engineering templates for image generation and content creation on Celite.',
+    keywords: [
+        'ai prompts',
+        'chatgpt prompts',
+        'midjourney prompts',
+        'dall-e prompts',
+        'stable diffusion prompts',
+        'ai prompt templates',
+        'prompt engineering',
+    ],
+    openGraph: {
+        title: 'AI Prompts — ChatGPT, Midjourney & DALL-E Templates | Celite',
+        description: 'Download professional AI prompts for ChatGPT, Midjourney, DALL-E, and Stable Diffusion.',
+        url: 'https://celite.in/prompts',
+        type: 'website',
+        images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'AI Prompts - Celite' }],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'AI Prompts | Celite',
+        description: 'Download professional AI prompts for ChatGPT, Midjourney, and DALL-E.',
+        images: ['/og-image.png'],
+    },
+    alternates: {
+        canonical: 'https://celite.in/prompts',
+    },
 };
 
 export const revalidate = 60;
