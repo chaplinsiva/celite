@@ -1,5 +1,11 @@
 "use client";
 
+declare global {
+  interface Window {
+    Razorpay: new (options: Record<string, any>) => { open: () => void };
+  }
+}
+
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useRef, Suspense } from "react";
@@ -131,8 +137,28 @@ function CheckoutContent() {
 
     const loadRazorpay = (): Promise<void> => {
         return new Promise((resolve, reject) => {
-            const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
-            if (existing) return resolve();
+            // If Razorpay constructor is already available, resolve immediately
+            if (typeof window.Razorpay === 'function') return resolve();
+
+            const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]') as HTMLScriptElement | null;
+            if (existing) {
+                // Script tag exists but Razorpay isn't ready yet — wait for it to finish loading
+                const onLoad = () => {
+                    existing.removeEventListener('load', onLoad);
+                    existing.removeEventListener('error', onError);
+                    resolve();
+                };
+                const onError = () => {
+                    existing.removeEventListener('load', onLoad);
+                    existing.removeEventListener('error', onError);
+                    reject(new Error('Failed to load Razorpay'));
+                };
+                existing.addEventListener('load', onLoad);
+                existing.addEventListener('error', onError);
+                return;
+            }
+
+            // No script tag yet — create and append one
             const script = document.createElement('script');
             script.src = 'https://checkout.razorpay.com/v1/checkout.js';
             script.onload = () => resolve();
