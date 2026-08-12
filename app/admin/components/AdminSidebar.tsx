@@ -2,7 +2,9 @@
 
 type TabKey =
   | 'overview'
+  | 'payouts'
   | 'products'
+  | 'subscriptionApproval'
   | 'vendorApproval'
   | 'categories'
   | 'analytics'
@@ -18,6 +20,8 @@ type TabKey =
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'overview', label: 'Overview' },
+  { key: 'payouts', label: '💰 Creator Payouts' },
+  { key: 'subscriptionApproval', label: '⭐ Subscription Approvals' },
   { key: 'products', label: 'Products' },
   { key: 'mediaCompressor', label: '⚡ Media Compressor' },
   { key: 'vendorApproval', label: 'Vendor Approval' },

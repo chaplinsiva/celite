@@ -80,6 +80,7 @@ export default function LatestTemplatesCarousel() {
           subcategories(id,name,slug)
         `)
         .eq('status', 'approved')
+        .eq('available_on_celite_subscription', true)
         .neq('category_id', musicSfxCategoryId)
         .neq('category_id', stockPhotoCategoryId)
         .neq('category_id', model3dCategoryId);

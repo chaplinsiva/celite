@@ -33,6 +33,8 @@ export default function WebsiteShowcaseCarousel({ initialTemplates }: { initialT
           slug,name,subtitle,description,img,video,video_path,thumbnail_path,features,tags,created_at,
           categories(id,name,slug)
         `)
+        .eq('status', 'approved')
+        .eq('available_on_celite_subscription', true)
         .order('created_at', { ascending: false })
         .limit(24);
 

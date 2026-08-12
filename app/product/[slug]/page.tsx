@@ -146,7 +146,7 @@ export default async function ProductPage(props: PageProps) {
   const [{ data: row }, { data: settingsData }] = await Promise.all([
     supabase
       .from('templates')
-      .select('slug,name,subtitle,description,img,video_path,thumbnail_path,audio_preview_path,model_3d_path,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name,category_id,subcategory_id,is_free,categories(id,slug,name)')
+      .select('slug,name,subtitle,description,img,video_path,thumbnail_path,audio_preview_path,model_3d_path,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name,category_id,subcategory_id,is_free,price,available_on_celite_market,available_on_celite_subscription,categories(id,slug,name)')
       .eq('slug', params.slug)
       .maybeSingle(),
     supabase
@@ -162,12 +162,14 @@ export default async function ProductPage(props: PageProps) {
   const categorySlug = category?.slug || '';
   const categoryName = category?.name || '';
 
-  const prod: Template & { source_path?: string | null; vendor_name?: string | null; video_path?: string | null; thumbnail_path?: string | null; audio_preview_path?: string | null; model_3d_path?: string | null; category_id?: string | null; subcategory_id?: string | null; category_slug?: string | null; category_name?: string | null } = {
+  const prod: Template & { source_path?: string | null; vendor_name?: string | null; video_path?: string | null; thumbnail_path?: string | null; audio_preview_path?: string | null; model_3d_path?: string | null; category_id?: string | null; subcategory_id?: string | null; category_slug?: string | null; category_name?: string | null; available_on_celite_market?: boolean; available_on_celite_subscription?: boolean } = {
     slug: row.slug,
     name: row.name,
     subtitle: row.subtitle,
     desc: row.description ?? '',
-    price: 0,
+    price: Number((row as any).price || 0),
+    available_on_celite_market: (row as any).available_on_celite_market ?? true,
+    available_on_celite_subscription: (row as any).available_on_celite_subscription ?? true,
     img: row.img,
     features: row.features ?? [],
     software: row.software ?? [],
@@ -194,7 +196,8 @@ export default async function ProductPage(props: PageProps) {
     .from('templates')
     .select('slug,name,subtitle,description,img,video_path,thumbnail_path,features,software,plugins,tags,status,vendor_name')
     .neq('slug', prod.slug)
-    .eq('status', 'approved');
+    .eq('status', 'approved')
+    .eq('available_on_celite_subscription', true);
 
   // Filter by category_id if available
   if (prod.category_id) {

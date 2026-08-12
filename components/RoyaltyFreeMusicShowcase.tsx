@@ -197,6 +197,7 @@ export default function RoyaltyFreeMusicShowcase({ initialTemplates }: { initial
             categories!inner(id, name, slug)
           `)
                     .eq('status', 'approved')
+                    .eq('available_on_celite_subscription', true)
                     .eq('categories.slug', 'stock-musics')
                     .order('created_at', { ascending: false })
                     .limit(16);

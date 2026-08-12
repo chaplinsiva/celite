@@ -121,6 +121,7 @@ export default function CinemaTemplatesShowcase({ initialTemplates }: { initialT
             sub_subcategories!inner(id, name, slug)
           `)
           .eq('status', 'approved')
+          .eq('available_on_celite_subscription', true)
           .eq('sub_subcategories.slug', 'movie-templates')
           .not('video_path', 'is', null)
           .order('created_at', { ascending: false })

@@ -230,6 +230,7 @@ export default function SfxShowcase({ initialTemplates }: { initialTemplates?: S
                         categories!inner(id, name, slug)
                     `)
                     .eq('status', 'approved')
+                    .eq('available_on_celite_subscription', true)
                     .eq('categories.slug', 'sound-effects')
                     .not('audio_preview_path', 'is', null)
                     .order('created_at', { ascending: false })

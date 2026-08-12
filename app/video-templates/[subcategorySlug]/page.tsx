@@ -57,6 +57,7 @@ async function getSubcategoryData(subcategorySlug: string) {
     .from('templates')
     .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id,is_free')
     .eq('status', 'approved')
+    .eq('available_on_celite_subscription', true)
     .eq('subcategory_id', subcategory.id)
     .order('created_at', { ascending: false });
 
@@ -65,6 +66,7 @@ async function getSubcategoryData(subcategorySlug: string) {
     .from('templates')
     .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id,is_free')
     .eq('status', 'approved')
+    .eq('available_on_celite_subscription', true)
     .eq('category_id', videoTemplatesCategory.id)
     .order('created_at', { ascending: false });
 
@@ -75,6 +77,7 @@ async function getSubcategoryData(subcategorySlug: string) {
       .from('templates')
       .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id,is_free')
       .eq('status', 'approved')
+      .eq('available_on_celite_subscription', true)
       .in('subcategory_id', allSubcatIds)
       .order('created_at', { ascending: false });
     siblingTemplates = data || [];

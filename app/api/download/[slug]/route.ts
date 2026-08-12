@@ -48,7 +48,7 @@ export async function GET(
     // Get template from database
     const { data: template, error: templateErr } = await admin
       .from('templates')
-      .select('slug, name, source_path, is_free')
+      .select('slug, name, source_path, is_free, available_on_celite_subscription')
       .eq('slug', slug)
       .maybeSingle();
 
@@ -68,6 +68,11 @@ export async function GET(
 
     if (!active && !isFreeTemplate) {
       return NextResponse.json({ error: 'Access denied. Please subscribe to download.' }, { status: 403 });
+    }
+
+    // Subscription downloads: only templates with available_on_celite_subscription = true are eligible
+    if (!isFreeTemplate && template.available_on_celite_subscription === false) {
+      return NextResponse.json({ error: 'This asset is not available on Celite Subscription. You can purchase it on Celite Market.' }, { status: 403 });
     }
 
     // Check pongal_weekly download limits

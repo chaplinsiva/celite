@@ -116,6 +116,7 @@ export default function SaveDateTemplatesShowcase({ initialTemplates }: { initia
             sub_subcategories!inner(id, name, slug)
           `)
           .eq('status', 'approved')
+          .eq('available_on_celite_subscription', true)
           .eq('sub_subcategories.slug', 'save-date')
           .order('created_at', { ascending: false })
           .limit(20);

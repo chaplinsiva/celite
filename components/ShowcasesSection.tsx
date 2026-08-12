@@ -28,6 +28,8 @@ export default function ShowcasesSection() {
         const { data: allTemplates } = await supabase
           .from('templates')
           .select('slug,name,subtitle,description,img,tags')
+          .eq('status', 'approved')
+          .eq('available_on_celite_subscription', true)
           .limit(20);
 
         if (!allTemplates || allTemplates.length === 0) {
@@ -79,6 +81,8 @@ export default function ShowcasesSection() {
           const { data: featuredTemplates } = await supabase
             .from('templates')
             .select('slug,name,subtitle,description,img,tags')
+            .eq('status', 'approved')
+            .eq('available_on_celite_subscription', true)
             .eq('is_featured', true)
             .limit(maxShowcases - showcaseList.length);
 
