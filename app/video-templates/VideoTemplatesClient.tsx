@@ -697,12 +697,14 @@ export default function VideoTemplatesClient({
           <p className="text-zinc-600 mb-8 text-lg max-w-2xl mx-auto">
             Upload your designs and become part of a growing creator community celebrated for creativity and innovation.
           </p>
-          <Link
-            href="/creator/dashboard"
+          <a
+            href="https://celitemarket.in"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors"
           >
             Get Started <ArrowRight className="w-4 h-4" />
-          </Link>
+          </a>
         </div>
       </section>
     </main>

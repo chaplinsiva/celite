@@ -59,6 +59,7 @@ export default async function SoundEffectsPage() {
     .from('templates')
     .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id')
     .eq('status', 'approved')
+    .eq('available_on_celite_subscription', true)
     .eq('category_id', category.id)
     .order('created_at', { ascending: false });
 

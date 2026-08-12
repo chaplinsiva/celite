@@ -19,6 +19,8 @@ import FreeGiftsPanel from './components/FreeGiftsPanel';
 import SpecialOfferPanel from './components/SpecialOfferPanel';
 import ProductAlertsPanel from './components/ProductAlertsPanel';
 import MediaCompressorPanel from './components/MediaCompressorPanel';
+import SubscriptionApprovalPanel from './components/SubscriptionApprovalPanel';
+import AdminPayoutPanel from './components/AdminPayoutPanel';
 
 type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null; video_path?: string | null; thumbnail_path?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null; category_id?: string | null; subcategory_id?: string | null; sub_subcategory_id?: string | null };
 
@@ -37,7 +39,7 @@ export default function AdminClient() {
     celiteAmount?: number;
   } | null>(null);
   const [active, setActive] = useState<
-    'overview' | 'products' | 'vendorApproval' | 'categories' | 'analytics' | 'subscriptionLog' | 'freeGifts' | 'specialOffer' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx' | 'mediaCompressor'
+    'overview' | 'payouts' | 'products' | 'subscriptionApproval' | 'vendorApproval' | 'categories' | 'analytics' | 'subscriptionLog' | 'freeGifts' | 'specialOffer' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx' | 'mediaCompressor'
   >('overview');
 
 
@@ -127,6 +129,8 @@ export default function AdminClient() {
         <div className="flex flex-col h-full overflow-hidden">
           <section className="flex-1 p-8 space-y-8 overflow-y-auto">
             {active === 'overview' && (<OverviewPanel stats={stats} onSeed={runSeed} onUpload={runUpload} />)}
+            {active === 'payouts' && (<AdminPayoutPanel />)}
+            {active === 'subscriptionApproval' && (<SubscriptionApprovalPanel />)}
 
             {active === 'products' && (
               templatesLoading ? (

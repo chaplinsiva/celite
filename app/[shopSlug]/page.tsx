@@ -77,6 +77,7 @@ export default async function CreatorShopPage(props: PageProps) {
     )
     .eq("creator_shop_id", shop.id)
     .eq("status", "approved")
+    .eq("available_on_celite_subscription", true)
     .order("created_at", { ascending: false });
 
   const creatorTemplates: CreatorTemplate[] = (templates || []) as any;

@@ -61,6 +61,8 @@ export default function TemplateCarousel() {
           subcategories(id,name,slug),
           creator_shops(vendor_name)
         `)
+        .eq('status', 'approved')
+        .eq('available_on_celite_subscription', true)
         .eq('feature', true)
         .order('updated_at', { ascending: false });
 
@@ -74,6 +76,8 @@ export default function TemplateCarousel() {
             subcategories(id,name,slug),
             creator_shops(vendor_name)
           `)
+          .eq('status', 'approved')
+          .eq('available_on_celite_subscription', true)
           .order('created_at', { ascending: false })
           .limit(12);
         if (!fallback.error && fallback.data) {

@@ -81,9 +81,9 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/start-selling" className="text-zinc-400 hover:text-white transition-colors">
+                <a href="https://celitemarket.in" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">
                   Start Selling
-                </Link>
+                </a>
               </li>
             </ul>
           </div>

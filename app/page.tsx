@@ -92,6 +92,7 @@ export default async function Home() {
           .from('templates')
           .select('slug, name, subtitle, img, video_path, thumbnail_path, category_id')
           .eq('status', 'approved')
+          .eq('available_on_celite_subscription', true)
           .eq('sub_subcategory_id', movieSubSubcatId)
           .not('video_path', 'is', null)
           .order('created_at', { ascending: false })
@@ -103,6 +104,7 @@ export default async function Home() {
           .from('templates')
           .select('slug, name, subtitle, img, video_path, thumbnail_path, category_id')
           .eq('status', 'approved')
+          .eq('available_on_celite_subscription', true)
           .eq('sub_subcategory_id', saveDateSubSubcatId)
           .order('created_at', { ascending: false })
           .limit(20)
@@ -113,6 +115,7 @@ export default async function Home() {
         .from('templates')
         .select('slug, name, subtitle, img, video_path, thumbnail_path, category_id, subcategory_id')
         .eq('status', 'approved')
+        .eq('available_on_celite_subscription', true)
         .eq('is_free', true);
       
       let videoFreeTemplates = templates || [];
@@ -151,6 +154,7 @@ export default async function Home() {
           .from('templates')
           .select('slug, name, subtitle, audio_preview_path, thumbnail_path, img, category_id')
           .eq('status', 'approved')
+          .eq('available_on_celite_subscription', true)
           .eq('category_id', musicCatId)
           .order('created_at', { ascending: false })
           .limit(16)
@@ -160,6 +164,7 @@ export default async function Home() {
           .from('templates')
           .select('slug, name, subtitle, audio_preview_path, thumbnail_path, img, category_id')
           .eq('status', 'approved')
+          .eq('available_on_celite_subscription', true)
           .eq('category_id', sfxCatId)
           .not('audio_preview_path', 'is', null)
           .order('created_at', { ascending: false })
@@ -170,6 +175,7 @@ export default async function Home() {
           .from('templates')
           .select('slug, name, subtitle, description, img, video, video_path, thumbnail_path, features, tags, created_at, category_id, categories(id, name, slug)')
           .eq('status', 'approved')
+          .eq('available_on_celite_subscription', true)
           .eq('category_id', webCatId)
           .order('created_at', { ascending: false })
           .limit(24)

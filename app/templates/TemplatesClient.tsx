@@ -149,6 +149,7 @@ export default function TemplatesClient({ initialCategoryGroups }: { initialCate
                     .from('templates')
                     .select('slug, name, img, video, video_path, thumbnail_path, audio_preview_path, model_3d_path, category_id, categories(id, name, slug)')
                     .eq('status', 'approved')
+                    .eq('available_on_celite_subscription', true)
                     .ilike('name', `%${searchQuery.trim()}%`)
                     .order('created_at', { ascending: false })
                     .limit(200);

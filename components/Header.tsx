@@ -266,23 +266,15 @@ export default function Header() {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-4">
-            {/* Creator link (Desktop) - show Start Selling until shop exists, then Creator Dashboard */}
-            {!isAuthLoading && user && !hasCreatorShop && (
-              <Link
-                href="/start-selling"
-                className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors"
-              >
-                Start Selling
-              </Link>
-            )}
-            {!isAuthLoading && user && hasCreatorShop && (
-              <Link
-                href="/creator/dashboard"
-                className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors"
-              >
-                Creator Dashboard
-              </Link>
-            )}
+            {/* Start Selling Link (Desktop) - Redirects to Celite Market */}
+            <a
+              href="https://celitemarket.in"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors"
+            >
+              Start Selling
+            </a>
 
             {/* Auth Buttons */}
             <div className="flex items-center gap-3">
@@ -402,24 +394,15 @@ export default function Header() {
                 </div>
               );
             })}
-            {!isAuthLoading && user && !hasCreatorShop && (
-              <Link
-                href="/start-selling"
-                className="text-lg font-medium text-zinc-500 py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Start Selling
-              </Link>
-            )}
-            {!isAuthLoading && user && hasCreatorShop && (
-              <Link
-                href="/creator/dashboard"
-                className="text-lg font-medium text-zinc-500 py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Creator Dashboard
-              </Link>
-            )}
+            <a
+              href="https://celitemarket.in"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-lg font-medium text-zinc-500 py-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Start Selling
+            </a>
             <Link
               href="/video-templates"
               className="text-lg font-medium text-zinc-800 py-2 border-b border-zinc-50"

@@ -26,7 +26,7 @@ interface Review {
 }
 
 interface ProductDetailsProps {
-  product: Template & { source_path?: string | null; vendor_name?: string | null; model_3d_path?: string | null; category_id?: string | null; subcategory_id?: string | null; category_slug?: string | null; category_name?: string | null };
+  product: Template & { source_path?: string | null; vendor_name?: string | null; model_3d_path?: string | null; category_id?: string | null; subcategory_id?: string | null; category_slug?: string | null; category_name?: string | null; available_on_celite_market?: boolean; available_on_celite_subscription?: boolean };
   related: Template[];
   reviews: Review[];
   monthlyPrice?: number | null;
@@ -149,7 +149,8 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
             .from('templates')
             .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name,category_id')
             .neq('slug', product.slug)
-            .eq('status', 'approved');
+            .eq('status', 'approved')
+            .eq('available_on_celite_subscription', true);
 
           if (product.category_id) {
             query = query.eq('category_id', product.category_id);
@@ -189,7 +190,8 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
           .from('templates')
           .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name')
           .neq('slug', product.slug)
-          .eq('status', 'approved');
+          .eq('status', 'approved')
+          .eq('available_on_celite_subscription', true);
 
         if (product.category_id) {
           query = query.eq('category_id', product.category_id);
@@ -392,7 +394,8 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
             .from('templates')
             .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name,category_id')
             .neq('slug', product.slug)
-            .eq('status', 'approved');
+            .eq('status', 'approved')
+            .eq('available_on_celite_subscription', true);
 
           if (product.category_id) {
             query = query.eq('category_id', product.category_id);
@@ -798,6 +801,10 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
               user={user}
               isFree={!!product.is_free}
               monthlyPrice={monthlyPrice}
+              productSlug={product.slug}
+              productPrice={product.price}
+              availableOnMarket={product.available_on_celite_market}
+              availableOnSub={product.available_on_celite_subscription}
             />
 
             {/* Description / Prompt */}
@@ -894,6 +901,10 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
                 user={user}
                 isFree={!!product.is_free}
                 monthlyPrice={monthlyPrice}
+                productSlug={product.slug}
+                productPrice={product.price}
+                availableOnMarket={product.available_on_celite_market}
+                availableOnSub={product.available_on_celite_subscription}
               />
 
               {/* Features Table / Tech Specs - Hidden for Prompts */}
@@ -1248,7 +1259,23 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
   );
 }
 
-function SubscriptionCard({ isSubActive, downloading, handleDownload, router, className, isPrompt, handleCopyPrompt, promptCopied, user, isFree, monthlyPrice }: {
+function SubscriptionCard({
+  isSubActive,
+  downloading,
+  handleDownload,
+  router,
+  className,
+  isPrompt,
+  handleCopyPrompt,
+  promptCopied,
+  user,
+  isFree,
+  monthlyPrice,
+  productSlug,
+  productPrice,
+  availableOnMarket,
+  availableOnSub,
+}: {
   isSubActive: boolean;
   downloading: boolean;
   handleDownload: () => void;
@@ -1260,10 +1287,13 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
   user?: any;
   isFree?: boolean;
   monthlyPrice?: number | null;
+  productSlug?: string;
+  productPrice?: number;
+  availableOnMarket?: boolean;
+  availableOnSub?: boolean;
 }) {
   // For prompts: show Copy Prompt button (no login required)
   if (isPrompt) {
-    // ... existing prompt logic ...
     return (
       <div className={cn("bg-violet-50/50 rounded-2xl p-6 border border-violet-100", className)}>
         <div className="text-center mb-4">
@@ -1341,10 +1371,28 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
     );
   }
 
-  // For subscribed users, show only the download button
+  // For subscribed users, show download button (or single buy CTA if not available on subscription)
   if (isSubActive) {
+    if (availableOnSub === false) {
+      return (
+        <div className={cn("bg-amber-50/50 rounded-2xl p-6 border border-amber-200", className)}>
+          <div className="text-center mb-4">
+            <h3 className="text-lg font-bold text-amber-900 mb-1">Celite Market Exclusive</h3>
+            <p className="text-xs text-amber-700">This template is available for direct purchase on Celite Market.</p>
+          </div>
+          <a
+            href={`https://celitemarket.in/product/${productSlug || ''}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all"
+          >
+            Buy this individual asset for {productPrice ? `₹${productPrice}` : 'single purchase'} on Celite Market →
+          </a>
+        </div>
+      );
+    }
+
     return (
-      // ... existing active sub logic ...
       <div className={cn("bg-blue-50/50 rounded-2xl p-6 border border-blue-100", className)}>
         <button
           onClick={handleDownload}
@@ -1376,11 +1424,23 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
             Preparing your file for download...
           </p>
         )}
+        {availableOnMarket !== false && productSlug && (
+          <div className="mt-3 text-center">
+            <a
+              href={`https://celitemarket.in/product/${productSlug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-blue-600 hover:text-blue-800 underline font-medium"
+            >
+              Or buy single asset for {productPrice ? `₹${productPrice}` : 'individual price'} on Celite Market →
+            </a>
+          </div>
+        )}
       </div>
     );
   }
 
-  // For non-subscribed users, show the full subscription card
+  // For non-subscribed users, show the full subscription card + single buy CTA on Celite Market
   return (
     <div className={cn("bg-blue-50/50 rounded-2xl p-6 border border-blue-100", className)}>
       <div className="flex justify-between items-start mb-4">
@@ -1425,6 +1485,19 @@ function SubscriptionCard({ isSubActive, downloading, handleDownload, router, cl
       >
         Subscribe to Download
       </button>
+
+      {/* Secondary Buy CTA for Single Asset Buyers */}
+      <div className="mt-4 pt-4 border-t border-blue-200/60 text-center">
+        <p className="text-xs text-blue-900/80 mb-2 font-medium">Want to buy single templates without a subscription?</p>
+        <a
+          href={`https://celitemarket.in/product/${productSlug || ''}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-md hover:shadow-emerald-600/20 active:scale-[0.98]"
+        >
+          Buy this individual asset for {productPrice ? `₹${productPrice}` : 'single purchase'} on Celite Market →
+        </a>
+      </div>
     </div>
   );
 }

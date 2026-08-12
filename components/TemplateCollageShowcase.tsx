@@ -40,6 +40,7 @@ export default function TemplateCollageShowcase() {
           categories(id,name,slug)
         `)
                 .eq('status', 'approved')
+                .eq('available_on_celite_subscription', true)
                 .not('video_path', 'is', null)
                 .order('updated_at', { ascending: false })
                 .limit(50); // Load more to shuffle from
