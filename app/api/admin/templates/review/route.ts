@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getSupabaseAdminClient } from '../../../../../lib/supabaseAdmin';
 
 export async function POST(req: Request) {
@@ -29,17 +30,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: 'Invalid status' }, { status: 400 });
     }
 
+    // When rejecting a template, also remove it from celite subscription pool
+    // to prevent it from showing on celite.in
+    const updatePayload: Record<string, unknown> = {
+      status,
+      review_note: reviewNote,
+      reviewed_at: new Date().toISOString(),
+    };
+    if (status === 'rejected') {
+      updatePayload.available_on_celite_subscription = false;
+      updatePayload.subscription_submission_status = 'REJECTED';
+    }
+
     const { error } = await admin
       .from('templates')
-      .update({
-        status,
-        review_note: reviewNote,
-        reviewed_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('slug', slug);
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    }
+
+    // Revalidate the product page so rejection takes effect immediately
+    try {
+      revalidatePath(`/product/${slug}`);
+    } catch (_) {
+      // Non-critical: page will still revalidate within 60s via ISR
     }
 
     return NextResponse.json({ ok: true });

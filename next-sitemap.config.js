@@ -14,7 +14,7 @@ async function getSupabaseData() {
       auth: { persistSession: false },
     });
     const [templatesRes, categoriesRes, subcategoriesRes, subSubcategoriesRes] = await Promise.all([
-      supabase.from('templates').select('slug, updated_at').eq('status', 'approved').order('updated_at', { ascending: false }),
+      supabase.from('templates').select('slug, updated_at').eq('status', 'approved').eq('available_on_celite_subscription', true).order('updated_at', { ascending: false }),
       supabase.from('categories').select('id, slug, updated_at'),
       supabase.from('subcategories').select('id, slug, updated_at, category_id'),
       supabase.from('sub_subcategories').select('slug, updated_at, subcategory_id'),
