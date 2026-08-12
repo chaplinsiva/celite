@@ -33,7 +33,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const supabase = getSupabaseServerClient();
   const { data: row } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,thumbnail_path,video_path,features,software,plugins,tags,meta_title,meta_description,vendor_name,category_id,is_free,available_on_celite_subscription,categories(id,slug,name)')
+    .select('slug,name,subtitle,description,img,thumbnail_path,video_path,features,software,plugins,tags,meta_title,meta_description,vendor_name,category_id,is_free,status,available_on_celite_subscription,categories(id,slug,name)')
     .eq('slug', params.slug)
     .maybeSingle();
   const prod = row ? ({
@@ -50,7 +50,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
     isFeatured: false,
     is_free: !!row.is_free,
   } as Template) : null;
-  if (!prod || (row as any)?.available_on_celite_subscription === false) {
+  if (!prod || (row as any)?.available_on_celite_subscription === false || (row as any)?.status === 'rejected') {
     return {
       title: 'Template Not Found • Celite',
       description: 'This template does not exist or was removed.',
@@ -156,9 +156,9 @@ export default async function ProductPage(props: PageProps) {
   ]);
   if (!row) return notFound();
 
-  // Block access to templates not available on Celite subscription
+  // Block access to templates not available on Celite subscription or rejected
   // This prevents rejected/unapproved celitemarket.in templates from showing on celite.in
-  if ((row as any).available_on_celite_subscription === false) return notFound();
+  if ((row as any).available_on_celite_subscription === false || (row as any).status === 'rejected') return notFound();
 
   const rawMonthlyPaise = settingsData?.[0]?.value || '79900';
   const monthlyPrice = paiseToINR(Number(rawMonthlyPaise));

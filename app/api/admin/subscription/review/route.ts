@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getSupabaseAdminClient } from '../../../../../lib/supabaseAdmin';
 
 export async function POST(req: Request) {
@@ -46,6 +47,13 @@ export async function POST(req: Request) {
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    }
+
+    // Revalidate the product page so the change takes effect immediately
+    try {
+      revalidatePath(`/product/${slug}`);
+    } catch (_) {
+      // Non-critical: page will still revalidate within 60s via ISR
     }
 
     return NextResponse.json({ ok: true, message: `Subscription request ${status.toLowerCase()} successfully.` });
