@@ -1,4 +1,4 @@
-// agent-notes: { ctx: "Admin payouts API for listing and processing creator payout requests", deps: ["lib/payouts.ts", "lib/supabaseAdmin.ts"], state: active, last: "sato@2026-08-12" }
+// agent-notes: { ctx: "Admin payouts API for listing and processing creator payout requests", deps: ["lib/payouts.ts", "lib/supabaseAdmin.ts"], state: active, last: "sato@2026-08-13" }
 
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabaseAdmin";
@@ -33,7 +33,7 @@ export async function GET(req: Request) {
 
     // Fetch creator payout requests
     const { data: requests, error: reqError } = await admin
-      .from("creator_payout_requests")
+      .from("payout_requests")
       .select("*")
       .order("created_at", { ascending: false });
 
@@ -131,11 +131,10 @@ export async function POST(req: Request) {
     const processedAt = new Date().toISOString();
 
     const { error: updateError } = await admin
-      .from("creator_payout_requests")
+      .from("payout_requests")
       .update({
         status,
         admin_note: adminNote || null,
-        admin_user_id: adminUserId,
         processed_at: processedAt,
       })
       .eq("id", requestId);
@@ -144,13 +143,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: updateError.message }, { status: 500 });
     }
 
-    // Dual-sync update to payout_requests table if present
+    // Dual-sync update to creator_payout_requests table if present
     try {
       await admin
-        .from("payout_requests")
+        .from("creator_payout_requests")
         .update({
           status,
           admin_note: adminNote || null,
+          admin_user_id: adminUserId,
           processed_at: processedAt,
         })
         .eq("id", requestId);

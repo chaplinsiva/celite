@@ -45,7 +45,7 @@ export async function GET(req: Request) {
 
     // 3. Fetch Payout Requests (to calculate paid & pending amounts per creator)
     const { data: payouts, error: payoutsErr } = await admin
-      .from('creator_payout_requests')
+      .from('payout_requests')
       .select('creator_shop_id, amount, status');
     if (payoutsErr) {
       return NextResponse.json({ ok: false, error: payoutsErr.message }, { status: 500 });
