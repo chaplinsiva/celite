@@ -1,4 +1,4 @@
-// agent-notes: { ctx: "Creator payout deduction and balance calculation helper", deps: ["lib/supabaseAdmin.ts"], state: active, last: "sato@2026-08-12" }
+// agent-notes: { ctx: "Creator payout deduction and balance calculation helper", deps: ["lib/supabaseAdmin.ts"], state: active, last: "sato@2026-08-13" }
 
 import { SupabaseClient } from "@supabase/supabase-js";
 
@@ -53,7 +53,7 @@ export async function calculateCreatorPayoutBalance(
 
   // 2. Fetch payout requests for deductions (paid + pending)
   const { data: payoutRequests, error: payoutsError } = await supabase
-    .from("creator_payout_requests")
+    .from("payout_requests")
     .select("amount, status")
     .eq("creator_shop_id", creatorShopId);
 

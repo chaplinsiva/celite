@@ -1,4 +1,4 @@
-// agent-notes: { ctx: "Creator payout request API with available balance deduction validation", deps: ["lib/payouts.ts", "lib/supabaseServer.ts"], state: active, last: "sato@2026-08-12" }
+// agent-notes: { ctx: "Creator payout request API with available balance deduction validation", deps: ["lib/payouts.ts", "lib/supabaseServer.ts"], state: active, last: "sato@2026-08-13" }
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -59,13 +59,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Insert payout request into creator_payout_requests
+    // Insert payout request into payout_requests
     const { data: newRequest, error: insertError } = await supabase
-      .from("creator_payout_requests")
+      .from("payout_requests")
       .insert({
         creator_shop_id: shop.id,
         user_id: user.id,
         amount: requestAmount,
+        bank_account_name: shop.bank_account_name || null,
+        bank_account_number: shop.bank_account_number || null,
+        bank_ifsc: shop.bank_ifsc || null,
+        bank_upi_id: shop.bank_upi_id || null,
         status: "pending",
         created_at: new Date().toISOString(),
       })
@@ -80,21 +84,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Dual-sync to payout_requests table for backward compatibility if present
+    // Dual-sync to creator_payout_requests table for backward compatibility if present
     try {
-      await supabase.from("payout_requests").insert({
+      await supabase.from("creator_payout_requests").insert({
         creator_shop_id: shop.id,
         user_id: user.id,
         amount: requestAmount,
-        bank_account_name: shop.bank_account_name || null,
-        bank_account_number: shop.bank_account_number || null,
-        bank_ifsc: shop.bank_ifsc || null,
-        bank_upi_id: shop.bank_upi_id || null,
         status: "pending",
         created_at: new Date().toISOString(),
       });
     } catch (e) {
-      // Ignore if table or columns differ
+      // Ignore if secondary table sync fails
     }
 
     const remainingBalance = Math.max(0, availableBalance - requestAmount);

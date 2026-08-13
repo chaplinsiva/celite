@@ -1,4 +1,4 @@
-// agent-notes: { ctx: "Creator dashboard API returning earnings, deductions, balance, and payout history", deps: ["lib/payouts.ts", "lib/supabaseServer.ts"], state: active, last: "sato@2026-08-12" }
+// agent-notes: { ctx: "Creator dashboard API returning earnings, deductions, balance, and payout history", deps: ["lib/payouts.ts", "lib/supabaseServer.ts"], state: active, last: "sato@2026-08-13" }
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -38,7 +38,7 @@ export async function GET() {
 
     // Fetch past payout requests
     const { data: payoutHistory } = await supabase
-      .from("creator_payout_requests")
+      .from("payout_requests")
       .select("*")
       .eq("creator_shop_id", shop.id)
       .order("created_at", { ascending: false });
