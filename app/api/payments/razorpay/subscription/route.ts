@@ -1,3 +1,4 @@
+// agent-notes: { ctx: "Razorpay subscription creation endpoint", deps: ["lib/supabaseAdmin.ts", "lib/razorpay.ts"], state: active, last: "sato@2026-08-13" }
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../../lib/supabaseAdmin';
 import { getRazorpayCreds, razorpayRequest } from '../../../../../lib/razorpay';
@@ -305,6 +306,7 @@ export async function POST(req: Request) {
       customer_notify: 1,
       notes: {
         user_id: userId || '',
+        plan: plan, // Critical: include plan so webhook can correctly identify yearly vs monthly
       },
     };
     

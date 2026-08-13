@@ -1,8 +1,10 @@
+// agent-notes: { ctx: "Admin analytics panel with monthly analysis sub-tab", deps: ["app/admin/components/MonthlyAnalysisTab.tsx"], state: active, last: "sato@2026-08-13" }
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import MonthlyAnalysisTab from './MonthlyAnalysisTab';
 
 type Order = { id: string; user_id: string; created_at: string; total: number; status: string };
 type OrderItem = { order_id: string; name: string; quantity: number; price: number };
@@ -44,7 +46,7 @@ export default function AnalyticsPanel() {
   const [totals, setTotals] = useState<any>(null);
   const [pagination, setPagination] = useState<any>(null);
   const subscriptionChannelRef = useRef<any>(null);
-  const [detailTab, setDetailTab] = useState<'subscriptions' | 'products' | 'renewal'>('subscriptions');
+  const [detailTab, setDetailTab] = useState<'monthly' | 'subscriptions' | 'products' | 'renewal'>('monthly');
   const [productRange, setProductRange] = useState<'7d' | '30d' | '90d' | '365d' | 'all'>('30d');
   const [performanceRange, setPerformanceRange] = useState<'7d' | '30d' | '90d' | '365d' | 'all'>('30d');
   const [subscriptionRange, setSubscriptionRange] = useState<'30d' | '90d' | '365d' | 'all'>('30d');
@@ -483,6 +485,15 @@ export default function AnalyticsPanel() {
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-1">
             <button
+              onClick={() => setDetailTab('monthly')}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all shadow-sm ${detailTab === 'monthly'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50 shadow-none'
+                }`}
+            >
+              📅 Monthly Analysis
+            </button>
+            <button
               onClick={() => setDetailTab('subscriptions')}
               className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all shadow-sm ${detailTab === 'subscriptions'
                 ? 'bg-white text-zinc-900'
@@ -511,7 +522,11 @@ export default function AnalyticsPanel() {
             </button>
           </div>
 
-          {detailTab === 'subscriptions' ? (
+          {detailTab === 'monthly' ? (
+            <div className="text-xs text-zinc-500 font-medium">
+              Real-time monthly revenue & auto-pay metrics
+            </div>
+          ) : detailTab === 'subscriptions' ? (
             <div className="flex items-center gap-2 text-xs text-zinc-500">
               <span className="font-medium">Range:</span>
               <select
@@ -557,7 +572,9 @@ export default function AnalyticsPanel() {
           )}
         </div>
 
-        {detailTab === 'subscriptions' ? (
+        {detailTab === 'monthly' ? (
+          <MonthlyAnalysisTab />
+        ) : detailTab === 'subscriptions' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
               <div className="text-xl font-bold text-zinc-900">{subscriptionStats.count}</div>

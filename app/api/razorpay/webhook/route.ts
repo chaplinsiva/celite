@@ -1,3 +1,4 @@
+// agent-notes: { ctx: "Razorpay webhook endpoint", deps: ["lib/supabaseAdmin.ts"], state: active, last: "sato@2026-08-13" }
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
@@ -140,21 +141,47 @@ export async function POST(req: Request) {
           finalPlan = existingSub.plan;
           console.log(`Using existing subscription plan for user ${resolvedUserId || existingSub.user_id}: ${finalPlan}`);
         } else {
-          // No existing subscription - try to parse from webhook
+          // No existing subscription - check multiple sources for plan type
           const subscriptionForPlan = subscriptionEntity || invoiceEntity;
-          const planFromWebhook = subscriptionForPlan?.plan_id
-            ? subscriptionForPlan.plan_id.includes('yearly')
+          
+          // Priority 1: Check notes.plan (set during subscription creation)
+          const planFromNotes = subscriptionEntity?.notes?.plan || invoiceEntity?.notes?.plan || paymentEntity?.notes?.plan;
+          
+          // Priority 2: Parse from Razorpay plan_id
+          const planFromPlanId = subscriptionForPlan?.plan_id
+            ? subscriptionForPlan.plan_id.toLowerCase().includes('yearly')
               ? 'yearly'
-              : subscriptionForPlan.plan_id.includes('weekly')
-                ? 'monthly' // Convert weekly to monthly (legacy support)
+              : subscriptionForPlan.plan_id.toLowerCase().includes('weekly')
+                ? 'pongal_weekly'
                 : 'monthly'
             : null;
+          
+          // Priority 3: Check checkout_details for this user to see what they selected
+          let planFromCheckout: string | null = null;
+          if (resolvedUserId) {
+            const { data: checkoutRecord } = await admin
+              .from('checkout_details')
+              .select('subscription_plan')
+              .eq('user_id', resolvedUserId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (checkoutRecord?.subscription_plan) {
+              planFromCheckout = checkoutRecord.subscription_plan;
+            }
+          }
 
-          if (planFromWebhook) {
-            finalPlan = planFromWebhook;
-            console.log(`Parsed plan from webhook for user ${resolvedUserId || 'unknown'}: ${finalPlan}`);
+          if (planFromNotes && ['monthly', 'yearly', 'pongal_weekly'].includes(planFromNotes)) {
+            finalPlan = planFromNotes;
+            console.log(`Plan from notes for user ${resolvedUserId || 'unknown'}: ${finalPlan}`);
+          } else if (planFromPlanId) {
+            finalPlan = planFromPlanId;
+            console.log(`Parsed plan from plan_id for user ${resolvedUserId || 'unknown'}: ${finalPlan}`);
+          } else if (planFromCheckout && ['monthly', 'yearly', 'pongal_weekly'].includes(planFromCheckout)) {
+            finalPlan = planFromCheckout;
+            console.log(`Plan from checkout_details for user ${resolvedUserId || 'unknown'}: ${finalPlan}`);
           } else {
-            // Last resort: default to monthly only if no existing subscription
+            // Last resort: default to monthly
             finalPlan = 'monthly';
             console.log(`No plan found, defaulting to monthly for user ${resolvedUserId || 'unknown'} (new subscription)`);
           }
@@ -266,6 +293,79 @@ export async function POST(req: Request) {
                 updated_at: new Date().toISOString(),
               });
             console.log(`Created new subscription for user ${targetUserId} with plan: ${finalPlan}`);
+          }
+
+          // --- AUTO-UPDATE/CREATE CHECKOUT DETAILS FOR ANALYTICS ---
+          try {
+            const billingName = invoiceEntity?.customer_name || invoiceEntity?.billing_address?.name || paymentEntity?.notes?.billing_name || subscriptionEntity?.notes?.billing_name || 'Subscriber';
+            const billingEmail = invoiceEntity?.customer_email || paymentEntity?.email || paymentEntity?.notes?.billing_email || subscriptionEntity?.notes?.billing_email || 'No Email';
+            const billingMobile = invoiceEntity?.customer_contact || paymentEntity?.contact || paymentEntity?.notes?.billing_mobile || subscriptionEntity?.notes?.billing_mobile || '';
+            const amountPaise = paymentEntity?.amount || invoiceEntity?.amount_paid || invoiceEntity?.amount || 0;
+            const amountRupees = amountPaise > 0 ? amountPaise / 100 : (finalPlan === 'yearly' ? 59 : 499);
+            const paymentId = paymentEntity?.id || null;
+
+            // 1. Try to find checkout record by subscription ID
+            let checkoutRecord = null;
+            if (razorpaySubscriptionId) {
+              const { data } = await admin
+                .from('checkout_details')
+                .select('id, status')
+                .eq('razorpay_subscription_id', razorpaySubscriptionId)
+                .maybeSingle();
+              checkoutRecord = data;
+            }
+
+            // 2. Fallback: Find failed/initiated checkout for same user and plan
+            if (!checkoutRecord && targetUserId) {
+              const { data } = await admin
+                .from('checkout_details')
+                .select('id, status')
+                .eq('user_id', targetUserId)
+                .eq('subscription_plan', finalPlan)
+                .in('status', ['initiated', 'failed'])
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              checkoutRecord = data;
+            }
+
+            if (checkoutRecord) {
+              await admin
+                .from('checkout_details')
+                .update({
+                  status: 'completed',
+                  razorpay_subscription_id: razorpaySubscriptionId,
+                  razorpay_payment_id: paymentId,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', checkoutRecord.id);
+              console.log(`Updated checkout ${checkoutRecord.id} status to completed via webhook`);
+            } else if (targetUserId) {
+              // Create a completed checkout record so revenue registers in analytics
+              const { error: insertErr } = await admin
+                .from('checkout_details')
+                .insert({
+                  user_id: targetUserId,
+                  status: 'completed',
+                  checkout_type: 'subscription',
+                  subscription_plan: finalPlan,
+                  total_amount: amountRupees,
+                  razorpay_subscription_id: razorpaySubscriptionId,
+                  razorpay_payment_id: paymentId,
+                  billing_name: billingName,
+                  billing_email: billingEmail,
+                  billing_mobile: billingMobile,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                });
+              if (insertErr) {
+                console.error('Failed to auto-create completed checkout record:', insertErr);
+              } else {
+                console.log(`Auto-created completed checkout record for user ${targetUserId} (${finalPlan}) via webhook`);
+              }
+            }
+          } catch (checkoutErr) {
+            console.error('Error during webhook checkout details synchronization:', checkoutErr);
           }
 
           console.log(`Subscription ${isRenewal ? 'renewed' : 'activated'} for user: ${targetUserId}, plan: ${finalPlan}, valid_until: ${validUntil.toISOString()}`);
