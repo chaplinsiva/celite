@@ -1,3 +1,4 @@
+// agent-notes: { ctx: "Subscription activation endpoint", deps: ["lib/supabaseAdmin.ts", "lib/razorpay.ts", "lib/emailService.ts"], state: active, last: "sato@2026-08-13" }
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
 import { razorpayRequest } from '../../../../lib/razorpay';
@@ -48,6 +49,8 @@ export async function POST(req: Request) {
       });
     }
 
+    let usdPpp: number | null = null;
+
     // Verify the Razorpay subscription is actually paid/active before activating
     if (razorpaySubscriptionId) {
       try {
@@ -57,10 +60,32 @@ export async function POST(req: Request) {
           console.error(`Razorpay subscription ${razorpaySubscriptionId} has invalid status: ${rzSub.status}`);
           return NextResponse.json({ ok: false, error: `Subscription not active (status: ${rzSub.status})` }, { status: 400 });
         }
+        if (rzSub?.notes?.usd_ppp) {
+          usdPpp = Number(rzSub.notes.usd_ppp);
+        }
       } catch (verifyError: any) {
         console.error('Failed to verify Razorpay subscription:', verifyError?.message);
         // Don't block activation if Razorpay API is temporarily unavailable
         // The webhook will also handle activation
+      }
+    }
+
+    // If not resolved from Razorpay subscription, try fetching from checkout details
+    if (!usdPpp) {
+      try {
+        const { data: latestCheckout } = await admin
+          .from('checkout_details')
+          .select('usd_ppp')
+          .eq('user_id', userId)
+          .eq('subscription_plan', plan)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (latestCheckout?.usd_ppp) {
+          usdPpp = Number(latestCheckout.usd_ppp);
+        }
+      } catch (e) {
+        console.error('Failed to resolve usd_ppp from checkout_details:', e);
       }
     }
 
@@ -100,7 +125,8 @@ export async function POST(req: Request) {
       user_id: userId,
       is_active: true,
       plan,
-      valid_until: expiresAt.toISOString()
+      valid_until: expiresAt.toISOString(),
+      usd_ppp: usdPpp || null
     };
 
     // Store Razorpay subscription ID if provided

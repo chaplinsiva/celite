@@ -1,3 +1,4 @@
+// agent-notes: { ctx: "Checkout details logger API route", deps: ["lib/supabaseAdmin.ts"], state: active, last: "sato@2026-08-13" }
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
 
@@ -29,6 +30,7 @@ export async function POST(req: Request) {
       cart_items,
       total_amount,
       razorpay_order_id,
+      usd_ppp,
     } = body;
 
     // Validate required fields
@@ -51,6 +53,7 @@ export async function POST(req: Request) {
         total_amount: Number(total_amount) || 0,
         status: 'initiated',
         razorpay_order_id: razorpay_order_id || null,
+        usd_ppp: usd_ppp || null,
       })
       .select('id')
       .single();

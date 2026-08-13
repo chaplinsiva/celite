@@ -1,4 +1,5 @@
 'use client';
+// agent-notes: { ctx: "Pricing page content renderer", deps: ["lib/supabaseClient.ts", "lib/currency.ts", "lib/priceUtils.ts"], state: active, last: "sato@2026-08-13" }
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -68,15 +69,25 @@ export default function PricingContent() {
     );
   }
 
-  const features = [
+  const monthlyFeatures = [
     "Unlimited After Effects Templates",
     "Premium Stock Music & SFX",
     "High-Quality Stock Images",
     "Professional 3D Models",
-    "Unlimited Downloads",
+    "Standard Commercial License",
     "Full Source File Access",
-    "Commercial License",
-    "Priority Support"
+    "Standard Support"
+  ];
+
+  const yearlyFeatures = [
+    "Unlimited After Effects Templates",
+    "Premium Stock Music & SFX",
+    "High-Quality Stock Images",
+    "Professional 3D Models",
+    "Extended Commercial License",
+    "Exclusive Free Asset Bundles",
+    "Full Source File Access",
+    "Priority 24/7 Dedicated Support"
   ];
 
   return (
@@ -158,7 +169,7 @@ export default function PricingContent() {
                 </Link>
 
                 <ul className="space-y-2 sm:space-y-3">
-                  {features.map((feature, index) => (
+                  {monthlyFeatures.map((feature, index) => (
                     <li key={index} className="flex items-start gap-2 sm:gap-3 text-zinc-700">
                       <Check className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                       <span className="text-xs sm:text-sm">{feature}</span>
@@ -205,7 +216,7 @@ export default function PricingContent() {
                 </Link>
 
                 <ul className="space-y-2 sm:space-y-3">
-                  {features.map((feature, index) => (
+                  {yearlyFeatures.map((feature, index) => (
                     <li key={index} className="flex items-start gap-2 sm:gap-3 text-zinc-700">
                       <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0 mt-0.5" />
                       <span className="text-xs sm:text-sm">{feature}</span>

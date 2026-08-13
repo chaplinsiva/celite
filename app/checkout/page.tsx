@@ -1,4 +1,5 @@
 "use client";
+// agent-notes: { ctx: "Checkout page frontend logic", deps: ["context/AppContext.tsx", "lib/supabaseClient.ts", "lib/currency.ts", "lib/priceUtils.ts"], state: active, last: "sato@2026-08-13" }
 
 declare global {
   interface Window {
@@ -53,7 +54,7 @@ function CheckoutContent() {
       setSubscriptionPlan(subscriptionType);
       // Load subscription price from database
       const loadSubscriptionPrice = async () => {
-        const { paiseToINR, centsToDollars } = await import('../../lib/priceUtils');
+        const { paiseToINR } = await import('../../lib/priceUtils');
         const supabase = getSupabaseBrowserClient();
         const { data: settings } = await supabase.from('settings').select('key,value');
         const settingsMap: Record<string, string> = {};
@@ -65,17 +66,7 @@ function CheckoutContent() {
           return;
         }
 
-        // For USD, use USD amounts if available
-        if (currency === 'USD') {
-          const usdKey = subscriptionType === 'monthly' ? 'RAZORPAY_MONTHLY_AMOUNT_USD' : 'RAZORPAY_YEARLY_AMOUNT_USD';
-          const usdCents = settingsMap[usdKey];
-          if (usdCents) {
-            setSubscriptionPrice(centsToDollars(Number(usdCents)));
-            return;
-          }
-        }
-
-        // INR pricing (default)
+        // Retrieve INR price first to apply PPP formula
         let amountPaise = 0;
         if (subscriptionType === 'monthly') {
           const monthlyAmount = settingsMap.RAZORPAY_MONTHLY_AMOUNT;
@@ -87,7 +78,15 @@ function CheckoutContent() {
           amountPaise = Number(yearlyAmount);
         }
 
-        setSubscriptionPrice(paiseToINR(amountPaise));
+        const inrRupees = paiseToINR(amountPaise);
+
+        if (currency === 'USD') {
+          // Dynamic USD_PPP calculation based on formula: USD_PPP = INR * 0.033
+          const usdPpp = inrRupees * 0.033;
+          setSubscriptionPrice(usdPpp);
+        } else {
+          setSubscriptionPrice(inrRupees);
+        }
       };
       loadSubscriptionPrice();
     }
@@ -273,6 +272,7 @@ function CheckoutContent() {
               img: item.img,
             })),
             total_amount: subtotal,
+            usd_ppp: subscriptionPlan && currency === 'USD' ? subtotal : null,
           }),
         });
 
@@ -954,10 +954,19 @@ function CheckoutContent() {
                         <span className="text-sm text-zinc-600">Unlimited downloads</span>
                       </div>
                       <div className="flex items-start gap-2">
-                        <span className="text-sm text-zinc-600">New templates weekly</span>
+                        <span className="text-sm text-zinc-600">
+                          {subscriptionPlan === 'yearly' ? 'Extended Commercial License' : 'Standard Commercial License'}
+                        </span>
                       </div>
+                      {subscriptionPlan === 'yearly' && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-sm text-zinc-600">Exclusive Free Asset Bundles</span>
+                        </div>
+                      )}
                       <div className="flex items-start gap-2">
-                        <span className="text-sm text-zinc-600">Priority support</span>
+                        <span className="text-sm text-zinc-600">
+                          {subscriptionPlan === 'yearly' ? 'Priority 24/7 dedicated support' : 'Standard support'}
+                        </span>
                       </div>
                     </>
                   )}
