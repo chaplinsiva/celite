@@ -216,6 +216,33 @@ export async function POST(req: Request) {
 
           console.log(`${isRenewal ? 'Renewing' : 'Activating'} subscription for user: ${targetUserId}, plan: ${finalPlan}`);
 
+          // Compute or retrieve usd_ppp
+          const usdPppFromNotes =
+            subscriptionEntity?.notes?.usd_ppp ||
+            invoiceEntity?.notes?.usd_ppp ||
+            paymentEntity?.notes?.usd_ppp ||
+            null;
+          
+          let finalUsdPpp: number | null = usdPppFromNotes ? Number(usdPppFromNotes) : null;
+
+          // Fallback dynamic calculation if currency is USD
+          const paymentCurrency = paymentEntity?.currency || invoiceEntity?.currency || subscriptionEntity?.currency || null;
+          if (!finalUsdPpp && paymentCurrency === 'USD') {
+            try {
+              const { data: settings } = await admin.from('settings').select('key,value');
+              const settingsMap: Record<string, string> = {};
+              (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
+              
+              const amountPaise = finalPlan === 'yearly'
+                ? Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900')
+                : Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '79900');
+              
+              finalUsdPpp = (amountPaise / 100) * 0.033;
+            } catch (e) {
+              console.error('Failed to compute fallback USD PPP in webhook:', e);
+            }
+          }
+
           // Note: User subscription status is tracked in the subscriptions table.
           // No separate users table update needed.
 
@@ -265,6 +292,7 @@ export async function POST(req: Request) {
                   valid_until: validUntil.toISOString(),
                   razorpay_subscription_id: razorpaySubscriptionId || existingSub.razorpay_subscription_id,
                   autopay_enabled: true,
+                  usd_ppp: finalUsdPpp || existingSub.usd_ppp,
                   updated_at: new Date().toISOString(), // Update timestamp when autopay renews
                 });
 
@@ -290,6 +318,7 @@ export async function POST(req: Request) {
                 valid_until: validUntil.toISOString(),
                 razorpay_subscription_id: razorpaySubscriptionId,
                 autopay_enabled: true,
+                usd_ppp: finalUsdPpp,
                 updated_at: new Date().toISOString(),
               });
             console.log(`Created new subscription for user ${targetUserId} with plan: ${finalPlan}`);
@@ -301,7 +330,11 @@ export async function POST(req: Request) {
             const billingEmail = invoiceEntity?.customer_email || paymentEntity?.email || paymentEntity?.notes?.billing_email || subscriptionEntity?.notes?.billing_email || 'No Email';
             const billingMobile = invoiceEntity?.customer_contact || paymentEntity?.contact || paymentEntity?.notes?.billing_mobile || subscriptionEntity?.notes?.billing_mobile || '';
             const amountPaise = paymentEntity?.amount || invoiceEntity?.amount_paid || invoiceEntity?.amount || 0;
-            const amountRupees = amountPaise > 0 ? amountPaise / 100 : (finalPlan === 'yearly' ? 59 : 499);
+            const amountRupees = amountPaise > 0 
+              ? amountPaise / 100 
+              : (paymentCurrency === 'USD' 
+                ? (finalUsdPpp || 0) 
+                : (finalPlan === 'yearly' ? 5499 : 799));
             const paymentId = paymentEntity?.id || null;
 
             // 1. Try to find checkout record by subscription ID
@@ -309,7 +342,7 @@ export async function POST(req: Request) {
             if (razorpaySubscriptionId) {
               const { data } = await admin
                 .from('checkout_details')
-                .select('id, status')
+                .select('id, status, usd_ppp')
                 .eq('razorpay_subscription_id', razorpaySubscriptionId)
                 .maybeSingle();
               checkoutRecord = data;
@@ -319,7 +352,7 @@ export async function POST(req: Request) {
             if (!checkoutRecord && targetUserId) {
               const { data } = await admin
                 .from('checkout_details')
-                .select('id, status')
+                .select('id, status, usd_ppp')
                 .eq('user_id', targetUserId)
                 .eq('subscription_plan', finalPlan)
                 .in('status', ['initiated', 'failed'])
@@ -336,6 +369,7 @@ export async function POST(req: Request) {
                   status: 'completed',
                   razorpay_subscription_id: razorpaySubscriptionId,
                   razorpay_payment_id: paymentId,
+                  usd_ppp: finalUsdPpp || checkoutRecord.usd_ppp,
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', checkoutRecord.id);
@@ -350,6 +384,7 @@ export async function POST(req: Request) {
                   checkout_type: 'subscription',
                   subscription_plan: finalPlan,
                   total_amount: amountRupees,
+                  usd_ppp: finalUsdPpp,
                   razorpay_subscription_id: razorpaySubscriptionId,
                   razorpay_payment_id: paymentId,
                   billing_name: billingName,

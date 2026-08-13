@@ -18,8 +18,12 @@ async function getOrCreatePlan(
   if (storedPlanId) {
     // Verify the plan still exists on Razorpay
     try {
-      await razorpayRequest(`/plans/${storedPlanId}`);
-      return storedPlanId;
+      const rzPlan = await razorpayRequest(`/plans/${storedPlanId}`);
+      // Verify that both the plan's amount and currency match the requested configuration
+      if (rzPlan.item.amount === planConfig.amount && rzPlan.item.currency === planConfig.currency) {
+        return storedPlanId;
+      }
+      console.log(`Stored plan ${storedPlanId} config mismatch (amount: ${rzPlan.item.amount} vs ${planConfig.amount}, currency: ${rzPlan.item.currency} vs ${planConfig.currency}), creating new one`);
     } catch {
       // Plan doesn't exist anymore, create a new one
       console.log(`Stored plan ${storedPlanId} not found on Razorpay, creating new one`);
@@ -240,15 +244,26 @@ export async function POST(req: Request) {
       }
     }
     
-    const { key_id, currency, monthly_amount, yearly_amount, monthly_amount_usd, yearly_amount_usd } = await getRazorpayCreds();
+    const { key_id, currency, monthly_amount, yearly_amount } = await getRazorpayCreds();
     
     const isYearly = plan === 'yearly';
     const isUSD = reqCurrency === 'USD';
     
+    // Get base INR amount in Rupees
+    const inrPaise = isYearly ? yearly_amount : monthly_amount;
+    const inrRupees = inrPaise / 100;
+    
     // Select amount and currency based on request
-    const amount = isUSD 
-      ? (isYearly ? yearly_amount_usd : monthly_amount_usd)
-      : (isYearly ? yearly_amount : monthly_amount);
+    let amount = 0;
+    let usdPpp: number | null = null;
+    
+    if (isUSD) {
+      usdPpp = inrRupees * 0.033;
+      amount = Math.round(usdPpp * 100); // USD amount in cents
+    } else {
+      amount = inrPaise; // INR amount in paise
+    }
+    
     const planCurrency = isUSD ? 'USD' : currency;
     const period = isYearly ? 'yearly' : 'monthly';
     
@@ -309,6 +324,10 @@ export async function POST(req: Request) {
         plan: plan, // Critical: include plan so webhook can correctly identify yearly vs monthly
       },
     };
+
+    if (isUSD && usdPpp !== null) {
+      subscriptionBody.notes.usd_ppp = usdPpp.toFixed(2);
+    }
     
     // Add customer details to notes
     if (userEmail) subscriptionBody.notes.customer_email = userEmail;
