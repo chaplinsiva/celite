@@ -1,3 +1,4 @@
+// agent-notes: { ctx: "Admin sidebar component containing navigation tabs", deps: [], state: active, last: "sato@2026-08-13" }
 "use client";
 
 type TabKey =
@@ -8,6 +9,7 @@ type TabKey =
   | 'vendorApproval'
   | 'categories'
   | 'analytics'
+  | 'vendorAnalytics'
   | 'subscriptionLog'
   | 'freeGifts'
   | 'specialOffer'
@@ -27,6 +29,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'vendorApproval', label: 'Vendor Approval' },
   { key: 'categories', label: 'Categories' },
   { key: 'analytics', label: 'Analytics' },
+  { key: 'vendorAnalytics', label: '📊 Vendor Analytics' },
   { key: 'subscriptionLog', label: 'Subscription Log' },
   { key: 'freeGifts', label: 'Free Gift Analytics' },
   { key: 'specialOffer', label: '3rd Anniversary Offer' },
