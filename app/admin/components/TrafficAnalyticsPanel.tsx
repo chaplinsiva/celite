@@ -532,11 +532,13 @@ export default function TrafficAnalyticsPanel() {
                       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
                       fontSize: '12px',
                     }}
-                    formatter={(value: number | string | undefined, name: number | string | undefined) => [
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    formatter={(value: any, name: any) => [
                       `${value ?? 0} visitors`,
                       String(name ?? ''),
                     ]}
-                    labelFormatter={(label, payload) => (payload?.[0]?.payload as { fullName?: string })?.fullName || String(label)}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    labelFormatter={(label: any, payload: any) => payload?.[0]?.payload?.fullName || String(label)}
                   />
                   <Legend verticalAlign="top" wrapperStyle={{ fontSize: '12px', paddingBottom: '16px' }} />
                   <Bar dataKey="First Touch (Acquisition)" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={32} />
@@ -583,9 +585,10 @@ export default function TrafficAnalyticsPanel() {
                         border: '1px solid #e2e8f0',
                         fontSize: '12px',
                       }}
-                      formatter={(val: number | string | undefined, _name: number | string | undefined, item: { payload?: { percentage?: number; name?: string } }) => [
-                        `${val ?? 0} visitors (${item.payload?.percentage ?? 0}%)`,
-                        item.payload?.name ?? '',
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      formatter={(val: any, _name: any, item: any) => [
+                        `${val ?? 0} visitors (${item?.payload?.percentage ?? 0}%)`,
+                        item?.payload?.name ?? '',
                       ]}
                     />
                   </PieChart>
