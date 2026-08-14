@@ -1,7 +1,7 @@
-// agent-notes: { ctx: "Admin client main coordinator managing tabs and rendering sub-panels", deps: ["app/admin/components/AdminSidebar.tsx", "app/admin/components/VendorAnalyticsPanel.tsx"], state: active, last: "sato@2026-08-13" }
+// agent-notes: { ctx: "Admin client main coordinator managing tabs and rendering sub-panels", deps: ["app/admin/components/AdminSidebar.tsx", "app/admin/components/TrafficAnalyticsPanel.tsx", "app/admin/components/VendorAnalyticsPanel.tsx"], state: active, last: "sato@2026-08-14" }
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
@@ -23,6 +23,7 @@ import SubscriptionApprovalPanel from './components/SubscriptionApprovalPanel';
 import AdminPayoutPanel from './components/AdminPayoutPanel';
 import VendorAnalyticsPanel from './components/VendorAnalyticsPanel';
 import AttributionAnalyticsPanel from './components/AttributionAnalyticsPanel';
+import TrafficAnalyticsPanel from './components/TrafficAnalyticsPanel';
 
 type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null; video_path?: string | null; thumbnail_path?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null; category_id?: string | null; subcategory_id?: string | null; sub_subcategory_id?: string | null };
 
@@ -41,7 +42,7 @@ export default function AdminClient() {
     celiteAmount?: number;
   } | null>(null);
   const [active, setActive] = useState<
-    'overview' | 'payouts' | 'products' | 'subscriptionApproval' | 'vendorApproval' | 'categories' | 'analytics' | 'attributionAnalytics' | 'vendorAnalytics' | 'subscriptionLog' | 'freeGifts' | 'specialOffer' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx'
+    'overview' | 'payouts' | 'products' | 'subscriptionApproval' | 'vendorApproval' | 'categories' | 'analytics' | 'trafficAnalytics' | 'attributionAnalytics' | 'vendorAnalytics' | 'subscriptionLog' | 'freeGifts' | 'specialOffer' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx'
   >('overview');
 
 
@@ -52,7 +53,7 @@ export default function AdminClient() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.replace('/'); return; }
       // check admins table
-      const { data } = await supabase.from('admins').select('user_id').eq('user_id', (session.user as any).id).maybeSingle();
+      const { data } = await supabase.from('admins').select('user_id').eq('user_id', session.user.id).maybeSingle();
       if (!data) { router.replace('/'); return; }
       setIsAdmin(true);
       await loadStats();
@@ -89,7 +90,7 @@ export default function AdminClient() {
       setTemplatesLoading(true);
       const supabase = getSupabaseBrowserClient();
       const { data } = await supabase.from('templates').select('slug,name,img,video,video_path,thumbnail_path,vendor_name,creator_shop_id,status,category_id,subcategory_id,sub_subcategory_id').order('created_at', { ascending: false });
-      setTemplates((data as any) ?? []);
+      setTemplates((data as unknown as TemplateRow[]) ?? []);
     } catch (e) {
       console.error('Failed to refresh templates:', e);
     } finally {
@@ -153,6 +154,7 @@ export default function AdminClient() {
             {active === 'categories' && (<CategoriesPanel />)}
 
             {active === 'analytics' && (<AnalyticsPanel />)}
+            {active === 'trafficAnalytics' && (<TrafficAnalyticsPanel />)}
             {active === 'attributionAnalytics' && (<AttributionAnalyticsPanel />)}
             {active === 'vendorAnalytics' && (<VendorAnalyticsPanel />)}
             {active === 'subscriptionLog' && (<SubscriptionLogPanel />)}
