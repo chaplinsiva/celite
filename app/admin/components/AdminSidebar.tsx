@@ -9,6 +9,7 @@ type TabKey =
   | 'vendorApproval'
   | 'categories'
   | 'analytics'
+  | 'attributionAnalytics'
   | 'vendorAnalytics'
   | 'subscriptionLog'
   | 'freeGifts'
@@ -29,6 +30,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'vendorApproval', label: 'Vendor Approval' },
   { key: 'categories', label: 'Categories' },
   { key: 'analytics', label: 'Analytics' },
+  { key: 'attributionAnalytics', label: '🎯 Attribution Analytics' },
   { key: 'vendorAnalytics', label: '📊 Vendor Analytics' },
   { key: 'subscriptionLog', label: 'Subscription Log' },
   { key: 'freeGifts', label: 'Free Gift Analytics' },

@@ -1,0 +1,10 @@
+.next
+node_modules
+coverage
+build
+dist
+out
+*.sql
+*.log
+package-lock.json
+tsconfig.tsbuildinfo

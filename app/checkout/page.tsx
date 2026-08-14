@@ -14,6 +14,7 @@ import { useAppContext } from "../../context/AppContext";
 import { getSupabaseBrowserClient } from "../../lib/supabaseClient";
 import { formatPriceWithDecimal, type Currency } from "../../lib/currency";
 import { trackBeginCheckout, trackPurchase, trackSubscribe } from "../../lib/gtag";
+import { getStoredAttribution } from "../../lib/attribution";
 import LoadingSpinner from "../../components/ui/loading-spinner";
 import { GlowingEffect } from "../../components/ui/glowing-effect";
 import { CountryCodeSelect } from "../../components/ui/CountryCodeSelect";
@@ -273,6 +274,7 @@ function CheckoutContent() {
             })),
             total_amount: subtotal,
             usd_ppp: subscriptionPlan && currency === 'USD' ? subtotal : null,
+            attribution: getStoredAttribution(),
           }),
         });
 

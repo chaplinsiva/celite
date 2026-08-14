@@ -362,6 +362,8 @@ export async function POST(req: Request) {
               checkoutRecord = data;
             }
 
+            let finalCheckoutDetailId = checkoutRecord?.id || null;
+
             if (checkoutRecord) {
               await admin
                 .from('checkout_details')
@@ -376,7 +378,7 @@ export async function POST(req: Request) {
               console.log(`Updated checkout ${checkoutRecord.id} status to completed via webhook`);
             } else if (targetUserId) {
               // Create a completed checkout record so revenue registers in analytics
-              const { error: insertErr } = await admin
+              const { data: newCheckout, error: insertErr } = await admin
                 .from('checkout_details')
                 .insert({
                   user_id: targetUserId,
@@ -392,11 +394,73 @@ export async function POST(req: Request) {
                   billing_mobile: billingMobile,
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString(),
-                });
+                })
+                .select('id')
+                .single();
               if (insertErr) {
                 console.error('Failed to auto-create completed checkout record:', insertErr);
               } else {
+                finalCheckoutDetailId = newCheckout?.id || null;
                 console.log(`Auto-created completed checkout record for user ${targetUserId} (${finalPlan}) via webhook`);
+              }
+            }
+
+            // --- RECORD IMMUTABLE SUBSCRIPTION ATTRIBUTION SNAPSHOT ---
+            if (targetUserId && finalCheckoutDetailId) {
+              try {
+                // Check if snapshot already recorded for this checkout detail
+                const { data: existingSnapshot } = await admin
+                  .from('subscription_attributions')
+                  .select('id')
+                  .eq('checkout_detail_id', finalCheckoutDetailId)
+                  .maybeSingle();
+
+                if (!existingSnapshot) {
+                  // Fetch visitor attribution journey for the user
+                  const { data: visitorAttr } = await admin
+                    .from('visitor_attributions')
+                    .select('*')
+                    .eq('user_id', targetUserId)
+                    .maybeSingle();
+
+                  await admin
+                    .from('subscription_attributions')
+                    .insert({
+                      checkout_detail_id: finalCheckoutDetailId,
+                      user_id: targetUserId,
+                      razorpay_subscription_id: razorpaySubscriptionId,
+                      subscription_plan: finalPlan,
+                      amount: amountRupees,
+                      currency: paymentCurrency || 'INR',
+
+                      // First touch snapshot
+                      first_source: visitorAttr?.first_source || 'Direct',
+                      first_medium: visitorAttr?.first_medium || null,
+                      first_campaign: visitorAttr?.first_campaign || null,
+                      first_content: visitorAttr?.first_content || null,
+                      first_term: visitorAttr?.first_term || null,
+                      first_landing_page: visitorAttr?.first_landing_page || '/',
+                      first_referrer: visitorAttr?.first_referrer || null,
+                      first_product_viewed: visitorAttr?.first_product_viewed || null,
+                      first_visit_at: visitorAttr?.first_visit_at || null,
+
+                      // Last touch snapshot
+                      last_source: visitorAttr?.last_source || visitorAttr?.first_source || 'Direct',
+                      last_medium: visitorAttr?.last_medium || visitorAttr?.first_medium || null,
+                      last_campaign: visitorAttr?.last_campaign || visitorAttr?.first_campaign || null,
+                      last_content: visitorAttr?.last_content || visitorAttr?.first_content || null,
+                      last_term: visitorAttr?.last_term || visitorAttr?.first_term || null,
+                      last_landing_page: visitorAttr?.last_landing_page || visitorAttr?.first_landing_page || '/',
+                      last_referrer: visitorAttr?.last_referrer || visitorAttr?.first_referrer || null,
+                      last_product_viewed: visitorAttr?.last_product_viewed || visitorAttr?.first_product_viewed || null,
+                      last_visit_at: visitorAttr?.last_visit_at || null,
+
+                      created_at: new Date().toISOString(),
+                    });
+                  console.log(`Saved immutable subscription attribution snapshot for checkout ${finalCheckoutDetailId}`);
+                }
+              } catch (snapshotErr) {
+                console.error('Error saving subscription attribution snapshot:', snapshotErr);
               }
             }
           } catch (checkoutErr) {

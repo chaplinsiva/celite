@@ -31,6 +31,7 @@ export async function POST(req: Request) {
       total_amount,
       razorpay_order_id,
       usd_ppp,
+      attribution,
     } = body;
 
     // Validate required fields
@@ -60,6 +61,61 @@ export async function POST(req: Request) {
 
     if (insertErr) {
       return NextResponse.json({ ok: false, error: insertErr.message }, { status: 500 });
+    }
+
+    // If attribution data was provided, sync visitor_attributions in background
+    if (attribution && attribution.firstTouch) {
+      try {
+        const { firstTouch, lastTouch, anonymousId } = attribution;
+        const { data: existingAttr } = await admin
+          .from('visitor_attributions')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (!existingAttr) {
+          await admin.from('visitor_attributions').insert({
+            user_id: userId,
+            anonymous_id: anonymousId || null,
+            first_source: firstTouch.source || 'Direct',
+            first_medium: firstTouch.medium || null,
+            first_campaign: firstTouch.campaign || null,
+            first_content: firstTouch.content || null,
+            first_term: firstTouch.term || null,
+            first_landing_page: firstTouch.landingPage || '/',
+            first_referrer: firstTouch.referrer || null,
+            first_product_viewed: firstTouch.productViewed || null,
+            first_visit_at: firstTouch.timestamp || new Date().toISOString(),
+            last_source: lastTouch?.source || firstTouch.source || 'Direct',
+            last_medium: lastTouch?.medium || firstTouch.medium || null,
+            last_campaign: lastTouch?.campaign || firstTouch.campaign || null,
+            last_content: lastTouch?.content || firstTouch.content || null,
+            last_term: lastTouch?.term || firstTouch.term || null,
+            last_landing_page: lastTouch?.landingPage || firstTouch.landingPage || '/',
+            last_referrer: lastTouch?.referrer || firstTouch.referrer || null,
+            last_product_viewed: lastTouch?.productViewed || firstTouch.productViewed || null,
+            last_visit_at: lastTouch?.timestamp || new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        } else {
+          await admin.from('visitor_attributions').update({
+            ...(anonymousId ? { anonymous_id: anonymousId } : {}),
+            last_source: lastTouch?.source || 'Direct',
+            last_medium: lastTouch?.medium || null,
+            last_campaign: lastTouch?.campaign || null,
+            last_content: lastTouch?.content || null,
+            last_term: lastTouch?.term || null,
+            last_landing_page: lastTouch?.landingPage || '/',
+            last_referrer: lastTouch?.referrer || null,
+            last_product_viewed: lastTouch?.productViewed || null,
+            last_visit_at: lastTouch?.timestamp || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }).eq('user_id', userId);
+        }
+      } catch (attrErr) {
+        console.warn('Non-blocking error syncing attribution during checkout:', attrErr);
+      }
     }
 
     return NextResponse.json({ ok: true, checkout_detail_id: checkoutDetail.id });
