@@ -19,7 +19,6 @@ import BulkSfxPanel from './components/BulkSfxPanel';
 import FreeGiftsPanel from './components/FreeGiftsPanel';
 import SpecialOfferPanel from './components/SpecialOfferPanel';
 import ProductAlertsPanel from './components/ProductAlertsPanel';
-import MediaCompressorPanel from './components/MediaCompressorPanel';
 import SubscriptionApprovalPanel from './components/SubscriptionApprovalPanel';
 import AdminPayoutPanel from './components/AdminPayoutPanel';
 import VendorAnalyticsPanel from './components/VendorAnalyticsPanel';
@@ -42,7 +41,7 @@ export default function AdminClient() {
     celiteAmount?: number;
   } | null>(null);
   const [active, setActive] = useState<
-    'overview' | 'payouts' | 'products' | 'subscriptionApproval' | 'vendorApproval' | 'categories' | 'analytics' | 'attributionAnalytics' | 'vendorAnalytics' | 'subscriptionLog' | 'freeGifts' | 'specialOffer' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx' | 'mediaCompressor'
+    'overview' | 'payouts' | 'products' | 'subscriptionApproval' | 'vendorApproval' | 'categories' | 'analytics' | 'attributionAnalytics' | 'vendorAnalytics' | 'subscriptionLog' | 'freeGifts' | 'specialOffer' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx'
   >('overview');
 
 
@@ -164,7 +163,6 @@ export default function AdminClient() {
             {active === 'marketing' && (<MarketingPanel />)}
             {active === 'productAlerts' && (<ProductAlertsPanel />)}
             {active === 'bulkSfx' && (<BulkSfxPanel />)}
-            {active === 'mediaCompressor' && (<MediaCompressorPanel />)}
             {active === 'settings' && (<SettingsPanel />)}
           </section>
 
