@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Script from "next/script";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import LayoutWrapper from "../components/LayoutWrapper";
 import GoogleAnalytics from "../components/GoogleAnalytics";
+import AttributionTracker from "../components/AttributionTracker";
 import { AppProvider } from "../context/AppContext";
 import { LoginModalProvider } from "../context/LoginModalContext";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -283,6 +285,9 @@ export default function RootLayout({
         />
         <AppProvider>
           <LoginModalProvider>
+            <Suspense fallback={null}>
+              <AttributionTracker />
+            </Suspense>
             <GoogleAnalytics />
             <SpeedInsights />
             <Analytics />

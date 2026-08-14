@@ -1,7 +1,28 @@
+// agent-notes: { ctx: "Admin subscription log panel with attribution source badges and journey inspection", deps: ["lib/supabaseClient.ts"], state: active, last: "sato@2026-08-14" }
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
+
+type AttributionInfo = {
+  first_source: string | null;
+  first_medium: string | null;
+  first_campaign: string | null;
+  first_content: string | null;
+  first_landing_page: string | null;
+  first_referrer: string | null;
+  first_product_viewed: string | null;
+  first_visit_at: string | null;
+  last_source: string | null;
+  last_medium: string | null;
+  last_campaign: string | null;
+  last_content: string | null;
+  last_landing_page: string | null;
+  last_referrer: string | null;
+  last_product_viewed: string | null;
+  last_visit_at: string | null;
+  is_snapshot?: boolean;
+};
 
 type CheckoutRow = {
   id: string;
@@ -17,6 +38,7 @@ type CheckoutRow = {
   razorpay_payment_id: string | null;
   created_at: string;
   updated_at: string;
+  attribution?: AttributionInfo | null;
 };
 
 type StatusType = 'completed' | 'initiated' | 'failed';
@@ -50,21 +72,74 @@ function formatDateTime(dateStr: string): string {
 }
 
 const STATUS_CONFIG: Record<StatusType, { label: string; bg: string; text: string; border: string; icon: string }> = {
-  completed: { label: 'Completed', bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', icon: '✓' },
+  completed: { label: 'Completed', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', icon: '✓' },
   initiated: { label: 'Initiated', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: '◌' },
   failed: { label: 'Failed', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', icon: '✕' },
 };
 
+function getSourceBadge(sourceName?: string | null) {
+  if (!sourceName) return { bg: 'bg-zinc-100', text: 'text-zinc-500', border: 'border-zinc-200', label: 'Unknown' };
+  const s = sourceName.toLowerCase();
+  if (s.includes('instagram paid')) {
+    return { bg: 'bg-gradient-to-r from-pink-500/10 to-rose-500/10', text: 'text-pink-700 font-semibold', border: 'border-pink-300', label: '📸 IG Paid' };
+  }
+  if (s.includes('instagram')) {
+    return { bg: 'bg-fuchsia-50', text: 'text-fuchsia-700', border: 'border-fuchsia-200', label: '📷 IG Organic' };
+  }
+  if (s.includes('facebook paid')) {
+    return { bg: 'bg-blue-100', text: 'text-blue-800 font-semibold', border: 'border-blue-300', label: '📘 FB Paid' };
+  }
+  if (s.includes('facebook')) {
+    return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', label: '👥 FB Organic' };
+  }
+  if (s.includes('google ads')) {
+    return { bg: 'bg-amber-50', text: 'text-amber-800 font-semibold', border: 'border-amber-300', label: '🔍 Google Ads' };
+  }
+  if (s.includes('google')) {
+    return { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200', label: '🌐 Google' };
+  }
+  if (s.includes('youtube')) {
+    return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', label: '▶ YouTube' };
+  }
+  if (s.includes('ai') || s.includes('chatgpt')) {
+    return { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200', label: '🤖 AI / ChatGPT' };
+  }
+  if (s.includes('referral')) {
+    return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', label: '🔗 Referral' };
+  }
+  if (s.includes('direct')) {
+    return { bg: 'bg-zinc-100', text: 'text-zinc-600', border: 'border-zinc-200', label: '⚡ Direct' };
+  }
+  return { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', label: sourceName };
+}
+
 const FILTER_TABS = ['all', 'completed', 'initiated', 'failed'] as const;
 type FilterTab = typeof FILTER_TABS[number];
+
+const ALL_SOURCES = [
+  'All Sources',
+  'Instagram Paid',
+  'Instagram Organic',
+  'Facebook Paid',
+  'Facebook Organic',
+  'Google Ads',
+  'Google Organic',
+  'YouTube',
+  'Direct',
+  'Referral',
+  'ChatGPT / AI',
+  'Other',
+];
 
 export default function SubscriptionLogPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [checkouts, setCheckouts] = useState<CheckoutRow[]>([]);
   const [filter, setFilter] = useState<FilterTab>('all');
+  const [sourceFilter, setSourceFilter] = useState<string>('All Sources');
   const [search, setSearch] = useState('');
   const [logPage, setLogPage] = useState(1);
+  const [selectedCheckout, setSelectedCheckout] = useState<CheckoutRow | null>(null);
   const logsPerPage = 20;
 
   useEffect(() => {
@@ -91,10 +166,18 @@ export default function SubscriptionLogPanel() {
   }, []);
 
   const filteredCheckouts = useMemo(() => {
-    let list = [...checkouts]; // already sorted latest first from API
+    let list = [...checkouts];
 
     if (filter !== 'all') {
       list = list.filter(s => getStatus(s) === filter);
+    }
+
+    if (sourceFilter !== 'All Sources') {
+      list = list.filter(s => {
+        const first = s.attribution?.first_source;
+        const last = s.attribution?.last_source;
+        return first === sourceFilter || last === sourceFilter;
+      });
     }
 
     if (search.trim()) {
@@ -102,17 +185,20 @@ export default function SubscriptionLogPanel() {
       list = list.filter(s =>
         (s.billing_email || '').toLowerCase().includes(q) ||
         (s.billing_name || '').toLowerCase().includes(q) ||
-        (s.billing_mobile || '').includes(q)
+        (s.billing_mobile || '').includes(q) ||
+        (s.attribution?.first_campaign || '').toLowerCase().includes(q) ||
+        (s.attribution?.first_product_viewed || '').toLowerCase().includes(q) ||
+        (s.attribution?.first_source || '').toLowerCase().includes(q)
       );
     }
 
     return list;
-  }, [checkouts, filter, search]);
+  }, [checkouts, filter, sourceFilter, search]);
 
-  // Reset page when filters/search change
+  // Reset page when filters change
   useEffect(() => {
     setLogPage(1);
-  }, [filter, search]);
+  }, [filter, sourceFilter, search]);
 
   const totalLogPages = Math.ceil(filteredCheckouts.length / logsPerPage);
   const paginatedCheckouts = filteredCheckouts.slice(
@@ -126,46 +212,50 @@ export default function SubscriptionLogPanel() {
     return c;
   }, [checkouts]);
 
-  // Revenue from completed checkouts
   const totalRevenue = useMemo(() => {
     return checkouts
       .filter(c => c.status === 'completed')
       .reduce((sum, c) => sum + Number(c.total_amount || 0), 0);
   }, [checkouts]);
 
-  if (loading) return <div className="text-center py-8 text-zinc-500">Loading subscription log…</div>;
+  if (loading) return <div className="text-center py-12 text-zinc-500 font-medium">Loading subscription log with attribution…</div>;
   if (error) return <div className="text-sm text-red-500 py-8 text-center">{error}</div>;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-zinc-900">Subscription Log</h2>
-        <p className="text-sm text-zinc-500 mt-1">Real-time checkout activity from checkout_details</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h2 className="text-xl font-bold text-zinc-900 flex items-center gap-2">
+            Subscription Log <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-semibold">Attribution Enabled</span>
+          </h2>
+          <p className="text-sm text-zinc-500 mt-0.5">Real-time checkout journeys with first-touch & last-touch origin tracking</p>
+        </div>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center">
-          <div className="text-2xl font-bold text-green-700">{counts.completed}</div>
-          <div className="text-[11px] font-medium text-green-600 mt-1">Completed</div>
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 text-center">
+          <div className="text-2xl font-bold text-emerald-700">{counts.completed}</div>
+          <div className="text-[11px] font-medium text-emerald-600 mt-1">Completed</div>
         </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center">
+        <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-center">
           <div className="text-2xl font-bold text-amber-700">{counts.initiated}</div>
           <div className="text-[11px] font-medium text-amber-600 mt-1">Initiated</div>
         </div>
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-center">
+        <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 text-center">
           <div className="text-2xl font-bold text-red-700">{counts.failed}</div>
           <div className="text-[11px] font-medium text-red-600 mt-1">Failed</div>
         </div>
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-center">
+        <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 text-center">
           <div className="text-2xl font-bold text-blue-700">₹{totalRevenue.toLocaleString('en-IN')}</div>
-          <div className="text-[11px] font-medium text-blue-600 mt-1">Revenue</div>
+          <div className="text-[11px] font-medium text-blue-600 mt-1">Total Revenue</div>
         </div>
       </div>
 
       {/* Filters + Search */}
       <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Status filter tabs */}
           <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-1">
             {FILTER_TABS.map(tab => (
               <button
@@ -181,16 +271,29 @@ export default function SubscriptionLogPanel() {
               </button>
             ))}
           </div>
+
+          {/* Source dropdown */}
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200 text-xs font-medium text-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+          >
+            {ALL_SOURCES.map((src) => (
+              <option key={src} value={src}>{src}</option>
+            ))}
+          </select>
+
+          {/* Search box */}
           <div className="ml-auto relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
             </svg>
             <input
               type="text"
-              placeholder="Search name, email, phone..."
+              placeholder="Search user, email, campaign, source..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 rounded-lg bg-zinc-50 border border-zinc-200 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-64"
+              className="pl-9 pr-4 py-2 rounded-lg bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-64"
             />
           </div>
         </div>
@@ -200,7 +303,7 @@ export default function SubscriptionLogPanel() {
       <div className="space-y-2">
         {filteredCheckouts.length === 0 ? (
           <div className="rounded-xl border border-zinc-200 bg-white p-12 text-center text-zinc-400">
-            No checkout events found
+            No checkout events found matching current criteria
           </div>
         ) : (
           paginatedCheckouts.map((c) => {
@@ -208,6 +311,10 @@ export default function SubscriptionLogPanel() {
             const cfg = STATUS_CONFIG[status];
             const name = c.billing_name || 'User';
             const phone = (c.billing_mobile || '').replace(/[^0-9]/g, '');
+            const attr = c.attribution;
+            const firstBadge = getSourceBadge(attr?.first_source);
+            const lastBadge = getSourceBadge(attr?.last_source);
+            const isAssisted = attr?.first_source && attr?.last_source && attr.first_source !== attr.last_source;
 
             const waMsg = status === 'completed'
               ? encodeURIComponent(`Hi ${name}, thank you for subscribing to Celite! If you have any questions or need assistance with your ${c.subscription_plan || ''} plan, feel free to reach out — we're happy to help!`)
@@ -227,63 +334,96 @@ export default function SubscriptionLogPanel() {
             const emUrl = c.billing_email ? `mailto:${c.billing_email}?subject=${emSubject}&body=${emBody}` : '';
 
             return (
-              <div key={c.id} className="rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-3 flex-wrap">
-                  {/* Status badge */}
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold ${cfg.bg} ${cfg.text} border ${cfg.border}`}>
-                    <span>{cfg.icon}</span> {cfg.label}
-                  </span>
+              <div
+                key={c.id}
+                onClick={() => setSelectedCheckout(c)}
+                className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  {/* Left: Status & User */}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold ${cfg.bg} ${cfg.text} border ${cfg.border}`}>
+                      <span>{cfg.icon}</span> {cfg.label}
+                    </span>
 
-                  {/* User info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-zinc-900 truncate">{name}</span>
-                      {c.billing_email && <span className="text-[11px] text-zinc-400 truncate hidden sm:inline">{c.billing_email}</span>}
-                      {c.billing_mobile && <span className="text-[11px] text-zinc-400 hidden lg:inline">{c.billing_mobile}</span>}
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-zinc-900 group-hover:text-blue-600 transition-colors truncate">
+                          {name}
+                        </span>
+                        {c.subscription_plan && (
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${c.subscription_plan === 'yearly' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
+                            {c.subscription_plan.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] text-zinc-400">
+                        {c.billing_email && <span className="truncate max-w-[180px]">{c.billing_email}</span>}
+                        {c.billing_mobile && <span>• {c.billing_mobile}</span>}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Plan badge */}
-                  {c.subscription_plan && (
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${c.subscription_plan === 'yearly' ? 'bg-purple-50 text-purple-700' :
-                      c.subscription_plan === 'monthly' ? 'bg-blue-50 text-blue-700' :
-                      'bg-zinc-100 text-zinc-600'}`}>
-                      {c.subscription_plan.toUpperCase()}
+                  {/* Middle: Attribution Badges */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {attr?.first_source ? (
+                      <div className="flex items-center gap-1.5 text-[11px]">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] ${firstBadge.bg} ${firstBadge.text} ${firstBadge.border}`} title={`First Touch: ${attr.first_source}`}>
+                          1st: {firstBadge.label}
+                        </span>
+
+                        {isAssisted && (
+                          <>
+                            <span className="text-zinc-300">→</span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] ${lastBadge.bg} ${lastBadge.text} ${lastBadge.border}`} title={`Last Touch: ${attr.last_source}`}>
+                              Last: {lastBadge.label}
+                            </span>
+                          </>
+                        )}
+
+                        {attr.first_campaign && (
+                          <span className="hidden md:inline-flex items-center px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 text-[10px] font-mono border border-zinc-200">
+                            📣 {attr.first_campaign}
+                          </span>
+                        )}
+
+                        {attr.first_product_viewed && (
+                          <span className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 text-[10px] font-mono border border-zinc-200 truncate max-w-[140px]" title={attr.first_product_viewed}>
+                            🎬 {attr.first_product_viewed}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-zinc-400 italic">No attribution</span>
+                    )}
+                  </div>
+
+                  {/* Right: Amount, Time, Actions */}
+                  <div className="flex items-center gap-3">
+                    {c.total_amount && (
+                      <span className="text-sm font-bold text-zinc-800">₹{Number(c.total_amount).toLocaleString('en-IN')}</span>
+                    )}
+
+                    <span className="text-[11px] text-zinc-400 whitespace-nowrap" title={new Date(c.created_at).toLocaleString()}>
+                      {formatDateTime(c.created_at)}
                     </span>
-                  )}
 
-                  {/* Amount */}
-                  {c.total_amount && (
-                    <span className="text-xs font-semibold text-zinc-700">₹{Number(c.total_amount).toLocaleString('en-IN')}</span>
-                  )}
-
-                  {/* Timestamp */}
-                  <span className="text-[11px] text-zinc-400 whitespace-nowrap" title={new Date(c.created_at).toLocaleString()}>
-                    {formatDateTime(c.created_at)}
-                  </span>
-
-                  {/* Razorpay ID */}
-                  {c.razorpay_subscription_id && (
-                    <span className="font-mono text-[10px] text-zinc-400 hidden lg:inline">
-                      {c.razorpay_subscription_id.slice(0, 16)}
-                    </span>
-                  )}
-
-                  {/* Contact buttons */}
-                  <div className="flex items-center gap-1">
-                    <a href={waUrl} target="_blank" rel="noopener noreferrer" title={`WhatsApp ${name}`} className="p-1.5 rounded-lg hover:bg-green-50 transition-colors group">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-zinc-300 group-hover:text-green-600 transition-colors">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" fill="currentColor"/>
-                        <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.264-1.222l-.306-.183-2.869.852.852-2.869-.183-.306A8 8 0 1112 20z" fill="currentColor"/>
-                      </svg>
-                    </a>
-                    {emUrl && (
-                      <a href={emUrl} title={`Email ${name}`} className="p-1.5 rounded-lg hover:bg-blue-50 transition-colors group">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-300 group-hover:text-blue-600 transition-colors">
-                          <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                    {/* Contact buttons */}
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <a href={waUrl} target="_blank" rel="noopener noreferrer" title={`WhatsApp ${name}`} className="p-1.5 rounded-lg hover:bg-green-50 transition-colors group/wa">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-zinc-400 group-hover/wa:text-green-600 transition-colors">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" fill="currentColor"/>
+                          <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.264-1.222l-.306-.183-2.869.852.852-2.869-.183-.306A8 8 0 1112 20z" fill="currentColor"/>
                         </svg>
                       </a>
-                    )}
+                      {emUrl && (
+                        <a href={emUrl} title={`Email ${name}`} className="p-1.5 rounded-lg hover:bg-blue-50 transition-colors group/em">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 group-hover/em:text-blue-600 transition-colors">
+                            <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                          </svg>
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -303,17 +443,124 @@ export default function SubscriptionLogPanel() {
             <button
               onClick={() => setLogPage(p => Math.max(1, p - 1))}
               disabled={logPage === 1}
-              className="px-3 py-1.5 rounded-lg border border-zinc-200 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed bg-white shadow-sm"
+              className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed bg-white shadow-sm"
             >
               Previous
             </button>
             <button
               onClick={() => setLogPage(p => Math.min(totalLogPages, p + 1))}
               disabled={logPage === totalLogPages}
-              className="px-3 py-1.5 rounded-lg border border-zinc-200 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed bg-white shadow-sm"
+              className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed bg-white shadow-sm"
             >
               Next
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Attribution Detail Modal */}
+      {selectedCheckout && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl border border-zinc-200 shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-6">
+            <div className="flex items-start justify-between border-b border-zinc-100 pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
+                  Customer Attribution Journey
+                  {selectedCheckout.attribution?.is_snapshot && (
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                      Immutable Purchase Snapshot
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-zinc-500 mt-1">
+                  Customer: <span className="font-semibold text-zinc-800">{selectedCheckout.billing_name || 'Subscriber'}</span> • {selectedCheckout.billing_email}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedCheckout(null)}
+                className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Journey Summary */}
+            {selectedCheckout.attribution ? (
+              <div className="space-y-5">
+                <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="text-xs font-medium text-zinc-500">First Touch (Discovery)</div>
+                    <div className="text-sm font-bold text-zinc-900 mt-0.5">
+                      {selectedCheckout.attribution.first_source || 'Direct'}
+                    </div>
+                  </div>
+                  <div className="hidden sm:block text-zinc-400 font-bold text-lg">➔</div>
+                  <div>
+                    <div className="text-xs font-medium text-zinc-500">Last Touch (Conversion)</div>
+                    <div className="text-sm font-bold text-zinc-900 mt-0.5">
+                      {selectedCheckout.attribution.last_source || selectedCheckout.attribution.first_source || 'Direct'}
+                    </div>
+                  </div>
+                  <div className="border-t sm:border-t-0 sm:border-l border-zinc-200 pt-2 sm:pt-0 sm:pl-4">
+                    <div className="text-xs font-medium text-zinc-500">Paid Amount</div>
+                    <div className="text-sm font-bold text-emerald-600 mt-0.5">
+                      ₹{Number(selectedCheckout.total_amount || 0).toLocaleString('en-IN')}
+                    </div>
+                  </div>
+                </div>
+
+                {/* First Touch Details */}
+                <div className="rounded-xl border border-zinc-200 p-4 space-y-3 bg-white">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-600 flex items-center gap-1.5">
+                    <span>🌱</span> First-Touch Parameters (Permanent Origin)
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div><span className="text-zinc-400">Source:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.first_source || 'None'}</span></div>
+                    <div><span className="text-zinc-400">Medium:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.first_medium || 'None'}</span></div>
+                    <div><span className="text-zinc-400">Campaign:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.first_campaign || 'None'}</span></div>
+                    <div><span className="text-zinc-400">Content:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.first_content || 'None'}</span></div>
+                    <div className="sm:col-span-2"><span className="text-zinc-400">Landing Page:</span> <span className="font-mono text-zinc-800 text-[11px]">{selectedCheckout.attribution.first_landing_page || '/'}</span></div>
+                    <div className="sm:col-span-2"><span className="text-zinc-400">Referrer:</span> <span className="font-mono text-zinc-800 text-[11px]">{selectedCheckout.attribution.first_referrer || 'None (Direct)'}</span></div>
+                    <div className="sm:col-span-2"><span className="text-zinc-400">First Product Viewed:</span> <span className="font-semibold text-blue-600">{selectedCheckout.attribution.first_product_viewed || 'None'}</span></div>
+                    {selectedCheckout.attribution.first_visit_at && (
+                      <div className="sm:col-span-2"><span className="text-zinc-400">First Visit Time:</span> <span className="text-zinc-700">{new Date(selectedCheckout.attribution.first_visit_at).toLocaleString()}</span></div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Last Touch Details */}
+                <div className="rounded-xl border border-zinc-200 p-4 space-y-3 bg-white">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-600 flex items-center gap-1.5">
+                    <span>🎯</span> Last-Touch Parameters (Converting Touch)
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div><span className="text-zinc-400">Source:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.last_source || selectedCheckout.attribution.first_source || 'None'}</span></div>
+                    <div><span className="text-zinc-400">Medium:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.last_medium || selectedCheckout.attribution.first_medium || 'None'}</span></div>
+                    <div><span className="text-zinc-400">Campaign:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.last_campaign || selectedCheckout.attribution.first_campaign || 'None'}</span></div>
+                    <div><span className="text-zinc-400">Content:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.last_content || selectedCheckout.attribution.first_content || 'None'}</span></div>
+                    <div className="sm:col-span-2"><span className="text-zinc-400">Landing Page:</span> <span className="font-mono text-zinc-800 text-[11px]">{selectedCheckout.attribution.last_landing_page || '/'}</span></div>
+                    <div className="sm:col-span-2"><span className="text-zinc-400">Referrer:</span> <span className="font-mono text-zinc-800 text-[11px]">{selectedCheckout.attribution.last_referrer || 'None (Direct)'}</span></div>
+                    <div className="sm:col-span-2"><span className="text-zinc-400">Last Product Viewed:</span> <span className="font-semibold text-blue-600">{selectedCheckout.attribution.last_product_viewed || 'None'}</span></div>
+                    {selectedCheckout.attribution.last_visit_at && (
+                      <div className="sm:col-span-2"><span className="text-zinc-400">Last Visit Time:</span> <span className="text-zinc-700">{new Date(selectedCheckout.attribution.last_visit_at).toLocaleString()}</span></div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-zinc-400 text-sm">
+                No attribution journey data recorded for this checkout attempt.
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setSelectedCheckout(null)}
+                className="px-4 py-2 rounded-xl bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

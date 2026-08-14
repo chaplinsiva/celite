@@ -19,10 +19,10 @@ import BulkSfxPanel from './components/BulkSfxPanel';
 import FreeGiftsPanel from './components/FreeGiftsPanel';
 import SpecialOfferPanel from './components/SpecialOfferPanel';
 import ProductAlertsPanel from './components/ProductAlertsPanel';
-import MediaCompressorPanel from './components/MediaCompressorPanel';
 import SubscriptionApprovalPanel from './components/SubscriptionApprovalPanel';
 import AdminPayoutPanel from './components/AdminPayoutPanel';
 import VendorAnalyticsPanel from './components/VendorAnalyticsPanel';
+import AttributionAnalyticsPanel from './components/AttributionAnalyticsPanel';
 
 type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null; video_path?: string | null; thumbnail_path?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null; category_id?: string | null; subcategory_id?: string | null; sub_subcategory_id?: string | null };
 
@@ -41,7 +41,7 @@ export default function AdminClient() {
     celiteAmount?: number;
   } | null>(null);
   const [active, setActive] = useState<
-    'overview' | 'payouts' | 'products' | 'subscriptionApproval' | 'vendorApproval' | 'categories' | 'analytics' | 'vendorAnalytics' | 'subscriptionLog' | 'freeGifts' | 'specialOffer' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx' | 'mediaCompressor'
+    'overview' | 'payouts' | 'products' | 'subscriptionApproval' | 'vendorApproval' | 'categories' | 'analytics' | 'attributionAnalytics' | 'vendorAnalytics' | 'subscriptionLog' | 'freeGifts' | 'specialOffer' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx'
   >('overview');
 
 
@@ -153,6 +153,7 @@ export default function AdminClient() {
             {active === 'categories' && (<CategoriesPanel />)}
 
             {active === 'analytics' && (<AnalyticsPanel />)}
+            {active === 'attributionAnalytics' && (<AttributionAnalyticsPanel />)}
             {active === 'vendorAnalytics' && (<VendorAnalyticsPanel />)}
             {active === 'subscriptionLog' && (<SubscriptionLogPanel />)}
             {active === 'freeGifts' && (<FreeGiftsPanel />)}
@@ -162,7 +163,6 @@ export default function AdminClient() {
             {active === 'marketing' && (<MarketingPanel />)}
             {active === 'productAlerts' && (<ProductAlertsPanel />)}
             {active === 'bulkSfx' && (<BulkSfxPanel />)}
-            {active === 'mediaCompressor' && (<MediaCompressorPanel />)}
             {active === 'settings' && (<SettingsPanel />)}
           </section>
 

@@ -233,6 +233,68 @@ export async function POST(req: Request) {
       // Don't fail the activation if email fails
     }
 
+    // Record immutable attribution snapshot for this subscription
+    try {
+      const { data: latestCheckout } = await admin
+        .from('checkout_details')
+        .select('id, total_amount')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const checkoutDetailId = latestCheckout?.id || null;
+
+      // Check if snapshot already exists
+      let hasSnapshot = false;
+      if (checkoutDetailId) {
+        const { data: existingSnap } = await admin
+          .from('subscription_attributions')
+          .select('id')
+          .eq('checkout_detail_id', checkoutDetailId)
+          .maybeSingle();
+        hasSnapshot = Boolean(existingSnap);
+      }
+
+      if (!hasSnapshot) {
+        const { data: visitorAttr } = await admin
+          .from('visitor_attributions')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        await admin.from('subscription_attributions').insert({
+          checkout_detail_id: checkoutDetailId,
+          user_id: userId,
+          razorpay_subscription_id: razorpaySubscriptionId,
+          subscription_plan: plan,
+          amount: latestCheckout?.total_amount ? Number(latestCheckout.total_amount) : (usdPpp || (plan === 'yearly' ? 5499 : 799)),
+          currency: usdPpp ? 'USD' : 'INR',
+          first_source: visitorAttr?.first_source || 'Direct',
+          first_medium: visitorAttr?.first_medium || null,
+          first_campaign: visitorAttr?.first_campaign || null,
+          first_content: visitorAttr?.first_content || null,
+          first_term: visitorAttr?.first_term || null,
+          first_landing_page: visitorAttr?.first_landing_page || '/',
+          first_referrer: visitorAttr?.first_referrer || null,
+          first_product_viewed: visitorAttr?.first_product_viewed || null,
+          first_visit_at: visitorAttr?.first_visit_at || null,
+          last_source: visitorAttr?.last_source || visitorAttr?.first_source || 'Direct',
+          last_medium: visitorAttr?.last_medium || visitorAttr?.first_medium || null,
+          last_campaign: visitorAttr?.last_campaign || visitorAttr?.first_campaign || null,
+          last_content: visitorAttr?.last_content || visitorAttr?.first_content || null,
+          last_term: visitorAttr?.last_term || visitorAttr?.first_term || null,
+          last_landing_page: visitorAttr?.last_landing_page || visitorAttr?.first_landing_page || '/',
+          last_referrer: visitorAttr?.last_referrer || visitorAttr?.first_referrer || null,
+          last_product_viewed: visitorAttr?.last_product_viewed || visitorAttr?.first_product_viewed || null,
+          last_visit_at: visitorAttr?.last_visit_at || null,
+          created_at: new Date().toISOString(),
+        });
+      }
+    } catch (attrSnapErr) {
+      console.warn('Failed to record subscription attribution snapshot in activate endpoint:', attrSnapErr);
+    }
+
     return NextResponse.json({ ok: true, plan, valid_until: expiresAt.toISOString() });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || 'Unknown error' }, { status: 500 });
