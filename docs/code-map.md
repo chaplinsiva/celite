@@ -40,8 +40,10 @@ Visitor (with UTMs / Referrer)
 | `components/AttributionTracker.tsx` | Client tracking component | Mounted in `app/layout.tsx` |
 | `app/api/attribution/sync/route.ts` | Sync anonymous touchpoints with authenticated user | Writes to `visitor_attributions` |
 | `app/api/admin/analytics/attribution/route.ts` | Attribution aggregation endpoint | Aggregates revenue by source, campaigns, products, assisted conversions |
+| `app/api/admin/analytics/traffic/route.ts` | Traffic sources analytics endpoint | Aggregates visitor_attributions, multi-touch journeys, landing pages, conversions |
 | `app/api/razorpay/webhook/route.ts` | Razorpay webhook listener | Stamps immutable `subscription_attributions` snapshots |
 | `app/admin/components/AttributionAnalyticsPanel.tsx` | Full attribution dashboard | KPI cards, Recharts, ROI tables, CSV export |
+| `app/admin/components/TrafficAnalyticsPanel.tsx` | Traffic sources analytics panel | Visitor acquisition channels, medium donut, landing pages, journey inspector |
 | `app/admin/components/SubscriptionLogPanel.tsx` | Subscription checkout activity log | Enriched with first/last touch badges & journey modals |
 
 ## Database Schema (Attribution)
