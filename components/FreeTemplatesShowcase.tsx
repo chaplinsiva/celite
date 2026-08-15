@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+// agent-notes: { ctx: "Free templates showcase with infinite left-to-right marquee loop and Celite obsidian blue aesthetic", deps: [lib/utils, lucide-react], state: active, last: "dani@2026-08-15" }
+
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { convertR2UrlToCdn } from '@/lib/utils';
-import { ArrowRight, ChevronLeft, ChevronRight, Gift } from 'lucide-react';
+import { ArrowRight, Gift, Sparkles, Play } from 'lucide-react';
 
 type FreeTemplate = {
   slug: string;
@@ -46,22 +48,32 @@ function VideoCard({ template }: { template: FreeTemplate }) {
   return (
     <Link
       href={`/product/${template.slug}`}
-      className="group relative flex-shrink-0 w-[280px] sm:w-[320px] md:w-[340px] overflow-hidden rounded-2xl bg-zinc-900 aspect-[16/9] shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-[1.03] snap-start"
+      className="group relative flex-shrink-0 w-[290px] sm:w-[330px] md:w-[360px] overflow-hidden rounded-2xl bg-[#0c0e15] border border-blue-500/25 hover:border-blue-400/70 aspect-[16/9] shadow-lg hover:shadow-[0_0_35px_-5px_rgba(59,130,246,0.35)] transition-all duration-500 hover:scale-[1.03] select-none"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* FREE Badge */}
-      <div className="absolute top-3 left-3 z-20 px-2.5 py-1 rounded-lg bg-emerald-500 text-white text-[11px] font-bold uppercase tracking-wider shadow-lg flex items-center gap-1">
-        <Gift className="w-3 h-3" />
-        Free
+      {/* Top Floating Blue Border Glow on Hover */}
+      <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-blue-400/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-30" />
+
+      {/* FREE Badge with Glowing Blue Accent */}
+      <div className="absolute top-3 left-3 z-20 px-3 py-1 rounded-full bg-blue-600/90 backdrop-blur-md border border-blue-400/40 text-white text-[11px] font-bold uppercase tracking-wider shadow-md flex items-center gap-1.5">
+        <Gift className="w-3 h-3 text-cyan-200" />
+        <span>Free</span>
       </div>
+
+      {/* Play Icon Indicator on hover */}
+      {videoUrl && (
+        <div className="absolute top-3 right-3 z-20 w-7 h-7 rounded-full bg-black/50 backdrop-blur-md border border-white/20 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md">
+          <Play className="w-3 h-3 fill-current ml-0.5" />
+        </div>
+      )}
 
       {/* Thumbnail Image */}
       <img
         src={thumbnail}
         alt={template.name}
         loading="lazy"
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
           isHovered && isLoaded && videoUrl ? 'opacity-0' : 'opacity-100'
         }`}
       />
@@ -76,26 +88,14 @@ function VideoCard({ template }: { template: FreeTemplate }) {
           playsInline
           preload="none"
           onLoadedData={() => setIsLoaded(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
             isHovered && isLoaded ? 'opacity-100' : 'opacity-0'
           }`}
         />
       )}
 
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-
-      {/* Title */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
-        <h3 className="text-sm md:text-base font-bold text-white line-clamp-2 drop-shadow-lg">
-          {template.name}
-        </h3>
-        {template.subtitle && (
-          <p className="text-xs md:text-sm text-zinc-300 line-clamp-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            {template.subtitle}
-          </p>
-        )}
-      </div>
+      {/* Subtle Bottom Ambient Vignette on hover */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
     </Link>
   );
 }
@@ -106,123 +106,102 @@ export default function FreeTemplatesShowcase({
   initialTemplates?: FreeTemplate[];
 }) {
   const [templates] = useState<FreeTemplate[]>(initialTemplates || []);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
 
-  const updateScrollButtons = () => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setCanScrollLeft(scrollLeft > 5);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
-    }
-  };
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el) {
-      updateScrollButtons();
-      el.addEventListener('scroll', updateScrollButtons, { passive: true });
-      // Also check on resize
-      const resizeObserver = new ResizeObserver(updateScrollButtons);
-      resizeObserver.observe(el);
-      return () => {
-        el.removeEventListener('scroll', updateScrollButtons);
-        resizeObserver.disconnect();
-      };
-    }
-  }, [templates]);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const cardWidth = 360; // approximate card width + gap
-      const offset = direction === 'left' ? -cardWidth : cardWidth;
-      scrollRef.current.scrollBy({ left: offset, behavior: 'smooth' });
-    }
-  };
-
-  if (templates.length === 0) {
+  if (!templates || templates.length === 0) {
     return null;
   }
 
+  // Multiply items to ensure a silky smooth, seamless infinite loop without gaps
+  const displayTemplates =
+    templates.length < 5
+      ? [...templates, ...templates, ...templates, ...templates, ...templates, ...templates]
+      : [...templates, ...templates, ...templates, ...templates];
+
   return (
-    <section className="relative w-full py-12 md:py-16 px-4 sm:px-6 bg-gradient-to-br from-emerald-950/80 via-zinc-950 to-zinc-950 border-y border-emerald-900/40 overflow-hidden">
+    <section className="relative w-full py-12 md:py-16 bg-gradient-to-br from-[#0d0f17] via-[#0a0b10] to-[#07080c] border-y border-blue-500/20 shadow-[0_0_60px_-15px_rgba(59,130,246,0.15)] overflow-hidden">
       
-      {/* Glow effect for the banner */}
+      {/* Dynamic Keyframes for Left-To-Right Infinite Loop Marquee */}
+      <style>{`
+        @keyframes celiteMarqueeLTR {
+          0% {
+            transform: translateX(-50%);
+          }
+          100% {
+            transform: translateX(0%);
+          }
+        }
+        .celite-marquee-track {
+          display: flex;
+          gap: 1.25rem;
+          width: max-content;
+          animation: celiteMarqueeLTR 95s linear infinite;
+          will-change: transform;
+        }
+        .celite-marquee-track:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+
+      {/* Top Floating Blue Hairline Accent */}
+      <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-blue-400/40 to-transparent pointer-events-none" />
+
+      {/* Ambient Radial Lighting */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-600/20 rounded-full blur-[100px]" />
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-600/15 rounded-full blur-[100px]" />
+        <div className="absolute -bottom-24 right-1/4 w-80 h-80 bg-cyan-500/10 rounded-full blur-[90px]" />
       </div>
 
-      <div className="max-w-[1400px] mx-auto relative z-10">
+      <div className="max-w-[1400px] mx-auto relative z-10 px-4 sm:px-6">
         {/* Header */}
-        <div className="flex items-end justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                <Gift className="w-5 h-5 text-emerald-400" />
+              <div className="p-2.5 rounded-xl bg-white/[0.07] backdrop-blur-md border border-blue-400/20 shadow-sm">
+                <Gift className="w-5 h-5 text-blue-400" />
               </div>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-[900] text-white tracking-tight drop-shadow-md">
                 Free Templates
               </h2>
             </div>
-            <p className="text-zinc-400 text-sm md:text-base max-w-lg">
-              Download premium quality video templates for free. No subscription required.
+            <p className="text-zinc-300 text-sm md:text-base max-w-lg font-normal">
+              Download premium quality video templates for free. Hover to preview &amp; explore.
             </p>
           </div>
-          <Link
-            href="/video-templates?free=true"
-            className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors group whitespace-nowrap"
-          >
-            See all free templates
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
-
-        {/* Carousel */}
-        <div className="relative group/carousel">
-          {/* Left Arrow */}
-          {canScrollLeft && (
-            <button
-              onClick={() => scroll('left')}
-              aria-label="Scroll left"
-              className="absolute -left-2 sm:left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110"
+          
+          <div className="flex items-center gap-4">
+            <div className="hidden lg:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-950/40 border border-blue-500/20 text-blue-300 text-xs font-medium">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
+              <span>Hover over any template to pause &amp; play</span>
+            </div>
+            <Link
+              href="/video-templates?free=true"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors group whitespace-nowrap"
             >
-              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-            </button>
-          )}
-
-          {/* Right Arrow */}
-          {canScrollRight && (
-            <button
-              onClick={() => scroll('right')}
-              aria-label="Scroll right"
-              className="absolute -right-2 sm:right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110"
-            >
-              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-            </button>
-          )}
-
-          {/* Scrollable Row */}
-          <div
-            ref={scrollRef}
-            className="flex gap-4 md:gap-5 overflow-x-auto snap-x snap-mandatory py-2 px-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-          >
-            {templates.map((template) => (
-              <VideoCard key={template.slug} template={template} />
-            ))}
+              See all free templates
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
           </div>
         </div>
+      </div>
 
-        {/* Mobile "See All" Link */}
-        <div className="sm:hidden mt-6 text-center">
-          <Link
-            href="/video-templates?free=true"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
-          >
-            See all free templates
-            <ArrowRight className="w-4 h-4" />
-          </Link>
+      {/* Infinite Scrolling Marquee Container with Feathered Edge Masks */}
+      <div className="relative w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent_0%,black_4%,black_96%,transparent_100%)] py-3">
+        <div className="celite-marquee-track">
+          {displayTemplates.map((template, index) => (
+            <VideoCard key={`${template.slug}-${index}`} template={template} />
+          ))}
         </div>
+      </div>
+
+      {/* Mobile Indicator */}
+      <div className="sm:hidden mt-6 text-center px-4">
+        <Link
+          href="/video-templates?free=true"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+        >
+          See all free templates
+          <ArrowRight className="w-4 h-4" />
+        </Link>
       </div>
     </section>
   );
