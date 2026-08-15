@@ -1,11 +1,13 @@
 "use client";
 
+// agent-notes: { ctx: "Header navbar with Celite brand styling, Start Selling badge, and profile avatar", deps: [next/link, next/navigation, lucide-react], state: active, last: "dani@2026-08-15" }
+
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '../context/AppContext';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
-import { Menu, X, Search, ChevronDown } from 'lucide-react';
+import { Menu, X, Search, ChevronDown, Sparkles } from 'lucide-react';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -187,9 +189,9 @@ export default function Header() {
         <nav className="max-w-[1440px] mx-auto h-20 px-6 sm:px-8 flex items-center justify-between">
           {/* Left: Logo & Nav */}
           <div className="flex items-center gap-10">
-            <Link href="/" className="flex items-center gap-2 focus:outline-none hover:opacity-80 transition-opacity shrink-0">
-              <img src={isDecember ? "/chirtsmaslogo.png" : "/logo/logo.png"} alt="Celite Logo" className="h-9 w-auto object-contain" />
-              <span className="text-xl font-bold text-zinc-900">Celite</span>
+            <Link href="/" className="flex items-center gap-2 focus:outline-none hover:opacity-90 transition-opacity shrink-0 group">
+              <img src={isDecember ? "/chirtsmaslogo.png" : "/logo/logo.png"} alt="Celite Logo" className="h-9 w-auto object-contain group-hover:scale-105 transition-transform" />
+              <span className="text-xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-zinc-950 via-zinc-900 to-blue-700">Celite</span>
             </Link>
 
             {/* Global Search Bar */}
@@ -271,9 +273,10 @@ export default function Header() {
               href="https://celitemarket.in"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden md:block text-[14px] font-medium text-zinc-500 hover:text-black transition-colors"
+              className="hidden md:inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#0a0c13] via-[#0e2142] to-[#1d4ed8] text-white text-[13px] font-semibold border border-blue-400/30 hover:border-blue-400/70 shadow-[0_0_15px_-3px_rgba(59,130,246,0.35)] hover:shadow-[0_0_22px_rgba(59,130,246,0.55)] transition-all duration-300 hover:scale-105 active:scale-95"
             >
-              Start Selling
+              <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+              <span>Start Selling</span>
             </a>
 
             {/* Auth Buttons */}
@@ -308,14 +311,14 @@ export default function Header() {
                     </Link>
                   )}
 
-                  {/* User Profile */}
+                  {/* User Profile with Celite Theme */}
                   <Link href="/dashboard" className="relative group">
-                    <div className="flex items-center gap-3 pl-3 pr-1 py-1 rounded-full border border-zinc-200 hover:shadow-md transition-all bg-white">
-                      <span className="text-xs font-semibold text-zinc-700 hidden sm:block">
+                    <div className="flex items-center gap-2.5 pl-3 pr-1 py-1 rounded-full border border-blue-500/25 hover:border-blue-400/60 shadow-sm hover:shadow-[0_0_18px_-3px_rgba(59,130,246,0.3)] transition-all bg-white">
+                      <span className="text-xs font-semibold text-zinc-800 hidden sm:block">
                         My Account
                       </span>
                       {isSubscribed ? (
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 p-[2px]">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-400 p-[2px] shadow-sm">
                           <div className="h-full w-full rounded-full bg-white flex items-center justify-center">
                             <span className="font-bold text-xs text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
                               {(user.email || 'U').charAt(0).toUpperCase()}
@@ -323,7 +326,7 @@ export default function Header() {
                           </div>
                         </div>
                       ) : (
-                        <div className="h-8 w-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-600 text-xs font-bold">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500 text-white flex items-center justify-center text-xs font-bold shadow-sm ring-1 ring-blue-400/30">
                           {(user.email || 'U').charAt(0).toUpperCase()}
                         </div>
                       )}
@@ -398,10 +401,11 @@ export default function Header() {
               href="https://celitemarket.in"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-lg font-medium text-zinc-500 py-2"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#0a0c13] via-[#0e2142] to-[#1d4ed8] text-white text-sm font-semibold border border-blue-400/30 shadow-sm w-fit my-1"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              Start Selling
+              <Sparkles className="w-4 h-4 text-cyan-300" />
+              <span>Start Selling</span>
             </a>
             <Link
               href="/video-templates"

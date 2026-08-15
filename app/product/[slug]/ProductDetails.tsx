@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Share2, Check, Download, AlertCircle, PlayCircle, Star, Shield, Clock, Layers, Zap, HardDrive, Music2, Copy, Gift } from 'lucide-react';
+import { Share2, Check, Download, AlertCircle, PlayCircle, Star, Shield, Clock, Layers, Zap, HardDrive, Music2, Copy, Gift, ArrowRight } from 'lucide-react';
 import { useAppContext } from '../../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { useLoginModal } from '../../../context/LoginModalContext';
@@ -1375,33 +1375,40 @@ function SubscriptionCard({
   if (isSubActive) {
     if (availableOnSub === false) {
       return (
-        <div className={cn("bg-amber-50/50 rounded-2xl p-6 border border-amber-200", className)}>
-          <div className="text-center mb-4">
-            <h3 className="text-lg font-bold text-amber-900 mb-1">Celite Market Exclusive</h3>
-            <p className="text-xs text-amber-700">This template is available for direct purchase on Celite Market.</p>
+        <div className={cn("relative bg-gradient-to-br from-[#0d0f19] via-[#0a0b12] to-[#07080e] rounded-3xl p-6 sm:p-7 border border-amber-500/30 shadow-[0_0_50px_-15px_rgba(245,158,11,0.2)] overflow-hidden group", className)}>
+          <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-400/80 to-transparent pointer-events-none" />
+          <div className="relative z-10 text-center mb-4">
+            <h3 className="text-lg font-bold text-white mb-1">Celite Market Exclusive</h3>
+            <p className="text-xs text-zinc-300">This template is available for direct single purchase on Celite Market.</p>
           </div>
           <a
             href={`https://celitemarket.in/product/${productSlug || ''}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all"
+            className="relative z-10 w-full py-3.5 rounded-xl bg-gradient-to-r from-[#0d1f18] via-[#0f2e24] to-[#047857] hover:from-[#0f2e24] hover:to-[#059669] text-white font-bold text-xs border border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:shadow-[0_0_25px_rgba(16,185,129,0.45)] flex items-center justify-center gap-2 transition-all duration-300 active:scale-[0.98]"
           >
-            Buy this individual asset for {productPrice ? `₹${productPrice}` : 'single purchase'} on Celite Market →
+            Buy this individual asset for {productPrice ? `₹${productPrice}` : '₹399'} on Celite Market →
           </a>
         </div>
       );
     }
 
     return (
-      <div className={cn("bg-blue-50/50 rounded-2xl p-6 border border-blue-100", className)}>
+      <div className={cn("relative bg-gradient-to-br from-[#0d0f19] via-[#0a0b12] to-[#07080e] rounded-3xl p-6 sm:p-7 border border-blue-500/30 shadow-[0_0_50px_-15px_rgba(59,130,246,0.25)] overflow-hidden group", className)}>
+        {/* Top Floating Blue Hairline Gradient */}
+        <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-blue-400/80 to-transparent pointer-events-none" />
+
+        {/* Ambient Radial Glow */}
+        <div className="absolute -top-16 -right-16 w-48 h-48 bg-blue-600/15 rounded-full blur-[60px] pointer-events-none" />
+
         <button
           onClick={handleDownload}
           disabled={downloading}
           className={cn(
-            "w-full py-3 rounded-lg font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2",
+            "relative z-10 w-full py-4 rounded-xl font-bold text-sm sm:text-base shadow-xl transition-all duration-300 flex items-center justify-center gap-2.5 active:scale-[0.98]",
             downloading
-              ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white cursor-wait"
-              : "bg-blue-600 text-white shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.98]"
+              ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white cursor-wait border border-blue-400/40"
+              : "bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border border-blue-300/40 shadow-[0_0_25px_rgba(59,130,246,0.45)] hover:shadow-[0_0_35px_rgba(59,130,246,0.7)]"
           )}
         >
           {downloading ? (
@@ -1410,29 +1417,29 @@ function SubscriptionCard({
                 <div className="absolute inset-0 rounded-full border-2 border-white/30"></div>
                 <div className="absolute inset-0 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
               </div>
-              <span className="animate-pulse">Downloading...</span>
+              <span className="animate-pulse">Preparing Download...</span>
             </>
           ) : (
             <>
-              <Download className="w-4 h-4" />
-              Download Now
+              <Download className="w-5 h-5" />
+              <span>Download Now</span>
             </>
           )}
         </button>
         {downloading && (
-          <p className="text-xs text-blue-600 text-center mt-2 animate-pulse">
-            Preparing your file for download...
+          <p className="relative z-10 text-xs text-cyan-300 text-center mt-2.5 animate-pulse font-medium">
+            Preparing your files for download...
           </p>
         )}
         {availableOnMarket !== false && productSlug && (
-          <div className="mt-3 text-center">
+          <div className="relative z-10 mt-4 pt-4 border-t border-white/[0.08] text-center">
             <a
               href={`https://celitemarket.in/product/${productSlug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] text-blue-600 hover:text-blue-800 underline font-medium"
+              className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#0d1f18] via-[#0f2e24] to-[#047857] hover:from-[#0f2e24] hover:to-[#059669] text-white font-bold text-xs border border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all duration-300 active:scale-[0.98]"
             >
-              Or buy single asset for {productPrice ? `₹${productPrice}` : 'individual price'} on Celite Market →
+              Or buy single asset for {productPrice ? `₹${productPrice}` : '₹399'} on Celite Market →
             </a>
           </div>
         )}
@@ -1442,29 +1449,37 @@ function SubscriptionCard({
 
   // For non-subscribed users, show the full subscription card + single buy CTA on Celite Market
   return (
-    <div className={cn("bg-blue-50/50 rounded-2xl p-6 border border-blue-100", className)}>
-      <div className="flex justify-between items-start mb-4">
+    <div className={cn("relative bg-gradient-to-br from-[#0d0f19] via-[#0a0b12] to-[#07080e] rounded-3xl p-6 sm:p-7 border border-blue-500/30 shadow-[0_0_50px_-15px_rgba(59,130,246,0.25)] overflow-hidden group", className)}>
+      {/* Top Floating Blue Hairline Gradient */}
+      <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-blue-400/80 to-transparent pointer-events-none" />
+
+      {/* Delicate Ambient Radial Glow */}
+      <div className="absolute -top-16 -right-16 w-48 h-48 bg-blue-600/15 rounded-full blur-[60px] pointer-events-none" />
+
+      <div className="relative z-10 flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-2xl font-bold text-blue-900">Monthly</h3>
-          <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold uppercase tracking-wider rounded">
+          <h3 className="text-2xl font-black text-white tracking-tight">Monthly</h3>
+          <span className="inline-block mt-1 px-2.5 py-0.5 bg-red-500/15 border border-red-500/30 text-red-400 text-[10px] font-extrabold uppercase tracking-wider rounded-full animate-pulse">
             Limited Offer
           </span>
         </div>
-        <span className="bg-blue-900 text-white text-[10px] uppercase font-bold px-2 py-1 rounded shadow-sm shadow-blue-900/20 flex items-center gap-1">
-          <Star className="w-3 h-3 fill-current" /> Popular
+        <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] uppercase font-bold px-2.5 py-1 rounded-full shadow-[0_0_12px_rgba(59,130,246,0.5)] border border-blue-300/40 flex items-center gap-1">
+          <Star className="w-3 h-3 fill-current text-amber-300" /> Popular
         </span>
       </div>
 
-      <div className="flex items-baseline gap-2 mb-2">
-        <span className="text-sm text-blue-400 line-through font-medium">₹899</span>
-        <span className="text-3xl font-bold text-blue-700">{formatPrice(monthlyPrice ?? 799)}</span>
-        <span className="text-sm text-blue-600/80 font-medium">/ month</span>
+      <div className="relative z-10 flex items-baseline gap-2 mb-1.5">
+        <span className="text-sm text-zinc-500 line-through font-semibold">₹899</span>
+        <span className="text-3xl sm:text-4xl font-[900] text-white tracking-tight drop-shadow-md">
+          {formatPrice(monthlyPrice ?? 499)}
+        </span>
+        <span className="text-sm text-zinc-400 font-semibold">/ month</span>
       </div>
-      <p className="text-xs text-blue-600/70 mb-6 leading-relaxed">
+      <p className="relative z-10 text-xs text-zinc-300 mb-6 leading-relaxed">
         Best balance for creators who want full premium access
       </p>
 
-      <ul className="space-y-3 mb-8">
+      <ul className="relative z-10 space-y-3 mb-6">
         {[
           'Unlimited AE Templates',
           'Stock Music & SFX',
@@ -1472,8 +1487,10 @@ function SubscriptionCard({
           'Unlimited Downloads',
           'Commercial License'
         ].map((item, i) => (
-          <li key={i} className="flex items-center gap-2 text-[13px] text-blue-900 font-medium">
-            <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />
+          <li key={i} className="flex items-center gap-2.5 text-[13px] text-zinc-200 font-medium">
+            <div className="w-4 h-4 rounded-full bg-blue-500/15 border border-blue-400/30 text-cyan-400 flex items-center justify-center flex-shrink-0">
+              <Check className="w-2.5 h-2.5" />
+            </div>
             <span className="truncate">{item}</span>
           </li>
         ))}
@@ -1481,21 +1498,22 @@ function SubscriptionCard({
 
       <button
         onClick={() => router.push('/pricing')}
-        className="w-full py-3 rounded-lg bg-blue-900 text-white font-bold text-sm shadow-xl shadow-blue-900/10 hover:bg-blue-800 active:scale-[0.98] transition-all"
+        className="relative z-10 w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-[0_0_25px_rgba(59,130,246,0.45)] hover:shadow-[0_0_35px_rgba(59,130,246,0.7)] border border-blue-300/40 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2 group/btn"
       >
-        Subscribe to Download
+        <span>Subscribe to Download</span>
+        <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
       </button>
 
-      {/* Secondary Buy CTA for Single Asset Buyers */}
-      <div className="mt-4 pt-4 border-t border-blue-200/60 text-center">
-        <p className="text-xs text-blue-900/80 mb-2 font-medium">Want to buy single templates without a subscription?</p>
+      {/* Secondary Buy CTA for Single Asset Buyers on Celite Market */}
+      <div className="relative z-10 mt-5 pt-5 border-t border-white/[0.08] text-center">
+        <p className="text-xs text-zinc-400 mb-2.5 font-medium">Want to buy single templates without a subscription?</p>
         <a
           href={`https://celitemarket.in/product/${productSlug || ''}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-md hover:shadow-emerald-600/20 active:scale-[0.98]"
+          className="w-full inline-flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl bg-gradient-to-r from-[#0d1f18] via-[#0f2e24] to-[#047857] hover:from-[#0f2e24] hover:to-[#059669] text-white font-bold text-xs border border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:shadow-[0_0_25px_rgba(16,185,129,0.45)] transition-all duration-300 active:scale-[0.98]"
         >
-          Buy this individual asset for {productPrice ? `₹${productPrice}` : 'single purchase'} on Celite Market →
+          Buy this individual asset for {productPrice ? `₹${productPrice}` : '₹499'} on Celite Market →
         </a>
       </div>
     </div>
