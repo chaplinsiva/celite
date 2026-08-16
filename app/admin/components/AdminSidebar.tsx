@@ -12,6 +12,8 @@ type TabKey =
   | 'analytics'
   | 'trafficAnalytics'
   | 'attributionAnalytics'
+  | 'liveTrafficLogs'
+  | 'marketingRegistry'
   | 'vendorAnalytics'
   | 'subscriptionLog'
   | 'freeGifts'
@@ -31,8 +33,10 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'vendorApproval', label: 'Vendor Approval' },
   { key: 'categories', label: 'Categories' },
   { key: 'analytics', label: 'Analytics' },
+  { key: 'liveTrafficLogs', label: '📡 Live Traffic Logs' },
   { key: 'trafficAnalytics', label: '🌐 Traffic Sources' },
   { key: 'attributionAnalytics', label: '🎯 Attribution Analytics' },
+  { key: 'marketingRegistry', label: '📋 Marketing Registry' },
   { key: 'vendorAnalytics', label: '📊 Vendor Analytics' },
   { key: 'subscriptionLog', label: 'Subscription Log' },
   { key: 'freeGifts', label: 'Free Gift Analytics' },

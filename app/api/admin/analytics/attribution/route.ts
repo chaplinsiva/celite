@@ -1,6 +1,7 @@
-// agent-notes: { ctx: "Admin attribution analytics API for source ROI, campaigns, and assisted conversions", deps: ["lib/supabaseAdmin.ts"], state: active, last: "sato@2026-08-14" }
+// agent-notes: { ctx: "Universal Admin attribution analytics API for multi-touch ROI, campaign hierarchy, assisted conversions, and registry resolution", deps: ["lib/supabaseAdmin.ts", "lib/attribution.ts"], state: active, last: "sato@2026-08-16" }
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../../lib/supabaseAdmin';
+import { resolveContentNames, type RegistryMapping } from '../../../../../lib/attribution';
 
 export async function GET(req: Request) {
   try {
@@ -21,7 +22,11 @@ export async function GET(req: Request) {
     const planFilter = searchParams.get('plan');
     const campaignFilter = searchParams.get('campaign');
 
-    // Fetch subscription attribution snapshots
+    // 1. Fetch Marketing Sources Registry mappings
+    const { data: rawRegistry } = await admin.from('marketing_sources_registry').select('*');
+    const registry: RegistryMapping[] = rawRegistry || [];
+
+    // 2. Fetch Subscription Attribution Snapshots
     let query = admin
       .from('subscription_attributions')
       .select('*')
@@ -58,78 +63,69 @@ export async function GET(req: Request) {
       );
     }
 
-    // 1. Overall Summary
+    // 3. Aggregate Core Summary
     let totalRevenue = 0;
     let monthlyRevenue = 0;
     let yearlyRevenue = 0;
     let monthlyCount = 0;
     let yearlyCount = 0;
 
+    const firstSourceMap: Record<string, { source: string; customers: number; revenue: number; monthly: number; yearly: number }> = {};
+    const lastSourceMap: Record<string, { source: string; customers: number; revenue: number; monthly: number; yearly: number }> = {};
+    const campaignMap: Record<string, {
+      campaign: string;
+      campaignId?: string | null;
+      source: string;
+      medium: string;
+      customers: number;
+      revenue: number;
+      monthly: number;
+      yearly: number;
+    }> = {};
+    const creativeMap: Record<string, {
+      name: string;
+      id: string;
+      campaignName: string;
+      source: string;
+      subscriptions: number;
+      revenue: number;
+    }> = {};
+    const referralDomainMap: Record<string, { domain: string; url: string; visitors: number; revenue: number }> = {};
+    const productMap: Record<string, { product: string; firstTouchCount: number; lastTouchCount: number; subscriptions: number; revenue: number }> = {};
+    const assistedMap: Record<string, { firstSource: string; lastSource: string; path: string; count: number; revenue: number }> = {};
+    const directInvestigation = {
+      genuineDirect: { count: 0, revenue: 0 },
+      previouslyAttributed: { count: 0, revenue: 0, origins: {} as Record<string, number> },
+      unknownMissingReferrer: { count: 0, revenue: 0 },
+    };
+    const confidenceBreakdown = {
+      high: 0,
+      medium: 0,
+      low: 0,
+    };
+
     records.forEach((r) => {
       const amt = Number(r.amount || 0);
       totalRevenue += amt;
       const plan = (r.subscription_plan || '').toLowerCase();
-      if (plan === 'yearly') {
+      const isYearly = plan === 'yearly';
+
+      if (isYearly) {
         yearlyRevenue += amt;
         yearlyCount += 1;
       } else {
         monthlyRevenue += amt;
         monthlyCount += 1;
       }
-    });
 
-    const totalSubscriptions = records.length;
-    const avgOrderValue = totalSubscriptions > 0 ? Math.round(totalRevenue / totalSubscriptions) : 0;
-
-    // 2. First-Touch Source Breakdown
-    const firstSourceMap: Record<string, {
-      source: string;
-      customers: number;
-      revenue: number;
-      monthly: number;
-      yearly: number;
-    }> = {};
-
-    // 3. Last-Touch Source Breakdown
-    const lastSourceMap: Record<string, {
-      source: string;
-      customers: number;
-      revenue: number;
-      monthly: number;
-      yearly: number;
-    }> = {};
-
-    // 4. Campaign Analytics
-    const campaignMap: Record<string, {
-      campaign: string;
-      source: string;
-      customers: number;
-      revenue: number;
-      monthly: number;
-      yearly: number;
-    }> = {};
-
-    // 5. Product Attribution
-    const productMap: Record<string, {
-      product: string;
-      subscriptions: number;
-      revenue: number;
-    }> = {};
-
-    // 6. Assisted Conversions (first_source != last_source)
-    const assistedMap: Record<string, {
-      firstSource: string;
-      lastSource: string;
-      path: string;
-      count: number;
-      revenue: number;
-    }> = {};
-
-    records.forEach((r) => {
       const fSource = r.first_source || 'Direct';
       const lSource = r.last_source || fSource || 'Direct';
-      const amt = Number(r.amount || 0);
-      const isYearly = (r.subscription_plan || '').toLowerCase() === 'yearly';
+
+      // Confidence
+      const conf = (r.confidence_level || 'medium').toLowerCase() as 'high' | 'medium' | 'low';
+      if (confidenceBreakdown[conf] !== undefined) {
+        confidenceBreakdown[conf] += 1;
+      }
 
       // First Touch Aggregation
       if (!firstSourceMap[fSource]) {
@@ -149,33 +145,87 @@ export async function GET(req: Request) {
       if (isYearly) lastSourceMap[lSource].yearly += 1;
       else lastSourceMap[lSource].monthly += 1;
 
-      // Campaign Aggregation
-      const campaign = r.first_campaign || r.last_campaign;
-      if (campaign) {
-        if (!campaignMap[campaign]) {
-          campaignMap[campaign] = {
-            campaign,
-            source: r.first_source || r.last_source || 'Other',
+      // Campaign & Creative Hierarchy Resolution
+      const rawCamp = r.first_campaign || r.last_campaign;
+      const rawCampId = r.first_campaign_id || r.first_meta_campaign_id;
+      const rawContent = r.first_content || r.last_content || r.first_meta_ad_name || r.first_youtube_video_name;
+      const rawContentId = r.first_content_id || r.first_meta_ad_id || r.first_youtube_video_id;
+
+      const resolved = resolveContentNames(
+        {
+          campaign: rawCamp,
+          campaign_id: rawCampId,
+          content: rawContent,
+          content_id: rawContentId,
+          source: fSource,
+        },
+        registry
+      );
+
+      const campaignName = resolved.campaign_name || rawCamp || 'Untagged Campaign';
+      if (rawCamp || rawCampId) {
+        if (!campaignMap[campaignName]) {
+          campaignMap[campaignName] = {
+            campaign: campaignName,
+            campaignId: rawCampId || null,
+            source: fSource,
+            medium: r.first_medium || 'Paid',
             customers: 0,
             revenue: 0,
             monthly: 0,
             yearly: 0,
           };
         }
-        campaignMap[campaign].customers += 1;
-        campaignMap[campaign].revenue += amt;
-        if (isYearly) campaignMap[campaign].yearly += 1;
-        else campaignMap[campaign].monthly += 1;
+        campaignMap[campaignName].customers += 1;
+        campaignMap[campaignName].revenue += amt;
+        if (isYearly) campaignMap[campaignName].yearly += 1;
+        else campaignMap[campaignName].monthly += 1;
       }
 
-      // Product Aggregation
-      const product = r.first_product_viewed || r.last_product_viewed;
-      if (product) {
-        if (!productMap[product]) {
-          productMap[product] = { product, subscriptions: 0, revenue: 0 };
+      if (resolved.content_name || rawContentId) {
+        const creativeKey = resolved.content_name || rawContentId || 'Unknown Creative';
+        if (!creativeMap[creativeKey]) {
+          creativeMap[creativeKey] = {
+            name: creativeKey,
+            id: rawContentId || '',
+            campaignName,
+            source: fSource,
+            subscriptions: 0,
+            revenue: 0,
+          };
         }
-        productMap[product].subscriptions += 1;
-        productMap[product].revenue += amt;
+        creativeMap[creativeKey].subscriptions += 1;
+        creativeMap[creativeKey].revenue += amt;
+      }
+
+      // Referral Websites
+      if (fSource === 'Referral' || lSource === 'Referral') {
+        const refUrl = r.first_referrer || r.last_referrer || 'Direct';
+        let domain = 'Referral';
+        try {
+          domain = new URL(refUrl).hostname;
+        } catch {
+          domain = refUrl;
+        }
+        if (!referralDomainMap[domain]) {
+          referralDomainMap[domain] = { domain, url: refUrl, visitors: 0, revenue: 0 };
+        }
+        referralDomainMap[domain].visitors += 1;
+        referralDomainMap[domain].revenue += amt;
+      }
+
+      // Product Attribution
+      if (r.first_product_viewed) {
+        const p = r.first_product_viewed;
+        if (!productMap[p]) productMap[p] = { product: p, firstTouchCount: 0, lastTouchCount: 0, subscriptions: 0, revenue: 0 };
+        productMap[p].firstTouchCount += 1;
+      }
+      if (r.last_product_viewed) {
+        const p = r.last_product_viewed;
+        if (!productMap[p]) productMap[p] = { product: p, firstTouchCount: 0, lastTouchCount: 0, subscriptions: 0, revenue: 0 };
+        productMap[p].lastTouchCount += 1;
+        productMap[p].subscriptions += 1;
+        productMap[p].revenue += amt;
       }
 
       // Assisted Conversions (Different discovery source vs converting source)
@@ -193,7 +243,26 @@ export async function GET(req: Request) {
         assistedMap[pathKey].count += 1;
         assistedMap[pathKey].revenue += amt;
       }
+
+      // Direct / Unknown Deep Investigation
+      if (lSource === 'Direct' || lSource === 'Genuine Direct' || lSource === 'Direct (Previously Attributed)') {
+        if (fSource !== 'Direct' && fSource !== 'Genuine Direct') {
+          directInvestigation.previouslyAttributed.count += 1;
+          directInvestigation.previouslyAttributed.revenue += amt;
+          directInvestigation.previouslyAttributed.origins[fSource] =
+            (directInvestigation.previouslyAttributed.origins[fSource] || 0) + 1;
+        } else {
+          directInvestigation.genuineDirect.count += 1;
+          directInvestigation.genuineDirect.revenue += amt;
+        }
+      } else if (lSource.includes('Unknown')) {
+        directInvestigation.unknownMissingReferrer.count += 1;
+        directInvestigation.unknownMissingReferrer.revenue += amt;
+      }
     });
+
+    const totalSubscriptions = records.length;
+    const avgOrderValue = totalSubscriptions > 0 ? Math.round(totalRevenue / totalSubscriptions) : 0;
 
     const firstTouchBreakdown = Object.values(firstSourceMap)
       .map((s) => ({
@@ -216,10 +285,9 @@ export async function GET(req: Request) {
       }))
       .sort((a, b) => b.revenue - a.revenue);
 
-    const productBreakdown = Object.values(productMap).sort(
-      (a, b) => b.subscriptions - a.subscriptions
-    );
-
+    const creativeBreakdown = Object.values(creativeMap).sort((a, b) => b.revenue - a.revenue);
+    const referralBreakdown = Object.values(referralDomainMap).sort((a, b) => b.revenue - a.revenue);
+    const productBreakdown = Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
     const assistedConversions = Object.values(assistedMap).sort((a, b) => b.count - a.count);
 
     return NextResponse.json({
@@ -235,9 +303,13 @@ export async function GET(req: Request) {
       },
       firstTouchBreakdown,
       lastTouchBreakdown,
-      campaignBreakdown,
-      productBreakdown,
       assistedConversions,
+      campaignBreakdown,
+      creativeBreakdown,
+      referralBreakdown,
+      productBreakdown,
+      directInvestigation,
+      confidenceBreakdown,
       recentRecords: records.slice(0, 50),
     });
   } catch (e: any) {

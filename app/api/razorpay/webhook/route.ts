@@ -455,6 +455,10 @@ export async function POST(req: Request) {
                       last_product_viewed: visitorAttr?.last_product_viewed || visitorAttr?.first_product_viewed || null,
                       last_visit_at: visitorAttr?.last_visit_at || null,
 
+                      journey_touch_count: visitorAttr?.touch_count || 1,
+                      journey_session_count: visitorAttr?.session_count || 1,
+                      confidence_level: visitorAttr?.confidence_level || 'medium',
+                      confidence_reason: visitorAttr?.confidence_reason || null,
                       created_at: new Date().toISOString(),
                     });
                   console.log(`Saved immutable subscription attribution snapshot for checkout ${finalCheckoutDetailId}`);

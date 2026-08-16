@@ -25,6 +25,8 @@ import AdminPayoutPanel from './components/AdminPayoutPanel';
 import VendorAnalyticsPanel from './components/VendorAnalyticsPanel';
 import AttributionAnalyticsPanel from './components/AttributionAnalyticsPanel';
 import TrafficAnalyticsPanel from './components/TrafficAnalyticsPanel';
+import MarketingSourcesRegistryPanel from './components/MarketingSourcesRegistryPanel';
+import LiveTrafficLogsPanel from './components/LiveTrafficLogsPanel';
 
 type TemplateRow = { slug: string; name: string; img: string | null; video?: string | null; video_path?: string | null; thumbnail_path?: string | null; vendor_name?: string | null; creator_shop_id?: string | null; status?: string | null; category_id?: string | null; subcategory_id?: string | null; sub_subcategory_id?: string | null };
 
@@ -43,7 +45,7 @@ export default function AdminClient() {
     celiteAmount?: number;
   } | null>(null);
   const [active, setActive] = useState<
-    'overview' | 'blogs' | 'payouts' | 'products' | 'subscriptionApproval' | 'vendorApproval' | 'categories' | 'analytics' | 'trafficAnalytics' | 'attributionAnalytics' | 'vendorAnalytics' | 'subscriptionLog' | 'freeGifts' | 'specialOffer' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx'
+    'overview' | 'blogs' | 'payouts' | 'products' | 'subscriptionApproval' | 'vendorApproval' | 'categories' | 'analytics' | 'liveTrafficLogs' | 'trafficAnalytics' | 'attributionAnalytics' | 'marketingRegistry' | 'vendorAnalytics' | 'subscriptionLog' | 'freeGifts' | 'specialOffer' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx'
   >('overview');
 
 
@@ -156,8 +158,10 @@ export default function AdminClient() {
             {active === 'categories' && (<CategoriesPanel />)}
 
             {active === 'analytics' && (<AnalyticsPanel />)}
+            {active === 'liveTrafficLogs' && (<LiveTrafficLogsPanel />)}
             {active === 'trafficAnalytics' && (<TrafficAnalyticsPanel />)}
             {active === 'attributionAnalytics' && (<AttributionAnalyticsPanel />)}
+            {active === 'marketingRegistry' && (<MarketingSourcesRegistryPanel />)}
             {active === 'vendorAnalytics' && (<VendorAnalyticsPanel />)}
             {active === 'subscriptionLog' && (<SubscriptionLogPanel />)}
             {active === 'freeGifts' && (<FreeGiftsPanel />)}
