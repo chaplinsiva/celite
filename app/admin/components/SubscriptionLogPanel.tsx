@@ -1,10 +1,11 @@
-// agent-notes: { ctx: "Admin subscription log panel with attribution source badges and journey inspection", deps: ["lib/supabaseClient.ts"], state: active, last: "sato@2026-08-14" }
+// agent-notes: { ctx: "Admin subscription log panel with universal attribution badges, interactive customer journey visualizer, and manual correction", deps: ["lib/supabaseClient.ts"], state: active, last: "sato@2026-08-16" }
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 
 type AttributionInfo = {
+  id?: string;
   first_source: string | null;
   first_medium: string | null;
   first_campaign: string | null;
@@ -21,6 +22,12 @@ type AttributionInfo = {
   last_referrer: string | null;
   last_product_viewed: string | null;
   last_visit_at: string | null;
+  journey_touch_count?: number;
+  journey_session_count?: number;
+  confidence_level?: string;
+  confidence_reason?: string | null;
+  is_manually_corrected?: boolean;
+  correction_reason?: string | null;
   is_snapshot?: boolean;
 };
 
@@ -33,12 +40,33 @@ type CheckoutRow = {
   billing_mobile: string | null;
   subscription_plan: string | null;
   total_amount: string | null;
-  status: string; // 'initiated' | 'completed' | 'failed'
+  status: string; // 'completed' | 'initiated' | 'failed'
   razorpay_subscription_id: string | null;
   razorpay_payment_id: string | null;
   created_at: string;
   updated_at: string;
   attribution?: AttributionInfo | null;
+};
+
+type TimelineEvent = {
+  id: string;
+  event_type: string;
+  source: string;
+  medium: string | null;
+  campaign: string | null;
+  content: string | null;
+  resolved_campaign_name: string | null;
+  resolved_content_name: string | null;
+  resolved_adset_name: string | null;
+  path: string;
+  url: string | null;
+  product_slug: string | null;
+  referrer_url: string | null;
+  referrer_domain: string | null;
+  device_type: string | null;
+  session_id: string | null;
+  confidence_level: string | null;
+  created_at: string;
 };
 
 type StatusType = 'completed' | 'initiated' | 'failed';
@@ -98,17 +126,35 @@ function getSourceBadge(sourceName?: string | null) {
   if (s.includes('google')) {
     return { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200', label: '🌐 Google' };
   }
+  if (s.includes('youtube paid')) {
+    return { bg: 'bg-red-100', text: 'text-red-800 font-semibold', border: 'border-red-300', label: '▶ YouTube Ads' };
+  }
   if (s.includes('youtube')) {
     return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', label: '▶ YouTube' };
   }
+  if (s.includes('bing')) {
+    return { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', label: '🔎 Bing' };
+  }
   if (s.includes('ai') || s.includes('chatgpt')) {
-    return { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200', label: '🤖 AI / ChatGPT' };
+    return { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200', label: '🤖 AI Search' };
+  }
+  if (s.includes('whatsapp')) {
+    return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', label: '💬 WhatsApp' };
+  }
+  if (s.includes('email')) {
+    return { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', label: '✉️ Email' };
   }
   if (s.includes('referral')) {
     return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', label: '🔗 Referral' };
   }
-  if (s.includes('direct')) {
+  if (s.includes('previously attributed')) {
+    return { bg: 'bg-amber-50/70', text: 'text-amber-800 font-medium', border: 'border-amber-200', label: '⚡ Direct (Returning)' };
+  }
+  if (s.includes('genuine direct') || s === 'direct') {
     return { bg: 'bg-zinc-100', text: 'text-zinc-600', border: 'border-zinc-200', label: '⚡ Direct' };
+  }
+  if (s.includes('unknown') || s.includes('missing')) {
+    return { bg: 'bg-zinc-100', text: 'text-zinc-400 italic', border: 'border-zinc-200', label: '❓ Unknown' };
   }
   return { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', label: sourceName };
 }
@@ -124,11 +170,15 @@ const ALL_SOURCES = [
   'Facebook Organic',
   'Google Ads',
   'Google Organic',
-  'YouTube',
-  'Direct',
-  'Referral',
+  'YouTube Paid',
+  'YouTube Organic',
+  'Bing Search',
   'ChatGPT / AI',
-  'Other',
+  'Referral',
+  'WhatsApp',
+  'Email',
+  'Direct',
+  'Unknown',
 ];
 
 export default function SubscriptionLogPanel() {
@@ -140,62 +190,162 @@ export default function SubscriptionLogPanel() {
   const [search, setSearch] = useState('');
   const [logPage, setLogPage] = useState(1);
   const [selectedCheckout, setSelectedCheckout] = useState<CheckoutRow | null>(null);
+  const [journeyLoading, setJourneyLoading] = useState(false);
+  const [journeyTimeline, setJourneyTimeline] = useState<TimelineEvent[]>([]);
+
+  // Manual Correction State
+  const [showCorrectionModal, setShowCorrectionModal] = useState(false);
+  const [correcting, setCorrecting] = useState(false);
+  const [correctionForm, setCorrectionForm] = useState({
+    firstSource: '',
+    firstCampaign: '',
+    firstContent: '',
+    lastSource: '',
+    lastCampaign: '',
+    lastContent: '',
+    reason: '',
+  });
+
   const logsPerPage = 20;
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        const supabase = getSupabaseBrowserClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { setError('Not signed in'); setLoading(false); return; }
+  const loadLogs = async () => {
+    try {
+      setLoading(true);
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setError('Not signed in'); setLoading(false); return; }
 
-        const res = await fetch('/api/admin/checkout-logs', {
-          headers: { Authorization: `Bearer ${session.access_token}` }
-        });
-        const json = await res.json();
-        if (!res.ok || !json.ok) { setError(json.error || 'Failed to load'); setLoading(false); return; }
-        setCheckouts(json.data || []);
-      } catch (e: any) {
-        setError(e?.message || 'Failed to load');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+      const res = await fetch('/api/admin/checkout-logs', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) { setError(json.error || 'Failed to load'); setLoading(false); return; }
+      setCheckouts(json.data || []);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadLogs();
   }, []);
+
+  const openJourneyModal = async (checkout: CheckoutRow) => {
+    setSelectedCheckout(checkout);
+    setJourneyTimeline([]);
+    setJourneyLoading(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch(`/api/admin/analytics/journey/${checkout.id}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json();
+      if (res.ok && json.ok) {
+        setJourneyTimeline(json.timeline || []);
+      }
+    } catch (e) {
+      console.error('Failed to load journey timeline:', e);
+    } finally {
+      setJourneyLoading(false);
+    }
+  };
+
+  const openCorrection = (checkout: CheckoutRow) => {
+    const attr = checkout.attribution;
+    setCorrectionForm({
+      firstSource: attr?.first_source || 'Instagram Paid',
+      firstCampaign: attr?.first_campaign || '',
+      firstContent: attr?.first_content || '',
+      lastSource: attr?.last_source || attr?.first_source || 'Direct',
+      lastCampaign: attr?.last_campaign || '',
+      lastContent: attr?.last_content || '',
+      reason: '',
+    });
+    setShowCorrectionModal(true);
+  };
+
+  const handleSaveCorrection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCheckout?.attribution?.id && !selectedCheckout?.id) return;
+    if (!correctionForm.reason.trim()) {
+      alert('Please enter an audit reason for manual correction.');
+      return;
+    }
+
+    try {
+      setCorrecting(true);
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch('/api/admin/analytics/attribution/correct', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          subscriptionAttributionId: selectedCheckout.attribution?.id || selectedCheckout.id,
+          ...correctionForm,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        alert(json.error || 'Failed to update attribution');
+        setCorrecting(false);
+        return;
+      }
+
+      setShowCorrectionModal(false);
+      setSelectedCheckout(null);
+      loadLogs();
+    } catch (e: any) {
+      alert(e?.message || 'Error saving correction');
+    } finally {
+      setCorrecting(false);
+    }
+  };
 
   const filteredCheckouts = useMemo(() => {
     let list = [...checkouts];
 
     if (filter !== 'all') {
-      list = list.filter(s => getStatus(s) === filter);
+      list = list.filter((s) => getStatus(s) === filter);
     }
 
     if (sourceFilter !== 'All Sources') {
-      list = list.filter(s => {
+      list = list.filter((s) => {
         const first = s.attribution?.first_source;
         const last = s.attribution?.last_source;
-        return first === sourceFilter || last === sourceFilter;
+        return (
+          first?.toLowerCase().includes(sourceFilter.toLowerCase()) ||
+          last?.toLowerCase().includes(sourceFilter.toLowerCase())
+        );
       });
     }
 
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter(s =>
-        (s.billing_email || '').toLowerCase().includes(q) ||
-        (s.billing_name || '').toLowerCase().includes(q) ||
-        (s.billing_mobile || '').includes(q) ||
-        (s.attribution?.first_campaign || '').toLowerCase().includes(q) ||
-        (s.attribution?.first_product_viewed || '').toLowerCase().includes(q) ||
-        (s.attribution?.first_source || '').toLowerCase().includes(q)
+      list = list.filter(
+        (s) =>
+          (s.billing_email || '').toLowerCase().includes(q) ||
+          (s.billing_name || '').toLowerCase().includes(q) ||
+          (s.billing_mobile || '').includes(q) ||
+          (s.attribution?.first_campaign || '').toLowerCase().includes(q) ||
+          (s.attribution?.first_product_viewed || '').toLowerCase().includes(q) ||
+          (s.attribution?.first_source || '').toLowerCase().includes(q)
       );
     }
 
     return list;
   }, [checkouts, filter, sourceFilter, search]);
 
-  // Reset page when filters change
   useEffect(() => {
     setLogPage(1);
   }, [filter, sourceFilter, search]);
@@ -208,27 +358,39 @@ export default function SubscriptionLogPanel() {
 
   const counts = useMemo(() => {
     const c = { all: checkouts.length, completed: 0, initiated: 0, failed: 0 };
-    checkouts.forEach(s => { c[getStatus(s)]++; });
+    checkouts.forEach((s) => {
+      c[getStatus(s)]++;
+    });
     return c;
   }, [checkouts]);
 
   const totalRevenue = useMemo(() => {
     return checkouts
-      .filter(c => c.status === 'completed')
+      .filter((c) => c.status === 'completed')
       .reduce((sum, c) => sum + Number(c.total_amount || 0), 0);
   }, [checkouts]);
 
-  if (loading) return <div className="text-center py-12 text-zinc-500 font-medium">Loading subscription log with attribution…</div>;
-  if (error) return <div className="text-sm text-red-500 py-8 text-center">{error}</div>;
+  if (loading)
+    return (
+      <div className="text-center py-12 text-zinc-500 font-medium text-xs">
+        Loading subscription log with customer journey tracking…
+      </div>
+    );
+  if (error) return <div className="text-xs text-red-500 py-8 text-center">{error}</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h2 className="text-xl font-bold text-zinc-900 flex items-center gap-2">
-            Subscription Log <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-semibold">Attribution Enabled</span>
+            Subscription Log
+            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-semibold">
+              Universal Journey Enabled
+            </span>
           </h2>
-          <p className="text-sm text-zinc-500 mt-0.5">Real-time checkout journeys with first-touch & last-touch origin tracking</p>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            Real-time subscriber checkouts with immutable First-Touch & Last-Touch origin tracking
+          </p>
         </div>
       </div>
 
@@ -252,108 +414,104 @@ export default function SubscriptionLogPanel() {
         </div>
       </div>
 
-      {/* Filters + Search */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Status filter tabs */}
-          <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-1">
-            {FILTER_TABS.map(tab => (
-              <button
-                key={tab}
-                onClick={() => setFilter(tab)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${filter === tab
-                  ? 'bg-white text-zinc-900 shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50'
-                }`}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                <span className="ml-1.5 text-zinc-400">({counts[tab]})</span>
-              </button>
-            ))}
-          </div>
+      {/* Controls & Filters */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-zinc-200 shadow-xs">
+        <div className="flex items-center gap-1 w-full sm:w-auto overflow-x-auto">
+          {FILTER_TABS.map((t) => (
+            <button
+              key={t}
+              onClick={() => setFilter(t)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${
+                filter === t
+                  ? 'bg-zinc-900 text-white'
+                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+              }`}
+            >
+              {t} ({counts[t]})
+            </button>
+          ))}
+        </div>
 
-          {/* Source dropdown */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <select
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200 text-xs font-medium text-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            className="px-3 py-1.5 text-xs rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white"
           >
-            {ALL_SOURCES.map((src) => (
-              <option key={src} value={src}>{src}</option>
+            {ALL_SOURCES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
           </select>
-
-          {/* Search box */}
-          <div className="ml-auto relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search user, email, campaign, source..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 rounded-lg bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-64"
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Search email, name, campaign..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="px-3 py-1.5 text-xs rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-56"
+          />
         </div>
       </div>
 
-      {/* Log entries */}
-      <div className="space-y-2">
-        {filteredCheckouts.length === 0 ? (
-          <div className="rounded-xl border border-zinc-200 bg-white p-12 text-center text-zinc-400">
-            No checkout events found matching current criteria
+      {/* Checkouts List */}
+      <div className="space-y-2.5">
+        {paginatedCheckouts.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-2xl border border-zinc-200 p-8 text-zinc-400 text-xs">
+            No subscription checkouts match the selected filters.
           </div>
         ) : (
           paginatedCheckouts.map((c) => {
-            const status = getStatus(c);
-            const cfg = STATUS_CONFIG[status];
-            const name = c.billing_name || 'User';
-            const phone = (c.billing_mobile || '').replace(/[^0-9]/g, '');
+            const st = getStatus(c);
+            const cfg = STATUS_CONFIG[st];
             const attr = c.attribution;
             const firstBadge = getSourceBadge(attr?.first_source);
-            const lastBadge = getSourceBadge(attr?.last_source);
-            const isAssisted = attr?.first_source && attr?.last_source && attr.first_source !== attr.last_source;
+            const lastBadge = getSourceBadge(attr?.last_source || attr?.first_source);
+            const isAssisted =
+              attr?.first_source &&
+              attr?.last_source &&
+              attr.first_source !== attr.last_source;
 
-            const waMsg = status === 'completed'
-              ? encodeURIComponent(`Hi ${name}, thank you for subscribing to Celite! If you have any questions or need assistance with your ${c.subscription_plan || ''} plan, feel free to reach out — we're happy to help!`)
-              : status === 'initiated'
-              ? encodeURIComponent(`Hi ${name}, we noticed you started a subscription checkout on Celite but didn't complete it. If you faced any issues or have questions, we're here to help — feel free to reach out!`)
-              : encodeURIComponent(`Hi ${name}, we noticed there was an issue with your recent subscription attempt on Celite. We'd love to help resolve it — please feel free to reach out!`);
-
-            const emSubject = status === 'completed'
-              ? encodeURIComponent('Welcome to Celite!')
-              : encodeURIComponent('Need Help with Your Celite Subscription?');
-
-            const emBody = status === 'completed'
-              ? encodeURIComponent(`Hi ${name},\n\nThank you for subscribing to Celite! If you have any questions or need assistance with your ${c.subscription_plan || ''} plan, feel free to reach out — we're happy to help!\n\nBest regards,\nCelite Team`)
-              : encodeURIComponent(`Hi ${name},\n\nWe noticed you recently tried to subscribe on Celite. If you faced any issues or have questions, we're here to help!\n\nFeel free to reach out and we'll get you sorted.\n\nBest regards,\nCelite Team`);
-
-            const waUrl = phone ? `https://wa.me/${phone}?text=${waMsg}` : `https://wa.me/?text=${waMsg}`;
-            const emUrl = c.billing_email ? `mailto:${c.billing_email}?subject=${emSubject}&body=${emBody}` : '';
+            const name = c.billing_name || c.billing_email?.split('@')[0] || 'Subscriber';
+            const phoneClean = c.billing_mobile?.replace(/\D/g, '') || '';
+            const waPhone = phoneClean.length === 10 ? `91${phoneClean}` : phoneClean;
+            const waUrl = `https://wa.me/${waPhone}`;
+            const emUrl = c.billing_email ? `mailto:${c.billing_email}` : '';
 
             return (
               <div
                 key={c.id}
-                onClick={() => setSelectedCheckout(c)}
-                className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all cursor-pointer group"
+                onClick={() => openJourneyModal(c)}
+                className="group bg-white rounded-2xl border border-zinc-200 p-4 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer space-y-3"
               >
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  {/* Left: Status & User */}
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold ${cfg.bg} ${cfg.text} border ${cfg.border}`}>
-                      <span>{cfg.icon}</span> {cfg.label}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  {/* Left: Status & Customer */}
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`inline-flex items-center justify-center w-7 h-7 rounded-xl border text-xs font-bold ${cfg.bg} ${cfg.text} ${cfg.border}`}
+                      title={cfg.label}
+                    >
+                      {cfg.icon}
                     </span>
-
-                    <div className="flex flex-col min-w-0">
+                    <div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-zinc-900 group-hover:text-blue-600 transition-colors truncate">
                           {name}
                         </span>
                         {c.subscription_plan && (
-                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${c.subscription_plan === 'yearly' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                              c.subscription_plan === 'yearly'
+                                ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                : 'bg-blue-50 text-blue-700 border border-blue-200'
+                            }`}
+                          >
                             {c.subscription_plan.toUpperCase()}
+                          </span>
+                        )}
+                        {attr?.is_manually_corrected && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800">
+                            Corrected
                           </span>
                         )}
                       </div>
@@ -368,14 +526,20 @@ export default function SubscriptionLogPanel() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {attr?.first_source ? (
                       <div className="flex items-center gap-1.5 text-[11px]">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] ${firstBadge.bg} ${firstBadge.text} ${firstBadge.border}`} title={`First Touch: ${attr.first_source}`}>
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] ${firstBadge.bg} ${firstBadge.text} ${firstBadge.border}`}
+                          title={`First Touch: ${attr.first_source}`}
+                        >
                           1st: {firstBadge.label}
                         </span>
 
                         {isAssisted && (
                           <>
                             <span className="text-zinc-300">→</span>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] ${lastBadge.bg} ${lastBadge.text} ${lastBadge.border}`} title={`Last Touch: ${attr.last_source}`}>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] ${lastBadge.bg} ${lastBadge.text} ${lastBadge.border}`}
+                              title={`Last Touch: ${attr.last_source}`}
+                            >
                               Last: {lastBadge.label}
                             </span>
                           </>
@@ -388,7 +552,10 @@ export default function SubscriptionLogPanel() {
                         )}
 
                         {attr.first_product_viewed && (
-                          <span className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 text-[10px] font-mono border border-zinc-200 truncate max-w-[140px]" title={attr.first_product_viewed}>
+                          <span
+                            className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 text-[10px] font-mono border border-zinc-200 truncate max-w-[140px]"
+                            title={attr.first_product_viewed}
+                          >
                             🎬 {attr.first_product_viewed}
                           </span>
                         )}
@@ -401,23 +568,35 @@ export default function SubscriptionLogPanel() {
                   {/* Right: Amount, Time, Actions */}
                   <div className="flex items-center gap-3">
                     {c.total_amount && (
-                      <span className="text-sm font-bold text-zinc-800">₹{Number(c.total_amount).toLocaleString('en-IN')}</span>
+                      <span className="text-sm font-bold text-zinc-800">
+                        ₹{Number(c.total_amount).toLocaleString('en-IN')}
+                      </span>
                     )}
 
-                    <span className="text-[11px] text-zinc-400 whitespace-nowrap" title={new Date(c.created_at).toLocaleString()}>
+                    <span className="text-[11px] text-zinc-400 whitespace-nowrap">
                       {formatDateTime(c.created_at)}
                     </span>
 
                     {/* Contact buttons */}
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <a href={waUrl} target="_blank" rel="noopener noreferrer" title={`WhatsApp ${name}`} className="p-1.5 rounded-lg hover:bg-green-50 transition-colors group/wa">
+                      <a
+                        href={waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`WhatsApp ${name}`}
+                        className="p-1.5 rounded-lg hover:bg-green-50 transition-colors group/wa"
+                      >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-zinc-400 group-hover/wa:text-green-600 transition-colors">
                           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" fill="currentColor"/>
                           <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.264-1.222l-.306-.183-2.869.852.852-2.869-.183-.306A8 8 0 1112 20z" fill="currentColor"/>
                         </svg>
                       </a>
                       {emUrl && (
-                        <a href={emUrl} title={`Email ${name}`} className="p-1.5 rounded-lg hover:bg-blue-50 transition-colors group/em">
+                        <a
+                          href={emUrl}
+                          title={`Email ${name}`}
+                          className="p-1.5 rounded-lg hover:bg-blue-50 transition-colors group/em"
+                        >
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 group-hover/em:text-blue-600 transition-colors">
                             <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
                           </svg>
@@ -441,16 +620,16 @@ export default function SubscriptionLogPanel() {
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-500 font-medium">Page {logPage} of {totalLogPages}</span>
             <button
-              onClick={() => setLogPage(p => Math.max(1, p - 1))}
+              onClick={() => setLogPage((p) => Math.max(1, p - 1))}
               disabled={logPage === 1}
-              className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed bg-white shadow-sm"
+              className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed bg-white shadow-xs"
             >
               Previous
             </button>
             <button
-              onClick={() => setLogPage(p => Math.min(totalLogPages, p + 1))}
+              onClick={() => setLogPage((p) => Math.min(totalLogPages, p + 1))}
               disabled={logPage === totalLogPages}
-              className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed bg-white shadow-sm"
+              className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed bg-white shadow-xs"
             >
               Next
             </button>
@@ -458,14 +637,14 @@ export default function SubscriptionLogPanel() {
         </div>
       )}
 
-      {/* Attribution Detail Modal */}
+      {/* Interactive Customer Journey Timeline Modal */}
       {selectedCheckout && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl border border-zinc-200 shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-6">
+          <div className="bg-white rounded-2xl border border-zinc-200 shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-6">
             <div className="flex items-start justify-between border-b border-zinc-100 pb-4">
               <div>
                 <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
-                  Customer Attribution Journey
+                  Customer Journey Timeline
                   {selectedCheckout.attribution?.is_snapshot && (
                     <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
                       Immutable Purchase Snapshot
@@ -476,84 +655,163 @@ export default function SubscriptionLogPanel() {
                   Customer: <span className="font-semibold text-zinc-800">{selectedCheckout.billing_name || 'Subscriber'}</span> • {selectedCheckout.billing_email}
                 </p>
               </div>
-              <button
-                onClick={() => setSelectedCheckout(null)}
-                className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100 transition-colors"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => openCorrection(selectedCheckout)}
+                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
+                >
+                  ✏️ Correct Attribution
+                </button>
+                <button
+                  onClick={() => setSelectedCheckout(null)}
+                  className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
-            {/* Journey Summary */}
-            {selectedCheckout.attribution ? (
-              <div className="space-y-5">
-                <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <div className="text-xs font-medium text-zinc-500">First Touch (Discovery)</div>
-                    <div className="text-sm font-bold text-zinc-900 mt-0.5">
-                      {selectedCheckout.attribution.first_source || 'Direct'}
-                    </div>
+            {/* Attribution Summary Banner */}
+            {selectedCheckout.attribution && (
+              <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="text-xs font-medium text-zinc-500">First Touch (Discovery)</div>
+                  <div className="text-sm font-bold text-zinc-900 mt-0.5">
+                    {selectedCheckout.attribution.first_source || 'Direct'}
                   </div>
-                  <div className="hidden sm:block text-zinc-400 font-bold text-lg">➔</div>
-                  <div>
-                    <div className="text-xs font-medium text-zinc-500">Last Touch (Conversion)</div>
-                    <div className="text-sm font-bold text-zinc-900 mt-0.5">
-                      {selectedCheckout.attribution.last_source || selectedCheckout.attribution.first_source || 'Direct'}
+                  {selectedCheckout.attribution.first_campaign && (
+                    <div className="text-[11px] text-zinc-500 font-mono">
+                      📣 {selectedCheckout.attribution.first_campaign}
                     </div>
+                  )}
+                </div>
+                <div className="hidden sm:block text-zinc-400 font-bold text-lg">➔</div>
+                <div>
+                  <div className="text-xs font-medium text-zinc-500">Last Touch (Converting)</div>
+                  <div className="text-sm font-bold text-zinc-900 mt-0.5">
+                    {selectedCheckout.attribution.last_source || selectedCheckout.attribution.first_source || 'Direct'}
                   </div>
-                  <div className="border-t sm:border-t-0 sm:border-l border-zinc-200 pt-2 sm:pt-0 sm:pl-4">
-                    <div className="text-xs font-medium text-zinc-500">Paid Amount</div>
-                    <div className="text-sm font-bold text-emerald-600 mt-0.5">
-                      ₹{Number(selectedCheckout.total_amount || 0).toLocaleString('en-IN')}
+                  {selectedCheckout.attribution.last_product_viewed && (
+                    <div className="text-[11px] text-blue-600 font-mono">
+                      🎬 {selectedCheckout.attribution.last_product_viewed}
                     </div>
+                  )}
+                </div>
+                <div className="border-t sm:border-t-0 sm:border-l border-zinc-200 pt-2 sm:pt-0 sm:pl-4">
+                  <div className="text-xs font-medium text-zinc-500">Revenue & Plan</div>
+                  <div className="text-sm font-bold text-emerald-600 mt-0.5">
+                    ₹{Number(selectedCheckout.total_amount || 0).toLocaleString('en-IN')} ({(selectedCheckout.subscription_plan || 'monthly').toUpperCase()})
                   </div>
                 </div>
-
-                {/* First Touch Details */}
-                <div className="rounded-xl border border-zinc-200 p-4 space-y-3 bg-white">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-600 flex items-center gap-1.5">
-                    <span>🌱</span> First-Touch Parameters (Permanent Origin)
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div><span className="text-zinc-400">Source:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.first_source || 'None'}</span></div>
-                    <div><span className="text-zinc-400">Medium:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.first_medium || 'None'}</span></div>
-                    <div><span className="text-zinc-400">Campaign:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.first_campaign || 'None'}</span></div>
-                    <div><span className="text-zinc-400">Content:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.first_content || 'None'}</span></div>
-                    <div className="sm:col-span-2"><span className="text-zinc-400">Landing Page:</span> <span className="font-mono text-zinc-800 text-[11px]">{selectedCheckout.attribution.first_landing_page || '/'}</span></div>
-                    <div className="sm:col-span-2"><span className="text-zinc-400">Referrer:</span> <span className="font-mono text-zinc-800 text-[11px]">{selectedCheckout.attribution.first_referrer || 'None (Direct)'}</span></div>
-                    <div className="sm:col-span-2"><span className="text-zinc-400">First Product Viewed:</span> <span className="font-semibold text-blue-600">{selectedCheckout.attribution.first_product_viewed || 'None'}</span></div>
-                    {selectedCheckout.attribution.first_visit_at && (
-                      <div className="sm:col-span-2"><span className="text-zinc-400">First Visit Time:</span> <span className="text-zinc-700">{new Date(selectedCheckout.attribution.first_visit_at).toLocaleString()}</span></div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Last Touch Details */}
-                <div className="rounded-xl border border-zinc-200 p-4 space-y-3 bg-white">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-600 flex items-center gap-1.5">
-                    <span>🎯</span> Last-Touch Parameters (Converting Touch)
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div><span className="text-zinc-400">Source:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.last_source || selectedCheckout.attribution.first_source || 'None'}</span></div>
-                    <div><span className="text-zinc-400">Medium:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.last_medium || selectedCheckout.attribution.first_medium || 'None'}</span></div>
-                    <div><span className="text-zinc-400">Campaign:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.last_campaign || selectedCheckout.attribution.first_campaign || 'None'}</span></div>
-                    <div><span className="text-zinc-400">Content:</span> <span className="font-medium text-zinc-900">{selectedCheckout.attribution.last_content || selectedCheckout.attribution.first_content || 'None'}</span></div>
-                    <div className="sm:col-span-2"><span className="text-zinc-400">Landing Page:</span> <span className="font-mono text-zinc-800 text-[11px]">{selectedCheckout.attribution.last_landing_page || '/'}</span></div>
-                    <div className="sm:col-span-2"><span className="text-zinc-400">Referrer:</span> <span className="font-mono text-zinc-800 text-[11px]">{selectedCheckout.attribution.last_referrer || 'None (Direct)'}</span></div>
-                    <div className="sm:col-span-2"><span className="text-zinc-400">Last Product Viewed:</span> <span className="font-semibold text-blue-600">{selectedCheckout.attribution.last_product_viewed || 'None'}</span></div>
-                    {selectedCheckout.attribution.last_visit_at && (
-                      <div className="sm:col-span-2"><span className="text-zinc-400">Last Visit Time:</span> <span className="text-zinc-700">{new Date(selectedCheckout.attribution.last_visit_at).toLocaleString()}</span></div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-zinc-400 text-sm">
-                No attribution journey data recorded for this checkout attempt.
               </div>
             )}
 
-            <div className="flex justify-end pt-2">
+            {/* Chronological Vertical Journey Timeline */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-600 flex items-center justify-between">
+                <span>📍 Chronological Customer Journey Stream</span>
+                {journeyTimeline.length > 0 && (
+                  <span className="text-[11px] font-normal text-zinc-400 lowercase">
+                    {journeyTimeline.length} touchpoint events
+                  </span>
+                )}
+              </h4>
+
+              {journeyLoading ? (
+                <div className="py-8 text-center text-zinc-400 text-xs font-medium">
+                  Loading customer touchpoint stream…
+                </div>
+              ) : journeyTimeline.length === 0 ? (
+                <div className="py-8 text-center text-zinc-400 text-xs border border-dashed border-zinc-200 rounded-xl">
+                  No granular event history recorded for this checkout session.
+                </div>
+              ) : (
+                <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200">
+                  {journeyTimeline.map((tp, idx) => {
+                    const isFirst = idx === 0;
+                    const isLast = idx === journeyTimeline.length - 1;
+                    const isProduct = tp.event_type === 'product_view' || Boolean(tp.product_slug);
+                    const isCheckout = tp.event_type.includes('checkout') || tp.event_type.includes('subscription');
+
+                    return (
+                      <div key={tp.id || idx} className="relative group">
+                        {/* Timeline Node Icon */}
+                        <div
+                          className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full border-2 bg-white flex items-center justify-center text-[10px] ${
+                            isFirst
+                              ? 'border-emerald-500 text-emerald-600'
+                              : isLast || isCheckout
+                              ? 'border-blue-500 text-blue-600'
+                              : isProduct
+                              ? 'border-purple-500 text-purple-600'
+                              : 'border-zinc-300 text-zinc-400'
+                          }`}
+                        >
+                          {isFirst ? '🌱' : isCheckout ? '💳' : isProduct ? '🎬' : '•'}
+                        </div>
+
+                        {/* Event Card */}
+                        <div className="bg-zinc-50 hover:bg-zinc-100/70 transition-colors border border-zinc-200 rounded-xl p-3.5 space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-zinc-900 uppercase">
+                                {tp.event_type.replace('_', ' ')}
+                              </span>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white border border-zinc-200 text-zinc-700">
+                                {tp.source}
+                              </span>
+                              {tp.medium && (
+                                <span className="text-[10px] text-zinc-500">({tp.medium})</span>
+                              )}
+                            </div>
+                            <span className="text-[11px] text-zinc-400 font-mono">
+                              {new Date(tp.created_at).toLocaleString()}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-zinc-600">
+                            <div>
+                              <span className="text-zinc-400">Path / Page:</span>{' '}
+                              <span className="font-mono text-zinc-800 text-[11px]">{tp.path || '/'}</span>
+                            </div>
+                            {tp.product_slug && (
+                              <div>
+                                <span className="text-zinc-400">Product:</span>{' '}
+                                <span className="font-semibold text-blue-600">{tp.product_slug}</span>
+                              </div>
+                            )}
+                            {(tp.resolved_campaign_name || tp.campaign) && (
+                              <div className="sm:col-span-2">
+                                <span className="text-zinc-400">Campaign:</span>{' '}
+                                <span className="font-semibold text-zinc-800">
+                                  {tp.resolved_campaign_name || tp.campaign}
+                                </span>
+                              </div>
+                            )}
+                            {(tp.resolved_content_name || tp.content) && (
+                              <div className="sm:col-span-2">
+                                <span className="text-zinc-400">Ad / Video Creative:</span>{' '}
+                                <span className="font-semibold text-zinc-800">
+                                  {tp.resolved_content_name || tp.content}
+                                </span>
+                              </div>
+                            )}
+                            {tp.referrer_url && (
+                              <div className="sm:col-span-2 truncate">
+                                <span className="text-zinc-400">Referrer:</span>{' '}
+                                <span className="font-mono text-zinc-700 text-[11px]">{tp.referrer_url}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-zinc-100">
               <button
                 onClick={() => setSelectedCheckout(null)}
                 className="px-4 py-2 rounded-xl bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors"
@@ -561,6 +819,87 @@ export default function SubscriptionLogPanel() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Attribution Correction Modal */}
+      {showCorrectionModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl border border-zinc-200 shadow-xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+              <h3 className="text-base font-bold text-zinc-900">✏️ Manual Attribution Correction</h3>
+              <button
+                onClick={() => setShowCorrectionModal(false)}
+                className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCorrection} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-zinc-700 mb-1">First Touch Source</label>
+                <input
+                  type="text"
+                  required
+                  value={correctionForm.firstSource}
+                  onChange={(e) => setCorrectionForm({ ...correctionForm, firstSource: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 bg-zinc-50"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-zinc-700 mb-1">First Campaign / Ad Name</label>
+                <input
+                  type="text"
+                  value={correctionForm.firstCampaign}
+                  onChange={(e) => setCorrectionForm({ ...correctionForm, firstCampaign: e.target.value })}
+                  placeholder="e.g. August Video Editors Campaign"
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 bg-zinc-50"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-zinc-700 mb-1">Last Touch Source</label>
+                <input
+                  type="text"
+                  required
+                  value={correctionForm.lastSource}
+                  onChange={(e) => setCorrectionForm({ ...correctionForm, lastSource: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 bg-zinc-50"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-zinc-700 mb-1">Audit Correction Reason *</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={correctionForm.reason}
+                  onChange={(e) => setCorrectionForm({ ...correctionForm, reason: e.target.value })}
+                  placeholder="Explain why this attribution is being manually adjusted (e.g. customer verified via WhatsApp conversation that they discovered Celite via Instagram Reel)."
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-zinc-100">
+                <button
+                  type="button"
+                  onClick={() => setShowCorrectionModal(false)}
+                  className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 font-semibold hover:bg-zinc-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={correcting}
+                  className="px-5 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {correcting ? 'Saving…' : 'Apply Correction'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

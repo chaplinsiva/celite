@@ -90,13 +90,20 @@ describe('Attribution Source Normalization', () => {
       normalizeSource({
         utm_source: 'youtube',
       })
-    ).toBe('YouTube');
+    ).toBe('YouTube Organic');
 
     expect(
       normalizeSource({
         referrer: 'https://m.youtube.com/',
       })
-    ).toBe('YouTube');
+    ).toBe('YouTube Organic');
+
+    expect(
+      normalizeSource({
+        utm_source: 'youtube',
+        utm_medium: 'paid_video',
+      })
+    ).toBe('YouTube Paid');
   });
 
   it('normalizes ChatGPT / AI', () => {
