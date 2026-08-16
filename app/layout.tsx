@@ -245,8 +245,8 @@ export default function RootLayout({
                 },
                 {
                   "@type": "SiteNavigationElement",
-                  "name": "Pricing",
-                  "url": "https://celite.in/pricing"
+                  "name": "Blogs & Guides",
+                  "url": "https://celite.in/blogs"
                 },
                 {
                   "@type": "SiteNavigationElement",

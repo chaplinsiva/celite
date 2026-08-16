@@ -19,6 +19,7 @@ import BulkSfxPanel from './components/BulkSfxPanel';
 import FreeGiftsPanel from './components/FreeGiftsPanel';
 import SpecialOfferPanel from './components/SpecialOfferPanel';
 import ProductAlertsPanel from './components/ProductAlertsPanel';
+import BlogsPanel from './components/BlogsPanel';
 import SubscriptionApprovalPanel from './components/SubscriptionApprovalPanel';
 import AdminPayoutPanel from './components/AdminPayoutPanel';
 import VendorAnalyticsPanel from './components/VendorAnalyticsPanel';
@@ -42,7 +43,7 @@ export default function AdminClient() {
     celiteAmount?: number;
   } | null>(null);
   const [active, setActive] = useState<
-    'overview' | 'payouts' | 'products' | 'subscriptionApproval' | 'vendorApproval' | 'categories' | 'analytics' | 'trafficAnalytics' | 'attributionAnalytics' | 'vendorAnalytics' | 'subscriptionLog' | 'freeGifts' | 'specialOffer' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx'
+    'overview' | 'blogs' | 'payouts' | 'products' | 'subscriptionApproval' | 'vendorApproval' | 'categories' | 'analytics' | 'trafficAnalytics' | 'attributionAnalytics' | 'vendorAnalytics' | 'subscriptionLog' | 'freeGifts' | 'specialOffer' | 'users' | 'settings' | 'marketing' | 'productAlerts' | 'bulkSfx'
   >('overview');
 
 
@@ -132,6 +133,7 @@ export default function AdminClient() {
         <div className="flex flex-col h-full overflow-hidden">
           <section className="flex-1 p-8 space-y-8 overflow-y-auto">
             {active === 'overview' && (<OverviewPanel stats={stats} onSeed={runSeed} onUpload={runUpload} />)}
+            {active === 'blogs' && (<BlogsPanel />)}
             {active === 'payouts' && (<AdminPayoutPanel />)}
             {active === 'subscriptionApproval' && (<SubscriptionApprovalPanel />)}
 
