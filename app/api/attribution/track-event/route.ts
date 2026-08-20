@@ -1,4 +1,4 @@
-// agent-notes: { ctx: "Touchpoint event streaming API endpoint for appending customer journey events to visitor_touchpoints and updating visitor_attributions", deps: ["lib/supabaseAdmin.ts", "lib/attribution.ts"], state: active, last: "sato@2026-08-16" }
+// agent-notes: { ctx: "Touchpoint event streaming API endpoint for appending customer journey events to visitor_touchpoints and updating visitor_attributions", deps: ["lib/supabaseAdmin.ts", "lib/attribution.ts"], state: active, last: "sato@2026-08-20" }
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
 import type { TouchPoint, EventType } from '../../../../lib/attribution';
@@ -88,7 +88,15 @@ export async function POST(req: Request) {
       console.warn('Failed to insert visitor_touchpoint:', touchpointErr.message);
     }
 
-    // 2. If user is authenticated, maintain visitor_attributions table
+    // 2. Auto-prune logs older than 5 hours (5-hour TTL)
+    try {
+      const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString();
+      await admin.from('visitor_touchpoints').delete().lt('created_at', fiveHoursAgo);
+    } catch (pruneErr) {
+      console.warn('Failed to prune old visitor_touchpoints:', pruneErr);
+    }
+
+    // 3. If user is authenticated, maintain visitor_attributions table
     if (userId) {
       const { data: existing } = await admin
         .from('visitor_attributions')

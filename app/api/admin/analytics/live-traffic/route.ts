@@ -1,4 +1,4 @@
-// agent-notes: { ctx: "Admin API endpoint for real-time live traffic activity stream, all-visitor views, signups by source, trend charts, and full funnel analytics", deps: ["lib/supabaseAdmin.ts", "lib/attribution.ts"], state: active, last: "sato@2026-08-16" }
+// agent-notes: { ctx: "Admin API endpoint for real-time live traffic activity stream, all-visitor views, signups by source, trend charts, and full funnel analytics", deps: ["lib/supabaseAdmin.ts", "lib/attribution.ts"], state: active, last: "sato@2026-08-20" }
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../../lib/supabaseAdmin';
 import { resolveContentNames, type RegistryMapping } from '../../../../../lib/attribution';
@@ -25,17 +25,25 @@ export async function GET(req: Request) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
 
-    // 1. Fetch Marketing Registry for name resolution
+    // 1. Auto-prune touchpoints older than 5 hours (5-hour TTL retention)
+    const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString();
+    await admin.from('visitor_touchpoints').delete().lt('created_at', fiveHoursAgo);
+
+    // 2. Fetch Marketing Registry for name resolution
     const { data: rawRegistry } = await admin.from('marketing_sources_registry').select('*');
     const registry: RegistryMapping[] = rawRegistry || [];
 
-    // 2. Query visitor_touchpoints
+    // 3. Query visitor_touchpoints (only last 5 hours retained)
     let query = admin
       .from('visitor_touchpoints')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false });
 
-    if (dateFrom) query = query.gte('created_at', new Date(dateFrom).toISOString());
+    if (dateFrom) {
+      query = query.gte('created_at', new Date(dateFrom).toISOString());
+    } else {
+      query = query.gte('created_at', fiveHoursAgo);
+    }
     if (dateTo) {
       const end = new Date(dateTo);
       end.setHours(23, 59, 59, 999);

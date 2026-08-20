@@ -1,4 +1,4 @@
-// agent-notes: { ctx: "Admin checkout logs API endpoint with attribution data join", deps: ["lib/supabaseAdmin.ts"], state: active, last: "sato@2026-08-14" }
+// agent-notes: { ctx: "Admin checkout logs API endpoint with attribution data join and contact status updates", deps: ["lib/supabaseAdmin.ts"], state: active, last: "sato@2026-08-20" }
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
 
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     // Fetch all checkout_details sorted by latest first
     const { data: checkouts, error: checkoutsErr } = await admin
       .from('checkout_details')
-      .select('id,user_id,checkout_type,billing_name,billing_email,billing_mobile,subscription_plan,total_amount,status,razorpay_subscription_id,razorpay_payment_id,created_at,updated_at')
+      .select('id,user_id,checkout_type,billing_name,billing_email,billing_mobile,subscription_plan,total_amount,status,razorpay_subscription_id,razorpay_payment_id,whatsapp_sent,email_sent,whatsapp_sent_at,email_sent_at,created_at,updated_at')
       .order('created_at', { ascending: false })
       .limit(500);
 
@@ -110,3 +110,53 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: e?.message || 'Unknown error' }, { status: 500 });
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const admin = getSupabaseAdminClient();
+    const auth = req.headers.get('authorization') || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length) : null;
+    if (!token) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+
+    const { data: me, error: meErr } = await admin.auth.getUser(token);
+    if (meErr || !me.user) return NextResponse.json({ ok: false, error: 'Invalid session' }, { status: 401 });
+    const { data: isAdmin } = await admin.from('admins').select('user_id').eq('user_id', me.user.id).maybeSingle();
+    if (!isAdmin) return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 });
+
+    const body = await req.json();
+    const { checkoutId, whatsapp_sent, email_sent } = body;
+
+    if (!checkoutId) {
+      return NextResponse.json({ ok: false, error: 'Missing checkoutId' }, { status: 400 });
+    }
+
+    const updates: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (typeof whatsapp_sent === 'boolean') {
+      updates.whatsapp_sent = whatsapp_sent;
+      updates.whatsapp_sent_at = whatsapp_sent ? new Date().toISOString() : null;
+    }
+
+    if (typeof email_sent === 'boolean') {
+      updates.email_sent = email_sent;
+      updates.email_sent_at = email_sent ? new Date().toISOString() : null;
+    }
+
+    const { error: updateErr } = await admin
+      .from('checkout_details')
+      .update(updates)
+      .eq('id', checkoutId);
+
+    if (updateErr) {
+      return NextResponse.json({ ok: false, error: updateErr.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, message: 'Status updated successfully' });
+  } catch (e: any) {
+    console.error('Update checkout status error:', e);
+    return NextResponse.json({ ok: false, error: e?.message || 'Unknown error' }, { status: 500 });
+  }
+}
+
