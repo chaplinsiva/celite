@@ -1,4 +1,4 @@
-// agent-notes: { ctx: "Unit tests for Live Traffic & All-Visitor Activity Logs aggregation logic", deps: ["vitest"], state: active, last: "tara@2026-08-16" }
+// agent-notes: { ctx: "Unit tests for Live Traffic & All-Visitor Activity Logs aggregation & 5-hour TTL pruning logic", deps: ["vitest"], state: active, last: "tara@2026-08-20" }
 import { describe, it, expect } from 'vitest';
 
 export type MockTouchpoint = {
@@ -16,6 +16,15 @@ export type MockTouchpoint = {
   browser: string | null;
   created_at: string;
 };
+
+export function filterRecentTouchpoints(
+  touchpoints: MockTouchpoint[],
+  maxHours = 5,
+  referenceTime = new Date()
+): MockTouchpoint[] {
+  const cutoffTime = new Date(referenceTime.getTime() - maxHours * 60 * 60 * 1000).toISOString();
+  return touchpoints.filter((t) => t.created_at >= cutoffTime);
+}
 
 export function computeLiveTrafficMetrics(touchpoints: MockTouchpoint[]) {
   const totalViews = touchpoints.length;
@@ -197,5 +206,78 @@ describe('Live Traffic & Visitor Activity Logs Aggregation', () => {
 
     expect(result.deviceBreakdown.Mobile).toBe(3);
     expect(result.deviceBreakdown.Desktop).toBe(1);
+  });
+
+  describe('5-hour TTL Log Retention & Pruning', () => {
+    it('prunes and excludes events older than 5 hours', () => {
+      const now = new Date('2026-08-16T12:00:00Z');
+      const eventsWithStale: MockTouchpoint[] = [
+        {
+          id: 'fresh-1',
+          anonymous_id: 'anon-1',
+          session_id: 'sess-1',
+          user_id: null,
+          event_type: 'landing',
+          source: 'Instagram Paid',
+          medium: 'cpc',
+          campaign: 'celite_august_sale',
+          path: '/',
+          product_slug: null,
+          device_type: 'Mobile',
+          browser: 'Chrome',
+          created_at: '2026-08-16T11:00:00Z', // 1 hour ago
+        },
+        {
+          id: 'fresh-2',
+          anonymous_id: 'anon-2',
+          session_id: 'sess-2',
+          user_id: null,
+          event_type: 'product_view',
+          source: 'Google Organic',
+          medium: 'organic',
+          campaign: null,
+          path: '/templates/wedding-invitation',
+          product_slug: 'wedding-invitation',
+          device_type: 'Desktop',
+          browser: 'Safari',
+          created_at: '2026-08-16T08:30:00Z', // 3.5 hours ago
+        },
+        {
+          id: 'stale-1',
+          anonymous_id: 'anon-old-1',
+          session_id: 'sess-old-1',
+          user_id: null,
+          event_type: 'landing',
+          source: 'Facebook Paid',
+          medium: 'cpc',
+          campaign: 'old_campaign',
+          path: '/',
+          product_slug: null,
+          device_type: 'Mobile',
+          browser: 'Chrome',
+          created_at: '2026-08-16T06:00:00Z', // 6 hours ago (STALE)
+        },
+        {
+          id: 'stale-2',
+          anonymous_id: 'anon-old-2',
+          session_id: 'sess-old-2',
+          user_id: null,
+          event_type: 'landing',
+          source: 'YouTube Organic',
+          medium: 'video',
+          campaign: null,
+          path: '/',
+          product_slug: null,
+          device_type: 'Desktop',
+          browser: 'Firefox',
+          created_at: '2026-08-15T12:00:00Z', // 24 hours ago (STALE)
+        },
+      ];
+
+      const retained = filterRecentTouchpoints(eventsWithStale, 5, now);
+      expect(retained.length).toBe(2);
+      expect(retained.map((e) => e.id)).toEqual(['fresh-1', 'fresh-2']);
+      expect(retained.some((e) => e.id === 'stale-1' || e.id === 'stale-2')).toBe(false);
+    });
   });
 });

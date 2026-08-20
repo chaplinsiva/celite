@@ -1,4 +1,4 @@
-// agent-notes: { ctx: "Admin subscription log panel with universal attribution badges, interactive customer journey visualizer, and manual correction", deps: ["lib/supabaseClient.ts"], state: active, last: "sato@2026-08-16" }
+// agent-notes: { ctx: "Admin subscription log panel with universal attribution badges, customer journey visualizer, and WhatsApp/Email sent status tracking", deps: ["lib/supabaseClient.ts"], state: active, last: "sato@2026-08-20" }
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -43,6 +43,10 @@ type CheckoutRow = {
   status: string; // 'completed' | 'initiated' | 'failed'
   razorpay_subscription_id: string | null;
   razorpay_payment_id: string | null;
+  whatsapp_sent?: boolean;
+  email_sent?: boolean;
+  whatsapp_sent_at?: string | null;
+  email_sent_at?: string | null;
   created_at: string;
   updated_at: string;
   attribution?: AttributionInfo | null;
@@ -231,6 +235,60 @@ export default function SubscriptionLogPanel() {
   useEffect(() => {
     loadLogs();
   }, []);
+
+  const toggleContactStatus = async (checkoutId: string, type: 'whatsapp' | 'email', currentVal: boolean) => {
+    const newVal = !currentVal;
+
+    // Optimistic UI update
+    setCheckouts((prev) =>
+      prev.map((c) => {
+        if (c.id === checkoutId) {
+          return {
+            ...c,
+            [type === 'whatsapp' ? 'whatsapp_sent' : 'email_sent']: newVal,
+            [type === 'whatsapp' ? 'whatsapp_sent_at' : 'email_sent_at']: newVal ? new Date().toISOString() : null,
+          };
+        }
+        return c;
+      })
+    );
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch('/api/admin/checkout-logs', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          checkoutId,
+          [type === 'whatsapp' ? 'whatsapp_sent' : 'email_sent']: newVal,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to save status');
+      }
+    } catch (err) {
+      console.error('Failed to update contact status:', err);
+      // Revert optimistic update on failure
+      setCheckouts((prev) =>
+        prev.map((c) => {
+          if (c.id === checkoutId) {
+            return {
+              ...c,
+              [type === 'whatsapp' ? 'whatsapp_sent' : 'email_sent']: currentVal,
+            };
+          }
+          return c;
+        })
+      );
+    }
+  };
 
   const openJourneyModal = async (checkout: CheckoutRow) => {
     setSelectedCheckout(checkout);
@@ -577,30 +635,61 @@ export default function SubscriptionLogPanel() {
                       {formatDateTime(c.created_at)}
                     </span>
 
-                    {/* Contact buttons */}
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <a
-                        href={waUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={`WhatsApp ${name}`}
-                        className="p-1.5 rounded-lg hover:bg-green-50 transition-colors group/wa"
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-zinc-400 group-hover/wa:text-green-600 transition-colors">
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" fill="currentColor"/>
-                          <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.264-1.222l-.306-.183-2.869.852.852-2.869-.183-.306A8 8 0 1112 20z" fill="currentColor"/>
-                        </svg>
-                      </a>
-                      {emUrl && (
+                    {/* Contact buttons with sent/unsent status checkboxes */}
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      {/* WhatsApp Contact + Sent Checkbox */}
+                      <div className="flex items-center bg-zinc-50 border border-zinc-200 rounded-lg p-0.5 gap-0.5 hover:border-zinc-300 transition-all">
                         <a
-                          href={emUrl}
-                          title={`Email ${name}`}
-                          className="p-1.5 rounded-lg hover:bg-blue-50 transition-colors group/em"
+                          href={waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`WhatsApp ${name}`}
+                          className="p-1 rounded hover:bg-green-50 transition-colors group/wa"
                         >
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 group-hover/em:text-blue-600 transition-colors">
-                            <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="text-zinc-500 group-hover/wa:text-green-600 transition-colors">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" fill="currentColor"/>
+                            <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.264-1.222l-.306-.183-2.869.852.852-2.869-.183-.306A8 8 0 1112 20z" fill="currentColor"/>
                           </svg>
                         </a>
+                        <button
+                          type="button"
+                          onClick={() => toggleContactStatus(c.id, 'whatsapp', Boolean(c.whatsapp_sent))}
+                          title={c.whatsapp_sent ? 'WhatsApp sent ✓ (Click to unmark)' : 'Mark WhatsApp log as sent'}
+                          className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer ${
+                            c.whatsapp_sent
+                              ? 'bg-green-600 text-white shadow-xs'
+                              : 'bg-white border border-zinc-300 text-transparent hover:border-green-500 hover:text-green-600/40'
+                          }`}
+                        >
+                          ✓
+                        </button>
+                      </div>
+
+                      {/* Email Contact + Sent Checkbox */}
+                      {emUrl && (
+                        <div className="flex items-center bg-zinc-50 border border-zinc-200 rounded-lg p-0.5 gap-0.5 hover:border-zinc-300 transition-all">
+                          <a
+                            href={emUrl}
+                            title={`Email ${name}`}
+                            className="p-1 rounded hover:bg-blue-50 transition-colors group/em"
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500 group-hover/em:text-blue-600 transition-colors">
+                              <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                            </svg>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => toggleContactStatus(c.id, 'email', Boolean(c.email_sent))}
+                            title={c.email_sent ? 'Email sent ✓ (Click to unmark)' : 'Mark Email log as sent'}
+                            className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer ${
+                              c.email_sent
+                                ? 'bg-blue-600 text-white shadow-xs'
+                                : 'bg-white border border-zinc-300 text-transparent hover:border-blue-500 hover:text-blue-600/40'
+                            }`}
+                          >
+                            ✓
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
