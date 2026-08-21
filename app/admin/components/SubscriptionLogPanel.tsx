@@ -533,8 +533,20 @@ export default function SubscriptionLogPanel() {
             const name = c.billing_name || c.billing_email?.split('@')[0] || 'Subscriber';
             const phoneClean = c.billing_mobile?.replace(/\D/g, '') || '';
             const waPhone = phoneClean.length === 10 ? `91${phoneClean}` : phoneClean;
-            const waUrl = `https://wa.me/${waPhone}`;
-            const emUrl = c.billing_email ? `mailto:${c.billing_email}` : '';
+            
+            const planStr = c.subscription_plan ? `${c.subscription_plan} plan` : 'subscription';
+            let waText = `Hi ${name}, thank you for choosing Celite! If you have any questions about your ${planStr}, feel free to reach out — we're happy to help!`;
+            if (st === 'initiated') {
+              waText = `Hi ${name}, we noticed you started your Celite ${planStr} checkout. If you need any assistance or have questions completing your setup, feel free to reply!`;
+            } else if (st === 'failed') {
+              waText = `Hi ${name}, we noticed your Celite ${planStr} payment was not completed. If you faced any issues or need help with payment, please let us know!`;
+            }
+            const waMsg = encodeURIComponent(waText);
+            const waUrl = waPhone ? `https://wa.me/${waPhone}?text=${waMsg}` : `https://wa.me/?text=${waMsg}`;
+            
+            const emSub = encodeURIComponent(`Celite Subscription Support - ${name}`);
+            const emBody = encodeURIComponent(waText);
+            const emUrl = c.billing_email ? `mailto:${c.billing_email}?subject=${emSub}&body=${emBody}` : '';
 
             return (
               <div
