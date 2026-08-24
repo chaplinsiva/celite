@@ -46,9 +46,10 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({ ok: true, data: records });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Marketing registry fetch error:', e);
-    return NextResponse.json({ ok: false, error: e?.message || 'Failed to fetch registry' }, { status: 500 });
+    const msg = e instanceof Error ? e.message : 'Failed to fetch registry';
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }
 
@@ -134,9 +135,10 @@ export async function POST(req: Request) {
       if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
       return NextResponse.json({ ok: true, data });
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Marketing registry save error:', e);
-    return NextResponse.json({ ok: false, error: e?.message || 'Failed to save registry mapping' }, { status: 500 });
+    const msg = e instanceof Error ? e.message : 'Failed to save registry mapping';
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }
 
@@ -161,8 +163,9 @@ export async function DELETE(req: Request) {
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Marketing registry delete error:', e);
-    return NextResponse.json({ ok: false, error: e?.message || 'Failed to delete registry mapping' }, { status: 500 });
+    const msg = e instanceof Error ? e.message : 'Failed to delete registry mapping';
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

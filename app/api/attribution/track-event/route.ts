@@ -152,8 +152,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.warn('Track event error:', e);
-    return NextResponse.json({ ok: false, error: e?.message || 'Error tracking event' }, { status: 500 });
+    const msg = e instanceof Error ? e.message : 'Error tracking event';
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

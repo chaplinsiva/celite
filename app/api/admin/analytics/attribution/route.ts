@@ -312,8 +312,9 @@ export async function GET(req: Request) {
       confidenceBreakdown,
       recentRecords: records.slice(0, 50),
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Attribution analytics error:', e);
-    return NextResponse.json({ ok: false, error: e?.message || 'Unknown error' }, { status: 500 });
+    const msg = e instanceof Error ? e.message : 'Unknown error';
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

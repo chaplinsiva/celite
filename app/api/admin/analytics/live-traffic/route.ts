@@ -309,8 +309,9 @@ export async function GET(req: Request) {
       },
       events: paginatedEvents,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Live traffic analytics error:', e);
-    return NextResponse.json({ ok: false, error: e?.message || 'Error loading live traffic logs' }, { status: 500 });
+    const msg = e instanceof Error ? e.message : 'Error loading live traffic logs';
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

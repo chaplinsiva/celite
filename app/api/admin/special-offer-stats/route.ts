@@ -1,3 +1,4 @@
+// agent-notes: { ctx: "Admin special offer subscription statistics endpoint", deps: ["lib/supabaseAdmin.ts"], state: active, last: "tara@2026-08-24" }
 import { NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
 
@@ -52,9 +53,22 @@ export async function GET() {
     const monthlySubs = activeSubs.filter(s => s.plan === 'monthly');
     const yearlySubs = activeSubs.filter(s => s.plan === 'yearly');
     
-    // Revenue estimation (499 monthly, 4999 yearly)
-    const monthlyRevenue = monthlySubs.length * 499;
-    const yearlyRevenue = yearlySubs.length * 4999;
+    // Revenue estimation from settings
+    let monthlyPrice = 799;
+    let yearlyPrice = 5499;
+    try {
+      const { data: settings } = await supabase.from('settings').select('key,value');
+      if (settings) {
+        const settingsMap: Record<string, string> = {};
+        settings.forEach((row: any) => { settingsMap[row.key] = row.value; });
+        const rawMonthly = Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || 79900);
+        const rawYearly = Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || 549900);
+        monthlyPrice = rawMonthly >= 100 ? rawMonthly / 100 : rawMonthly;
+        yearlyPrice = rawYearly >= 100 ? rawYearly / 100 : rawYearly;
+      }
+    } catch {}
+    const monthlyRevenue = monthlySubs.length * monthlyPrice;
+    const yearlyRevenue = yearlySubs.length * yearlyPrice;
     const totalRevenue = monthlyRevenue + yearlyRevenue;
 
     // Get recent subscribers details

@@ -139,8 +139,9 @@ export default function AttributionAnalyticsPanel() {
         return;
       }
       setData(json);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load attribution analytics');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to load attribution analytics';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -172,8 +173,9 @@ export default function AttributionAnalyticsPanel() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-    } catch (e: any) {
-      alert(e?.message || 'Error exporting CSV');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error exporting CSV';
+      alert(msg);
     }
   };
 
@@ -375,7 +377,7 @@ export default function AttributionAnalyticsPanel() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
                       <XAxis dataKey="source" angle={-15} textAnchor="end" tick={{ fontSize: 10 }} />
                       <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${v}`} />
-                      <Tooltip formatter={(value: any) => [`₹${Number(value).toLocaleString('en-IN')}`, '']} />
+                      <Tooltip formatter={(value: unknown) => [`₹${Number(value || 0).toLocaleString('en-IN')}`, '']} />
                       <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                       <Bar dataKey="First Touch (Discovery)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="Last Touch (Conversion)" fill="#10b981" radius={[4, 4, 0, 0]} />
@@ -660,7 +662,7 @@ export default function AttributionAnalyticsPanel() {
               {Object.keys(data.directInvestigation.previouslyAttributed.origins).length > 0 && (
                 <div className="bg-white rounded-2xl border border-zinc-200 p-5 space-y-3 shadow-xs">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-700">
-                    Original Acquisition Sources of "Direct" Subscribers
+                    Original Acquisition Sources of &quot;Direct&quot; Subscribers
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {Object.entries(data.directInvestigation.previouslyAttributed.origins).map(([orig, count]) => (

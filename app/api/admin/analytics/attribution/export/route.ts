@@ -57,8 +57,9 @@ export async function GET(req: Request) {
         'Content-Disposition': `attachment; filename="celite-attribution-export-${new Date().toISOString().slice(0, 10)}.csv"`,
       },
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Attribution export error:', e);
-    return NextResponse.json({ ok: false, error: e?.message || 'Error exporting CSV' }, { status: 500 });
+    const msg = e instanceof Error ? e.message : 'Error exporting CSV';
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

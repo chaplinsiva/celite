@@ -1,4 +1,5 @@
 "use client";
+// agent-notes: { ctx: "Admin panel tracking subscription offer statistics", deps: ["lucide-react"], state: active, last: "tara@2026-08-24" }
 
 import { useEffect, useState } from 'react';
 import { Gift, TrendingUp, Users, CreditCard } from 'lucide-react';
@@ -77,13 +78,13 @@ export default function SpecialOfferPanel() {
                     color="indigo"
                 />
                 <StatCard
-                    label="Monthly (₹499)"
+                    label="Monthly Plan"
                     value={stats.monthlyCount}
                     icon={<TrendingUp className="w-5 h-5" />}
                     color="blue"
                 />
                 <StatCard
-                    label="Yearly (₹4999)"
+                    label="Yearly Plan"
                     value={stats.yearlyCount}
                     icon={<TrendingUp className="w-5 h-5" />}
                     color="purple"

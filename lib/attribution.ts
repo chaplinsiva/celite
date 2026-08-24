@@ -765,7 +765,7 @@ export interface AttributionMetricsResult {
 /**
  * Aggregates multi-touch subscription records into reports
  */
-export function aggregateAttributionMetrics(records: any[]): AttributionMetricsResult {
+export function aggregateAttributionMetrics(records: Record<string, unknown>[]): AttributionMetricsResult {
   let totalRevenue = 0;
   let monthlyRevenue = 0;
   let yearlyRevenue = 0;
@@ -907,8 +907,8 @@ export function aggregateAttributionMetrics(records: any[]): AttributionMetricsR
 /**
  * Formats a single subscription attribution record into a CSV row
  */
-export function formatAttributionCsvRow(record: any): string {
-  const escape = (val: any) => {
+export function formatAttributionCsvRow(record: Record<string, unknown>): string {
+  const escape = (val: unknown) => {
     if (val === null || val === undefined) return '""';
     const str = String(val).replace(/"/g, '""');
     return `"${str}"`;

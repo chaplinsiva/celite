@@ -1,7 +1,7 @@
 // agent-notes: { ctx: "Universal Admin Live Traffic & Activity Logs Panel with rich interactive charts, pie charts, funnel graphs, and real-time stream", deps: ["lib/supabaseClient.ts", "recharts"], state: active, last: "sato@2026-08-16" }
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import {
   ResponsiveContainer,
@@ -140,7 +140,7 @@ export default function LiveTrafficLogsPanel() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  const loadTraffic = async (isBackground = false) => {
+  const loadTraffic = useCallback(async (isBackground = false) => {
     try {
       if (!isBackground) setLoading(true);
       setError(null);
@@ -168,16 +168,17 @@ export default function LiveTrafficLogsPanel() {
         return;
       }
       setData(json);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load live traffic logs');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to load live traffic logs';
+      setError(msg);
     } finally {
       if (!isBackground) setLoading(false);
     }
-  };
+  }, [dateFrom, dateTo, eventTypeFilter, sourceFilter, deviceFilter, search, page]);
 
   useEffect(() => {
     loadTraffic();
-  }, [dateFrom, dateTo, eventTypeFilter, sourceFilter, deviceFilter, search, page]);
+  }, [loadTraffic]);
 
   // Auto-refresh interval (every 30 seconds)
   useEffect(() => {
@@ -186,7 +187,7 @@ export default function LiveTrafficLogsPanel() {
       loadTraffic(true);
     }, 30000);
     return () => clearInterval(timer);
-  }, [autoRefresh, dateFrom, dateTo, eventTypeFilter, sourceFilter, deviceFilter, search, page]);
+  }, [autoRefresh, loadTraffic]);
 
   const deviceChartData = useMemo(() => {
     if (!data?.deviceBreakdown) return [];
@@ -316,17 +317,21 @@ export default function LiveTrafficLogsPanel() {
             <option value="Unknown">Unknown</option>
           </select>
 
-          {/* Device Filter */}
-          <select
-            value={deviceFilter}
-            onChange={(e) => { setDeviceFilter(e.target.value); setPage(1); }}
-            className="px-2.5 py-1.5 text-xs rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white"
-          >
-            <option value="all">All Devices</option>
-            <option value="Desktop">Desktop</option>
-            <option value="Mobile">Mobile</option>
-            <option value="Tablet">Tablet</option>
-          </select>
+          {/* Date Range Inputs */}
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+            className="px-2.5 py-1.5 text-xs rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white text-zinc-700"
+            title="From Date"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+            className="px-2.5 py-1.5 text-xs rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white text-zinc-700"
+            title="To Date"
+          />
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -442,7 +447,7 @@ export default function LiveTrafficLogsPanel() {
                         <Cell key={`cell-${index}`} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v: any) => [`${v} views`, '']} />
+                    <Tooltip formatter={(v: unknown) => [`${String(v)} views`, '']} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -474,7 +479,7 @@ export default function LiveTrafficLogsPanel() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
                     <XAxis dataKey="stage" angle={-15} textAnchor="end" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 10 }} />
-                    <Tooltip formatter={(value: any) => [`${value} count`, '']} />
+                    <Tooltip formatter={(value: unknown) => [`${String(value)} count`, '']} />
                     <Bar dataKey="count" name="Total Actions" fill="#3b82f6" radius={[6, 6, 0, 0]}>
                       {(data?.funnelStages || []).map((_, index) => (
                         <Cell key={`funnel-cell-${index}`} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
@@ -497,7 +502,7 @@ export default function LiveTrafficLogsPanel() {
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
                       <XAxis type="number" tick={{ fontSize: 10 }} />
                       <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} />
-                      <Tooltip formatter={(v: any) => [`${v} signups`, '']} />
+                      <Tooltip formatter={(v: unknown) => [`${String(v)} signups`, '']} />
                       <Bar dataKey="value" name="Signups" fill="#10b981" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
