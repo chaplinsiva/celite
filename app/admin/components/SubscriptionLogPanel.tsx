@@ -225,8 +225,9 @@ export default function SubscriptionLogPanel() {
       const json = await res.json();
       if (!res.ok || !json.ok) { setError(json.error || 'Failed to load'); setLoading(false); return; }
       setCheckouts(json.data || []);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to load';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -363,8 +364,9 @@ export default function SubscriptionLogPanel() {
       setShowCorrectionModal(false);
       setSelectedCheckout(null);
       loadLogs();
-    } catch (e: any) {
-      alert(e?.message || 'Error saving correction');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error saving correction';
+      alert(msg);
     } finally {
       setCorrecting(false);
     }

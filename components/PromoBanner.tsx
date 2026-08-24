@@ -1,9 +1,9 @@
 "use client";
 
-// agent-notes: { ctx: "Promo banner with Celite obsidian blue aesthetic and glowing CTA", deps: [next/link, lucide-react], state: active, last: "dani@2026-08-15" }
+// agent-notes: { ctx: "Promo banner with Celite obsidian blue aesthetic and glowing CTA", deps: [next/link, lucide-react], state: active, last: "tara@2026-08-24" }
 
 import Link from 'next/link';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export default function PromoBanner() {
     return (
@@ -17,11 +17,13 @@ export default function PromoBanner() {
             <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm font-medium relative z-10">
                 <div className="flex items-center gap-2 flex-wrap justify-center text-center">
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-200 text-[11px] sm:text-xs font-bold tracking-wide shadow-sm">
-                        <span>🎉</span>
-                        <span>3rd Anniversary Offer</span>
+                        <span>⚡</span>
+                        <span>Limited Time Offer</span>
                     </span>
-                    <span className="text-zinc-200">
-                        <strong className="text-white font-black text-sm text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200">₹499</strong> for monthly
+                    <span className="text-zinc-200 flex items-center gap-1.5">
+                        <span className="text-zinc-400 line-through text-xs font-semibold">₹899</span>
+                        <strong className="text-white font-black text-sm text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200">₹799</strong>
+                        <span className="text-xs text-zinc-300">/ month</span>
                     </span>
                     <span className="hidden sm:inline text-blue-400">•</span>
                     <span className="font-bold text-white tracking-tight">Unlimited Downloads</span>

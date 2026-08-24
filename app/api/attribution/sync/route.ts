@@ -122,8 +122,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Attribution sync error:', e);
-    return NextResponse.json({ ok: false, error: e?.message || 'Attribution sync failed' }, { status: 500 });
+    const msg = e instanceof Error ? e.message : 'Attribution sync failed';
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

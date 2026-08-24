@@ -75,8 +75,9 @@ export default function MarketingSourcesRegistryPanel() {
         return;
       }
       setMappings(json.data || []);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load registry');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to load registry';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -160,8 +161,9 @@ export default function MarketingSourcesRegistryPanel() {
 
       setShowModal(false);
       loadRegistry();
-    } catch (e: any) {
-      alert(e?.message || 'Error saving mapping');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error saving mapping';
+      alert(msg);
     } finally {
       setSaving(false);
     }
@@ -181,8 +183,9 @@ export default function MarketingSourcesRegistryPanel() {
       if (res.ok) {
         loadRegistry();
       }
-    } catch (e: any) {
-      alert(e?.message || 'Error deleting mapping');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error deleting mapping';
+      alert(msg);
     }
   };
 

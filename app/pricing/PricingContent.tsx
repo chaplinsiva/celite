@@ -1,6 +1,6 @@
 'use client';
 
-// agent-notes: { ctx: "Compact split-screen pricing page utilizing full screen width with minimal side gaps and tight vertical height", deps: ["lib/supabaseClient.ts", "lib/currency.ts", "lib/priceUtils.ts", "lucide-react"], state: active, last: "dani@2026-08-15" }
+// agent-notes: { ctx: "Pricing page with 799 limited offer and yearly comparison", deps: ["lib/supabaseClient.ts", "lib/currency.ts", "lib/priceUtils.ts", "lucide-react"], state: active, last: "tara@2026-08-24" }
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -152,7 +152,7 @@ export default function PricingContent() {
           <div className="lg:col-span-5 flex flex-col justify-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-xs font-bold mb-3 shadow-sm w-fit">
               <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
-              <span>3rd Anniversary Limited Offer</span>
+              <span>Limited Time Offer</span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-[900] tracking-tight text-zinc-950 leading-[1.1] mb-3">
@@ -272,7 +272,7 @@ export default function PricingContent() {
                         <span className="text-zinc-300 text-xs font-semibold">/ month</span>
                       </div>
                       <p className="text-cyan-300 text-xs font-semibold mt-1">
-                        🎉 3rd Anniversary Special
+                        ⚡ Limited Time Offer (Save ₹100)
                       </p>
                     </div>
 

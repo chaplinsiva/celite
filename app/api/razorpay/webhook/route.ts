@@ -1,4 +1,4 @@
-// agent-notes: { ctx: "Razorpay webhook endpoint", deps: ["lib/supabaseAdmin.ts"], state: active, last: "sato@2026-08-13" }
+// agent-notes: { ctx: "Razorpay webhook endpoint", deps: ["lib/supabaseAdmin.ts"], state: active, last: "tara@2026-08-24" }
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseAdminClient } from '../../../../lib/supabaseAdmin';
@@ -191,30 +191,32 @@ export async function POST(req: Request) {
         // For new subscriptions, process if no existing subscription
         const isRenewal = existingSub && existingSub.is_active === true;
         const isNewSubscription = !existingSub;
+        let isReactivation = false;
 
         // DO NOT reactivate if subscription is cancelled (is_active: false)
         // UNLESS this is a subscription.activated event with a NEW subscription ID
         // (meaning the user has re-subscribed with a new payment)
         if (existingSub && existingSub.is_active === false) {
-          const isNewSubscription = event === 'subscription.activated' && 
+          const isNewSubEvent = event === 'subscription.activated' && 
             razorpaySubscriptionId && 
             razorpaySubscriptionId !== existingSub.razorpay_subscription_id;
           
-          if (!isNewSubscription) {
+          if (!isNewSubEvent) {
             console.log(`Skipping reactivation: Subscription is cancelled for user ${resolvedUserId || existingSub.user_id}. Event: ${event}. Plan preserved: ${existingSub.plan}`);
             return NextResponse.json({ status: 'ok', message: 'Subscription is cancelled, not reactivating' });
           }
+          isReactivation = true;
           console.log(`Re-activating cancelled subscription for user ${resolvedUserId || existingSub.user_id}: new Razorpay subscription ${razorpaySubscriptionId}`);
         }
 
-        if ((isRenewal || isNewSubscription) && finalPlan) {
+        if ((isRenewal || isNewSubscription || isReactivation) && finalPlan) {
           const targetUserId = resolvedUserId || existingSub?.user_id;
           if (!targetUserId) {
             console.log('Cannot process subscription payment: no user_id available');
             return NextResponse.json({ status: 'ok', message: 'No user_id available for subscription update' });
           }
 
-          console.log(`${isRenewal ? 'Renewing' : 'Activating'} subscription for user: ${targetUserId}, plan: ${finalPlan}`);
+          console.log(`${isRenewal ? 'Renewing' : isReactivation ? 'Re-activating' : 'Activating'} subscription for user: ${targetUserId}, plan: ${finalPlan}`);
 
           // Compute or retrieve usd_ppp
           const usdPppFromNotes =
@@ -281,9 +283,7 @@ export async function POST(req: Request) {
 
           // Update subscription - but be very careful not to override cancelled subscriptions
           if (existingSub) {
-            // Only update if subscription is currently active (extra safety check)
-            // We already checked above, but double-check here to be safe
-            if (existingSub.is_active === true) {
+            if (existingSub.is_active === true || isReactivation) {
               let updateQuery = admin
                 .from('subscriptions')
                 .update({
@@ -302,8 +302,8 @@ export async function POST(req: Request) {
                 updateQuery = updateQuery.eq('razorpay_subscription_id', razorpaySubscriptionId);
               }
 
-              await updateQuery.eq('is_active', true); // Extra safety: only update if already active
-              console.log(`Updated active subscription for user ${targetUserId} with plan: ${finalPlan}, valid_until: ${validUntil.toISOString()}`);
+              await updateQuery;
+              console.log(`Updated subscription for user ${targetUserId} with plan: ${finalPlan}, valid_until: ${validUntil.toISOString()}`);
             } else {
               console.error(`CRITICAL: Attempted to update inactive subscription for user ${targetUserId}. This should not happen!`);
             }
@@ -576,7 +576,7 @@ export async function POST(req: Request) {
                   (settings || []).forEach((row: any) => { settingsMap[row.key] = row.value; });
 
                   const amountPaise = finalPlan === 'monthly'
-                    ? Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '59900')
+                    ? Number(settingsMap.RAZORPAY_MONTHLY_AMOUNT || '79900')
                     : finalPlan === 'pongal_weekly'
                       ? Number(settingsMap.PONGAL_WEEKLY_PRICE || '49900')
                       : Number(settingsMap.RAZORPAY_YEARLY_AMOUNT || '549900');

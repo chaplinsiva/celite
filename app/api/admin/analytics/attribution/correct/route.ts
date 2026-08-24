@@ -78,8 +78,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Manual attribution correction error:', e);
-    return NextResponse.json({ ok: false, error: e?.message || 'Error correcting attribution' }, { status: 500 });
+    const msg = e instanceof Error ? e.message : 'Error correcting attribution';
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

@@ -28,8 +28,8 @@ export async function GET(
     // Find checkout or subscription snapshot
     let userId: string | null = null;
     let anonymousId: string | null = null;
-    let checkoutData: any = null;
-    let subscriptionAttr: any = null;
+    let checkoutData: Record<string, unknown> | null = null;
+    let subscriptionAttr: Record<string, unknown> | null = null;
 
     // 1. Try checking checkout_details
     const { data: checkout } = await admin
@@ -39,7 +39,7 @@ export async function GET(
       .maybeSingle();
 
     if (checkout) {
-      checkoutData = checkout;
+      checkoutData = checkout as Record<string, unknown>;
       userId = checkout.user_id;
     } else {
       // Maybe id is user_id
@@ -53,7 +53,7 @@ export async function GET(
         .select('*')
         .eq('checkout_detail_id', checkoutData.id)
         .maybeSingle();
-      subscriptionAttr = snap;
+      subscriptionAttr = snap as Record<string, unknown> | null;
     }
     if (!subscriptionAttr && userId) {
       const { data: snap } = await admin
@@ -63,18 +63,18 @@ export async function GET(
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-      subscriptionAttr = snap;
+      subscriptionAttr = snap as Record<string, unknown> | null;
     }
 
     // 3. Fetch visitor_attributions for user
-    let visitorAttr: any = null;
+    let visitorAttr: Record<string, unknown> | null = null;
     if (userId) {
       const { data: vAttr } = await admin
         .from('visitor_attributions')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
-      visitorAttr = vAttr;
+      visitorAttr = vAttr as Record<string, unknown> | null;
       if (vAttr?.anonymous_id) {
         anonymousId = vAttr.anonymous_id;
       }
@@ -122,8 +122,9 @@ export async function GET(
       visitorAttribution: visitorAttr,
       timeline: touchpoints,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Customer journey fetch error:', e);
-    return NextResponse.json({ ok: false, error: e?.message || 'Error fetching journey' }, { status: 500 });
+    const msg = e instanceof Error ? e.message : 'Error fetching journey';
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

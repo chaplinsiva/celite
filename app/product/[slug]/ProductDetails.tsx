@@ -1,5 +1,6 @@
 
 "use client";
+// agent-notes: { ctx: "Product details page with asset preview and subscription CTA", deps: ["context/AppContext.tsx", "lib/supabaseClient.ts", "lib/currency.ts"], state: active, last: "tara@2026-08-24" }
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
@@ -1332,7 +1333,7 @@ function SubscriptionCard({
         <div className="text-center mb-4">
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wider mb-2">
             <Gift className="w-3 h-3" />
-            3rd Anniversary Gift
+            Free Gift
           </div>
           <h3 className="text-lg font-bold text-green-900">Download for Free</h3>
           <p className="text-xs text-green-600 mt-1">Sign in required to download</p>
@@ -1471,7 +1472,7 @@ function SubscriptionCard({
       <div className="relative z-10 flex items-baseline gap-2 mb-1.5">
         <span className="text-sm text-zinc-500 line-through font-semibold">₹899</span>
         <span className="text-3xl sm:text-4xl font-[900] text-white tracking-tight drop-shadow-md">
-          {formatPrice(monthlyPrice ?? 499)}
+          {formatPrice(monthlyPrice ?? 799)}
         </span>
         <span className="text-sm text-zinc-400 font-semibold">/ month</span>
       </div>
@@ -1513,7 +1514,7 @@ function SubscriptionCard({
           rel="noopener noreferrer"
           className="w-full inline-flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl bg-gradient-to-r from-[#0d1f18] via-[#0f2e24] to-[#047857] hover:from-[#0f2e24] hover:to-[#059669] text-white font-bold text-xs border border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:shadow-[0_0_25px_rgba(16,185,129,0.45)] transition-all duration-300 active:scale-[0.98]"
         >
-          Buy this individual asset for {productPrice ? `₹${productPrice}` : '₹499'} on Celite Market →
+          Buy this individual asset for {productPrice ? `₹${productPrice}` : '₹399'} on Celite Market →
         </a>
       </div>
     </div>

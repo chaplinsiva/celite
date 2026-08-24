@@ -762,10 +762,22 @@ export interface AttributionMetricsResult {
   }>;
 }
 
+export interface SubscriptionAttributionRow {
+  amount?: number | string | null;
+  subscription_plan?: string | null;
+  first_source?: string | null;
+  last_source?: string | null;
+  first_campaign?: string | null;
+  last_campaign?: string | null;
+  first_product_viewed?: string | null;
+  last_product_viewed?: string | null;
+  [key: string]: any;
+}
+
 /**
  * Aggregates multi-touch subscription records into reports
  */
-export function aggregateAttributionMetrics(records: any[]): AttributionMetricsResult {
+export function aggregateAttributionMetrics(records: (SubscriptionAttributionRow | Record<string, any>)[]): AttributionMetricsResult {
   let totalRevenue = 0;
   let monthlyRevenue = 0;
   let yearlyRevenue = 0;
@@ -781,7 +793,7 @@ export function aggregateAttributionMetrics(records: any[]): AttributionMetricsR
   records.forEach((r) => {
     const amt = Number(r.amount || 0);
     totalRevenue += amt;
-    const plan = (r.subscription_plan || '').toLowerCase();
+    const plan = String(r.subscription_plan || '').toLowerCase();
     const isYearly = plan === 'yearly';
 
     if (isYearly) {
@@ -792,8 +804,8 @@ export function aggregateAttributionMetrics(records: any[]): AttributionMetricsR
       monthlyCount += 1;
     }
 
-    const fSource = r.first_source || 'Direct';
-    const lSource = r.last_source || fSource || 'Direct';
+    const fSource = String(r.first_source || 'Direct');
+    const lSource = String(r.last_source || fSource || 'Direct');
 
     // First Touch
     if (!firstSourceMap[fSource]) {
@@ -814,12 +826,12 @@ export function aggregateAttributionMetrics(records: any[]): AttributionMetricsR
     else lastSourceMap[lSource].monthly += 1;
 
     // Campaign
-    const camp = r.first_campaign || r.last_campaign;
+    const camp = r.first_campaign ? String(r.first_campaign) : (r.last_campaign ? String(r.last_campaign) : '');
     if (camp) {
       if (!campaignMap[camp]) {
         campaignMap[camp] = {
           campaign: camp,
-          source: r.first_source || r.last_source || 'Other',
+          source: String(r.first_source || r.last_source || 'Other'),
           customers: 0,
           revenue: 0,
           monthly: 0,
@@ -833,7 +845,7 @@ export function aggregateAttributionMetrics(records: any[]): AttributionMetricsR
     }
 
     // Product
-    const prod = r.first_product_viewed || r.last_product_viewed;
+    const prod = r.first_product_viewed ? String(r.first_product_viewed) : (r.last_product_viewed ? String(r.last_product_viewed) : '');
     if (prod) {
       if (!productMap[prod]) {
         productMap[prod] = { product: prod, subscriptions: 0, revenue: 0 };
@@ -907,8 +919,8 @@ export function aggregateAttributionMetrics(records: any[]): AttributionMetricsR
 /**
  * Formats a single subscription attribution record into a CSV row
  */
-export function formatAttributionCsvRow(record: any): string {
-  const escape = (val: any) => {
+export function formatAttributionCsvRow(record: Record<string, unknown>): string {
+  const escape = (val: unknown) => {
     if (val === null || val === undefined) return '""';
     const str = String(val).replace(/"/g, '""');
     return `"${str}"`;
