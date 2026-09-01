@@ -160,7 +160,7 @@ export default async function ProductPage(props: PageProps) {
   // This prevents rejected/unapproved celitemarket.in templates from showing on celite.in
   if ((row as any).available_on_celite_subscription === false || (row as any).status === 'rejected') return notFound();
 
-  const rawMonthlyPaise = settingsData?.[0]?.value || '79900';
+  const rawMonthlyPaise = settingsData?.[0]?.value || '49900';
   const monthlyPrice = paiseToINR(Number(rawMonthlyPaise));
   const category = (row as any)?.categories ? (Array.isArray((row as any).categories) ? (row as any).categories[0] : (row as any).categories) : null;
   const categorySlug = category?.slug || '';

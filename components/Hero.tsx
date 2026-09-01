@@ -1,6 +1,6 @@
 "use client";
 
-// agent-notes: { ctx: "Hero black box with floating blue border glow and white text", deps: [next/link, framer-motion, lucide-react], state: active, last: "tara@2026-08-24" }
+// agent-notes: { ctx: "Hero black box with floating blue border glow and white text", deps: [next/link, framer-motion, lucide-react], state: active, last: "sato@2026-09-01" }
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -112,7 +112,7 @@ export default function Hero() {
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-3xl md:text-4xl font-black text-white tracking-tight drop-shadow-md">
-                    ₹799
+                    ₹499
                   </span>
                   <span className="text-zinc-400 font-semibold text-sm">/month</span>
                 </div>

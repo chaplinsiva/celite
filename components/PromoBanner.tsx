@@ -1,6 +1,6 @@
 "use client";
 
-// agent-notes: { ctx: "Promo banner with Celite obsidian blue aesthetic and glowing CTA", deps: [next/link, lucide-react], state: active, last: "tara@2026-08-24" }
+// agent-notes: { ctx: "Promo banner with Celite obsidian blue aesthetic and glowing CTA", deps: [next/link, lucide-react], state: active, last: "sato@2026-09-01" }
 
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
@@ -22,7 +22,7 @@ export default function PromoBanner() {
                     </span>
                     <span className="text-zinc-200 flex items-center gap-1.5">
                         <span className="text-zinc-400 line-through text-xs font-semibold">₹899</span>
-                        <strong className="text-white font-black text-sm text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200">₹799</strong>
+                        <strong className="text-white font-black text-sm text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200">₹499</strong>
                         <span className="text-xs text-zinc-300">/ month</span>
                     </span>
                     <span className="hidden sm:inline text-blue-400">•</span>
