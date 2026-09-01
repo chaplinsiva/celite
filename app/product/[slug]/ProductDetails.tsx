@@ -1,6 +1,6 @@
 
 "use client";
-// agent-notes: { ctx: "Product details page with asset preview and subscription CTA", deps: ["context/AppContext.tsx", "lib/supabaseClient.ts", "lib/currency.ts"], state: active, last: "tara@2026-08-24" }
+// agent-notes: { ctx: "Product details page with asset preview and subscription CTA", deps: ["context/AppContext.tsx", "lib/supabaseClient.ts", "lib/currency.ts"], state: active, last: "sato@2026-09-01" }
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
@@ -1472,7 +1472,7 @@ function SubscriptionCard({
       <div className="relative z-10 flex items-baseline gap-2 mb-1.5">
         <span className="text-sm text-zinc-500 line-through font-semibold">₹899</span>
         <span className="text-3xl sm:text-4xl font-[900] text-white tracking-tight drop-shadow-md">
-          {formatPrice(monthlyPrice ?? 799)}
+          {formatPrice(monthlyPrice ?? 499)}
         </span>
         <span className="text-sm text-zinc-400 font-semibold">/ month</span>
       </div>
