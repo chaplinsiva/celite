@@ -47,9 +47,8 @@ export default async function TemplatesPage() {
         dbCategories.map(async (category) => {
             const { data: templates, error: templatesError } = await supabase
                 .from('templates')
-                .select('slug, name, img, video, video_path, thumbnail_path, audio_preview_path, model_3d_path, category_id')
+                .select('slug, name, img, video, video_path, thumbnail_path, audio_preview_path, model_3d_path, category_id, available_on_celite_subscription, available_on_celite_market, price')
                 .eq('status', 'approved')
-                .eq('available_on_celite_subscription', true)
                 .eq('category_id', category.id)
                 .order('created_at', { ascending: false })
                 .limit(8);
@@ -62,7 +61,6 @@ export default async function TemplatesPage() {
                 .from('templates')
                 .select('slug', { count: 'exact', head: true })
                 .eq('status', 'approved')
-                .eq('available_on_celite_subscription', true)
                 .eq('category_id', category.id);
 
             if (countError) {

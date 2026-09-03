@@ -7,6 +7,7 @@ import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
 import { Download, Search, Play, Volume2, Music, X, ChevronLeft, ChevronRight, ChevronDown, Filter } from 'lucide-react';
 import Link from 'next/link';
+import MarketExclusiveBadge from '../../components/MarketExclusiveBadge';
 import { cn, convertR2UrlToCdn } from '../../lib/utils';
 
 type Template = {
@@ -28,6 +29,9 @@ type Template = {
     subcategory_id?: string | null;
     sub_subcategory_id?: string | null;
     vendor_name?: string | null;
+    available_on_celite_subscription?: boolean | null;
+    available_on_celite_market?: boolean | null;
+    price?: number | string | null;
 };
 
 // Filter options
@@ -589,9 +593,14 @@ export default function StockMusicsClient({ initialTemplates }: { initialTemplat
                                                     </button>
 
                                                     <div className="flex-1 min-w-0">
-                                                        <h3 className="text-base font-semibold text-zinc-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
-                                                            {template.name}
-                                                        </h3>
+                                                        <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                                                            {template.available_on_celite_subscription === false && (
+                                                                <MarketExclusiveBadge variant="subtle" price={template.price} />
+                                                            )}
+                                                            <h3 className="text-base font-semibold text-zinc-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                                                                {template.name}
+                                                            </h3>
+                                                        </div>
                                                         {template.subtitle && (
                                                             <p className="text-sm text-zinc-500 line-clamp-1 mt-0.5">{template.subtitle}</p>
                                                         )}
@@ -608,9 +617,16 @@ export default function StockMusicsClient({ initialTemplates }: { initialTemplat
                                                             </div>
                                                         )}
                                                         <button
-                                                            onClick={(e) => handleDownload(template.slug, e)}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (template.available_on_celite_subscription === false) {
+                                                                    window.open(`https://celitemarket.in/product/${template.slug}`, '_blank');
+                                                                } else {
+                                                                    handleDownload(template.slug, e);
+                                                                }
+                                                            }}
                                                             className="p-2 text-zinc-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                                            title="Download"
+                                                            title={template.available_on_celite_subscription === false ? "Buy on Celite Market" : "Download"}
                                                         >
                                                             <Download className="w-5 h-5" />
                                                         </button>

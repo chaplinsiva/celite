@@ -8,6 +8,7 @@ import { useAppContext } from '../context/AppContext';
 import { useLoginModal } from '../context/LoginModalContext';
 import { convertR2UrlToCdn } from '../lib/utils';
 import VideoThumbnailPlayer from './VideoThumbnailPlayer';
+import MarketExclusiveBadge from './MarketExclusiveBadge';
 import { cn } from '@/lib/utils';
 import { ArrowRight, ChevronLeft, ChevronRight, Zap, PlayCircle, Check, Download } from 'lucide-react';
 
@@ -56,13 +57,12 @@ export default function TemplateCarousel() {
         .from('templates')
         .select(`
           slug,name,subtitle,description,img,video_path,thumbnail_path,features,software,plugins,tags,created_at,feature,
-          category_id,subcategory_id,
+          category_id,subcategory_id,price,available_on_celite_subscription,available_on_celite_market,
           categories(id,name,slug),
           subcategories(id,name,slug),
           creator_shops(vendor_name)
         `)
         .eq('status', 'approved')
-        .eq('available_on_celite_subscription', true)
         .eq('feature', true)
         .order('updated_at', { ascending: false });
 
@@ -71,13 +71,12 @@ export default function TemplateCarousel() {
           .from('templates')
           .select(`
             slug,name,subtitle,description,img,video_path,thumbnail_path,features,software,plugins,tags,created_at,feature,
-            category_id,subcategory_id,
+            category_id,subcategory_id,price,available_on_celite_subscription,available_on_celite_market,
             categories(id,name,slug),
             subcategories(id,name,slug),
             creator_shops(vendor_name)
           `)
           .eq('status', 'approved')
-          .eq('available_on_celite_subscription', true)
           .order('created_at', { ascending: false })
           .limit(12);
         if (!fallback.error && fallback.data) {
@@ -101,7 +100,9 @@ export default function TemplateCarousel() {
           name: r.name,
           subtitle: r.subtitle,
           desc: r.description ?? '',
-          price: 0,
+          price: r.price ?? 0,
+          available_on_celite_subscription: r.available_on_celite_subscription ?? true,
+          available_on_celite_market: Boolean(r.available_on_celite_market),
           img: r.img,
           video_path: r.video_path,
           thumbnail_path: r.thumbnail_path,
@@ -189,6 +190,9 @@ export default function TemplateCarousel() {
 
             {/* Badges */}
             <div className="absolute top-3 left-3 flex items-center gap-2 pointer-events-none z-30">
+              {tpl.available_on_celite_subscription === false && (
+                <MarketExclusiveBadge variant="card" price={tpl.price} />
+              )}
               {tpl.software && tpl.software.includes('After Effects') && (
                 <span className="px-2 py-1 rounded bg-black/60 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider">Ae</span>
               )}
@@ -230,9 +234,14 @@ export default function TemplateCarousel() {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handleDownload(tpl.slug);
+                    if (tpl.available_on_celite_subscription === false) {
+                      window.open(`https://celitemarket.in/product/${tpl.slug}`, '_blank');
+                    } else {
+                      handleDownload(tpl.slug);
+                    }
                   }}
                   className="hover:text-blue-600 transition-colors"
+                  title={tpl.available_on_celite_subscription === false ? "Buy on Celite Market" : "Download"}
                 >
                   <Download className="w-4 h-4" />
                 </button>

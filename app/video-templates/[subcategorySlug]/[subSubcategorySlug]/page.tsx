@@ -64,18 +64,16 @@ async function getSubSubcategoryData(subcategorySlug: string, subSubcategorySlug
   // Fetch templates specifically in this sub-subcategory (for count and structured data)
   const { data: subSubcatTemplates } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id,is_free')
+    .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id,is_free,available_on_celite_subscription,available_on_celite_market,price')
     .eq('status', 'approved')
-    .eq('available_on_celite_subscription', true)
     .eq('sub_subcategory_id', subSubcategory.id)
     .order('created_at', { ascending: false });
 
   // Fetch all templates in the parent category for the client component
   const { data: catTemplates } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id,is_free')
+    .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id,is_free,available_on_celite_subscription,available_on_celite_market,price')
     .eq('status', 'approved')
-    .eq('available_on_celite_subscription', true)
     .eq('category_id', videoTemplatesCategory.id)
     .order('created_at', { ascending: false });
 
@@ -83,9 +81,8 @@ async function getSubSubcategoryData(subcategorySlug: string, subSubcategorySlug
   if (allSubcatIds.length > 0) {
     const { data } = await supabase
       .from('templates')
-      .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id,is_free')
+      .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id,is_free,available_on_celite_subscription,available_on_celite_market,price')
       .eq('status', 'approved')
-      .eq('available_on_celite_subscription', true)
       .in('subcategory_id', allSubcatIds)
       .order('created_at', { ascending: false });
     siblingTemplates = data || [];
@@ -172,7 +169,9 @@ export default async function SubSubcategoryPage(props: PageProps) {
 
   const mappedTemplates = templates.map(t => ({
     ...t,
-    price: 0,
+    price: Number((t as any).price || 0),
+    available_on_celite_subscription: (t as any).available_on_celite_subscription,
+    available_on_celite_market: (t as any).available_on_celite_market,
     is_featured: Boolean((t as any).feature),
     feature: Boolean((t as any).feature),
   }));

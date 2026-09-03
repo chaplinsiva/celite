@@ -7,6 +7,7 @@ import { useAppContext } from '../context/AppContext';
 import { useLoginModal } from '../context/LoginModalContext';
 import { convertR2UrlToCdn } from '../lib/utils';
 import VideoThumbnailPlayer from './VideoThumbnailPlayer';
+import MarketExclusiveBadge from './MarketExclusiveBadge';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type LatestTemplate = Template & {
@@ -75,12 +76,11 @@ export default function LatestTemplatesCarousel() {
         .from('templates')
         .select(`
           slug,name,subtitle,description,img,video_path,thumbnail_path,features,software,plugins,tags,created_at,feature,
-          category_id,subcategory_id,
+          category_id,subcategory_id,price,available_on_celite_subscription,available_on_celite_market,
           categories(id,name,slug),
           subcategories(id,name,slug)
         `)
         .eq('status', 'approved')
-        .eq('available_on_celite_subscription', true)
         .neq('category_id', musicSfxCategoryId)
         .neq('category_id', stockPhotoCategoryId)
         .neq('category_id', model3dCategoryId);
@@ -118,7 +118,9 @@ export default function LatestTemplatesCarousel() {
           name: r.name,
           subtitle: r.subtitle,
           desc: r.description ?? '',
-          price: 0,
+          price: r.price ?? 0,
+          available_on_celite_subscription: r.available_on_celite_subscription ?? true,
+          available_on_celite_market: Boolean(r.available_on_celite_market),
           img: r.img,
           video: r.video_path ?? null,
           video_path: r.video_path,
@@ -230,6 +232,13 @@ export default function LatestTemplatesCarousel() {
                 {tpl.name}
               </h3>
             </div>
+
+            {/* Market Exclusive Crown Badge */}
+            {tpl.available_on_celite_subscription === false && (
+              <div className="absolute top-2 right-2 z-30 pointer-events-none">
+                <MarketExclusiveBadge variant="card" price={tpl.price} />
+              </div>
+            )}
 
             {/* Software Badge - Always visible */}
             {tpl.software?.includes('After Effects') && (

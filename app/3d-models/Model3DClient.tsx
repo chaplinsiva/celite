@@ -8,6 +8,7 @@ import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
 import { cn, convertR2UrlToCdn } from '../../lib/utils';
 import { Search, ChevronDown, ChevronLeft, ChevronRight, Check, Download, Filter, ArrowRight } from 'lucide-react';
+import MarketExclusiveBadge from '../../components/MarketExclusiveBadge';
 
 type Template = {
   slug: string;
@@ -35,6 +36,9 @@ type Template = {
   meta_title?: string | null;
   meta_description?: string | null;
   vendor_name?: string | null;
+  available_on_celite_subscription?: boolean | null;
+  available_on_celite_market?: boolean | null;
+  price?: number | string | null;
 };
 
 type Category = {
@@ -469,6 +473,11 @@ export default function Model3DClient({
                   <div key={template.slug} className="group flex flex-col bg-white rounded-xl overflow-hidden border border-zinc-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300">
                     {/* Thumbnail Preview */}
                     <Link href={`/product/${template.slug}`} className="block relative aspect-video overflow-hidden bg-zinc-100">
+                      {template.available_on_celite_subscription === false && (
+                        <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
+                          <MarketExclusiveBadge price={template.price} />
+                        </div>
+                      )}
                       {template.thumbnail_path ? (
                         <img
                           src={convertR2UrlToCdn(template.thumbnail_path) || template.thumbnail_path}

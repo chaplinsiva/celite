@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ChevronRight, Sparkles, Filter, Grid, List, Copy, Check } from 'lucide-react';
 import VideoThumbnailPlayer from '../../components/VideoThumbnailPlayer';
+import MarketExclusiveBadge from '../../components/MarketExclusiveBadge';
 import { convertR2UrlToCdn } from '../../lib/utils';
 import { useAppContext } from '../../context/AppContext';
 import { useLoginModal } from '../../context/LoginModalContext';
@@ -31,6 +32,9 @@ type Template = {
     created_at?: string;
     subcategory_id?: string;
     feature?: boolean;
+    available_on_celite_subscription?: boolean;
+    available_on_celite_market?: boolean;
+    price?: number | string | null;
 };
 
 interface PromptsClientProps {
@@ -184,6 +188,11 @@ export default function PromptsClient({ initialTemplates, subcategories }: Promp
                                 key={template.slug}
                                 className="group relative break-inside-avoid rounded-xl overflow-hidden cursor-pointer"
                             >
+                                {template.available_on_celite_subscription === false && (
+                                    <div className="absolute top-2 left-2 z-20 pointer-events-none">
+                                        <MarketExclusiveBadge price={template.price} />
+                                    </div>
+                                )}
                                 {/* Thumbnail Only - Clean Display */}
                                 <Link href={`/product/${template.slug}`}>
                                     {(template.thumbnail_path || template.img) ? (

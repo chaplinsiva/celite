@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Hero from '../components/Hero';
 import CinemaTemplatesShowcase from '../components/CinemaTemplatesShowcase';
 import SaveDateTemplatesShowcase from '../components/SaveDateTemplatesShowcase';
+import MarketTemplatesShowcase from '../components/MarketTemplatesShowcase';
 import FreeTemplatesShowcase from '../components/FreeTemplatesShowcase';
 import RoyaltyFreeMusicShowcase from '../components/RoyaltyFreeMusicShowcase';
 import SfxShowcase from '../components/SfxShowcase';
@@ -85,7 +86,7 @@ export default async function Home() {
   const saveDateSubSubcatId = saveDateSubSubcat?.id;
 
   // Fetch in parallel
-  const [cinemaRes, saveDateRes, freeRes, musicRes, sfxRes, webRes] = await Promise.all([
+  const [cinemaRes, saveDateRes, marketRes, freeRes, musicRes, sfxRes, webRes] = await Promise.all([
     // Cinema: Only fetch templates from "Movie Templates" sub-subcategory
     movieSubSubcatId
       ? supabase
@@ -109,6 +110,13 @@ export default async function Home() {
           .order('created_at', { ascending: false })
           .limit(20)
       : Promise.resolve({ data: null }),
+    // Celite Market exclusives: only fetch templates NOT available on subscription
+    supabase
+      .from('templates')
+      .select('slug, name, subtitle, img, video_path, thumbnail_path, category_id, price, available_on_celite_subscription, available_on_celite_market')
+      .eq('status', 'approved')
+      .eq('available_on_celite_subscription', false)
+      .order('created_at', { ascending: false }),
     // Free templates: fetch all free templates, then sort by download count
     (async () => {
       const { data: templates } = await supabase
@@ -191,6 +199,7 @@ export default async function Home() {
     ...t,
     category: { id: videoCatId, name: 'Video Templates', slug: 'video-templates' }
   }));
+  const marketTemplates = marketRes.data || [];
   const musicTemplates = (musicRes.data || []).map((t: any) => ({
     ...t,
     category: { id: musicCatId, name: 'Stock Musics', slug: 'stock-musics' }
@@ -227,6 +236,7 @@ export default async function Home() {
       <FreeTemplatesShowcase initialTemplates={freeTemplates as any} />
       <CinemaTemplatesShowcase initialTemplates={cinemaTemplates as any} />
       <SaveDateTemplatesShowcase initialTemplates={saveDateTemplates as any} />
+      <MarketTemplatesShowcase initialTemplates={marketTemplates as any} />
       <RoyaltyFreeMusicShowcase initialTemplates={musicTemplates as any} />
       <SfxShowcase initialTemplates={sfxTemplates as any} />
       <CategoriesSection />

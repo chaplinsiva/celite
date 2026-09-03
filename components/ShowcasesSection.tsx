@@ -29,7 +29,6 @@ export default function ShowcasesSection() {
           .from('templates')
           .select('slug,name,subtitle,description,img,tags')
           .eq('status', 'approved')
-          .eq('available_on_celite_subscription', true)
           .limit(20);
 
         if (!allTemplates || allTemplates.length === 0) {
@@ -65,7 +64,7 @@ export default function ShowcasesSection() {
           const categoryName = tag.charAt(0).toUpperCase() + tag.slice(1).replace(/_/g, ' ');
           
           showcaseList.push({
-            id: `showcase-${count}`,
+            id: `showcase-${tag}`,
             title: `${categoryName} Collection`,
             description: template.subtitle || template.description || `Professional ${categoryName.toLowerCase()} templates`,
             image: template.img || '/PNG1.png',
@@ -82,7 +81,6 @@ export default function ShowcasesSection() {
             .from('templates')
             .select('slug,name,subtitle,description,img,tags')
             .eq('status', 'approved')
-            .eq('available_on_celite_subscription', true)
             .eq('is_featured', true)
             .limit(maxShowcases - showcaseList.length);
 

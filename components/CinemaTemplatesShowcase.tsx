@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { convertR2UrlToCdn } from '@/lib/utils';
 import { ArrowRight, Film, Play, Sparkles, Clapperboard, Video, Maximize2 } from 'lucide-react';
+import MarketExclusiveBadge from '@/components/MarketExclusiveBadge';
 
 type CinemaTemplate = {
   slug: string;
@@ -16,6 +17,9 @@ type CinemaTemplate = {
   video_path?: string;
   thumbnail_path?: string;
   category?: { id: string; name: string; slug: string } | null;
+  available_on_celite_subscription?: boolean | null;
+  available_on_celite_market?: boolean | null;
+  price?: number | string | null;
 };
 
 type VideoCardProps = {
@@ -64,6 +68,13 @@ function VideoCard({
     >
       {/* Top Floating Blue Hairline Gradient on Hover */}
       <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-blue-400/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-30" />
+
+      {/* Market Exclusive Crown Badge */}
+      {template.available_on_celite_subscription === false && (
+        <div className="absolute top-3 right-3 z-30 pointer-events-none">
+          <MarketExclusiveBadge variant="card" price={template.price} />
+        </div>
+      )}
 
       {/* Center Hover Play Ring */}
       {videoUrl && (
@@ -136,10 +147,12 @@ export default function CinemaTemplatesShowcase({
             video_path,
             thumbnail_path,
             category_id,
+            price,
+            available_on_celite_subscription,
+            available_on_celite_market,
             sub_subcategories!inner(id, name, slug)
           `)
           .eq('status', 'approved')
-          .eq('available_on_celite_subscription', true)
           .eq('sub_subcategories.slug', 'movie-templates')
           .not('video_path', 'is', null)
           .order('created_at', { ascending: false })

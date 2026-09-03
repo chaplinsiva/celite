@@ -50,7 +50,8 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
     isFeatured: false,
     is_free: !!row.is_free,
   } as Template) : null;
-  if (!prod || (row as any)?.available_on_celite_subscription === false || (row as any)?.status === 'rejected') {
+  // Block metadata generation for unapproved or rejected templates
+  if (!prod || (row as any)?.status !== 'approved') {
     return {
       title: 'Template Not Found • Celite',
       description: 'This template does not exist or was removed.',
@@ -146,7 +147,7 @@ export default async function ProductPage(props: PageProps) {
   const [{ data: row }, { data: settingsData }] = await Promise.all([
     supabase
       .from('templates')
-      .select('slug,name,subtitle,description,img,video_path,thumbnail_path,audio_preview_path,model_3d_path,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name,category_id,subcategory_id,is_free,price,available_on_celite_market,available_on_celite_subscription,categories(id,slug,name)')
+      .select('slug,name,subtitle,description,img,video_path,thumbnail_path,audio_preview_path,model_3d_path,features,software,plugins,tags,source_path,meta_title,meta_description,vendor_name,category_id,subcategory_id,is_free,price,available_on_celite_market,available_on_celite_subscription,status,categories(id,slug,name)')
       .eq('slug', params.slug)
       .maybeSingle(),
     supabase
@@ -156,9 +157,9 @@ export default async function ProductPage(props: PageProps) {
   ]);
   if (!row) return notFound();
 
-  // Block access to templates not available on Celite subscription or rejected
-  // This prevents rejected/unapproved celitemarket.in templates from showing on celite.in
-  if ((row as any).available_on_celite_subscription === false || (row as any).status === 'rejected') return notFound();
+  // Block access to unapproved or rejected templates
+  // Approved templates (both subscription and Celite Market exclusive) are permitted
+  if ((row as any).status !== 'approved') return notFound();
 
   const rawMonthlyPaise = settingsData?.[0]?.value || '49900';
   const monthlyPrice = paiseToINR(Number(rawMonthlyPaise));
@@ -195,13 +196,12 @@ export default async function ProductPage(props: PageProps) {
     is_free: !!row.is_free,
   };
 
-  // Fetch related templates from the same category
+  // Fetch related templates from the same category (including approved market items)
   let relatedQuery = supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video_path,thumbnail_path,features,software,plugins,tags,status,vendor_name')
+    .select('slug,name,subtitle,description,img,video_path,thumbnail_path,features,software,plugins,tags,status,vendor_name,available_on_celite_subscription,available_on_celite_market,price')
     .neq('slug', prod.slug)
-    .eq('status', 'approved')
-    .eq('available_on_celite_subscription', true);
+    .eq('status', 'approved');
 
   // Filter by category_id if available
   if (prod.category_id) {
@@ -214,7 +214,7 @@ export default async function ProductPage(props: PageProps) {
     name: r.name,
     subtitle: r.subtitle,
     desc: r.description ?? '',
-    price: 0,
+    price: Number((r as any).price || 0),
     img: r.img,
     video_path: (r as any).video_path ?? null,
     thumbnail_path: (r as any).thumbnail_path ?? null,
@@ -225,6 +225,8 @@ export default async function ProductPage(props: PageProps) {
     plugins: r.plugins ?? [],
     tags: r.tags ?? [],
     isFeatured: false,
+    available_on_celite_subscription: (r as any).available_on_celite_subscription,
+    available_on_celite_market: (r as any).available_on_celite_market,
   }));
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://celite.in';

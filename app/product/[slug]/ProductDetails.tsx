@@ -5,7 +5,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Share2, Check, Download, AlertCircle, PlayCircle, Star, Shield, Clock, Layers, Zap, HardDrive, Music2, Copy, Gift, ArrowRight } from 'lucide-react';
+import { Share2, Check, Download, AlertCircle, PlayCircle, Star, Shield, Clock, Layers, Zap, HardDrive, Music2, Copy, Gift, ArrowRight, Crown } from 'lucide-react';
 import { useAppContext } from '../../../context/AppContext';
 import { getSupabaseBrowserClient } from '../../../lib/supabaseClient';
 import { useLoginModal } from '../../../context/LoginModalContext';
@@ -15,6 +15,8 @@ import Model3DViewerInteractive from '../../../components/Model3DViewerInteracti
 import StockPhotoViewer from '../../../components/StockPhotoViewer';
 import MusicSfxPlayer from '../../../components/MusicSfxPlayer';
 import SimpleMusicPlayer from '../../../components/SimpleMusicPlayer';
+import MarketExclusiveBadge from '../../../components/MarketExclusiveBadge';
+import { isMarketExclusiveTemplate } from '../../../lib/templateUtils';
 import { cn, convertR2UrlToCdn } from '../../../lib/utils';
 import { formatPrice } from '../../../lib/currency';
 import type { Template } from '../../../data/templateData';
@@ -62,6 +64,9 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
   const [loadingMoreInStyle, setLoadingMoreInStyle] = useState(true);
   const [loadingYouMayAlsoLike, setLoadingYouMayAlsoLike] = useState(true);
   const [promptCopied, setPromptCopied] = useState(false);
+
+  // Check if this is an approved Celite Market exclusive product (not in subscription)
+  const isMarketExclusive = isMarketExclusiveTemplate(product);
 
   // Check if this is a prompt product (only requires login, not subscription)
   const isPromptProduct = (product as any).category_slug === 'prompts' ||
@@ -148,10 +153,9 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
           // If no keywords, fetch templates from same category
           let query = supabase
             .from('templates')
-            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name,category_id')
+            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name,category_id,available_on_celite_subscription,available_on_celite_market,price')
             .neq('slug', product.slug)
-            .eq('status', 'approved')
-            .eq('available_on_celite_subscription', true);
+            .eq('status', 'approved');
 
           if (product.category_id) {
             query = query.eq('category_id', product.category_id);
@@ -167,7 +171,7 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
               name: r.name,
               subtitle: r.subtitle,
               desc: r.description ?? '',
-              price: 0,
+              price: Number(r.price || 0),
               img: r.img,
               video: r.video,
               video_path: r.video_path ?? null,
@@ -180,6 +184,8 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
               plugins: r.plugins ?? [],
               tags: r.tags ?? [],
               isFeatured: false,
+              available_on_celite_subscription: r.available_on_celite_subscription,
+              available_on_celite_market: r.available_on_celite_market,
             })));
           }
           setLoadingMoreInStyle(false);
@@ -189,10 +195,9 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
         // Search for templates matching keywords in the same category
         let query = supabase
           .from('templates')
-          .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name')
+          .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name,category_id,available_on_celite_subscription,available_on_celite_market,price')
           .neq('slug', product.slug)
-          .eq('status', 'approved')
-          .eq('available_on_celite_subscription', true);
+          .eq('status', 'approved');
 
         if (product.category_id) {
           query = query.eq('category_id', product.category_id);
@@ -234,7 +239,7 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
             name: item.template.name,
             subtitle: item.template.subtitle,
             desc: item.template.description ?? '',
-            price: 0,
+            price: Number(item.template.price || 0),
             img: item.template.img,
             video: item.template.video,
             video_path: item.template.video_path ?? null,
@@ -247,6 +252,8 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
             plugins: item.template.plugins ?? [],
             tags: item.template.tags ?? [],
             isFeatured: false,
+            available_on_celite_subscription: item.template.available_on_celite_subscription,
+            available_on_celite_market: item.template.available_on_celite_market,
           }));
 
         // If we don't have enough matches, fill with random
@@ -259,7 +266,7 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
               name: r.name,
               subtitle: r.subtitle,
               desc: r.description ?? '',
-              price: 0,
+              price: Number(r.price || 0),
               img: r.img,
               video: r.video,
               video_path: r.video_path ?? null,
@@ -271,6 +278,8 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
               plugins: r.plugins ?? [],
               tags: r.tags ?? [],
               isFeatured: false,
+              available_on_celite_subscription: r.available_on_celite_subscription,
+              available_on_celite_market: r.available_on_celite_market,
             }));
           setMoreInStyleTemplates([...scored, ...randomTemplates]);
         } else {
@@ -390,13 +399,12 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
             setYouMayAlsoLikeTemplates(scored);
           }
         } else {
-          // For non-subscribed users: fetch templates from same category
+          // For non-subscribed users: fetch templates from same category (including approved market items)
           let query = supabase
             .from('templates')
-            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name,category_id')
+            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,model_3d_path,features,software,plugins,tags,vendor_name,category_id,available_on_celite_subscription,available_on_celite_market,price')
             .neq('slug', product.slug)
-            .eq('status', 'approved')
-            .eq('available_on_celite_subscription', true);
+            .eq('status', 'approved');
 
           if (product.category_id) {
             query = query.eq('category_id', product.category_id);
@@ -412,7 +420,7 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
               name: r.name,
               subtitle: r.subtitle,
               desc: r.description ?? '',
-              price: 0,
+              price: Number(r.price || 0),
               img: r.img,
               video: r.video,
               video_path: r.video_path ?? null,
@@ -425,6 +433,8 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
               plugins: r.plugins ?? [],
               tags: r.tags ?? [],
               isFeatured: false,
+              available_on_celite_subscription: r.available_on_celite_subscription,
+              available_on_celite_market: r.available_on_celite_market,
             })));
           }
         }
@@ -441,6 +451,13 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
 
 
   const handleDownload = async () => {
+    // If the template is market-exclusive, direct to Celite Market instead of subscription download
+    if (isMarketExclusive) {
+      window.open(getCeliteMarketUrl(product.slug), '_blank');
+      setFeedback('This template is available exclusively on Celite Market.');
+      return;
+    }
+
     try {
       setDownloading(true);
       const supabase = getSupabaseBrowserClient();
@@ -669,6 +686,12 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
               );
             })()}
           </div>
+          {/* Celite Market Exclusive Badge */}
+          {isMarketExclusive && (
+            <div className="mb-3">
+              <MarketExclusiveBadge variant="product" price={product.price} />
+            </div>
+          )}
           {/* Mobile: Smaller title */}
           <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-zinc-900 tracking-tight line-clamp-2 sm:line-clamp-none">{product.name}</h1>
           {/* Desktop: Vendor / brand info */}
@@ -1117,6 +1140,11 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
                   return (
                     <Link key={item.slug} href={`/product/${item.slug}`} className="group">
                       <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
+                        {(item as any).available_on_celite_subscription === false && (
+                          <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
+                            <MarketExclusiveBadge price={(item as any).price} />
+                          </div>
+                        )}
                         {itemIsMusic ? (
                           // Music items - show simple thumbnail with music icon
                           <div className="relative w-full h-full bg-gradient-to-br from-purple-500 via-blue-500 to-pink-500">
@@ -1199,6 +1227,11 @@ export default function ProductDetails({ product, related, reviews, monthlyPrice
                   return (
                     <Link key={item.slug} href={`/product/${item.slug}`} className="group">
                       <div className="aspect-video rounded-lg overflow-hidden bg-zinc-100 mb-3 relative">
+                        {(item as any).available_on_celite_subscription === false && (
+                          <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
+                            <MarketExclusiveBadge price={(item as any).price} />
+                          </div>
+                        )}
                         {itemIsMusic ? (
                           // Music items - show simple thumbnail with music icon
                           <div className="relative w-full h-full bg-gradient-to-br from-purple-500 via-blue-500 to-pink-500">
@@ -1372,27 +1405,91 @@ function SubscriptionCard({
     );
   }
 
-  // For subscribed users, show download button (or single buy CTA if not available on subscription)
-  if (isSubActive) {
-    if (availableOnSub === false) {
-      return (
-        <div className={cn("relative bg-gradient-to-br from-[#0d0f19] via-[#0a0b12] to-[#07080e] rounded-3xl p-6 sm:p-7 border border-amber-500/30 shadow-[0_0_50px_-15px_rgba(245,158,11,0.2)] overflow-hidden group", className)}>
-          <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-400/80 to-transparent pointer-events-none" />
-          <div className="relative z-10 text-center mb-4">
-            <h3 className="text-lg font-bold text-white mb-1">Celite Market Exclusive</h3>
-            <p className="text-xs text-zinc-300">This template is available for direct single purchase on Celite Market.</p>
+  // If the asset is Celite Market exclusive (not included in Celite subscription),
+  // show the dedicated Celite Market pay-per-item card for ALL users (both subscribed and non-subscribed)
+  if (availableOnSub === false) {
+    const formattedPrice = productPrice && Number(productPrice) > 0 ? `₹${productPrice}` : '₹399';
+    return (
+      <div className={cn("relative bg-gradient-to-br from-[#0e101a] via-[#121422] to-[#0a0b12] rounded-3xl p-6 sm:p-7 border-2 border-amber-500/40 shadow-[0_0_50px_-15px_rgba(245,158,11,0.3)] overflow-hidden group", className)}>
+        {/* Top Floating Amber Hairline */}
+        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400 to-transparent pointer-events-none" />
+        <div className="absolute -top-16 -right-16 w-48 h-48 bg-amber-500/15 rounded-full blur-[60px] pointer-events-none" />
+
+        <div className="relative z-10 flex justify-between items-start mb-4">
+          <div>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-400/15 border border-amber-400/40 text-amber-300 text-xs font-black uppercase tracking-wider rounded-full">
+              <Crown className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+              <span>Celite Market</span>
+            </span>
           </div>
-          <a
-            href={`https://celitemarket.in/product/${productSlug || ''}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="relative z-10 w-full py-3.5 rounded-xl bg-gradient-to-r from-[#0d1f18] via-[#0f2e24] to-[#047857] hover:from-[#0f2e24] hover:to-[#059669] text-white font-bold text-xs border border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:shadow-[0_0_25px_rgba(16,185,129,0.45)] flex items-center justify-center gap-2 transition-all duration-300 active:scale-[0.98]"
-          >
-            Buy this individual asset for {productPrice ? `₹${productPrice}` : '₹399'} on Celite Market →
-          </a>
+          <span className="bg-black/40 text-amber-200 text-[10px] uppercase font-bold px-2.5 py-1 rounded-full border border-amber-400/20">
+            Pay-Per-Item
+          </span>
         </div>
-      );
-    }
+
+        <div className="relative z-10 flex items-baseline gap-2 mb-1.5">
+          <span className="text-3xl sm:text-4xl font-[900] text-white tracking-tight drop-shadow-md">
+            {formattedPrice}
+          </span>
+          <span className="text-xs text-zinc-400 font-semibold">/ single asset</span>
+        </div>
+
+        {/* Big Alert: Not included in subscription */}
+        <div className="relative z-10 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-400/30 mb-5">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-bold text-amber-300">Not Included in Subscription</p>
+              <p className="text-[11px] text-zinc-300 mt-0.5 leading-snug">
+                This creator asset is sold individually on Celite Market and cannot be downloaded via subscription.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <ul className="relative z-10 space-y-2.5 mb-6">
+          {[
+            'Pay per download on Celite Market',
+            'Commercial usage license included',
+            'Direct instant asset delivery',
+            'Full lifetime file access'
+          ].map((item, i) => (
+            <li key={i} className="flex items-center gap-2.5 text-[12px] text-zinc-200 font-medium">
+              <div className="w-4 h-4 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-400 flex items-center justify-center flex-shrink-0">
+                <Check className="w-2.5 h-2.5" />
+              </div>
+              <span className="truncate">{item}</span>
+            </li>
+          ))}
+        </ul>
+
+        <a
+          href={`https://celitemarket.in/product/${productSlug || ''}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative z-10 w-full py-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-black text-sm shadow-[0_0_25px_rgba(245,158,11,0.45)] hover:shadow-[0_0_35px_rgba(245,158,11,0.7)] border border-amber-200/80 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2 text-center"
+        >
+          <span>Buy on Celite Market ({formattedPrice})</span>
+          <ArrowRight className="w-4 h-4 text-black stroke-[3]" />
+        </a>
+
+        {!isSubActive && (
+          <div className="relative z-10 mt-4 pt-4 border-t border-white/[0.08] text-center">
+            <p className="text-[11px] text-zinc-400 mb-2">Want all-access downloads for other templates?</p>
+            <button
+              onClick={() => router.push('/pricing')}
+              className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors inline-flex items-center gap-1"
+            >
+              Explore Celite Subscription Plans →
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // For subscribed users, show download button
+  if (isSubActive) {
 
     return (
       <div className={cn("relative bg-gradient-to-br from-[#0d0f19] via-[#0a0b12] to-[#07080e] rounded-3xl p-6 sm:p-7 border border-blue-500/30 shadow-[0_0_50px_-15px_rgba(59,130,246,0.25)] overflow-hidden group", className)}>
