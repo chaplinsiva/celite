@@ -16,7 +16,7 @@ import StockPhotoViewer from '../../../components/StockPhotoViewer';
 import MusicSfxPlayer from '../../../components/MusicSfxPlayer';
 import SimpleMusicPlayer from '../../../components/SimpleMusicPlayer';
 import MarketExclusiveBadge from '../../../components/MarketExclusiveBadge';
-import { isMarketExclusiveTemplate } from '../../../lib/templateUtils';
+import { isMarketExclusiveTemplate, getCeliteMarketUrl } from '../../../lib/templateUtils';
 import { cn, convertR2UrlToCdn } from '../../../lib/utils';
 import { formatPrice } from '../../../lib/currency';
 import type { Template } from '../../../data/templateData';
