@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import VideoThumbnailPlayer from './VideoThumbnailPlayer';
+import MarketExclusiveBadge from './MarketExclusiveBadge';
 import { ArrowRight, Sparkles, Play } from 'lucide-react';
 
 interface CollageTemplate {
@@ -12,6 +13,9 @@ interface CollageTemplate {
     thumbnail_path?: string | null;
     img?: string | null;
     category?: { id: string; name: string; slug: string } | null;
+    price?: number | string | null;
+    available_on_celite_subscription?: boolean | null;
+    available_on_celite_market?: boolean | null;
 }
 
 // Shuffle array randomly
@@ -36,11 +40,10 @@ export default function TemplateCollageShowcase() {
             const { data, error } = await supabase
                 .from('templates')
                 .select(`
-          slug,name,img,video_path,thumbnail_path,
-          categories(id,name,slug)
-        `)
+                  slug,name,img,video_path,thumbnail_path,price,available_on_celite_subscription,available_on_celite_market,
+                  categories(id,name,slug)
+                `)
                 .eq('status', 'approved')
-                .eq('available_on_celite_subscription', true)
                 .not('video_path', 'is', null)
                 .order('updated_at', { ascending: false })
                 .limit(50); // Load more to shuffle from
@@ -58,6 +61,9 @@ export default function TemplateCollageShowcase() {
                 thumbnail_path: r.thumbnail_path,
                 img: r.img,
                 category: r.categories ? (Array.isArray(r.categories) ? r.categories[0] : r.categories) : null,
+                price: r.price ?? 0,
+                available_on_celite_subscription: r.available_on_celite_subscription ?? true,
+                available_on_celite_market: Boolean(r.available_on_celite_market),
             }));
 
             // Shuffle and take 9 random templates for display
@@ -123,6 +129,13 @@ export default function TemplateCollageShowcase() {
                                         {tpl.name}
                                     </h3>
                                 </div>
+
+                                {/* Crown badge for Market Exclusive */}
+                                {tpl.available_on_celite_subscription === false && (
+                                    <div className="absolute top-3 left-3 z-20 pointer-events-none">
+                                        <MarketExclusiveBadge variant="card" price={tpl.price} />
+                                    </div>
+                                )}
 
                                 {/* Play indicator */}
                                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">

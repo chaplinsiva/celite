@@ -18,6 +18,10 @@ export type Template = {
   meta_title?: string | null;
   meta_description?: string | null;
   is_free?: boolean;
+  status?: string;
+  available_on_celite_subscription?: boolean;
+  available_on_celite_market?: boolean;
+  ownership_type?: string;
 };
 
 export declare const templates: Template[];

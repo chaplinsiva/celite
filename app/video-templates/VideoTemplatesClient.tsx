@@ -9,6 +9,7 @@ import { useLoginModal } from '../../context/LoginModalContext';
 import { cn, convertR2UrlToCdn } from '../../lib/utils';
 import { Search, ChevronDown, ChevronRight, ChevronLeft, Download, ArrowRight } from 'lucide-react';
 import VideoThumbnailPlayer from '../../components/VideoThumbnailPlayer';
+import MarketExclusiveBadge from '../../components/MarketExclusiveBadge';
 
 type Template = {
   slug: string;
@@ -36,6 +37,9 @@ type Template = {
   meta_description?: string | null;
   vendor_name?: string | null;
   is_free?: boolean | null;
+  available_on_celite_subscription?: boolean | null;
+  available_on_celite_market?: boolean | null;
+  price?: number | string | null;
 };
 
 type Category = {
@@ -577,6 +581,13 @@ export default function VideoTemplatesClient({
                     href={`/product/${template.slug}`}
                     className="group relative aspect-video overflow-hidden bg-zinc-900 transition-all duration-300"
                   >
+                    {/* Celite Market Exclusive Crown Badge */}
+                    {template.available_on_celite_subscription === false && (
+                      <div className="absolute top-2 left-2 z-20 pointer-events-none">
+                        <MarketExclusiveBadge price={template.price} />
+                      </div>
+                    )}
+
                     {/* Video/Image */}
                     {template.video_path ? (
                       <VideoThumbnailPlayer
@@ -616,10 +627,14 @@ export default function VideoTemplatesClient({
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          handleDownload(template.slug);
+                          if (template.available_on_celite_subscription === false) {
+                            window.open(`https://celitemarket.in/product/${template.slug}`, '_blank');
+                          } else {
+                            handleDownload(template.slug);
+                          }
                         }}
                         className="p-1.5 sm:p-2 bg-black/60 backdrop-blur-sm rounded-full text-white hover:bg-blue-600 transition-colors"
-                        title="Download"
+                        title={template.available_on_celite_subscription === false ? "Buy on Celite Market" : "Download"}
                       >
                         <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                       </button>
@@ -627,7 +642,10 @@ export default function VideoTemplatesClient({
 
                     {/* Software Badge - Always visible */}
                     {template.software?.includes('After Effects') && (
-                      <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-sm rounded text-[9px] font-bold text-white uppercase tracking-wider">
+                      <div className={cn(
+                        "absolute top-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-sm rounded text-[9px] font-bold text-white uppercase tracking-wider",
+                        template.available_on_celite_subscription === false ? "left-[100px]" : "left-2"
+                      )}>
                         Ae
                       </div>
                     )}

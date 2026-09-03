@@ -7,6 +7,7 @@ import { getSupabaseBrowserClient } from '../../lib/supabaseClient';
 import { useLoginModal } from '../../context/LoginModalContext';
 import { Download, Search } from 'lucide-react';
 import Link from 'next/link';
+import MarketExclusiveBadge from '../../components/MarketExclusiveBadge';
 import { cn, convertR2UrlToCdn } from '../../lib/utils';
 
 type Template = {
@@ -34,6 +35,9 @@ type Template = {
   meta_description?: string | null;
   vendor_name?: string | null;
   source_path?: string | null;
+  available_on_celite_subscription?: boolean | null;
+  available_on_celite_market?: boolean | null;
+  price?: number | string | null;
 };
 
 export default function StockPhotosClient({ initialTemplates }: { initialTemplates: Template[] }) {
@@ -254,6 +258,11 @@ export default function StockPhotosClient({ initialTemplates }: { initialTemplat
                     href={`/product/${template.slug}`}
                     className={`group relative overflow-hidden rounded-xl bg-zinc-100 ${collageClass} cursor-pointer hover:scale-[1.02] transition-all duration-300 shadow-sm hover:shadow-xl block`}
                   >
+                    {template.available_on_celite_subscription === false && (
+                      <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
+                        <MarketExclusiveBadge price={template.price} />
+                      </div>
+                    )}
                     <img
                       src={thumbnail}
                       alt={template.name}

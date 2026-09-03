@@ -8,6 +8,7 @@ import { convertR2UrlToCdn } from '../../lib/utils';
 import VideoThumbnailPlayer from '../../components/VideoThumbnailPlayer';
 import MusicSfxPlayer from '../../components/MusicSfxPlayer';
 import StockPhotoViewer from '../../components/StockPhotoViewer';
+import MarketExclusiveBadge from '../../components/MarketExclusiveBadge';
 import { ChevronRight, PlayCircle, Music2, Image, Video, Box, Sparkles, Search } from 'lucide-react';
 
 type Template = {
@@ -20,6 +21,9 @@ type Template = {
     audio_preview_path?: string | null;
     model_3d_path?: string | null;
     category_id?: string | null;
+    available_on_celite_subscription?: boolean;
+    available_on_celite_market?: boolean;
+    price?: number | string | null;
 };
 
 type Category = {
@@ -147,9 +151,8 @@ export default function TemplatesClient({ initialCategoryGroups }: { initialCate
                 // Fetch templates filtered by search query from database directly
                 const { data: templates, error } = await supabase
                     .from('templates')
-                    .select('slug, name, img, video, video_path, thumbnail_path, audio_preview_path, model_3d_path, category_id, categories(id, name, slug)')
+                    .select('slug, name, img, video, video_path, thumbnail_path, audio_preview_path, model_3d_path, category_id, available_on_celite_subscription, available_on_celite_market, price, categories(id, name, slug)')
                     .eq('status', 'approved')
-                    .eq('available_on_celite_subscription', true)
                     .ilike('name', `%${searchQuery.trim()}%`)
                     .order('created_at', { ascending: false })
                     .limit(200);
@@ -197,6 +200,9 @@ export default function TemplatesClient({ initialCategoryGroups }: { initialCate
                                     audio_preview_path: t.audio_preview_path,
                                     model_3d_path: t.model_3d_path,
                                     category_id: t.category_id,
+                                    available_on_celite_subscription: t.available_on_celite_subscription,
+                                    available_on_celite_market: t.available_on_celite_market,
+                                    price: t.price,
                                 });
                             }
                         }
@@ -396,6 +402,11 @@ export default function TemplatesClient({ initialCategoryGroups }: { initialCate
                                     >
                                         {/* Template Thumbnail/Video */}
                                         <div className="relative aspect-video overflow-hidden bg-zinc-100">
+                                            {template.available_on_celite_subscription === false && (
+                                                <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
+                                                    <MarketExclusiveBadge price={template.price} />
+                                                </div>
+                                            )}
                                             {renderTemplatePreview(template)}
                                         </div>
 

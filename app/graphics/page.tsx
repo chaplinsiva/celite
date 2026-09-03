@@ -43,9 +43,8 @@ export default async function GraphicsPage() {
   const psdTemplatesCategoryId = 'acf1f57b-bf0a-42bb-85c5-f4eb65221b04';
   const { data: templates, error } = await supabase
     .from('templates')
-    .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,feature,vendor_name,status,creator_shop_id')
+    .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,feature,vendor_name,status,creator_shop_id,available_on_celite_subscription,available_on_celite_market,price')
     .eq('status', 'approved')
-    .eq('available_on_celite_subscription', true)
     .eq('category_id', psdTemplatesCategoryId)
     .order('created_at', { ascending: false });
 
@@ -56,7 +55,9 @@ export default async function GraphicsPage() {
   // Map templates to match Template type
   const mappedTemplates = (templates || []).map(t => ({
     ...t,
-    price: 0,
+    price: Number((t as any).price || 0),
+    available_on_celite_subscription: (t as any).available_on_celite_subscription,
+    available_on_celite_market: (t as any).available_on_celite_market,
     is_featured: Boolean((t as any).feature),
     feature: Boolean((t as any).feature),
   }));

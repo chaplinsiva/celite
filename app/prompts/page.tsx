@@ -72,9 +72,8 @@ export default async function PromptsPage() {
         // Fetch templates that belong to Prompts category
         const { data: catTemplates, error: catError } = await supabase
             .from('templates')
-            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id')
+            .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id,available_on_celite_subscription,available_on_celite_market,price')
             .eq('status', 'approved')
-            .eq('available_on_celite_subscription', true)
             .eq('category_id', promptsCategory.id)
             .order('created_at', { ascending: false });
 
@@ -83,9 +82,8 @@ export default async function PromptsPage() {
         if (subcategoryIds.length > 0) {
             const { data: subTemplates, error: subError } = await supabase
                 .from('templates')
-                .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id')
+                .select('slug,name,subtitle,description,img,video,video_path,thumbnail_path,audio_preview_path,features,software,plugins,tags,created_at,category_id,subcategory_id,sub_subcategory_id,feature,vendor_name,status,creator_shop_id,available_on_celite_subscription,available_on_celite_market,price')
                 .eq('status', 'approved')
-                .eq('available_on_celite_subscription', true)
                 .in('subcategory_id', subcategoryIds)
                 .order('created_at', { ascending: false });
 
@@ -114,7 +112,9 @@ export default async function PromptsPage() {
     // Map templates to match Template type
     const mappedTemplates = (templates || []).map(t => ({
         ...t,
-        price: 0,
+        price: Number((t as any).price || 0),
+        available_on_celite_subscription: (t as any).available_on_celite_subscription,
+        available_on_celite_market: (t as any).available_on_celite_market,
         is_featured: Boolean((t as any).feature),
         feature: Boolean((t as any).feature),
     }));

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { convertR2UrlToCdn } from '@/lib/utils';
+import MarketExclusiveBadge from './MarketExclusiveBadge';
 import { ArrowRight, Play, Pause, Volume2, Zap } from 'lucide-react';
 
 type SfxTemplate = {
@@ -13,6 +14,9 @@ type SfxTemplate = {
     audio_preview_path?: string;
     thumbnail_path?: string;
     img?: string;
+    price?: number | string | null;
+    available_on_celite_subscription?: boolean | null;
+    available_on_celite_market?: boolean | null;
 };
 
 // Waveform visualization colors
@@ -131,12 +135,17 @@ function SfxCard({ template, index, currentlyPlaying, onPlay }: SfxCardProps) {
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                        <Link
-                            href={`/product/${template.slug}`}
-                            className="text-sm font-semibold text-white truncate hover:text-cyan-400 transition-colors block"
-                        >
-                            {template.name}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                            <Link
+                                href={`/product/${template.slug}`}
+                                className="text-sm font-semibold text-white truncate hover:text-cyan-400 transition-colors block"
+                            >
+                                {template.name}
+                            </Link>
+                            {template.available_on_celite_subscription === false && (
+                                <MarketExclusiveBadge variant="subtle" price={template.price} />
+                            )}
+                        </div>
                         {template.subtitle ? (
                             <p className="text-xs text-zinc-400 truncate mt-0.5">{template.subtitle}</p>
                         ) : (
@@ -227,10 +236,12 @@ export default function SfxShowcase({ initialTemplates }: { initialTemplates?: S
                         thumbnail_path,
                         img,
                         category_id,
+                        price,
+                        available_on_celite_subscription,
+                        available_on_celite_market,
                         categories!inner(id, name, slug)
                     `)
                     .eq('status', 'approved')
-                    .eq('available_on_celite_subscription', true)
                     .eq('categories.slug', 'sound-effects')
                     .not('audio_preview_path', 'is', null)
                     .order('created_at', { ascending: false })

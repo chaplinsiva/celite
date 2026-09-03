@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import VideoThumbnailPlayer from './VideoThumbnailPlayer';
+import MarketExclusiveBadge from './MarketExclusiveBadge';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import type { Template } from '../data/templateData';
 import { cn } from '@/lib/utils';
@@ -30,11 +31,10 @@ export default function WebsiteShowcaseCarousel({ initialTemplates }: { initialT
       const { data, error } = await supabase
         .from('templates')
         .select(`
-          slug,name,subtitle,description,img,video,video_path,thumbnail_path,features,tags,created_at,
+          slug,name,subtitle,description,img,video,video_path,thumbnail_path,features,tags,created_at,price,available_on_celite_subscription,available_on_celite_market,
           categories(id,name,slug)
         `)
         .eq('status', 'approved')
-        .eq('available_on_celite_subscription', true)
         .order('created_at', { ascending: false })
         .limit(24);
 
@@ -59,7 +59,9 @@ export default function WebsiteShowcaseCarousel({ initialTemplates }: { initialT
             name: tpl.name,
             subtitle: tpl.subtitle,
             desc: tpl.description ?? '',
-            price: 0,
+            price: tpl.price ?? 0,
+            available_on_celite_subscription: tpl.available_on_celite_subscription ?? true,
+            available_on_celite_market: Boolean(tpl.available_on_celite_market),
             img: tpl.img,
             video: tpl.video,
             video_path: tpl.video_path,
@@ -131,13 +133,18 @@ export default function WebsiteShowcaseCarousel({ initialTemplates }: { initialT
             <div className="relative grid lg:grid-cols-[1.1fr_0.9fr] gap-4 sm:gap-6 md:gap-8 lg:gap-12 items-center">
               <div className="space-y-3 sm:space-y-4 md:space-y-6">
                 <div>
-                  <p className="inline-flex items-center text-[10px] sm:text-xs tracking-wider uppercase text-blue-600 font-semibold mb-1 sm:mb-2">
-                    {featuredWebsite.category?.name ||
-                      featuredWebsite.tags?.find(
-                        (tag) => typeof tag === 'string' && tag.toLowerCase().includes('website'),
-                      ) ||
-                      'Website Template'}
-                  </p>
+                  <div className="flex items-center gap-2 mb-1 sm:mb-2 flex-wrap">
+                    {featuredWebsite.available_on_celite_subscription === false && (
+                      <MarketExclusiveBadge variant="subtle" price={featuredWebsite.price} />
+                    )}
+                    <p className="inline-flex items-center text-[10px] sm:text-xs tracking-wider uppercase text-blue-600 font-semibold">
+                      {featuredWebsite.category?.name ||
+                        featuredWebsite.tags?.find(
+                          (tag) => typeof tag === 'string' && tag.toLowerCase().includes('website'),
+                        ) ||
+                        'Website Template'}
+                    </p>
+                  </div>
                   <h3 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold text-zinc-900 leading-tight">
                     {featuredWebsite.name}
                   </h3>
@@ -164,12 +171,23 @@ export default function WebsiteShowcaseCarousel({ initialTemplates }: { initialT
                   >
                     View Template
                   </Link>
-                  <Link
-                    href="/pricing"
-                    className="px-4 py-2 sm:px-6 sm:py-3 rounded-full border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-900 font-semibold hover:bg-zinc-50 transition"
-                  >
-                    Get Access
-                  </Link>
+                  {featuredWebsite.available_on_celite_subscription === false ? (
+                    <a
+                      href={`https://celitemarket.in/product/${featuredWebsite.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 sm:px-6 sm:py-3 rounded-full border border-amber-500/30 bg-amber-500/10 text-xs sm:text-sm text-amber-600 dark:text-amber-400 font-semibold hover:bg-amber-500/20 transition"
+                    >
+                      Buy on Celite Market {featuredWebsite.price ? `₹${featuredWebsite.price}` : ''}
+                    </a>
+                  ) : (
+                    <Link
+                      href="/pricing"
+                      className="px-4 py-2 sm:px-6 sm:py-3 rounded-full border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-900 font-semibold hover:bg-zinc-50 transition"
+                    >
+                      Get Access
+                    </Link>
+                  )}
                 </div>
               </div>
               <div className="relative group">
@@ -178,6 +196,11 @@ export default function WebsiteShowcaseCarousel({ initialTemplates }: { initialT
                     'relative rounded-xl sm:rounded-2xl border border-zinc-200 overflow-hidden shadow-2xl shadow-blue-900/5 bg-white aspect-video',
                   )}
                 >
+                  {featuredWebsite.available_on_celite_subscription === false && (
+                    <div className="absolute top-3 right-3 z-30 pointer-events-none">
+                      <MarketExclusiveBadge variant="card" price={featuredWebsite.price} />
+                    </div>
+                  )}
                   {featuredWebsite.video_path ? (
                     <VideoThumbnailPlayer
                       videoUrl={featuredWebsite.video_path}
